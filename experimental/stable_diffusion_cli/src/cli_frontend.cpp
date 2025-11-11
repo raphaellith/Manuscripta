@@ -2,6 +2,9 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+// Known problem: On some machines, VC_redist must be downloaded beforehand.
+// https://download.visualstudio.microsoft.com/download/pr/7ebf5fdb-36dc-4145-b0a0-90d3d5990a61/CC0FF0EB1DC3F5188AE6300FAEF32BF5BEEBA4BDD6E8E445A9184072096B713B/VC_redist.x64.exe
+
 bool download_model(const std::string& model_path) {
     // If model has not been downloaded, download it from
     // curl -L -O https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors
