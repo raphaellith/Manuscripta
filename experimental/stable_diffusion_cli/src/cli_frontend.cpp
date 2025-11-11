@@ -86,7 +86,7 @@ bool download_stable_diffusion(){
         // Unzip the file
         std::string unzip_command;
         #ifdef _WIN32
-            unzip_command = "tar -xf ./supplementary/stable_diffusion.zip -C .\\supplementary\\";
+            unzip_command = "powershell -command \"Expand-Archive -Path './supplementary/stable_diffusion.zip' -DestinationPath './supplementary/' -Force\"";
         #else
             unzip_command = "unzip ./supplementary/stable_diffusion.zip -d ./supplementary/";
         #endif
@@ -127,7 +127,7 @@ int main(){
     }
 
     // Check whether stable diffusion executable exists; if not download it
-    bool stable_diffusion_exists = fs::exists("./supplementary/sd");
+    bool stable_diffusion_exists = fs::exists("./supplementary/sd") || fs::exists("./supplementary/sd.exe");
     if (!stable_diffusion_exists) {
         std::cout << "Stable Diffusion executable not found. Downloading..." << std::endl;
         if (!download_stable_diffusion()) {
@@ -148,12 +148,13 @@ int main(){
     std::cout << "Enter output filename (with .png extension): ";
     std::getline(std::cin, output_filename);
 
-    // load path
-    std::string command = "install_name_tool -add_rpath @loader_path ./supplementary/sd";
-    system(command.c_str());
-
     // Call stable diffusion with the prompt
-    std::string sd_command = "./supplementary/sd -m " + model_path + " -p \"" + prompt + "\"" + " -o " + output_filename;
+   std::string sd_command;
+    #ifdef _WIN32
+        sd_command = "supplementary\\sd.exe -m " + model_path + " -p \"" + prompt + "\"" + " -o " + output_filename;
+    #else
+        sd_command = "./supplementary/sd -m " + model_path + " -p \"" + prompt + "\"" + " -o " + output_filename;
+    #endif
     std::cout << "Running Stable Diffusion with command: " << sd_command << std::endl;
     int sd_result = system(sd_command.c_str());
     if (sd_result != 0) {
