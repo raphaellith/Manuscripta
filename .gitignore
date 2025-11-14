@@ -47,7 +47,7 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# IntelliJ
+# IntelliJ IDEA / Android Studio
 *.iml
 .idea/workspace.xml
 .idea/tasks.xml
@@ -55,7 +55,6 @@ captures/
 .idea/assetWizardSettings.xml
 .idea/dictionaries
 .idea/libraries
-.idea/jarRepositories.xml
 .idea/caches
 .idea/modules.xml
 .idea/.name
@@ -63,10 +62,17 @@ captures/
 .idea/misc.xml
 .idea/deploymentTargetDropDown.xml
 .idea/render.experimental.xml
-.idea/vcs.xml
-# Comment out if you want to keep some IntelliJ settings:
-# .idea/runConfigurations.xml
-# .idea/codeStyles/
+.idea/navEditor.xml
+.idea/uiDesigner.xml
+
+# IDE settings for team consistency
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+!.idea/vcs.xml
+
+# Android Studio specific
+.idea/androidTestResultsUserPreferences.xml
 
 # Keystore files (NEVER commit these!)
 *.jks
@@ -94,16 +100,21 @@ fastlane/readme.md
 # Version control
 vcs.xml
 
-# lint
+# Lint
 lint/intermediates/
 lint/generated/
 lint/outputs/
 lint/tmp/
 lint-report.html
 lint-results.xml
+lint-results*.xml
 
 # Android Profiling
 *.hprof
+
+# KSP (Kotlin Symbol Processing)
+.ksp/
+**/kspCaches/
 
 #########################
 # Windows / .NET
@@ -149,25 +160,6 @@ bld/
 # Mono auto generated files
 mono_crash.*
 
-# Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-[Ww][Ii][Nn]32/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
-
-# Visual Studio 2015/2017 cache/options directory
-.vs/
-
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
@@ -200,7 +192,6 @@ _ReSharper*/
 
 # JetBrains Rider
 *.sln.iml
-.idea/
 
 # CodeRush personal settings
 .cr/personal
@@ -284,6 +275,11 @@ Temporary Items
 *.zip
 *.tar.gz
 *.rar
+
+# Keep gradle wrapper
+!gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle-wrapper.jar
 
 # Virtual machine crash logs
 hs_err_pid*
