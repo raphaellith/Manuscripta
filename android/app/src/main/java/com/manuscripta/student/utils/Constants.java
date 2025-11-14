@@ -10,5 +10,8 @@ public final class Constants {
     }
 
     // Add application constants here
+    /**
+     * Application tag used for logging.
+     */
     public static final String TAG = "ManuscriptaApp";
 }

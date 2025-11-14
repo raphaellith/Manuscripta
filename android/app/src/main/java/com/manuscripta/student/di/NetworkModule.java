@@ -20,6 +20,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @InstallIn(SingletonComponent.class)
 public class NetworkModule {
 
+    /**
+     * Base URL for the Manuscripta API.
+     */
     private static final String BASE_URL = "https://api.manuscripta.example.com/";
 
     /**

@@ -15,7 +15,14 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
+    /**
+     * View binding for the main activity layout.
+     */
     private ActivityMainBinding binding;
+
+    /**
+     * ViewModel for the main activity.
+     */
     private MainViewModel viewModel;
 
     @Override

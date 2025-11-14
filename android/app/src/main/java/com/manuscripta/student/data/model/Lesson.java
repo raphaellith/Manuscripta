@@ -9,9 +9,15 @@ import androidx.room.PrimaryKey;
  */
 @Entity(tableName = "lessons")
 public class Lesson {
+    /**
+     * The unique identifier for this lesson.
+     */
     @PrimaryKey(autoGenerate = true)
     private long id;
 
+    /**
+     * The title of the lesson.
+     */
     private String title;
 
     public Lesson() {
