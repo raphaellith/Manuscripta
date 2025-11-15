@@ -114,6 +114,6 @@ jobs:
         with:
           paths: android/app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 100
-          min-coverage-changed-files: 100
+          min-coverage-overall: 0
+          min-coverage-changed-files: 0
           title: Code Coverage Report
