@@ -37,6 +37,9 @@ class TestApp:
         mock_st.chat_message = MagicMock()
         mock_st.chat_message.return_value.__enter__.return_value = MagicMock()
         
+        # Mock tabs for prompt selector
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+
         # Reset button side effects
         mock_st.button.side_effect = None
         mock_st.button.return_value = False
@@ -101,7 +104,10 @@ class TestApp:
         with patch('app.init_session_state') as mock_init, \
              patch('app.init_chat_state') as mock_init_chat, \
              patch('app.LLMClient') as mock_client_cls, \
-             patch('app.render_sidebar') as mock_render:
+             patch('app.render_sidebar') as mock_render, \
+             patch('app.render_prompt_selector') as mock_prompt_selector:
+            
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             
             main()
             
@@ -114,7 +120,10 @@ class TestApp:
 
     def test_chat_interaction(self):
         with patch('app.LLMClient') as mock_client_cls, \
-             patch('app.render_sidebar'): # Mock sidebar to prevent auto-selection interfering
+             patch('app.render_sidebar'), \
+             patch('app.render_prompt_selector') as mock_prompt_selector: # Mock sidebar to prevent auto-selection interfering
+            
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             
             mock_client = mock_client_cls.return_value
             mock_client.chat.return_value = iter([
@@ -144,7 +153,10 @@ class TestApp:
 
     def test_chat_interaction_exception(self):
         with patch('app.LLMClient') as mock_client_cls, \
-             patch('app.render_sidebar'):
+             patch('app.render_sidebar'), \
+             patch('app.render_prompt_selector') as mock_prompt_selector:
+            
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             
             mock_client = mock_client_cls.return_value
             mock_client.chat.side_effect = Exception("Chat error")
@@ -158,7 +170,10 @@ class TestApp:
 
     def test_chat_no_model_selected(self):
         with patch('app.LLMClient') as mock_client_cls, \
-             patch('app.render_sidebar'):
+             patch('app.render_sidebar'), \
+             patch('app.render_prompt_selector') as mock_prompt_selector:
+            
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             
             mock_st.chat_input.return_value = "Hi"
             mock_st.session_state.selected_model = None
@@ -168,7 +183,9 @@ class TestApp:
             mock_st.error.assert_called_with("Please select a model in the sidebar.")
 
     def test_clear_history(self):
-        with patch('app.LLMClient'):
+        with patch('app.LLMClient'), \
+             patch('app.render_prompt_selector') as mock_prompt_selector:
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             mock_st.session_state.messages = [{"role": "user", "content": "hi"}]
             
             # Mock button click
@@ -180,7 +197,9 @@ class TestApp:
             mock_st.rerun.assert_called()
 
     def test_save_conversation(self):
-        with patch('app.LLMClient'):
+        with patch('app.LLMClient'), \
+             patch('app.render_prompt_selector') as mock_prompt_selector:
+            mock_prompt_selector.return_value = "You are a helpful assistant."
             mock_st.session_state.messages = [{"role": "user", "content": "hi"}]
             
             main()

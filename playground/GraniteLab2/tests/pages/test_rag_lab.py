@@ -41,6 +41,8 @@ class TestRAGLab:
         mock_st.chat_message.__enter__.return_value = None
         mock_st.empty = MagicMock()
         mock_st.empty.return_value = MagicMock()
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+        mock_st.radio.return_value = "Saved"
 
     def test_init_session_state(self):
         with patch('pages.rag_lab.RAGEngine') as mock_engine_cls:
@@ -51,7 +53,9 @@ class TestRAGLab:
             mock_engine_cls.assert_called_once()
 
     def test_main_no_models(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = []
@@ -64,7 +68,9 @@ class TestRAGLab:
             mock_st.warning.assert_called_with("No models found. Please pull a model using `ollama pull <model>`.")
 
     def test_main_with_models(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -83,7 +89,9 @@ class TestRAGLab:
             assert mock_st.session_state.selected_model == "model1"
 
     def test_main_with_preselected_model(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1", "model2"]
@@ -103,7 +111,9 @@ class TestRAGLab:
             assert kwargs['index'] == 1
 
     def test_file_upload(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -131,7 +141,9 @@ class TestRAGLab:
             assert mock_st.session_state.current_file == "test.pdf"
 
     def test_file_upload_already_processed(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -153,7 +165,9 @@ class TestRAGLab:
             mock_engine.ingest_file.assert_not_called()
 
     def test_chat_interaction(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -181,7 +195,9 @@ class TestRAGLab:
             assert mock_st.session_state.rag_messages[-1]["content"] == "Hi there"
 
     def test_history_rendering_with_context(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -201,7 +217,9 @@ class TestRAGLab:
             mock_st.expander.assert_called_with("View Retrieved Context (X-Ray)")
 
     def test_chat_interaction_no_context(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]
@@ -228,7 +246,9 @@ class TestRAGLab:
             assert messages[0]['content'] == "You are a helpful assistant."
 
     def test_chat_interaction_error(self):
-        with patch('pages.rag_lab.LLMClient') as mock_client_cls:
+        with patch('pages.rag_lab.LLMClient') as mock_client_cls, \
+             patch('pages.rag_lab.render_prompt_selector') as mock_render:
+            mock_render.return_value = "You are a helpful assistant."
             mock_client = mock_client_cls.return_value
             mock_client.check_connection.return_value = True
             mock_client.list_models.return_value = ["model1"]

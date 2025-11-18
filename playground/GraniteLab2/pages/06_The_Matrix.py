@@ -3,6 +3,7 @@ import time
 import json
 from modules.db_manager import DBManager
 from modules.llm_client import LLMClient
+from modules.prompt_ui import render_prompt_selector
 
 st.set_page_config(page_title="The Matrix", layout="wide")
 
@@ -22,12 +23,31 @@ with col1:
     selected_models = st.multiselect("Select Models", available_models)
 
     iterations = st.number_input("Iterations per Prompt", min_value=1, value=1)
+    
+    st.subheader("System Prompt")
+    system_prompt = render_prompt_selector(key="matrix_system_prompt")
 
 with col2:
-    all_prompts = db.get_all_prompts()
-    prompt_options = {f"{p['alias']} (ID: {p['id']})": p for p in all_prompts}
-    selected_prompt_names = st.multiselect("Select Prompts", list(prompt_options.keys()))
-    selected_prompts = [prompt_options[name] for name in selected_prompt_names]
+    st.subheader("User Prompts")
+    prompt_source = st.radio("Prompt Source", ["Library", "Manual Input"], horizontal=True)
+    
+    selected_prompts = []
+    
+    if prompt_source == "Library":
+        all_prompts = db.get_all_prompts()
+        prompt_options = {f"{p['alias']} (ID: {p['id']})": p for p in all_prompts}
+        selected_prompt_names = st.multiselect("Select Prompts", list(prompt_options.keys()))
+        selected_prompts = [prompt_options[name] for name in selected_prompt_names]
+    else:
+        manual_input = st.text_area("Enter Prompts (one per line)", height=200)
+        if manual_input:
+            lines = [line.strip() for line in manual_input.split('\n') if line.strip()]
+            for i, line in enumerate(lines):
+                selected_prompts.append({
+                    "alias": f"Manual Prompt #{i+1}",
+                    "content": line,
+                    "id": f"manual_{i}"
+                })
 
 experiment_name = st.text_input("Experiment Name", value=f"Run {time.strftime('%Y-%m-%d %H:%M')}")
 
@@ -42,7 +62,8 @@ if st.button("Start Matrix Run", type="primary"):
         config = {
             "models": selected_models,
             "prompts": [p['alias'] for p in selected_prompts],
-            "iterations": iterations
+            "iterations": iterations,
+            "system_prompt": system_prompt
         }
         experiment_id = db.create_experiment(experiment_name, "matrix", config)
         st.success(f"Experiment '{experiment_name}' initialized (ID: {experiment_id})")
@@ -70,6 +91,8 @@ if st.button("Start Matrix Run", type="primary"):
                     try:
                         # We use chat for consistency, assuming prompts are user messages
                         messages = [{"role": "user", "content": prompt_data['content']}]
+                        if system_prompt:
+                            messages.insert(0, {"role": "system", "content": system_prompt})
                         
                         # Stream response to calculate metrics
                         stream = llm.chat(model=model, messages=messages, stream=True)

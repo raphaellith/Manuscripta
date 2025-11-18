@@ -3,6 +3,8 @@ import time
 import json
 from modules.llm_client import LLMClient
 from modules.ui_utils import init_session_state, render_sidebar
+from modules.style_manager import load_custom_css
+from modules.prompt_ui import render_prompt_selector
 
 def init_chat_state():
     if "messages" not in st.session_state:
@@ -12,6 +14,7 @@ def init_chat_state():
 
 def main():
     st.set_page_config(page_title="GraniteLab", layout="wide")
+    load_custom_css()
     init_session_state()
     init_chat_state()
     
@@ -22,6 +25,11 @@ def main():
     with st.sidebar:
         st.divider()
         st.header("🧪 Lab Settings")
+        
+        # System Prompt Selector
+        system_prompt = render_prompt_selector(key="chat_system_prompt")
+        st.divider()
+        
         st.session_state.json_mode = st.toggle("JSON Mode", value=st.session_state.json_mode, help="Enforce JSON output format.")
         
         if st.button("Clear History"):
@@ -69,6 +77,11 @@ def main():
             # Prepare messages
             # If JSON mode is on, we might want to append a system instruction if not present
             messages_payload = [m for m in st.session_state.messages]
+            
+            # Prepend System Prompt
+            if system_prompt:
+                messages_payload.insert(0, {"role": "system", "content": system_prompt})
+            
             if st.session_state.json_mode:
                  # Ensure the user knows JSON is expected, or rely on the 'format' param
                  pass
@@ -113,7 +126,11 @@ def main():
                         
                         if eval_duration > 0:
                             tps = eval_count / (eval_duration / 1e9)
-                            st.caption(f"⏱️ TTFT: {ttft*1000:.2f}ms | ⚡ TPS: {tps:.2f} | 📏 Tokens: {eval_count}")
+                            # st.caption(f"⏱️ TTFT: {ttft*1000:.2f}ms | ⚡ TPS: {tps:.2f} | 📏 Tokens: {eval_count}")
+                            m1, m2, m3 = st.columns(3)
+                            m1.metric("TTFT (ms)", f"{ttft*1000:.2f}")
+                            m2.metric("TPS", f"{tps:.2f}")
+                            m3.metric("Tokens", f"{eval_count}")
 
                 message_placeholder.markdown(full_response)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})

@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 from modules.llm_client import LLMClient
+from modules.prompt_ui import render_prompt_selector
 
 def main():
     st.set_page_config(page_title="The Arena", layout="wide")
@@ -13,6 +14,10 @@ def main():
     if not client.check_connection():
         st.error("🔴 Ollama not connected. Is it running?")
         return
+
+    with st.sidebar:
+        st.header("Settings")
+        system_prompt = render_prompt_selector(key="arena_system_prompt")
 
     models = client.list_models()
     if not models:
@@ -56,9 +61,13 @@ def main():
                 # We use stream=True to show progress, though for side-by-side 
                 # strictly sequential might be better if we want to measure pure generation time without UI overhead
                 # But streaming is better UX.
+                messages_a = [{'role': 'user', 'content': prompt}]
+                if system_prompt:
+                    messages_a.insert(0, {'role': 'system', 'content': system_prompt})
+
                 stream_a = client.chat(
                     model=model_a,
-                    messages=[{'role': 'user', 'content': prompt}],
+                    messages=messages_a,
                     stream=True
                 )
                 
@@ -85,9 +94,13 @@ def main():
             placeholder_b = st.empty()
             
             try:
+                messages_b = [{'role': 'user', 'content': prompt}]
+                if system_prompt:
+                    messages_b.insert(0, {'role': 'system', 'content': system_prompt})
+
                 stream_b = client.chat(
                     model=model_b,
-                    messages=[{'role': 'user', 'content': prompt}],
+                    messages=messages_b,
                     stream=True
                 )
                 

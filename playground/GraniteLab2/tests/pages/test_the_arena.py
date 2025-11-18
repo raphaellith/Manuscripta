@@ -19,6 +19,8 @@ class TestTheArena(unittest.TestCase):
         # Patch LLMClient
         self.llm_patcher = patch('modules.llm_client.LLMClient', return_value=self.mock_llm_client)
         self.mock_llm_class = self.llm_patcher.start()
+        
+        self.mock_st.tabs.return_value = [MagicMock(), MagicMock()]
 
     def tearDown(self):
         self.st_patcher.stop()
@@ -34,7 +36,9 @@ class TestTheArena(unittest.TestCase):
         the_arena = importlib.util.module_from_spec(spec)
         
         # We need to make sure 'modules' is available to the imported module
-        with patch.dict('sys.modules', {'streamlit': self.mock_st}):
+        with patch.dict('sys.modules', {'streamlit': self.mock_st}), \
+             patch('modules.prompt_ui.render_prompt_selector') as mock_render:
+             mock_render.return_value = "You are a helpful assistant."
              spec.loader.exec_module(the_arena)
              
              # Test: No connection

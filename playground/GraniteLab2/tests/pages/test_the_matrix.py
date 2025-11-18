@@ -15,6 +15,8 @@ class TestTheMatrix(unittest.TestCase):
         
         # Configure columns to always return 2 items to avoid ValueError
         self.mock_st.columns.return_value = [MagicMock(), MagicMock()]
+        self.mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+        self.mock_st.radio.return_value = "Library"
         
     def tearDown(self):
         self.st_patcher.stop()
@@ -22,7 +24,10 @@ class TestTheMatrix(unittest.TestCase):
     def test_page_render(self):
         """Test that the page renders the basic UI elements."""
         with patch('modules.db_manager.DBManager') as MockDB, \
-             patch('modules.llm_client.LLMClient') as MockLLM:
+             patch('modules.llm_client.LLMClient') as MockLLM, \
+             patch('modules.prompt_ui.render_prompt_selector') as mock_render:
+            
+            mock_render.return_value = "You are a helpful assistant."
             
             # Setup mocks
             mock_db = MockDB.return_value
@@ -46,7 +51,10 @@ class TestTheMatrix(unittest.TestCase):
     def test_execution_logic(self):
         """Test the execution logic when button is clicked."""
         with patch('modules.db_manager.DBManager') as MockDB, \
-             patch('modules.llm_client.LLMClient') as MockLLM:
+             patch('modules.llm_client.LLMClient') as MockLLM, \
+             patch('modules.prompt_ui.render_prompt_selector') as mock_render:
+            
+            mock_render.return_value = "You are a helpful assistant."
             
             # Setup mocks
             mock_db = MockDB.return_value
@@ -91,7 +99,10 @@ class TestTheMatrix(unittest.TestCase):
     def test_execution_error_handling(self):
         """Test that errors during execution are handled gracefully."""
         with patch('modules.db_manager.DBManager') as MockDB, \
-             patch('modules.llm_client.LLMClient') as MockLLM:
+             patch('modules.llm_client.LLMClient') as MockLLM, \
+             patch('modules.prompt_ui.render_prompt_selector') as mock_render:
+            
+            mock_render.return_value = "You are a helpful assistant."
             
             # Setup mocks
             mock_db = MockDB.return_value

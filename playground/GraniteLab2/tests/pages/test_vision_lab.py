@@ -26,7 +26,10 @@ def test_vision_lab_render_no_upload():
     with patch.object(vision_lab, 'st') as mock_st, \
          patch.object(vision_lab, 'LLMClient') as mock_client_cls, \
          patch.object(vision_lab, 'render_sidebar') as mock_render_sidebar, \
-         patch.object(vision_lab, 'init_session_state') as mock_init_session_state:
+         patch.object(vision_lab, 'init_session_state') as mock_init_session_state, \
+         patch.object(vision_lab, 'render_prompt_selector') as mock_render:
+        
+        mock_render.return_value = "You are a helpful assistant."
         
         # Mock session state
         mock_st.session_state = MockSessionState({
@@ -37,25 +40,32 @@ def test_vision_lab_render_no_upload():
             'vision_prompt': ''
         })
         
-        # Mock file uploader to return None
-        mock_st.file_uploader.return_value = None
-        
-        # Mock columns
-        mock_col1 = MagicMock()
-        mock_col2 = MagicMock()
-        mock_st.columns.return_value = [mock_col1, mock_col2]
-        
-        # Context managers for columns
-        mock_col1.__enter__.return_value = mock_col1
-        mock_col1.__exit__.return_value = None
-        mock_col2.__enter__.return_value = mock_col2
-        mock_col2.__exit__.return_value = None
-        
-        vision_lab.main()
-        
-        mock_st.set_page_config.assert_called_once()
-        mock_st.title.assert_called_once_with("👁️ Vision Lab")
-        mock_st.info.assert_called_once_with("Please upload an image to start.")
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+    
+        # We also need to mock modules.llm_client.LLMClient
+        with patch('modules.llm_client.LLMClient') as mock_client_cls:
+            # Mock file uploader to return None
+            mock_st.file_uploader.return_value = None
+            
+            # Mock tabs
+            mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+    
+            # Mock columns
+            mock_col1 = MagicMock()
+            mock_col2 = MagicMock()
+            mock_st.columns.return_value = [mock_col1, mock_col2]
+            
+            # Context managers for columns
+            mock_col1.__enter__.return_value = mock_col1
+            mock_col1.__exit__.return_value = None
+            mock_col2.__enter__.return_value = mock_col2
+            mock_col2.__exit__.return_value = None
+            
+            vision_lab.main()
+            
+            mock_st.set_page_config.assert_called_once()
+            mock_st.title.assert_called_once_with("👁️ Vision Lab")
+            mock_st.info.assert_called_once_with("Please upload an image to start.")
 
 def test_vision_lab_with_image_and_generate():
     vision_lab = import_vision_lab()
@@ -65,7 +75,10 @@ def test_vision_lab_with_image_and_generate():
          patch.object(vision_lab, 'render_sidebar') as mock_render_sidebar, \
          patch.object(vision_lab, 'init_session_state') as mock_init_session_state, \
          patch.object(vision_lab, 'Image') as mock_image_cls, \
-         patch.object(vision_lab, 'io') as mock_io:
+         patch.object(vision_lab, 'io') as mock_io, \
+         patch.object(vision_lab, 'render_prompt_selector') as mock_render:
+        
+        mock_render.return_value = "You are a helpful assistant."
         
         # Mock session state
         mock_st.session_state = MockSessionState({
@@ -75,6 +88,9 @@ def test_vision_lab_with_image_and_generate():
             'context_window': 4096,
             'vision_prompt': ''
         })
+        
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+        mock_st.radio.return_value = "Saved"
         
         # Mock file uploader
         mock_file = MagicMock()
@@ -89,6 +105,8 @@ def test_vision_lab_with_image_and_generate():
         mock_bytes_io = MagicMock()
         mock_bytes_io.getvalue.return_value = b'fake_image_bytes'
         mock_io.BytesIO.return_value = mock_bytes_io
+        
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
         
         # Mock columns
         mock_col1 = MagicMock()
@@ -145,7 +163,10 @@ def test_vision_lab_quick_prompts():
          patch.object(vision_lab, 'render_sidebar') as mock_render_sidebar, \
          patch.object(vision_lab, 'init_session_state') as mock_init_session_state, \
          patch.object(vision_lab, 'Image') as mock_image_cls, \
-         patch.object(vision_lab, 'io') as mock_io:
+         patch.object(vision_lab, 'io') as mock_io, \
+         patch.object(vision_lab, 'render_prompt_selector') as mock_render:
+        
+        mock_render.return_value = "You are a helpful assistant."
         
         # Mock session state
         mock_st.session_state = MockSessionState({
@@ -158,6 +179,9 @@ def test_vision_lab_quick_prompts():
         
         # Mock Image.open
         mock_image_cls.open.return_value = MagicMock()
+        
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+        mock_st.radio.return_value = "Saved"
         
         # Mock columns
         mock_col1 = MagicMock()
@@ -194,11 +218,17 @@ def test_vision_lab_validation_and_error():
          patch.object(vision_lab, 'render_sidebar') as mock_render_sidebar, \
          patch.object(vision_lab, 'init_session_state') as mock_init_session_state, \
          patch.object(vision_lab, 'Image') as mock_image_cls, \
-         patch.object(vision_lab, 'io') as mock_io:
+         patch.object(vision_lab, 'io') as mock_io, \
+         patch.object(vision_lab, 'render_prompt_selector') as mock_render:
+        
+        mock_render.return_value = "You are a helpful assistant."
         
         # Mock file uploader
         mock_st.file_uploader.return_value = MagicMock()
         mock_image_cls.open.return_value = MagicMock()
+        
+        mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+        mock_st.radio.return_value = "Saved"
         
         # Mock columns
         mock_col1 = MagicMock()
@@ -285,11 +315,17 @@ def test_vision_lab_as_script():
         'vision_prompt': ''
     })
     
+    mock_st.tabs.return_value = [MagicMock(), MagicMock()]
+    mock_st.radio.return_value = "Saved"
+    
     # We also need to mock modules.llm_client.LLMClient
     with patch('modules.llm_client.LLMClient') as mock_client_cls, \
          patch('modules.ui_utils.render_sidebar'), \
          patch('modules.ui_utils.init_session_state'), \
-         patch('PIL.Image.open') as mock_image_open:
+         patch('PIL.Image.open') as mock_image_open, \
+         patch('modules.prompt_ui.render_prompt_selector') as mock_render:
+         
+         mock_render.return_value = "You are a helpful assistant."
          
          # Mock columns
          mock_col = MagicMock()

@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from modules.llm_client import LLMClient
 from modules.rag_engine import RAGEngine
+from modules.prompt_ui import render_prompt_selector
 
 st.set_page_config(page_title="RAG Lab", layout="wide")
 
@@ -42,6 +43,10 @@ def main():
         else:
             st.error("🔴 Ollama not connected. Is it running?")
             
+        st.divider()
+        st.subheader("System Prompt")
+        base_system_prompt = render_prompt_selector(key="rag_system_prompt")
+
         st.divider()
         st.subheader("Hyperparameters")
         temperature = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
@@ -94,9 +99,9 @@ def main():
                 # Construct Prompt with Context
                 if retrieved_docs:
                     context_text = "\n\n".join([doc.page_content for doc in retrieved_docs])
-                    system_prompt = f"You are a helpful assistant. Use the following context to answer the user's question.\n\nContext:\n{context_text}"
+                    system_prompt = f"{base_system_prompt}\n\nUse the following context to answer the user's question.\n\nContext:\n{context_text}"
                 else:
-                    system_prompt = "You are a helpful assistant."
+                    system_prompt = base_system_prompt
                     context_text = "No context retrieved."
                 
                 messages = [

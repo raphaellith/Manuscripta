@@ -1,6 +1,7 @@
 import streamlit as st
 from modules.llm_client import LLMClient
 from modules.ui_utils import init_session_state, render_sidebar
+from modules.prompt_ui import render_prompt_selector
 from PIL import Image
 import io
 
@@ -11,6 +12,11 @@ def main():
     client = LLMClient()
     render_sidebar(client)
     
+    with st.sidebar:
+        st.divider()
+        st.header("System Prompt")
+        system_prompt = render_prompt_selector(key="vision_system_prompt")
+
     st.title("👁️ Vision Lab")
     st.markdown("Experiment with image-to-text capabilities (OCR, Description, Extraction).")
 
@@ -72,13 +78,17 @@ def main():
                             
                             # Use generate for vision tasks as per spec
                             # Note: ollama.generate takes images as list of bytes
-                            for chunk in client.generate(
-                                model=st.session_state.selected_model,
-                                prompt=prompt,
-                                images=[image_bytes],
-                                options=options,
-                                stream=True
-                            ):
+                            kwargs = {
+                                "model": st.session_state.selected_model,
+                                "prompt": prompt,
+                                "images": [image_bytes],
+                                "options": options,
+                                "stream": True
+                            }
+                            if system_prompt:
+                                kwargs["system"] = system_prompt
+
+                            for chunk in client.generate(**kwargs):
                                 if 'response' in chunk:
                                     full_response += chunk['response']
                                     response_container.markdown(full_response)

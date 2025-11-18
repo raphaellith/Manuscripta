@@ -67,3 +67,22 @@ def test_add_result(db_manager):
     assert row['duration_ms'] == 100.0
     assert row['tps'] == 10.0
     assert row['ttft_ms'] == 50.0
+
+def test_create_experiment_with_system_prompt(db_manager):
+    config = {
+        "models": ["model1"], 
+        "prompts": ["prompt1"], 
+        "iterations": 1,
+        "system_prompt": "You are a robot."
+    }
+    exp_id = db_manager.create_experiment("System Prompt Experiment", "matrix", config)
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM experiments WHERE id = ?", (exp_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    saved_config = json.loads(row['config'])
+    assert saved_config['system_prompt'] == "You are a robot."
