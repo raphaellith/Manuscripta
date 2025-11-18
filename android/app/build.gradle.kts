@@ -77,9 +77,9 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.arch.core.testing)
-    testImplementation("androidx.test:core:1.7.0")
-    testImplementation("com.google.dagger:hilt-android-testing:2.52")
-    kspTest("com.google.dagger:hilt-android-compiler:2.52")
+    testImplementation(libs.androidx.core)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.android.compiler)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
