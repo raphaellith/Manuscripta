@@ -11,6 +11,7 @@ This directory contains configuration files for JaCoCo code coverage tool.
   - Hilt generated files (_Factory, _MembersInjector, etc.)
   - Dagger modules and components
   - Application class (ManuscriptaApplication)
+  - Database (ManuscriptaDatabase)
   - Test files
 
 ## Running Coverage Reports

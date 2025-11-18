@@ -122,8 +122,11 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         include("**/com/manuscripta/student/**")
 
         // BLACKLIST: Exclude generated noise that ends up INSIDE your package
-        exclude(
-            "**/R.class",
+        exclude("**/R.class",
+            "**/ManuscriptaApplication.class",
+            "**/ManuscriptaApplication$*.class",
+            "**/ManuscriptaDatabase.class",
+            "**/ManuscriptaDatabase$*.class",
             "**/R$*.class",
             "**/BuildConfig.*",
             "**/Manifest*.*",
@@ -162,6 +165,10 @@ tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
         include("**/com/manuscripta/student/**")
         exclude(
             "**/R.class",
+            "**/ManuscriptaApplication.class",
+            "**/ManuscriptaApplication$*.class",
+            "**/ManuscriptaDatabase.class",
+            "**/ManuscriptaDatabase$*.class",
             "**/R$*.class",
             "**/BuildConfig.*",
             "**/Manifest*.*",
