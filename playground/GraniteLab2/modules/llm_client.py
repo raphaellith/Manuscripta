@@ -35,3 +35,12 @@ class LLMClient:
         except Exception as e:
             # In a real app, we might want to log this properly
             raise e
+
+    def generate(self, model: str, prompt: str, images: List[bytes] = None, options: Dict[str, Any] = None, stream: bool = True, **kwargs):
+        """
+        Sends a generate request to the Ollama model (useful for vision tasks).
+        """
+        try:
+            return ollama.generate(model=model, prompt=prompt, images=images, options=options, stream=stream, **kwargs)
+        except Exception as e:
+            raise e

@@ -7,7 +7,11 @@ import os
 mock_st = MagicMock()
 sys.modules["streamlit"] = mock_st
 
-from app import init_session_state, render_sidebar, main
+# Add project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from modules.ui_utils import init_session_state, render_sidebar
+from app import main
 from modules.llm_client import LLMClient
 
 class MockSessionState(dict):
@@ -149,13 +153,13 @@ class TestApp:
         
         # Reset mocks to ensure we capture calls from this run
         mock_st.reset_mock()
+        # Ensure session state is set
+        mock_st.session_state = MockSessionState()
         
-        # We need to mock LLMClient because main() instantiates it
-        # Note: app.py imports LLMClient. We need to patch it where it is used.
-        # Since runpy executes the file, it imports LLMClient again in its namespace.
-        # But sys.modules['modules.llm_client'] is already loaded or we can patch it.
-        
-        with patch('modules.llm_client.LLMClient') as mock_client_cls:
+        with patch('modules.llm_client.LLMClient') as mock_client_cls, \
+             patch('modules.ui_utils.render_sidebar'), \
+             patch('modules.ui_utils.init_session_state'):
+             
              runpy.run_path(file_path, run_name='__main__')
              
              # Verify main ran

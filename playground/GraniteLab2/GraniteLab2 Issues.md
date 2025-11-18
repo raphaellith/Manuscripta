@@ -102,13 +102,13 @@ Implement the Retrieval Augmented Generation experiment page. The key differenti
 An experiment page for image-to-text capabilities, focusing on handwriting and transcription (Granite vision capabilities).
 
 **Tasks:**
-- [ ] Image Uploader (Support PNG/JPG).
-- [ ] Render uploaded image in the left column, Chat/Output in the right.
-- [ ] **Preset Prompts:** Add buttons for quick-testing:
-    - "Transcribe this handwriting"
-    - "Describe this image in JSON"
-    - "Extract data table"
-- [ ] Pass image bytes correctly to `ollama.generate(images=[bytes])`.
+- [x] Image Uploader (Support PNG/JPG).
+- [x] Render uploaded image in the left column, Chat/Output in the right.
+- [x] **Preset Prompts:** Add buttons for quick-testing:
+    - [x] "Transcribe this handwriting"
+    - [x] "Describe this image in JSON"
+    - [x] "Extract data table"
+- [x] Pass image bytes correctly to `ollama.generate(images=[bytes])`.
 
 ---
 
