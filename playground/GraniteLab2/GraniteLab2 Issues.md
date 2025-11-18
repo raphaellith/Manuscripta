@@ -83,15 +83,15 @@ A split-view interface to compare two models side-by-side with the same prompt.
 Implement the Retrieval Augmented Generation experiment page. The key differentiator here is the "X-Ray" transparency to debug retrieval quality.
 
 **Tasks:**
-- [ ] **Backend:**
-    - [ ] Integrate `ChromaDB` (ephemeral or persistent).
-    - [ ] Integrate `LangChain` + `PyPDF` for ingestion.
-- [ ] **UI:**
-    - [ ] File Uploader (PDF/TXT).
-    - [ ] Tuning Sliders: `Chunk Size`, `Overlap`, `Top K` (how many chunks to retrieve).
-- [ ] **X-Ray Feature:**
-    - [ ] After the model answers, render an `st.expander("View Retrieved Context")`.
-    - [ ] Inside, show the exact raw text chunks that were sent to the LLM.
+- [x] **Backend:**
+    - [x] Integrate `ChromaDB` (ephemeral or persistent).
+    - [x] Integrate `LangChain` + `PyPDF` for ingestion.
+- [x] **UI:**
+    - [x] File Uploader (PDF/TXT).
+    - [x] Tuning Sliders: `Chunk Size`, `Overlap`, `Top K` (how many chunks to retrieve).
+- [x] **X-Ray Feature:**
+    - [x] After the model answers, render an `st.expander("View Retrieved Context")`.
+    - [x] Inside, show the exact raw text chunks that were sent to the LLM.
 
 ---
 
