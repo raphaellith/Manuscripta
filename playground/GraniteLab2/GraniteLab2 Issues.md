@@ -1,3 +1,12 @@
+**Preface**
+
+This issues were used to direct a coding agent in the build out of this experimental sub application. It was built using Gemini 3 Pro (Preview) in copilot agent mode. 
+
+For each issue, Gemini was prompted with:
+
+"complete issue 8 from GraniteLabs2 Issues.md. Make sure to also read GraniteLabs2 Sepcification.md. Include unit tests in a parallel test directory where relevent, and make sure all the code you write passes all the unit tests with 100% coverage. Use python -m pytest --cov=. --cov-report=term-missing tests/ in the GraniteLab2 conda env to check coverage otherwise it freezes up. Make a commit when you're done and confident that it's all working as intended. Commit all changes to the current branch. Update the checklist on the issue as you go. The commits in your issues markdown file are LOCAL only. Do not include # in the commit because it will mess with real issues in the repo."
+
+Until all issues were complete. 
 
 ---
 
