@@ -152,7 +152,8 @@ class RAGExperiment:
         self,
         query: str,
         model_engine,
-        k: int = 3
+        k: int = 3,
+        system_prompt: str = "You are a helpful AI assistant. Answer questions based on the provided context."
     ) -> Tuple[str, List[Tuple[Document, float]]]:
         """
         Generate an answer using RAG.
@@ -161,6 +162,7 @@ class RAGExperiment:
             query: User query
             model_engine: ModelEngine instance
             k: Number of documents to retrieve
+            system_prompt: System prompt to guide the model's behavior
             
         Returns:
             Tuple of (answer, retrieved_documents_with_scores)
@@ -187,8 +189,8 @@ Question: {query}
 
 Answer:"""
         
-        # Generate answer
-        answer = model_engine.invoke(prompt)
+        # Generate answer with system prompt
+        answer = model_engine.invoke(prompt, system_prompt=system_prompt)
         
         return answer, retrieved_docs
     

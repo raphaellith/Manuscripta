@@ -347,6 +347,9 @@ chroma_db/
 playground/granite_lab/.streamlit/secrets.toml
 playground/granite_lab/**/__pycache__/
 playground/granite_lab/**/*.py[cod]
+playground/granite_lab/resources/system_prompts/*.txt
+playground/granite_lab/resources/system_prompts/*.json
+!playground/granite_lab/resources/system_prompts/README.md
 
 # Documentation builds
 docs/_build/
