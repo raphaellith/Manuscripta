@@ -25,3 +25,13 @@ class LLMClient:
             return []
         except Exception:
             return []
+
+    def chat(self, model: str, messages: List[Dict[str, str]], options: Dict[str, Any] = None, stream: bool = True, **kwargs):
+        """
+        Sends a chat request to the Ollama model.
+        """
+        try:
+            return ollama.chat(model=model, messages=messages, options=options, stream=stream, **kwargs)
+        except Exception as e:
+            # In a real app, we might want to log this properly
+            raise e

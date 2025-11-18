@@ -40,3 +40,22 @@ class TestLLMClient:
         with patch('ollama.list') as mock_list:
             mock_list.side_effect = Exception("Error")
             assert client.list_models() == []
+
+    def test_chat_success(self, client):
+        with patch('ollama.chat') as mock_chat:
+            mock_chat.return_value = iter([{'message': {'content': 'Hello'}}])
+            response = client.chat(model='test-model', messages=[{'role': 'user', 'content': 'Hi'}])
+            assert next(response) == {'message': {'content': 'Hello'}}
+            mock_chat.assert_called_once_with(
+                model='test-model',
+                messages=[{'role': 'user', 'content': 'Hi'}],
+                options=None,
+                stream=True
+            )
+
+    def test_chat_failure(self, client):
+        with patch('ollama.chat') as mock_chat:
+            mock_chat.side_effect = Exception("Chat error")
+            with pytest.raises(Exception) as excinfo:
+                client.chat(model='test-model', messages=[])
+            assert "Chat error" in str(excinfo.value)

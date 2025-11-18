@@ -31,13 +31,13 @@ Initialise the project repository, file structure, and the "one-click" launcher 
 Implement the SQLite database and the "Prompt Library" page. This is the foundation for the "Matrix" experiments later. We need to be able to Create, Read, Update, and Delete (CRUD) prompts and system personas.
 
 **Tasks:**
-- [ ] **Database:**
-    - [ ] Create `schema.sql` (Tables: `prompts`, `system_prompts`, `experiments`, `results`).
-    - [ ] Create `db_manager.py` to handle init and connections.
+- [x] **Database:**
+    - [x] Create `schema.sql` (Tables: `prompts`, `system_prompts`, `experiments`, `results`).
+    - [x] Create `db_manager.py` to handle init and connections.
 - [ ] **UI (Page: Prompt Library):**
-    - [ ] Implement `st.data_editor` to view/edit existing prompts.
-    - [ ] Create a Form to add new prompts with fields: `Alias`, `Content`, `Tags`.
-    - [ ] Implement a "System Prompt Manager" tab for personas (e.g., "Strict Coder").
+    - [x] Implement `st.data_editor` to view/edit existing prompts.
+    - [x] Create a Form to add new prompts with fields: `Alias`, `Content`, `Tags`.
+    - [x] Implement a "System Prompt Manager" tab for personas (e.g., "Strict Coder").
 
 **Acceptance Criteria:**
 - I can add a prompt named "Python Sort" with tag `#coding`.
@@ -52,12 +52,12 @@ Implement the SQLite database and the "Prompt Library" page. This is the foundat
 Build the standard Chat interface. It must include specific features for testing IBM Granite (JSON enforcement, Code UI).
 
 **Tasks:**
-- [ ] Implement standard chat loop (User input -> Stream output -> History).
-- [ ] **Granite Features:**
-    - [ ] "JSON Mode" Toggle: Appends strict JSON instructions/format to the API call.
-    - [ ] Code Syntax Highlighting: Ensure Python/JS blocks render correctly.
-- [ ] **Metrics:** Display TPS (Tokens per second) and TTFT (Time to first token) at the top of the response.
-- [ ] Add a "Save Conversation" button (downloads JSON).
+- [x] Implement standard chat loop (User input -> Stream output -> History).
+- [x] **Granite Features:**
+    - [x] "JSON Mode" Toggle: Appends strict JSON instructions/format to the API call.
+    - [x] Code Syntax Highlighting: Ensure Python/JS blocks render correctly.
+- [x] **Metrics:** Display TPS (Tokens per second) and TTFT (Time to first token) at the top of the response.
+- [x] Add a "Save Conversation" button (downloads JSON).
 
 ---
 
