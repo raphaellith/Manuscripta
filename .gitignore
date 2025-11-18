@@ -323,6 +323,30 @@ test-output/
 *.pth
 *.h5
 *.pb
+*.gguf
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv/
+.python-version
+
+# Streamlit cache
+.streamlit/
+
+# ChromaDB data
+chroma_db/
+*.chroma
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Granite Lab (AI Playground)
+playground/granite_lab/.streamlit/secrets.toml
+playground/granite_lab/**/__pycache__/
+playground/granite_lab/**/*.py[cod]
 
 # Documentation builds
 docs/_build/
