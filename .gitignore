@@ -5,6 +5,7 @@
 # Project-Specific
 #########################
 /local/
+/android/local/
 
 #########################
 # Android
