@@ -1,24 +1,27 @@
 import ollama
+from ollama import Client
+import os
 from typing import List, Dict, Any
 
 class LLMClient:
     def __init__(self, host: str = None):
-        # ollama python client uses OLLAMA_HOST env var or default localhost:11434
-        # We can allow passing a host if needed, but usually it's env var based.
-        pass
+        # Default to 127.0.0.1 which is often more reliable than localhost
+        self.host = host or os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434')
+        self.client = Client(host=self.host)
 
     def check_connection(self) -> bool:
         """Checks if the Ollama server is reachable."""
         try:
-            ollama.list()
+            self.client.list()
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Connection check failed for {self.host}: {e}")
             return False
 
     def list_models(self) -> List[str]:
         """Lists available models from Ollama."""
         try:
-            models_response = ollama.list()
+            models_response = self.client.list()
             # The response structure from ollama.list() is usually {'models': [{'name': '...', ...}]}
             if 'models' in models_response:
                 return [m['name'] for m in models_response['models']]
@@ -31,7 +34,7 @@ class LLMClient:
         Sends a chat request to the Ollama model.
         """
         try:
-            return ollama.chat(model=model, messages=messages, options=options, stream=stream, **kwargs)
+            return self.client.chat(model=model, messages=messages, options=options, stream=stream, **kwargs)
         except Exception as e:
             # In a real app, we might want to log this properly
             raise e
@@ -41,6 +44,6 @@ class LLMClient:
         Sends a generate request to the Ollama model (useful for vision tasks).
         """
         try:
-            return ollama.generate(model=model, prompt=prompt, images=images, options=options, stream=stream, **kwargs)
+            return self.client.generate(model=model, prompt=prompt, images=images, options=options, stream=stream, **kwargs)
         except Exception as e:
             raise e

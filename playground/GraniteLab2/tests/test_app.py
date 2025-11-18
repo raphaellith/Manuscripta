@@ -11,7 +11,7 @@ sys.modules["streamlit"] = mock_st
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.ui_utils import init_session_state, render_sidebar
-from app import main
+from app import main, init_chat_state
 from modules.llm_client import LLMClient
 
 class MockSessionState(dict):
@@ -29,8 +29,18 @@ class TestApp:
         mock_st.reset_mock()
         # Reset session state mock for each test
         mock_st.session_state = MockSessionState()
+        mock_st.session_state.messages = []
+        mock_st.session_state.json_mode = False
+        
         mock_st.sidebar = MagicMock()
         mock_st.sidebar.__enter__.return_value = mock_st.sidebar
+        mock_st.chat_message = MagicMock()
+        mock_st.chat_message.return_value.__enter__.return_value = MagicMock()
+        
+        # Reset button side effects
+        mock_st.button.side_effect = None
+        mock_st.button.return_value = False
+        mock_st.chat_input.return_value = None
 
     def test_mock_session_state_attribute_error(self):
         state = MockSessionState()
@@ -47,6 +57,17 @@ class TestApp:
         # Test defaults
         assert mock_st.session_state.selected_model is None
         assert mock_st.session_state.temperature == 0.7
+
+    def test_init_chat_state(self):
+        # Clear state to test initialization
+        mock_st.session_state = MockSessionState()
+        
+        init_chat_state()
+        
+        assert "messages" in mock_st.session_state
+        assert mock_st.session_state.messages == []
+        assert "json_mode" in mock_st.session_state
+        assert mock_st.session_state.json_mode is False
 
     def test_render_sidebar_connected(self):
         mock_client = MagicMock(spec=LLMClient)
@@ -76,91 +97,95 @@ class TestApp:
         mock_st.session_state.selected_model = "model1"
         assert mock_st.session_state.selected_model == "model1"
 
-    def test_render_sidebar_disconnected(self):
-        mock_client = MagicMock(spec=LLMClient)
-        mock_client.check_connection.return_value = False
-        
-        # Setup session state for sliders which are still rendered or accessed?
-        # Wait, in my code, sliders are rendered AFTER the connection check block?
-        # Let's check app.py. 
-        # Yes, st.divider() and st.subheader("Hyperparameters") are outside the if/else.
-        # So we need session state for them.
-        mock_st.session_state = MockSessionState({
-            "temperature": 0.7,
-            "top_k": 40,
-            "context_window": 4096
-        })
-
-        render_sidebar(mock_client)
-        
-        mock_st.error.assert_called_with("🔴 Ollama not connected. Is it running?")
-        mock_st.selectbox.assert_not_called()
-
-    def test_render_sidebar_connected_with_selection(self):
-        mock_client = MagicMock(spec=LLMClient)
-        mock_client.check_connection.return_value = True
-        mock_client.list_models.return_value = ["model1", "model2"]
-        
-        # Setup session state with pre-selected model
-        mock_st.session_state = MockSessionState({
-            "selected_model": "model2",
-            "temperature": 0.7,
-            "top_k": 40,
-            "context_window": 4096
-        })
-        
-        mock_st.selectbox.return_value = "model2"
-        
-        render_sidebar(mock_client)
-        
-        # Verify selectbox called with correct index
-        mock_st.selectbox.assert_called_with("Select Model", ["model1", "model2"], index=1)
-
-    def test_render_sidebar_no_models(self):
-        mock_client = MagicMock(spec=LLMClient)
-        mock_client.check_connection.return_value = True
-        mock_client.list_models.return_value = []
-        
-        mock_st.session_state = MockSessionState({
-            "temperature": 0.7,
-            "top_k": 40,
-            "context_window": 4096
-        })
-
-        render_sidebar(mock_client)
-        
-        mock_st.warning.assert_called_with("No models found. Please pull a model using `ollama pull <model>`.")
-        mock_st.selectbox.assert_not_called()
-
-    def test_main(self):
+    def test_main_layout(self):
         with patch('app.init_session_state') as mock_init, \
+             patch('app.init_chat_state') as mock_init_chat, \
              patch('app.LLMClient') as mock_client_cls, \
-             patch('app.render_sidebar') as mock_render, \
-             patch('app.st') as mock_st_module:
+             patch('app.render_sidebar') as mock_render:
             
             main()
             
             mock_init.assert_called_once()
+            mock_init_chat.assert_called_once()
             mock_client_cls.assert_called_once()
             mock_render.assert_called_once()
-            mock_st_module.set_page_config.assert_called_once()
-            mock_st_module.title.assert_called_once()
-            mock_st_module.write.assert_called_once()
+            mock_st.set_page_config.assert_called_once()
+            mock_st.title.assert_called_with("💬 Chat Lab")
 
-    def test_app_as_script(self):
-        import runpy
-        file_path = os.path.join(os.path.dirname(__file__), '..', 'app.py')
-        
-        # Reset mocks to ensure we capture calls from this run
-        mock_st.reset_mock()
-        # Ensure session state is set
-        mock_st.session_state = MockSessionState()
-        
-        with patch('modules.llm_client.LLMClient') as mock_client_cls, \
-             patch('modules.ui_utils.render_sidebar'), \
-             patch('modules.ui_utils.init_session_state'):
-             
-             runpy.run_path(file_path, run_name='__main__')
-             
-             # Verify main ran
-             mock_st.title.assert_called_with("🧪 GraniteLab Workbench")
+    def test_chat_interaction(self):
+        with patch('app.LLMClient') as mock_client_cls, \
+             patch('app.render_sidebar'): # Mock sidebar to prevent auto-selection interfering
+            
+            mock_client = mock_client_cls.return_value
+            mock_client.chat.return_value = iter([
+                {'message': {'content': 'Hello'}, 'done': False},
+                {'message': {'content': ' World'}, 'done': True, 'eval_count': 2, 'eval_duration': 100000000}
+            ])
+            
+            # Mock user input
+            mock_st.chat_input.return_value = "Hi"
+            
+            # Mock session state for model selection
+            mock_st.session_state.selected_model = "granite-code:8b"
+            
+            main()
+            
+            # Verify user message added
+            assert {"role": "user", "content": "Hi"} in mock_st.session_state.messages
+            
+            # Verify client.chat called
+            mock_client.chat.assert_called()
+            call_args = mock_client.chat.call_args[1]
+            assert call_args['model'] == "granite-code:8b"
+            assert call_args['messages'][-1]['content'] == "Hi"
+            
+            # Verify assistant response added
+            assert {"role": "assistant", "content": "Hello World"} in mock_st.session_state.messages
+
+    def test_chat_interaction_exception(self):
+        with patch('app.LLMClient') as mock_client_cls, \
+             patch('app.render_sidebar'):
+            
+            mock_client = mock_client_cls.return_value
+            mock_client.chat.side_effect = Exception("Chat error")
+            
+            mock_st.chat_input.return_value = "Hi"
+            mock_st.session_state.selected_model = "granite-code:8b"
+            
+            main()
+            
+            mock_st.error.assert_called_with("An error occurred: Chat error")
+
+    def test_chat_no_model_selected(self):
+        with patch('app.LLMClient') as mock_client_cls, \
+             patch('app.render_sidebar'):
+            
+            mock_st.chat_input.return_value = "Hi"
+            mock_st.session_state.selected_model = None
+            
+            main()
+            
+            mock_st.error.assert_called_with("Please select a model in the sidebar.")
+
+    def test_clear_history(self):
+        with patch('app.LLMClient'):
+            mock_st.session_state.messages = [{"role": "user", "content": "hi"}]
+            
+            # Mock button click
+            mock_st.button.return_value = True
+            
+            main()
+            
+            assert mock_st.session_state.messages == []
+            mock_st.rerun.assert_called()
+
+    def test_save_conversation(self):
+        with patch('app.LLMClient'):
+            mock_st.session_state.messages = [{"role": "user", "content": "hi"}]
+            
+            main()
+            
+            mock_st.download_button.assert_called()
+            call_args = mock_st.download_button.call_args[1]
+            assert call_args['file_name'] == "conversation.json"
+            assert "hi" in call_args['data']

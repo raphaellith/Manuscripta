@@ -16,36 +16,51 @@ def install_dependencies():
 def check_ollama():
     """Checks if Ollama is running, and starts it if not."""
     print("🔍 Checking Ollama connection...")
+    
+    # Use the LLMClient to check connection to ensure consistency
+    # We need to add the modules path to sys.path to import LLMClient
+    sys.path.append(os.path.dirname(__file__))
     try:
-        import ollama
-        ollama.list()
-        print("✅ Ollama is running.")
-        return True
+        from modules.llm_client import LLMClient
+        client = LLMClient()
+        if client.check_connection():
+            print("✅ Ollama is running.")
+            return True
     except ImportError:
-        print("⚠️ Ollama library not found (will be installed).")
-        return False
-    except Exception:
-        print("❌ Ollama is NOT running. Attempting to start it...")
+        print("⚠️ Could not import LLMClient. Checking manually...")
         try:
-            # Attempt to start Ollama in the background
-            subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("⏳ Waiting for Ollama to start...")
-            
-            # Wait up to 10 seconds for it to become responsive
-            for _ in range(10):
-                time.sleep(1)
-                try:
-                    ollama.list()
+            import ollama
+            ollama.list()
+            print("✅ Ollama is running.")
+            return True
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"⚠️ Connection check error: {e}")
+
+    print("❌ Ollama is NOT running. Attempting to start it...")
+    try:
+        # Attempt to start Ollama in the background
+        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("⏳ Waiting for Ollama to start...")
+        
+        # Wait up to 10 seconds for it to become responsive
+        for _ in range(10):
+            time.sleep(1)
+            try:
+                from modules.llm_client import LLMClient
+                client = LLMClient()
+                if client.check_connection():
                     print("✅ Ollama started successfully.")
                     return True
-                except Exception:
-                    pass
-            
-            print("❌ Failed to start Ollama automatically. Please run 'ollama serve' manually.")
-            return False
-        except FileNotFoundError:
-            print("❌ 'ollama' command not found. Please install Ollama from https://ollama.com/")
-            return False
+            except Exception:
+                pass
+        
+        print("❌ Failed to start Ollama automatically. Please run 'ollama serve' manually.")
+        return False
+    except FileNotFoundError:
+        print("❌ 'ollama' command not found. Please install Ollama from https://ollama.com/")
+        return False
 
 def run_streamlit():
     """Launches the Streamlit app."""

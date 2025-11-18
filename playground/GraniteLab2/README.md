@@ -34,6 +34,3 @@ This project was built using an AI-assisted development process. The `GraniteLab
 *   **Database:** SQLite (Prompts, Results)
 *   **Vector Store:** ChromaDB (RAG)
 
-## License
-
-[Insert License Here]
