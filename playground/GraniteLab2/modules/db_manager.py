@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from typing import List, Dict, Optional, Any
+import json
 
 class DBManager:
     def __init__(self, db_path: str = "db/workbench.db", schema_path: str = "db/schema.sql"):
@@ -134,6 +135,40 @@ class DBManager:
         try:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM system_prompts WHERE id = ?", (prompt_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    # --- Experiments ---
+
+    def create_experiment(self, name: str, experiment_type: str, config: Dict[str, Any]) -> int:
+        """Creates a new experiment record."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO experiments (name, experiment_type, config) VALUES (?, ?, ?)",
+                (name, experiment_type, json.dumps(config))
+            )
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    def add_result(self, experiment_id: int, model: str, prompt_content: str, output: str, 
+                   duration_ms: float, tps: float, ttft_ms: float):
+        """Adds a result record for an experiment."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO results 
+                (experiment_id, model, prompt_content, output, duration_ms, tps, ttft_ms) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (experiment_id, model, prompt_content, output, duration_ms, tps, ttft_ms)
+            )
             conn.commit()
         finally:
             conn.close()

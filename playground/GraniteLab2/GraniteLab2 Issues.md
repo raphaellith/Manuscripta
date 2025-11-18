@@ -119,17 +119,17 @@ An experiment page for image-to-text capabilities, focusing on handwriting and t
 The core "Workhorse" of the app. A system to define and execute large-scale validation runs (N Models × N Prompts × N Iterations).
 
 **Tasks:**
-- [ ] **Configuration Wizard:**
-    - [ ] Multi-select widget for Models.
-    - [ ] Multi-select widget for Prompts (filtered by Tags from Issue #2).
-    - [ ] Input for `Iterations` (Count).
-- [ ] **Execution Engine:**
-    - [ ] Create a loop that runs: `Models * Prompts * Iterations`.
-    - [ ] **Robustness:** Wrap inference in `try/except`. If Model A fails, log "ERROR" and continue to Model B. Do not crash.
-    - [ ] **Streaming Save:** Write result to SQLite `results` table *immediately* after each generation.
-- [ ] **UI Feedback:**
-    - [ ] Progress Bar (0% to 100%).
-    - [ ] "Console Log" window showing current status (e.g., "Processing Run 4/50: Granite-8b on Prompt #2").
+- [x] **Configuration Wizard:**
+    - [x] Multi-select widget for Models.
+    - [x] Multi-select widget for Prompts (filtered by Tags from Issue #2).
+    - [x] Input for `Iterations` (Count).
+- [x] **Execution Engine:**
+    - [x] Create a loop that runs: `Models * Prompts * Iterations`.
+    - [x] **Robustness:** Wrap inference in `try/except`. If Model A fails, log "ERROR" and continue to Model B. Do not crash.
+    - [x] **Streaming Save:** Write result to SQLite `results` table *immediately* after each generation.
+- [x] **UI Feedback:**
+    - [x] Progress Bar (0% to 100%).
+    - [x] "Console Log" window showing current status (e.g., "Processing Run 4/50: Granite-8b on Prompt #2").
 
 ---
 
