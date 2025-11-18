@@ -3,3 +3,4 @@ ollama
 pytest
 pytest-cov
 pytest-mock
+pandas

@@ -28,6 +28,11 @@ class TestApp:
         mock_st.sidebar = MagicMock()
         mock_st.sidebar.__enter__.return_value = mock_st.sidebar
 
+    def test_mock_session_state_attribute_error(self):
+        state = MockSessionState()
+        with pytest.raises(AttributeError, match="'MockSessionState' object has no attribute 'missing'"):
+            _ = state.missing
+
     def test_init_session_state(self):
         init_session_state()
         assert "selected_model" in mock_st.session_state

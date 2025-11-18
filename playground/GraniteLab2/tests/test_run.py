@@ -39,6 +39,7 @@ class TestRun:
             return original_import(name, *args, **kwargs)
         
         with patch('builtins.__import__', side_effect=mock_import):
+            import os # Trigger else branch
             assert check_ollama() is False
 
     def test_run_streamlit(self):
