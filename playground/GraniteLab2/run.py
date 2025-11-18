@@ -14,20 +14,38 @@ def install_dependencies():
         sys.exit(1)
 
 def check_ollama():
-    """Checks if Ollama is running."""
+    """Checks if Ollama is running, and starts it if not."""
     print("🔍 Checking Ollama connection...")
     try:
-        # We can try to import ollama here since dependencies should be installed
         import ollama
         ollama.list()
         print("✅ Ollama is running.")
         return True
     except ImportError:
         print("⚠️ Ollama library not found (will be installed).")
-        return False # Should be installed in next step if not present, but logic flow handles install first
-    except Exception:
-        print("❌ Ollama is NOT running. Please start Ollama app first.")
         return False
+    except Exception:
+        print("❌ Ollama is NOT running. Attempting to start it...")
+        try:
+            # Attempt to start Ollama in the background
+            subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("⏳ Waiting for Ollama to start...")
+            
+            # Wait up to 10 seconds for it to become responsive
+            for _ in range(10):
+                time.sleep(1)
+                try:
+                    ollama.list()
+                    print("✅ Ollama started successfully.")
+                    return True
+                except Exception:
+                    pass
+            
+            print("❌ Failed to start Ollama automatically. Please run 'ollama serve' manually.")
+            return False
+        except FileNotFoundError:
+            print("❌ 'ollama' command not found. Please install Ollama from https://ollama.com/")
+            return False
 
 def run_streamlit():
     """Launches the Streamlit app."""
