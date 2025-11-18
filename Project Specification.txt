@@ -191,6 +191,9 @@ Networking Protocol:
 Client-server relationship: the Android Tablets should act as the client and the Windows Laptop should act as the server.
 Communication should mainly be done by the HTTP protocol, since it is anticipated that most content would be transmitted as text. However, lower-level message transmission using TCP/UDP on certain control messages should be considered if a performance bottleneck is discovered.
 
+Data Consistency and Entity Identification:
+Entity IDs (for materials, lessons, units, questions, responses, sessions, etc.) must be persistent and consistent across both the Windows teacher application and Android student applications. When either client generates a new entity, it must assign a globally unique identifier (e.g., UUID) that remains constant across all services. This ensures data integrity and enables proper synchronization without conflicts. For example, if the Windows application creates a new material, it assigns the ID; if an Android client creates a response, it assigns that response's ID. All services must respect and preserve these IDs throughout the entity lifecycle.
+
 
 9. Schedule and Key Milestones
 The following table outlines the key deadlines and deliverables for the project.
