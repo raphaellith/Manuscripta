@@ -5,13 +5,6 @@
 # Project-Specific
 #########################
 /local/
-# NOTE: The above line will match any folder named 'local' anywhere in the project
-# (including android packages like com/manuscripta/student/data/local/). To keep
-# ignoring the top-level `local/` folder that stores local development files but
-# allow package directories named 'local' under `android/app/src/...`, use an
-# anchored pattern below.  Uncomment the following and remove the generic
-# 'local/' line if you prefer an anchored match instead:
-# /local/
 
 #########################
 # Android
