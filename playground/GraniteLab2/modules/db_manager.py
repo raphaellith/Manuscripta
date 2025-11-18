@@ -155,6 +155,17 @@ class DBManager:
         finally:
             conn.close()
 
+    def get_all_experiments(self) -> List[Dict[str, Any]]:
+        """Retrieves all experiments."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM experiments ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
     def add_result(self, experiment_id: int, model: str, prompt_content: str, output: str, 
                    duration_ms: float, tps: float, ttft_ms: float):
         """Adds a result record for an experiment."""
@@ -170,5 +181,16 @@ class DBManager:
                 (experiment_id, model, prompt_content, output, duration_ms, tps, ttft_ms)
             )
             conn.commit()
+        finally:
+            conn.close()
+
+    def get_results_by_experiment_id(self, experiment_id: int) -> List[Dict[str, Any]]:
+        """Retrieves all results for a specific experiment."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM results WHERE experiment_id = ?", (experiment_id,))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
         finally:
             conn.close()

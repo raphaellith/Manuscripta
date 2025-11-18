@@ -12,4 +12,5 @@ langchain-text-splitters
 langchain-chroma
 langchain-ollama
 Pillow
+plotly
 
