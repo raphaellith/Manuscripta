@@ -68,11 +68,11 @@ Build the standard Chat interface. It must include specific features for testing
 A split-view interface to compare two models side-by-side with the same prompt.
 
 **Tasks:**
-- [ ] Create a 2-column layout.
-- [ ] Add two separate Model Selectors in the main view (Model A vs Model B).
-- [ ] **Sync/Async Logic:** When the user sends a prompt, trigger generation for *both* models. (Note: Local inference might be sequential if GPU VRAM is limited; implement a queue or simple sequential execution first).
-- [ ] Display comparison metrics (Duration A vs Duration B).
-- [ ] Add a "Copy Prompt" button to easily re-run tests.
+- [x] Create a 2-column layout.
+- [x] Add two separate Model Selectors in the main view (Model A vs Model B).
+- [x] **Sync/Async Logic:** When the user sends a prompt, trigger generation for *both* models. (Note: Local inference might be sequential if GPU VRAM is limited; implement a queue or simple sequential execution first).
+- [x] Display comparison metrics (Duration A vs Duration B).
+- [x] Add a "Copy Prompt" button to easily re-run tests.
 
 ---
 
