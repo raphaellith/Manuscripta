@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from core.client import ModelEngine
 from core.utils import format_metrics
 from core.prompt_manager import PromptManager
+from core.prompt_ui import render_prompt_selector
 
 # Page configuration
 st.set_page_config(
@@ -30,8 +31,6 @@ if 'chat_engine' not in st.session_state:
     st.session_state.chat_engine = None
 if 'prompt_manager' not in st.session_state:
     st.session_state.prompt_manager = PromptManager()
-if 'current_system_prompt' not in st.session_state:
-    st.session_state.current_system_prompt = "You are a helpful AI assistant."
 
 # Sidebar controls
 st.sidebar.header("Configuration")
@@ -55,103 +54,12 @@ selected_model = st.sidebar.selectbox(
 
 # System Prompt Management
 st.sidebar.subheader("System Prompt")
-
-# Prompt selector: default, saved prompts, or custom
-prompt_mode = st.sidebar.radio(
-    "Prompt Mode",
-    ["Default", "Saved Prompts", "Custom"],
-    label_visibility="collapsed"
+system_prompt = render_prompt_selector(
+    prompt_manager=st.session_state.prompt_manager,
+    session_key_prefix="chat",
+    default_prompt="You are a helpful AI assistant.",
+    height=150
 )
-
-if prompt_mode == "Default":
-    st.session_state.current_system_prompt = "You are a helpful AI assistant."
-    system_prompt = st.session_state.current_system_prompt
-    st.sidebar.text_area(
-        "Current Prompt",
-        value=system_prompt,
-        height=100,
-        disabled=True,
-        key="default_prompt_display"
-    )
-
-elif prompt_mode == "Saved Prompts":
-    saved_prompts = st.session_state.prompt_manager.list_prompts()
-    
-    if saved_prompts:
-        # Display saved prompts with descriptions
-        prompt_options = ["Select a prompt..."] + [p["name"] for p in saved_prompts]
-        selected_prompt_name = st.sidebar.selectbox(
-            "Choose Prompt",
-            prompt_options,
-            key="saved_prompt_selector"
-        )
-        
-        if selected_prompt_name != "Select a prompt...":
-            # Load the selected prompt
-            loaded_prompt = st.session_state.prompt_manager.load_prompt(selected_prompt_name)
-            if loaded_prompt:
-                st.session_state.current_system_prompt = loaded_prompt
-                
-                # Show description if available
-                prompt_meta = next((p for p in saved_prompts if p["name"] == selected_prompt_name), None)
-                if prompt_meta and prompt_meta["description"]:
-                    st.sidebar.caption(f"ℹ️ {prompt_meta['description']}")
-                
-                # Display the prompt
-                st.sidebar.text_area(
-                    "Current Prompt",
-                    value=loaded_prompt,
-                    height=150,
-                    disabled=True,
-                    key="loaded_prompt_display"
-                )
-                
-                # Delete button
-                if st.sidebar.button("🗑️ Delete This Prompt", key="delete_saved_prompt"):
-                    if st.session_state.prompt_manager.delete_prompt(selected_prompt_name):
-                        st.sidebar.success(f"Deleted '{selected_prompt_name}'")
-                        st.rerun()
-                    else:
-                        st.sidebar.error("Failed to delete prompt")
-        else:
-            st.sidebar.info("Select a saved prompt from the dropdown")
-    else:
-        st.sidebar.info("No saved prompts yet. Use 'Custom' mode to create one.")
-    
-    system_prompt = st.session_state.current_system_prompt
-
-elif prompt_mode == "Custom":
-    # Custom prompt input
-    system_prompt = st.sidebar.text_area(
-        "Custom System Prompt",
-        value=st.session_state.current_system_prompt,
-        height=150,
-        key="custom_prompt_input"
-    )
-    st.session_state.current_system_prompt = system_prompt
-    
-    # Save prompt interface
-    with st.sidebar.expander("💾 Save This Prompt"):
-        prompt_name = st.text_input("Prompt Name", key="new_prompt_name")
-        prompt_description = st.text_input("Description (optional)", key="new_prompt_desc")
-        
-        if st.button("Save Prompt", key="save_prompt_btn"):
-            if not prompt_name:
-                st.error("Please enter a name")
-            elif st.session_state.prompt_manager.prompt_exists(prompt_name):
-                st.warning(f"Prompt '{prompt_name}' already exists")
-            elif not system_prompt.strip():
-                st.error("Prompt content cannot be empty")
-            else:
-                if st.session_state.prompt_manager.save_prompt(
-                    prompt_name, 
-                    system_prompt, 
-                    prompt_description
-                ):
-                    st.success(f"✅ Saved '{prompt_name}'")
-                    st.rerun()
-                else:
-                    st.error("Failed to save prompt")
 
 st.sidebar.divider()
 

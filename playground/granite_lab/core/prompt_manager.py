@@ -38,7 +38,7 @@ class PromptManager:
                 "Each prompt is stored as a .txt file with metadata in a .json file.\n"
             )
     
-    def save_prompt(self, name: str, content: str, description: str = "") -> bool:
+    def save_prompt(self, name: str, content: str, description: str = "", overwrite: bool = False) -> bool:
         """
         Save a system prompt.
         
@@ -46,6 +46,7 @@ class PromptManager:
             name: Name of the prompt (used as filename)
             content: The prompt content
             description: Optional description of the prompt
+            overwrite: If True, allows overwriting existing prompts
             
         Returns:
             True if successful, False otherwise
@@ -57,6 +58,10 @@ class PromptManager:
             
             if not safe_name:
                 raise ValueError("Invalid prompt name")
+            
+            # Check if exists and overwrite is not allowed
+            if not overwrite and self.prompt_exists(name):
+                raise ValueError(f"Prompt '{name}' already exists")
             
             # Save prompt content
             prompt_path = self.prompts_dir / f"{safe_name}.txt"
@@ -75,6 +80,20 @@ class PromptManager:
         except Exception as e:
             print(f"Error saving prompt: {e}")
             return False
+    
+    def update_prompt(self, name: str, content: str, description: str = "") -> bool:
+        """
+        Update an existing system prompt.
+        
+        Args:
+            name: Name of the prompt to update
+            content: The new prompt content
+            description: Optional new description
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.save_prompt(name, content, description, overwrite=True)
     
     def load_prompt(self, name: str) -> Optional[str]:
         """

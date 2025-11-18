@@ -12,6 +12,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.client import ModelEngine
 from core.utils import encode_image_to_base64
+from core.prompt_manager import PromptManager
+from core.prompt_ui import render_prompt_selector
 
 # Page configuration
 st.set_page_config(
@@ -30,6 +32,8 @@ if 'uploaded_image' not in st.session_state:
     st.session_state.uploaded_image = None
 if 'vision_results' not in st.session_state:
     st.session_state.vision_results = []
+if 'vision_prompt_manager' not in st.session_state:
+    st.session_state.vision_prompt_manager = PromptManager()
 
 # Sidebar controls
 st.sidebar.header("Configuration")
@@ -62,25 +66,18 @@ selected_model = st.sidebar.selectbox(
     index=available_models.index(default_model) if default_model in available_models else 0
 )
 
-# System prompt
-system_prompt = st.sidebar.text_area(
-    "System Prompt (Optional)",
-    value="",
-    height=80,
-    placeholder="You are a helpful vision assistant..."
+st.sidebar.divider()
+
+# System Prompt Management
+st.sidebar.subheader("System Prompt")
+system_prompt = render_prompt_selector(
+    prompt_manager=st.session_state.vision_prompt_manager,
+    session_key_prefix="vision",
+    default_prompt="You are a helpful vision assistant.",
+    height=120
 )
 
-# Default prompts
 st.sidebar.divider()
-st.sidebar.subheader("Quick Prompts")
-
-quick_prompts = [
-    "Transcribe all text visible in this image.",
-    "Describe this image in detail.",
-    "What objects can you see in this image?",
-    "Extract any tables or structured data from this image.",
-    "Is there any handwritten text in this image? If so, transcribe it."
-]
 
 # Initialize engine
 if st.session_state.vision_engine is None or st.session_state.vision_engine.model_name != selected_model:
@@ -126,18 +123,10 @@ with col2:
         # Prompt input
         prompt = st.text_area(
             "What would you like to know about this image?",
-            value=quick_prompts[0],
+            value="Describe this image in detail.",
             height=100,
             placeholder="Ask a question about the image..."
         )
-        
-        # Quick prompt buttons
-        st.caption("Quick prompts:")
-        cols = st.columns(3)
-        for idx, quick_prompt in enumerate(quick_prompts[:3]):
-            with cols[idx]:
-                if st.button(f"Prompt {idx+1}", use_container_width=True, key=f"quick_{idx}"):
-                    prompt = quick_prompt
         
         # Analyze button
         if st.button("Analyze Image", type="primary", use_container_width=True, disabled=not prompt):

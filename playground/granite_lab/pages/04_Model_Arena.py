@@ -13,6 +13,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.client import ModelEngine
 from core.utils import format_metrics
+from core.prompt_manager import PromptManager
+from core.prompt_ui import render_prompt_selector
 
 # Page configuration
 st.set_page_config(
@@ -27,6 +29,8 @@ st.markdown("A/B testing: Compare two models side-by-side")
 # Initialize session state
 if 'arena_results' not in st.session_state:
     st.session_state.arena_results = []
+if 'arena_prompt_manager' not in st.session_state:
+    st.session_state.arena_prompt_manager = PromptManager()
 
 # Sidebar controls
 st.sidebar.header("Configuration")
@@ -54,12 +58,18 @@ temperature = st.sidebar.slider(
     step=0.1
 )
 
-# System prompt (shared)
-system_prompt = st.sidebar.text_area(
-    "System Prompt (Shared)",
-    value="You are a helpful AI assistant.",
-    height=100
+st.sidebar.divider()
+
+# System Prompt Management
+st.sidebar.subheader("System Prompt (Shared)")
+system_prompt = render_prompt_selector(
+    prompt_manager=st.session_state.arena_prompt_manager,
+    session_key_prefix="arena",
+    default_prompt="You are a helpful AI assistant.",
+    height=120
 )
+
+st.sidebar.divider()
 
 # Clear results
 if st.sidebar.button("Clear Results", use_container_width=True):

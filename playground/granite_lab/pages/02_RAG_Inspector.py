@@ -15,6 +15,7 @@ from core.client import ModelEngine
 from core.rag import RAGExperiment
 from core.utils import format_file_size
 from core.prompt_manager import PromptManager
+from core.prompt_ui import render_prompt_selector
 
 # Page configuration
 st.set_page_config(
@@ -35,8 +36,6 @@ if 'rag_history' not in st.session_state:
     st.session_state.rag_history = []
 if 'rag_prompt_manager' not in st.session_state:
     st.session_state.rag_prompt_manager = PromptManager()
-if 'rag_system_prompt' not in st.session_state:
-    st.session_state.rag_system_prompt = "You are a helpful AI assistant. Answer questions based on the provided context."
 
 # Sidebar controls
 st.sidebar.header("Configuration")
@@ -95,104 +94,12 @@ st.sidebar.divider()
 
 # System Prompt Management for RAG
 st.sidebar.subheader("System Prompt")
-
-# Prompt selector: default, saved prompts, or custom
-rag_prompt_mode = st.sidebar.radio(
-    "RAG Prompt Mode",
-    ["Default", "Saved Prompts", "Custom"],
-    label_visibility="collapsed",
-    key="rag_prompt_mode"
+rag_system_prompt = render_prompt_selector(
+    prompt_manager=st.session_state.rag_prompt_manager,
+    session_key_prefix="rag",
+    default_prompt="You are a helpful AI assistant. Answer questions based on the provided context.",
+    height=120
 )
-
-if rag_prompt_mode == "Default":
-    st.session_state.rag_system_prompt = "You are a helpful AI assistant. Answer questions based on the provided context."
-    rag_system_prompt = st.session_state.rag_system_prompt
-    st.sidebar.text_area(
-        "Current Prompt",
-        value=rag_system_prompt,
-        height=80,
-        disabled=True,
-        key="rag_default_prompt_display"
-    )
-
-elif rag_prompt_mode == "Saved Prompts":
-    saved_prompts = st.session_state.rag_prompt_manager.list_prompts()
-    
-    if saved_prompts:
-        # Display saved prompts with descriptions
-        prompt_options = ["Select a prompt..."] + [p["name"] for p in saved_prompts]
-        selected_prompt_name = st.sidebar.selectbox(
-            "Choose Prompt",
-            prompt_options,
-            key="rag_saved_prompt_selector"
-        )
-        
-        if selected_prompt_name != "Select a prompt...":
-            # Load the selected prompt
-            loaded_prompt = st.session_state.rag_prompt_manager.load_prompt(selected_prompt_name)
-            if loaded_prompt:
-                st.session_state.rag_system_prompt = loaded_prompt
-                
-                # Show description if available
-                prompt_meta = next((p for p in saved_prompts if p["name"] == selected_prompt_name), None)
-                if prompt_meta and prompt_meta["description"]:
-                    st.sidebar.caption(f"ℹ️ {prompt_meta['description']}")
-                
-                # Display the prompt
-                st.sidebar.text_area(
-                    "Current Prompt",
-                    value=loaded_prompt,
-                    height=120,
-                    disabled=True,
-                    key="rag_loaded_prompt_display"
-                )
-                
-                # Delete button
-                if st.sidebar.button("🗑️ Delete This Prompt", key="rag_delete_saved_prompt"):
-                    if st.session_state.rag_prompt_manager.delete_prompt(selected_prompt_name):
-                        st.sidebar.success(f"Deleted '{selected_prompt_name}'")
-                        st.rerun()
-                    else:
-                        st.sidebar.error("Failed to delete prompt")
-        else:
-            st.sidebar.info("Select a saved prompt from the dropdown")
-    else:
-        st.sidebar.info("No saved prompts yet. Use 'Custom' mode to create one.")
-    
-    rag_system_prompt = st.session_state.rag_system_prompt
-
-elif rag_prompt_mode == "Custom":
-    # Custom prompt input
-    rag_system_prompt = st.sidebar.text_area(
-        "Custom System Prompt",
-        value=st.session_state.rag_system_prompt,
-        height=120,
-        key="rag_custom_prompt_input"
-    )
-    st.session_state.rag_system_prompt = rag_system_prompt
-    
-    # Save prompt interface
-    with st.sidebar.expander("💾 Save This Prompt"):
-        prompt_name = st.text_input("Prompt Name", key="rag_new_prompt_name")
-        prompt_description = st.text_input("Description (optional)", key="rag_new_prompt_desc")
-        
-        if st.button("Save Prompt", key="rag_save_prompt_btn"):
-            if not prompt_name:
-                st.error("Please enter a name")
-            elif st.session_state.rag_prompt_manager.prompt_exists(prompt_name):
-                st.warning(f"Prompt '{prompt_name}' already exists")
-            elif not rag_system_prompt.strip():
-                st.error("Prompt content cannot be empty")
-            else:
-                if st.session_state.rag_prompt_manager.save_prompt(
-                    prompt_name, 
-                    rag_system_prompt, 
-                    prompt_description
-                ):
-                    st.success(f"✅ Saved '{prompt_name}'")
-                    st.rerun()
-                else:
-                    st.error("Failed to save prompt")
 
 st.sidebar.divider()
 
@@ -306,7 +213,7 @@ with col2:
                         query=query,
                         model_engine=st.session_state.rag_engine,
                         k=k_retrieval,
-                        system_prompt=st.session_state.rag_system_prompt
+                        system_prompt=rag_system_prompt
                     )
                     
                     # Store in history
