@@ -8,15 +8,15 @@
 Initialise the project repository, file structure, and the "one-click" launcher script. The goal is to have a running Streamlit application that connects to a local Ollama instance.
 
 **Tasks:**
-- [ ] Create directory structure (`/pages`, `/modules`, `/db`).
-- [ ] Implement `llm_client.py`: A wrapper class for `ollama-python` to handle connection checks and model listing.
-- [ ] Create `app.py` (Main Entry):
-    - [ ] Sidebar with Model Selector (populated dynamically).
-    - [ ] Sidebar with Hyperparameter sliders (Temp, Top_K, Context).
-- [ ] Create `run.py`:
-    - [ ] Auto-install dependencies from `requirements.txt`.
-    - [ ] Launch the Streamlit server automatically.
-    - [ ] Handle "Ollama not found" errors gracefully.
+- [x] Create directory structure (`/pages`, `/modules`, `/db`).
+- [x] Implement `llm_client.py`: A wrapper class for `ollama-python` to handle connection checks and model listing.
+- [x] Create `app.py` (Main Entry):
+    - [x] Sidebar with Model Selector (populated dynamically).
+    - [x] Sidebar with Hyperparameter sliders (Temp, Top_K, Context).
+- [x] Create `run.py`:
+    - [x] Auto-install dependencies from `requirements.txt`.
+    - [x] Launch the Streamlit server automatically.
+    - [x] Handle "Ollama not found" errors gracefully.
 
 **Technical Notes:**
 - Use `subprocess` in `run.py` to call streamlit.

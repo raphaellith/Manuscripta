@@ -1,0 +1,5 @@
+streamlit
+ollama
+pytest
+pytest-cov
+pytest-mock

@@ -359,3 +359,10 @@ site/
 *.bak
 *.backup
 *~.nib
+
+# Granite Lab 2
+playground/GraniteLab2/db/workbench.db
+playground/GraniteLab2/db/chroma_db/
+playground/GraniteLab2/venv/
+playground/GraniteLab2/.venv/
+playground/GraniteLab2/env/
