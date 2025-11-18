@@ -22,9 +22,15 @@ class LLMClient:
         """Lists available models from Ollama."""
         try:
             models_response = self.client.list()
-            # The response structure from ollama.list() is usually {'models': [{'name': '...', ...}]}
-            if 'models' in models_response:
-                return [m['name'] for m in models_response['models']]
+            
+            # Handle object response (newer ollama lib)
+            if hasattr(models_response, 'models'):
+                return [m.model for m in models_response.models]
+            
+            # Handle dict response (older ollama lib or raw api)
+            if isinstance(models_response, dict) and 'models' in models_response:
+                return [m.get('name', m.get('model')) for m in models_response['models']]
+                
             return []
         except Exception:
             return []

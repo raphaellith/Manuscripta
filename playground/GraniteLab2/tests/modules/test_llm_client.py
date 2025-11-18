@@ -32,6 +32,23 @@ class TestLLMClient:
         assert 'granite-code:8b' in models
         assert 'llama3:latest' in models
 
+    def test_list_models_object_response(self, client):
+        # Test for newer ollama library response format (objects)
+        mock_model1 = MagicMock()
+        mock_model1.model = 'granite-code:8b'
+        mock_model2 = MagicMock()
+        mock_model2.model = 'llama3:latest'
+        
+        mock_response = MagicMock()
+        mock_response.models = [mock_model1, mock_model2]
+        
+        client.client.list.return_value = mock_response
+        
+        models = client.list_models()
+        assert len(models) == 2
+        assert 'granite-code:8b' in models
+        assert 'llama3:latest' in models
+
     def test_list_models_empty(self, client):
         client.client.list.return_value = {} # Unexpected format or empty
         assert client.list_models() == []
