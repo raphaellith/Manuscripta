@@ -31,7 +31,7 @@ android {
         }
         debug {
             enableUnitTestCoverage = true
-            enableAndroidTestCoverage = true 
+            enableAndroidTestCoverage = true
         }
     }
 
@@ -123,15 +123,15 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         include("**/com/manuscripta/student/**")
 
         // BLACKLIST: Exclude generated noise that ends up INSIDE your package
-            exclude("**/R.class",
+        exclude("**/R.class",
             "**/ManuscriptaApplication.class",
             "**/ManuscriptaApplication$*.class",
             "**/ManuscriptaDatabase.class",
             "**/ManuscriptaDatabase$*.class",
-                "**/DatabaseModule.class",
-                "**/DatabaseModule$*.class",
-                "**/ui/main/MainActivity.class",
-                "**/ui/main/MainActivity$*.class",
+            "**/DatabaseModule.class",
+            "**/DatabaseModule$*.class",
+            "**/ui/main/MainActivity.class",
+            "**/ui/main/MainActivity$*.class",
             "**/R$*.class",
             "**/BuildConfig.*",
             "**/Manifest*.*",

@@ -32,6 +32,7 @@ public class MaterialDaoTest {
 
     private ManuscriptaDatabase database;
     private MaterialDao materialDao;
+    private MaterialEntity defaultMaterial;
 
     @Before
     public void setUp() {
@@ -41,6 +42,16 @@ public class MaterialDaoTest {
                 .fallbackToDestructiveMigration()
                 .build();
         materialDao = database.materialDao();
+
+        defaultMaterial = new MaterialEntity(
+                "mat-1",
+                MaterialType.QUIZ,
+                "Test Quiz",
+                "Sample Content",
+                "{\"author\": \"Teacher\"}",
+                "[\"term1\", \"term2\"]",
+                System.currentTimeMillis()
+        );
     }
 
     @After
@@ -52,21 +63,29 @@ public class MaterialDaoTest {
 
     @Test
     public void testInsertAndGetById() {
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Test Quiz");
-        materialDao.insert(material);
+        materialDao.insert(defaultMaterial);
 
         MaterialEntity retrieved = materialDao.getById("mat-1");
         assertNotNull(retrieved);
         assertEquals("mat-1", retrieved.getId());
         assertEquals("Test Quiz", retrieved.getTitle());
         assertEquals(MaterialType.QUIZ, retrieved.getType());
+        assertEquals("Sample Content", retrieved.getContent());
     }
 
     @Test
     public void testGetAll() {
-        MaterialEntity material1 = new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz 1");
-        MaterialEntity material2 = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson 1");
-        materialDao.insert(material1);
+        materialDao.insert(defaultMaterial);
+        
+        MaterialEntity material2 = new MaterialEntity(
+                "mat-2", 
+                MaterialType.LESSON, 
+                "Lesson 1",
+                "Lesson Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        );
         materialDao.insert(material2);
 
         List<MaterialEntity> materials = materialDao.getAll();
@@ -75,8 +94,18 @@ public class MaterialDaoTest {
 
     @Test
     public void testGetByType() {
-        MaterialEntity quiz = new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz");
-        MaterialEntity lesson = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson");
+        MaterialEntity quiz = new MaterialEntity(
+                "mat-1", 
+                MaterialType.QUIZ, 
+                "Quiz",
+                "Content", "{}", "[]", 0
+        );
+        MaterialEntity lesson = new MaterialEntity(
+                "mat-2", 
+                MaterialType.LESSON, 
+                "Lesson",
+                "Content", "{}", "[]", 0
+        );
         materialDao.insert(quiz);
         materialDao.insert(lesson);
 
@@ -87,11 +116,18 @@ public class MaterialDaoTest {
 
     @Test
     public void testUpdate() {
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Original");
-        materialDao.insert(material);
+        materialDao.insert(defaultMaterial);
 
-        material.setTitle("Updated");
-        materialDao.update(material);
+        MaterialEntity updatedMaterial = new MaterialEntity(
+                defaultMaterial.getId(),
+                defaultMaterial.getType(),
+                "Updated",
+                defaultMaterial.getContent(),
+                defaultMaterial.getMetadata(),
+                defaultMaterial.getVocabularyTerms(),
+                defaultMaterial.getTimestamp()
+        );
+        materialDao.update(updatedMaterial);
 
         MaterialEntity retrieved = materialDao.getById("mat-1");
         assertEquals("Updated", retrieved.getTitle());
@@ -99,17 +135,15 @@ public class MaterialDaoTest {
 
     @Test
     public void testDelete() {
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz");
-        materialDao.insert(material);
-        materialDao.delete(material);
+        materialDao.insert(defaultMaterial);
+        materialDao.delete(defaultMaterial);
 
         assertNull(materialDao.getById("mat-1"));
     }
 
     @Test
     public void testDeleteById() {
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz");
-        materialDao.insert(material);
+        materialDao.insert(defaultMaterial);
         materialDao.deleteById("mat-1");
 
         assertNull(materialDao.getById("mat-1"));
@@ -117,8 +151,8 @@ public class MaterialDaoTest {
 
     @Test
     public void testDeleteAll() {
-        materialDao.insert(new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz 1"));
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2"));
+        materialDao.insert(defaultMaterial);
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
         materialDao.deleteAll();
 
         assertEquals(0, materialDao.getCount());
@@ -128,32 +162,39 @@ public class MaterialDaoTest {
     public void testGetCount() {
         assertEquals(0, materialDao.getCount());
 
-        materialDao.insert(new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz 1"));
+        materialDao.insert(defaultMaterial);
         assertEquals(1, materialDao.getCount());
 
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2"));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
         assertEquals(2, materialDao.getCount());
     }
 
     @Test
     public void testInsertAll() {
-        MaterialEntity mat1 = new MaterialEntity("mat-1", MaterialType.QUIZ, "Quiz 1");
-        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson 1");
-        materialDao.insertAll(Arrays.asList(mat1, mat2));
+        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson 1", "C", "{}", "[]", 0);
+        materialDao.insertAll(Arrays.asList(defaultMaterial, mat2));
 
         assertEquals(2, materialDao.getCount());
     }
 
     @Test
     public void testInsertReplaceOnConflict() {
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Original");
-        materialDao.insert(material);
+        materialDao.insert(defaultMaterial);
 
-        MaterialEntity updated = new MaterialEntity("mat-1", MaterialType.QUIZ, "Replaced");
+        MaterialEntity updated = new MaterialEntity(
+                "mat-1", 
+                MaterialType.QUIZ, 
+                "Replaced",
+                "New Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        );
         materialDao.insert(updated);
 
         MaterialEntity retrieved = materialDao.getById("mat-1");
         assertEquals("Replaced", retrieved.getTitle());
+        assertEquals("New Content", retrieved.getContent());
         assertEquals(1, materialDao.getCount());
     }
 

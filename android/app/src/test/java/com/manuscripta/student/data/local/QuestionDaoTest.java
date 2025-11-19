@@ -35,6 +35,7 @@ public class QuestionDaoTest {
     private ManuscriptaDatabase database;
     private MaterialDao materialDao;
     private QuestionDao questionDao;
+    private QuestionEntity defaultQuestion;
 
     @Before
     public void setUp() {
@@ -47,8 +48,25 @@ public class QuestionDaoTest {
         questionDao = database.questionDao();
 
         // Insert a parent material for foreign key constraint
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Test Quiz");
+        MaterialEntity material = new MaterialEntity(
+                "mat-1",
+                MaterialType.QUIZ,
+                "Test Quiz",
+                "Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        );
         materialDao.insert(material);
+
+        defaultQuestion = new QuestionEntity(
+                "q-1",
+                "mat-1",
+                "Sample question?",
+                QuestionType.MULTIPLE_CHOICE,
+                "[\"A\", \"B\", \"C\", \"D\"]",
+                "A"
+        );
     }
 
     @After
@@ -58,21 +76,9 @@ public class QuestionDaoTest {
         }
     }
 
-    private QuestionEntity createQuestion(String id, String materialId) {
-        QuestionEntity question = new QuestionEntity();
-        question.setId(id);
-        question.setMaterialId(materialId);
-        question.setQuestionText("Sample question?");
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
-        question.setOptions("[\"A\", \"B\", \"C\", \"D\"]");
-        question.setCorrectAnswer("A");
-        return question;
-    }
-
     @Test
     public void testInsertAndGetById() {
-        QuestionEntity question = createQuestion("q-1", "mat-1");
-        questionDao.insert(question);
+        questionDao.insert(defaultQuestion);
 
         QuestionEntity retrieved = questionDao.getById("q-1");
         assertNotNull(retrieved);
@@ -83,8 +89,8 @@ public class QuestionDaoTest {
 
     @Test
     public void testGetAll() {
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
 
         List<QuestionEntity> questions = questionDao.getAll();
         assertEquals(2, questions.size());
@@ -93,11 +99,11 @@ public class QuestionDaoTest {
     @Test
     public void testGetByMaterialId() {
         // Add another material
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson"));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson", "C", "{}", "[]", 0));
 
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
-        questionDao.insert(createQuestion("q-3", "mat-2"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.TRUE_FALSE, "[]", "True"));
 
         List<QuestionEntity> mat1Questions = questionDao.getByMaterialId("mat-1");
         assertEquals(2, mat1Questions.size());
@@ -108,11 +114,17 @@ public class QuestionDaoTest {
 
     @Test
     public void testUpdate() {
-        QuestionEntity question = createQuestion("q-1", "mat-1");
-        questionDao.insert(question);
+        questionDao.insert(defaultQuestion);
 
-        question.setQuestionText("Updated question?");
-        questionDao.update(question);
+        QuestionEntity updatedQuestion = new QuestionEntity(
+                defaultQuestion.getId(),
+                defaultQuestion.getMaterialId(),
+                "Updated question?",
+                defaultQuestion.getQuestionType(),
+                defaultQuestion.getOptions(),
+                defaultQuestion.getCorrectAnswer()
+        );
+        questionDao.update(updatedQuestion);
 
         QuestionEntity retrieved = questionDao.getById("q-1");
         assertEquals("Updated question?", retrieved.getQuestionText());
@@ -120,16 +132,15 @@ public class QuestionDaoTest {
 
     @Test
     public void testDelete() {
-        QuestionEntity question = createQuestion("q-1", "mat-1");
-        questionDao.insert(question);
-        questionDao.delete(question);
+        questionDao.insert(defaultQuestion);
+        questionDao.delete(defaultQuestion);
 
         assertNull(questionDao.getById("q-1"));
     }
 
     @Test
     public void testDeleteById() {
-        questionDao.insert(createQuestion("q-1", "mat-1"));
+        questionDao.insert(defaultQuestion);
         questionDao.deleteById("q-1");
 
         assertNull(questionDao.getById("q-1"));
@@ -137,8 +148,8 @@ public class QuestionDaoTest {
 
     @Test
     public void testDeleteByMaterialId() {
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
         questionDao.deleteByMaterialId("mat-1");
 
         assertEquals(0, questionDao.getCountByMaterialId("mat-1"));
@@ -146,8 +157,8 @@ public class QuestionDaoTest {
 
     @Test
     public void testDeleteAll() {
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
         questionDao.deleteAll();
 
         assertEquals(0, questionDao.getCount());
@@ -157,20 +168,20 @@ public class QuestionDaoTest {
     public void testGetCount() {
         assertEquals(0, questionDao.getCount());
 
-        questionDao.insert(createQuestion("q-1", "mat-1"));
+        questionDao.insert(defaultQuestion);
         assertEquals(1, questionDao.getCount());
 
-        questionDao.insert(createQuestion("q-2", "mat-1"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
         assertEquals(2, questionDao.getCount());
     }
 
     @Test
     public void testGetCountByMaterialId() {
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson"));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson", "C", "{}", "[]", 0));
 
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
-        questionDao.insert(createQuestion("q-3", "mat-2"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.TRUE_FALSE, "[]", "True"));
 
         assertEquals(2, questionDao.getCountByMaterialId("mat-1"));
         assertEquals(1, questionDao.getCountByMaterialId("mat-2"));
@@ -178,17 +189,16 @@ public class QuestionDaoTest {
 
     @Test
     public void testInsertAll() {
-        QuestionEntity q1 = createQuestion("q-1", "mat-1");
-        QuestionEntity q2 = createQuestion("q-2", "mat-1");
-        questionDao.insertAll(Arrays.asList(q1, q2));
+        QuestionEntity q2 = new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True");
+        questionDao.insertAll(Arrays.asList(defaultQuestion, q2));
 
         assertEquals(2, questionDao.getCount());
     }
 
     @Test
     public void testCascadeDeleteOnMaterialDelete() {
-        questionDao.insert(createQuestion("q-1", "mat-1"));
-        questionDao.insert(createQuestion("q-2", "mat-1"));
+        questionDao.insert(defaultQuestion);
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
 
         // Delete the parent material
         materialDao.deleteById("mat-1");
@@ -211,12 +221,16 @@ public class QuestionDaoTest {
 
     @Test
     public void testInsertReplaceOnConflict() {
-        QuestionEntity question = createQuestion("q-1", "mat-1");
-        question.setQuestionText("Original");
-        questionDao.insert(question);
+        questionDao.insert(defaultQuestion);
 
-        QuestionEntity updated = createQuestion("q-1", "mat-1");
-        updated.setQuestionText("Replaced");
+        QuestionEntity updated = new QuestionEntity(
+                "q-1",
+                "mat-1",
+                "Replaced",
+                QuestionType.MULTIPLE_CHOICE,
+                "[]",
+                "A"
+        );
         questionDao.insert(updated);
 
         QuestionEntity retrieved = questionDao.getById("q-1");
