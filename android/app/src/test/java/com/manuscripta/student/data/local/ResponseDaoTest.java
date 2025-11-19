@@ -51,16 +51,25 @@ public class ResponseDaoTest {
         responseDao = database.responseDao();
 
         // Insert parent material and question for foreign key constraints
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Test Quiz");
+        MaterialEntity material = new MaterialEntity(
+                "mat-1",
+                MaterialType.QUIZ,
+                "Test Quiz",
+                "Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        );
         materialDao.insert(material);
 
-        QuestionEntity question = new QuestionEntity();
-        question.setId("q-1");
-        question.setMaterialId("mat-1");
-        question.setQuestionText("What is 2+2?");
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
-        question.setOptions("[\"3\", \"4\", \"5\"]");
-        question.setCorrectAnswer("4");
+        QuestionEntity question = new QuestionEntity(
+                "q-1",
+                "mat-1",
+                "What is 2+2?",
+                QuestionType.MULTIPLE_CHOICE,
+                "[\"3\", \"4\", \"5\"]",
+                "4"
+        );
         questionDao.insert(question);
     }
 
@@ -107,13 +116,14 @@ public class ResponseDaoTest {
     @Test
     public void testGetByQuestionId() {
         // Add another question
-        QuestionEntity q2 = new QuestionEntity();
-        q2.setId("q-2");
-        q2.setMaterialId("mat-1");
-        q2.setQuestionText("What is 3+3?");
-        q2.setQuestionType(QuestionType.MULTIPLE_CHOICE);
-        q2.setOptions("[\"5\", \"6\", \"7\"]");
-        q2.setCorrectAnswer("6");
+        QuestionEntity q2 = new QuestionEntity(
+                "q-2",
+                "mat-1",
+                "What is 3+3?",
+                QuestionType.MULTIPLE_CHOICE,
+                "[\"5\", \"6\", \"7\"]",
+                "6"
+        );
         questionDao.insert(q2);
 
         responseDao.insert(createResponse("r-1", "q-1"));
