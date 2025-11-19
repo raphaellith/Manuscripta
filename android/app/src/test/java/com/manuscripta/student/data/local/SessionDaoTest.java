@@ -1,0 +1,308 @@
+package com.manuscripta.student.data.local;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import android.content.Context;
+
+import androidx.room.Room;
+import androidx.test.core.app.ApplicationProvider;
+
+import com.manuscripta.student.data.model.MaterialEntity;
+import com.manuscripta.student.data.model.MaterialType;
+import com.manuscripta.student.data.model.SessionEntity;
+import com.manuscripta.student.data.model.SessionStatus;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Unit tests for {@link SessionDao}.
+ */
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 28, manifest = Config.NONE)
+public class SessionDaoTest {
+
+    private ManuscriptaDatabase database;
+    private MaterialDao materialDao;
+    private SessionDao sessionDao;
+
+    @Before
+    public void setUp() {
+        Context context = ApplicationProvider.getApplicationContext();
+        database = Room.inMemoryDatabaseBuilder(context, ManuscriptaDatabase.class)
+                .allowMainThreadQueries()
+                .fallbackToDestructiveMigration()
+                .build();
+        materialDao = database.materialDao();
+        sessionDao = database.sessionDao();
+
+        // Insert a parent material for foreign key constraint
+        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Test Quiz");
+        materialDao.insert(material);
+    }
+
+    @After
+    public void tearDown() {
+        if (database != null) {
+            database.close();
+        }
+    }
+
+    private SessionEntity createSession(String id, String materialId) {
+        SessionEntity session = new SessionEntity();
+        session.setId(id);
+        session.setMaterialId(materialId);
+        session.setStartTime(System.currentTimeMillis());
+        session.setEndTime(0);
+        session.setStatus(SessionStatus.ACTIVE);
+        session.setDeviceId("device-1");
+        return session;
+    }
+
+    @Test
+    public void testInsertAndGetById() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        sessionDao.insert(session);
+
+        SessionEntity retrieved = sessionDao.getById("s-1");
+        assertNotNull(retrieved);
+        assertEquals("s-1", retrieved.getId());
+        assertEquals("mat-1", retrieved.getMaterialId());
+        assertEquals(SessionStatus.ACTIVE, retrieved.getStatus());
+    }
+
+    @Test
+    public void testGetAll() {
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.insert(createSession("s-2", "mat-1"));
+
+        List<SessionEntity> sessions = sessionDao.getAll();
+        assertEquals(2, sessions.size());
+    }
+
+    @Test
+    public void testGetByMaterialId() {
+        // Add another material
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson"));
+
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.insert(createSession("s-2", "mat-1"));
+        sessionDao.insert(createSession("s-3", "mat-2"));
+
+        List<SessionEntity> mat1Sessions = sessionDao.getByMaterialId("mat-1");
+        assertEquals(2, mat1Sessions.size());
+
+        List<SessionEntity> mat2Sessions = sessionDao.getByMaterialId("mat-2");
+        assertEquals(1, mat2Sessions.size());
+    }
+
+    @Test
+    public void testGetByStatus() {
+        SessionEntity active = createSession("s-1", "mat-1");
+        active.setStatus(SessionStatus.ACTIVE);
+        sessionDao.insert(active);
+
+        SessionEntity completed = createSession("s-2", "mat-1");
+        completed.setStatus(SessionStatus.COMPLETED);
+        sessionDao.insert(completed);
+
+        List<SessionEntity> activeSessions = sessionDao.getByStatus(SessionStatus.ACTIVE);
+        assertEquals(1, activeSessions.size());
+        assertEquals("s-1", activeSessions.get(0).getId());
+
+        List<SessionEntity> completedSessions = sessionDao.getByStatus(SessionStatus.COMPLETED);
+        assertEquals(1, completedSessions.size());
+        assertEquals("s-2", completedSessions.get(0).getId());
+    }
+
+    @Test
+    public void testGetActiveSession() {
+        SessionEntity active = createSession("s-1", "mat-1");
+        active.setStatus(SessionStatus.ACTIVE);
+        sessionDao.insert(active);
+
+        SessionEntity completed = createSession("s-2", "mat-1");
+        completed.setStatus(SessionStatus.COMPLETED);
+        sessionDao.insert(completed);
+
+        SessionEntity activeSession = sessionDao.getActiveSession();
+        assertNotNull(activeSession);
+        assertEquals("s-1", activeSession.getId());
+    }
+
+    @Test
+    public void testGetActiveSessionNone() {
+        SessionEntity completed = createSession("s-1", "mat-1");
+        completed.setStatus(SessionStatus.COMPLETED);
+        sessionDao.insert(completed);
+
+        assertNull(sessionDao.getActiveSession());
+    }
+
+    @Test
+    public void testGetByDeviceId() {
+        SessionEntity session1 = createSession("s-1", "mat-1");
+        session1.setDeviceId("device-1");
+        sessionDao.insert(session1);
+
+        SessionEntity session2 = createSession("s-2", "mat-1");
+        session2.setDeviceId("device-2");
+        sessionDao.insert(session2);
+
+        List<SessionEntity> device1Sessions = sessionDao.getByDeviceId("device-1");
+        assertEquals(1, device1Sessions.size());
+        assertEquals("s-1", device1Sessions.get(0).getId());
+    }
+
+    @Test
+    public void testUpdateStatus() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        sessionDao.insert(session);
+
+        sessionDao.updateStatus("s-1", SessionStatus.PAUSED);
+
+        assertEquals(SessionStatus.PAUSED, sessionDao.getById("s-1").getStatus());
+    }
+
+    @Test
+    public void testEndSession() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        sessionDao.insert(session);
+
+        long endTime = System.currentTimeMillis();
+        sessionDao.endSession("s-1", endTime, SessionStatus.COMPLETED);
+
+        SessionEntity ended = sessionDao.getById("s-1");
+        assertEquals(endTime, ended.getEndTime());
+        assertEquals(SessionStatus.COMPLETED, ended.getStatus());
+    }
+
+    @Test
+    public void testUpdate() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        sessionDao.insert(session);
+
+        session.setDeviceId("device-2");
+        sessionDao.update(session);
+
+        assertEquals("device-2", sessionDao.getById("s-1").getDeviceId());
+    }
+
+    @Test
+    public void testDelete() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        sessionDao.insert(session);
+        sessionDao.delete(session);
+
+        assertNull(sessionDao.getById("s-1"));
+    }
+
+    @Test
+    public void testDeleteById() {
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.deleteById("s-1");
+
+        assertNull(sessionDao.getById("s-1"));
+    }
+
+    @Test
+    public void testDeleteByMaterialId() {
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.insert(createSession("s-2", "mat-1"));
+        sessionDao.deleteByMaterialId("mat-1");
+
+        assertEquals(0, sessionDao.getCount());
+    }
+
+    @Test
+    public void testDeleteAll() {
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.insert(createSession("s-2", "mat-1"));
+        sessionDao.deleteAll();
+
+        assertEquals(0, sessionDao.getCount());
+    }
+
+    @Test
+    public void testGetCount() {
+        assertEquals(0, sessionDao.getCount());
+
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        assertEquals(1, sessionDao.getCount());
+
+        sessionDao.insert(createSession("s-2", "mat-1"));
+        assertEquals(2, sessionDao.getCount());
+    }
+
+    @Test
+    public void testGetCountByStatus() {
+        SessionEntity active = createSession("s-1", "mat-1");
+        active.setStatus(SessionStatus.ACTIVE);
+        sessionDao.insert(active);
+
+        SessionEntity completed = createSession("s-2", "mat-1");
+        completed.setStatus(SessionStatus.COMPLETED);
+        sessionDao.insert(completed);
+
+        assertEquals(1, sessionDao.getCountByStatus(SessionStatus.ACTIVE));
+        assertEquals(1, sessionDao.getCountByStatus(SessionStatus.COMPLETED));
+        assertEquals(0, sessionDao.getCountByStatus(SessionStatus.PAUSED));
+    }
+
+    @Test
+    public void testInsertAll() {
+        SessionEntity s1 = createSession("s-1", "mat-1");
+        SessionEntity s2 = createSession("s-2", "mat-1");
+        sessionDao.insertAll(Arrays.asList(s1, s2));
+
+        assertEquals(2, sessionDao.getCount());
+    }
+
+    @Test
+    public void testCascadeDeleteOnMaterialDelete() {
+        sessionDao.insert(createSession("s-1", "mat-1"));
+        sessionDao.insert(createSession("s-2", "mat-1"));
+
+        // Delete the parent material
+        materialDao.deleteById("mat-1");
+
+        // Sessions should be deleted due to CASCADE
+        assertEquals(0, sessionDao.getCount());
+    }
+
+    @Test
+    public void testGetByIdNotFound() {
+        assertNull(sessionDao.getById("nonexistent"));
+    }
+
+    @Test
+    public void testGetAllEmpty() {
+        List<SessionEntity> sessions = sessionDao.getAll();
+        assertNotNull(sessions);
+        assertTrue(sessions.isEmpty());
+    }
+
+    @Test
+    public void testInsertReplaceOnConflict() {
+        SessionEntity session = createSession("s-1", "mat-1");
+        session.setDeviceId("device-1");
+        sessionDao.insert(session);
+
+        SessionEntity updated = createSession("s-1", "mat-1");
+        updated.setDeviceId("device-2");
+        sessionDao.insert(updated);
+
+        assertEquals("device-2", sessionDao.getById("s-1").getDeviceId());
+        assertEquals(1, sessionDao.getCount());
+    }
+}
