@@ -94,10 +94,6 @@ public class MaterialEntity {
         return id;
     }
 
-    public void setId(@NonNull String id) {
-        this.id = id;
-    }
-
     @NonNull
     public MaterialType getType() {
         return type;
