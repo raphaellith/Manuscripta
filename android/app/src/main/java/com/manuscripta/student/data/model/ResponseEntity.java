@@ -3,8 +3,11 @@ package com.manuscripta.student.data.model;
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+
+import java.util.UUID;
 
 /**
  * Room entity representing a student's response to a question.
@@ -44,14 +47,45 @@ public class ResponseEntity {
      */
     private boolean synced;
 
-    // Default constructor
-    public ResponseEntity() {
-        this.id = "";
-        this.questionId = "";
-        this.selectedAnswer = "";
-        this.isCorrect = false;
-        this.timestamp = System.currentTimeMillis();
-        this.synced = false;
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR 1: For Room (Rehydration)
+    // -------------------------------------------------------------------------
+    /**
+     * Standard constructor used by Room to recreate objects from the database.
+     * Pass the existing ID explicitly.
+     */
+    public ResponseEntity(@NonNull String id,
+                          @NonNull String questionId,
+                          @NonNull String selectedAnswer,
+                          boolean isCorrect,
+                          long timestamp,
+                          boolean synced) {
+        this.id = id;
+        this.questionId = questionId;
+        this.selectedAnswer = selectedAnswer;
+        this.isCorrect = isCorrect;
+        this.timestamp = timestamp;
+        this.synced = synced;
+    }
+
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR 2: For the App (Creation)
+    // -------------------------------------------------------------------------
+    /**
+     * Convenience constructor for creating NEW responses.
+     * Automatically generates a random UUID and sets default values.
+     * Annotated with @Ignore so Room doesn't try to use it.
+     */
+    @Ignore
+    public ResponseEntity(@NonNull String questionId, @NonNull String selectedAnswer) {
+        this(
+            UUID.randomUUID().toString(),
+            questionId,
+            selectedAnswer,
+            false,
+            System.currentTimeMillis(),
+            false
+        );
     }
 
     // Getters and Setters
@@ -59,10 +93,6 @@ public class ResponseEntity {
     @NonNull
     public String getId() {
         return id;
-    }
-
-    public void setId(@NonNull String id) {
-        this.id = id;
     }
 
     @NonNull

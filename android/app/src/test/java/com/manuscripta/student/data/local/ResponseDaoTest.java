@@ -81,14 +81,14 @@ public class ResponseDaoTest {
     }
 
     private ResponseEntity createResponse(String id, String questionId) {
-        ResponseEntity response = new ResponseEntity();
-        response.setId(id);
-        response.setQuestionId(questionId);
-        response.setSelectedAnswer("4");
-        response.setCorrect(true);
-        response.setTimestamp(System.currentTimeMillis());
-        response.setSynced(false);
-        return response;
+        return new ResponseEntity(
+                id,
+                questionId,
+                "4",
+                true,
+                System.currentTimeMillis(),
+                false
+        );
     }
 
     @Test
