@@ -81,9 +81,9 @@ public class MaterialEntity {
         this.id = id;
         this.type = type;
         this.title = title;
-        this.content = "";
-        this.metadata = "";
-        this.vocabularyTerms = "";
+        this.content = content;
+        this.metadata = metadata;
+        this.vocabularyTerms = vocabularyTerms;
         this.timestamp = System.currentTimeMillis();
     }
 
