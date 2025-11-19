@@ -47,7 +47,15 @@ public class SessionDaoTest {
         sessionDao = database.sessionDao();
 
         // Insert a parent material for foreign key constraint
-        MaterialEntity material = new MaterialEntity("mat-1", MaterialType.QUIZ, "Test Quiz");
+        MaterialEntity material = new MaterialEntity(
+                "mat-1",
+                MaterialType.QUIZ,
+                "Test Quiz",
+                "Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        );
         materialDao.insert(material);
     }
 
@@ -93,7 +101,15 @@ public class SessionDaoTest {
     @Test
     public void testGetByMaterialId() {
         // Add another material
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson"));
+        materialDao.insert(new MaterialEntity(
+                "mat-2",
+                MaterialType.LESSON,
+                "Lesson",
+                "Content",
+                "{}",
+                "[]",
+                System.currentTimeMillis()
+        ));
 
         sessionDao.insert(createSession("s-1", "mat-1"));
         sessionDao.insert(createSession("s-2", "mat-1"));
