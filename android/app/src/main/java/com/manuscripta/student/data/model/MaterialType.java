@@ -31,17 +31,11 @@ public enum MaterialType {
      * @return Display name suitable for UI
      */
     public String getDisplayName() {
-        switch (this) {
-            case LESSON:
-                return "Reading Material";
-            case QUIZ:
-                return "Quiz";
-            case WORKSHEET:
-                return "Worksheet";
-            case POLL:
-                return "Poll";
-            default:
-                return "";
-        }
+        return switch (this) {
+            case LESSON    -> "Reading Material";
+            case QUIZ      -> "Quiz";
+            case WORKSHEET -> "Worksheet";
+            case POLL      -> "Poll";
+        };
     }
 }

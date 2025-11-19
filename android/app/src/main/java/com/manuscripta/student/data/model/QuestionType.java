@@ -35,15 +35,10 @@ public enum QuestionType {
      * @return Display name suitable for UI
      */
     public String getDisplayName() {
-        switch (this) {
-            case MULTIPLE_CHOICE:
-                return "Multiple Choice";
-            case TRUE_FALSE:
-                return "True/False";
-            case SHORT_ANSWER:
-                return "Short Answer";
-            default:
-                return "";
-        }
+        return switch (this) {
+            case MULTIPLE_CHOICE -> "Multiple Choice";
+            case TRUE_FALSE      -> "True/False";
+            case SHORT_ANSWER    -> "Short Answer";
+        };
     }
 }
