@@ -9,6 +9,9 @@ import androidx.room.PrimaryKey;
 /**
  * Room entity representing a question within a material.
  * Questions are linked to a parent MaterialEntity via foreign key.
+ *
+ * <p>Like MaterialEntity, this is immutable on the client side as the content
+ * is defined by the teacher's Windows application.</p>
  */
 @Entity(
         tableName = "questions",
@@ -35,29 +38,45 @@ public class QuestionEntity {
     @NonNull
     private QuestionType questionType;
 
+    /**
+     * JSON string representing options (e.g., for Multiple Choice).
+     */
     private String options;
 
+    /**
+     * String representing the correct answer.
+     */
     private String correctAnswer;
 
-    // Default constructor
-    public QuestionEntity() {
-        this.id = "";
-        this.materialId = "";
-        this.questionText = "";
-        this.questionType = QuestionType.MULTIPLE_CHOICE;
-        this.options = "";
-        this.correctAnswer = "";
+    /**
+     * Constructor with required fields.
+     *
+     * @param id Unique identifier (UUID)
+     * @param materialId UUID of the parent material
+     * @param questionText The text of the question
+     * @param questionType The type of question
+     * @param options JSON string of options (use empty string if none)
+     * @param correctAnswer The correct answer string (use empty string if none)
+     */
+    public QuestionEntity(@NonNull String id,
+                          @NonNull String materialId,
+                          @NonNull String questionText,
+                          @NonNull QuestionType questionType,
+                          @NonNull String options,
+                          @NonNull String correctAnswer) {
+        this.id = id;
+        this.materialId = materialId;
+        this.questionText = questionText;
+        this.questionType = questionType;
+        this.options = options;
+        this.correctAnswer = correctAnswer;
     }
 
-    // Getters and Setters
+    // Getters Only (Immutable)
 
     @NonNull
     public String getId() {
         return id;
-    }
-
-    public void setId(@NonNull String id) {
-        this.id = id;
     }
 
     @NonNull
@@ -65,17 +84,9 @@ public class QuestionEntity {
         return materialId;
     }
 
-    public void setMaterialId(@NonNull String materialId) {
-        this.materialId = materialId;
-    }
-
     @NonNull
     public String getQuestionText() {
         return questionText;
-    }
-
-    public void setQuestionText(@NonNull String questionText) {
-        this.questionText = questionText;
     }
 
     @NonNull
@@ -83,23 +94,11 @@ public class QuestionEntity {
         return questionType;
     }
 
-    public void setQuestionType(@NonNull QuestionType questionType) {
-        this.questionType = questionType;
-    }
-
     public String getOptions() {
         return options;
     }
 
-    public void setOptions(String options) {
-        this.options = options;
-    }
-
     public String getCorrectAnswer() {
         return correctAnswer;
-    }
-
-    public void setCorrectAnswer(String correctAnswer) {
-        this.correctAnswer = correctAnswer;
     }
 }

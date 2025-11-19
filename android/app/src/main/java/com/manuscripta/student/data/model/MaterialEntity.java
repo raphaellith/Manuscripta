@@ -57,29 +57,30 @@ public class MaterialEntity {
     private long timestamp;
 
     /**
-     * Default constructor required by Room.
-     */
-    public MaterialEntity() {
-        this.id = "";
-        this.type = MaterialType.LESSON;
-        this.title = "";
-    }
-
-    /**
      * Constructor with required fields.
      *
      * @param id    Unique identifier (UUID)
      * @param type  Type of material
      * @param title Title of the material
+     * @param content Main content of the material
+     * @param metadata Additional metadata in JSON format
+     * @param vocabularyTerms Key vocabulary terms in JSON array
+     * @param timestamp Timestamp when the material was created or last modified
      */
-    public MaterialEntity(@NonNull String id, @NonNull MaterialType type, @NonNull String title) {
+    public MaterialEntity(@NonNull String id,
+                          @NonNull MaterialType type,
+                          @NonNull String title,
+                          @NonNull String content,
+                          @NonNull String metadata,
+                          @NonNull String vocabularyTerms,
+                          @NonNull long timestamp) {
         this.id = id;
         this.type = type;
         this.title = title;
-        this.content = "";
-        this.metadata = "";
-        this.vocabularyTerms = "";
-        this.timestamp = System.currentTimeMillis();
+        this.content = content;
+        this.metadata = metadata;
+        this.vocabularyTerms = vocabularyTerms;
+        this.timestamp = timestamp;
     }
 
     // Getters and Setters
@@ -89,17 +90,9 @@ public class MaterialEntity {
         return id;
     }
 
-    public void setId(@NonNull String id) {
-        this.id = id;
-    }
-
     @NonNull
     public MaterialType getType() {
         return type;
-    }
-
-    public void setType(@NonNull MaterialType type) {
-        this.type = type;
     }
 
     @NonNull
@@ -107,39 +100,20 @@ public class MaterialEntity {
         return title;
     }
 
-    public void setTitle(@NonNull String title) {
-        this.title = title;
-    }
 
     public String getContent() {
         return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
     }
 
     public String getMetadata() {
         return metadata;
     }
 
-    public void setMetadata(String metadata) {
-        this.metadata = metadata;
-    }
-
     public String getVocabularyTerms() {
         return vocabularyTerms;
     }
 
-    public void setVocabularyTerms(String vocabularyTerms) {
-        this.vocabularyTerms = vocabularyTerms;
-    }
-
     public long getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
     }
 }
