@@ -72,7 +72,12 @@ public class MaterialEntity {
      * @param type  Type of material
      * @param title Title of the material
      */
-    public MaterialEntity(@NonNull String id, @NonNull MaterialType type, @NonNull String title) {
+    public MaterialEntity(@NonNull String id,
+                          @NonNull MaterialType type,
+                          @NonNull String title,
+                          @NonNull String content,
+                          @NonNull String metadata,
+                          @NonNull String vocabularyTerms) {
         this.id = id;
         this.type = type;
         this.title = title;
