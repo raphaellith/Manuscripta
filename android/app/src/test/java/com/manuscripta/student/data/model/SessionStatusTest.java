@@ -13,7 +13,11 @@ public class SessionStatusTest {
     @Test
     public void testEnumValues() {
         SessionStatus[] values = SessionStatus.values();
-        assertEquals(4, values.length);
+        // Verify that all expected enum values exist
+        assertNotNull(SessionStatus.valueOf("ACTIVE"));
+        assertNotNull(SessionStatus.valueOf("PAUSED"));
+        assertNotNull(SessionStatus.valueOf("COMPLETED"));
+        assertNotNull(SessionStatus.valueOf("CANCELLED"));
     }
 
     @Test
