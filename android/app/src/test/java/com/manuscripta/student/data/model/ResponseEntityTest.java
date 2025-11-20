@@ -2,6 +2,7 @@ package com.manuscripta.student.data.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -51,7 +52,7 @@ public class ResponseEntityTest {
         ResponseEntity response1 = new ResponseEntity("q-1", "A");
         ResponseEntity response2 = new ResponseEntity("q-1", "B");
 
-        assertFalse(response1.getId().equals(response2.getId()));
+        assertNotEquals(response1.getId(), response2.getId());
     }
 
     @Test

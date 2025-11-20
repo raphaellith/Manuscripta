@@ -5,13 +5,14 @@ import androidx.room.RoomDatabase;
 
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.QuestionEntity;
+import com.manuscripta.student.data.model.SessionEntity;
 import com.manuscripta.student.data.model.ResponseEntity;
 
 /**
  * Room database for Manuscripta application.
  * This is the main database configuration.
  */
-@Database(entities = {MaterialEntity.class, QuestionEntity.class, ResponseEntity.class}, version = 5, exportSchema = false)
+@Database(entities = {MaterialEntity.class, QuestionEntity.class, ResponseEntity.class, SessionEntity.class}, version = 6, exportSchema = false)
 public abstract class ManuscriptaDatabase extends RoomDatabase {
 
     /**
@@ -27,6 +28,13 @@ public abstract class ManuscriptaDatabase extends RoomDatabase {
      * @return QuestionDao instance
      */
     public abstract QuestionDao questionDao();
+
+    /**
+     * Get the Session DAO for database operations on sessions.
+     *
+     * @return SessionDao instance
+     */
+    public abstract SessionDao sessionDao();
 
     /**
      * Get the Response DAO for database operations on responses.
