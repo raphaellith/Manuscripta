@@ -21,40 +21,40 @@ public class MaterialEntity {
      */
     @PrimaryKey
     @NonNull
-    private String id;
+    private final String id;
 
     /**
      * The type of material (LESSON, QUIZ, WORKSHEET, POLL).
      */
     @NonNull
-    private MaterialType type;
+    private final MaterialType type;
 
     /**
      * The title of the material.
      */
     @NonNull
-    private String title;
+    private final String title;
 
     /**
      * The main content of the material (can include formatted text, HTML, etc.).
      */
-    private String content;
+    private final String content;
 
     /**
      * Additional metadata in JSON format (e.g., author, subject, grade level).
      */
-    private String metadata;
+    private final String metadata;
 
     /**
      * Key vocabulary terms as a JSON array for MAT6 accessibility support.
      * Used for text-to-speech and content simplification features.
      */
-    private String vocabularyTerms;
+    private final String vocabularyTerms;
 
     /**
      * Timestamp when the material was created or last modified (Unix epoch milliseconds).
      */
-    private long timestamp;
+    private final long timestamp;
 
     /**
      * Constructor with required fields.
