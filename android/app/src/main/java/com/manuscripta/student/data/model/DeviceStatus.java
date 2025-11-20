@@ -17,5 +17,15 @@ public enum DeviceStatus {
     /**
      * Device is disconnected or offline.
      */
-    DISCONNECTED
+    DISCONNECTED,
+
+    /**
+     * Device screen is locked by the teacher.
+     */
+    LOCKED,
+
+    /**
+     * Device has been idle for a prolonged period.
+     */
+    IDLE
 }
