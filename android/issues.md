@@ -350,7 +350,7 @@ Create enum for different question types (multiple choice, true/false, open-ende
 Create entity to track device status for reporting to teacher.
 
 **Tasks:**
-- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED), batteryLevel, lastUpdated
+- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED, LOCKED, IDLE), batteryLevel, lastUpdated
 - Create `DeviceStatusDao.java` interface
 - Write unit tests
 

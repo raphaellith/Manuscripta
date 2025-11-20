@@ -74,7 +74,7 @@ MAT15 The application must allow the teacher to define and tag "Key Vocabulary" 
 MAT16 The application must allow the import and display of static images and PDF documents as lesson materials.
 CLASSROOM CONTROL (CON)
 CON1        The application must provide a continuously updated dashboard displaying aggregated and anonymised data.
-CON2        The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help or is disconnected.
+CON2        The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
 CON3        The dashboard must include a panel displaying the number of connected devices.
 CON4        The dashboard could include a panel displaying the average student’s progress through the current lesson. This is calculated based on all connected devices and displayed as a percentage.
 CON5        The dashboard must include a panel indicating devices which require attention. This includes students who are in need of assistance or whose tablets are low on battery.

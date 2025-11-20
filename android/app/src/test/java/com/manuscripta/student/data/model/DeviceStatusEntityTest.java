@@ -87,5 +87,12 @@ public class DeviceStatusEntityTest {
             deviceStatusEntity.setStatus(status);
             assertEquals(status, deviceStatusEntity.getStatus());
         }
+        
+        // Explicitly check new statuses
+        deviceStatusEntity.setStatus(DeviceStatus.LOCKED);
+        assertEquals(DeviceStatus.LOCKED, deviceStatusEntity.getStatus());
+        
+        deviceStatusEntity.setStatus(DeviceStatus.IDLE);
+        assertEquals(DeviceStatus.IDLE, deviceStatusEntity.getStatus());
     }
 }
