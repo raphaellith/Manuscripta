@@ -91,8 +91,6 @@ public class SessionEntity {
         return id;
     }
 
-
-
     @NonNull
     public String getMaterialId() {
         return materialId;
