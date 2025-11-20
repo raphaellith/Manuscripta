@@ -62,6 +62,7 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
+    testImplementation("androidx.room:room-testing:2.6.1")
 
     // Retrofit & OkHttp
     implementation(libs.retrofit)
