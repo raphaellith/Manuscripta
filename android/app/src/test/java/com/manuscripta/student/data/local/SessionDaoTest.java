@@ -67,14 +67,15 @@ public class SessionDaoTest {
     }
 
     private SessionEntity createSession(String id, String materialId) {
-        SessionEntity session = new SessionEntity();
-        session.setId(id);
-        session.setMaterialId(materialId);
-        session.setStartTime(System.currentTimeMillis());
-        session.setEndTime(0);
-        session.setStatus(SessionStatus.ACTIVE);
-        session.setDeviceId("device-1");
-        return session;
+        // Use Room constructor to force specific ID
+        return new SessionEntity(
+            id,
+            materialId,
+            System.currentTimeMillis(),
+            0,
+            SessionStatus.ACTIVE,
+            "device-1"
+        );
     }
 
     @Test
