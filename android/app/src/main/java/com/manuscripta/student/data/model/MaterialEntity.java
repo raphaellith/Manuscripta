@@ -73,7 +73,7 @@ public class MaterialEntity {
                           @NonNull String content,
                           @NonNull String metadata,
                           @NonNull String vocabularyTerms,
-                          @NonNull long timestamp) {
+                          long timestamp) {
         this.id = id;
         this.type = type;
         this.title = title;
