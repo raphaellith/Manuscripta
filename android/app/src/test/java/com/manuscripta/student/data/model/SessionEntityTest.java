@@ -2,6 +2,7 @@ package com.manuscripta.student.data.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class SessionEntityTest {
         long currentTime = System.currentTimeMillis();
         long diff = Math.abs(currentTime - newSession.getStartTime());
         // Allow for small time difference (e.g., 1 second)
-        assert(diff < 1000);
+        assertTrue("Start time should be within 1 second of current time", diff < 1000);
     }
 
     @Test
