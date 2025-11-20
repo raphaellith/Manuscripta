@@ -1,0 +1,21 @@
+package com.manuscripta.student.data.model;
+
+/**
+ * Enum representing the status of a student device.
+ */
+public enum DeviceStatus {
+    /**
+     * Student is actively working on the assigned task.
+     */
+    ON_TASK,
+
+    /**
+     * Student has requested help.
+     */
+    NEEDS_HELP,
+
+    /**
+     * Device is disconnected or offline.
+     */
+    DISCONNECTED
+}
