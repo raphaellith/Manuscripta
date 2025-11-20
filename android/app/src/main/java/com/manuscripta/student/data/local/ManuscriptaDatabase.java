@@ -7,7 +7,6 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.SessionEntity;
 import com.manuscripta.student.data.model.ResponseEntity;
-import com.manuscripta.student.data.model.SessionEntity;
 
 /**
  * Room database for Manuscripta application.

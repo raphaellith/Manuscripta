@@ -30,7 +30,7 @@ public class ResponseEntity {
 
     @PrimaryKey
     @NonNull
-    private String id;
+    private final String id;
 
     @NonNull
     private String questionId;
