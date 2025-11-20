@@ -5,6 +5,9 @@ import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.Ignore;
+
+import java.util.UUID;
 
 /**
  * Room entity representing a learning session.
@@ -27,7 +30,7 @@ public class SessionEntity {
 
     @PrimaryKey
     @NonNull
-    private String id;
+    private final String id;
 
     @NonNull
     private String materialId;
@@ -42,14 +45,43 @@ public class SessionEntity {
     @NonNull
     private String deviceId;
 
-    // Default constructor
-    public SessionEntity() {
-        this.id = "";
-        this.materialId = "";
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR 1: For Room (Rehydration)
+    // -------------------------------------------------------------------------
+    /**
+     * Standard constructor used by Room to recreate objects from the database.
+     * Pass the existing ID explicitly.
+     */
+    public SessionEntity(@NonNull String id,
+                         @NonNull String materialId,
+                         long startTime,
+                         long endTime,
+                         @NonNull SessionStatus status,
+                         @NonNull String deviceId) {
+        this.id = id;
+        this.materialId = materialId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.status = status;
+        this.deviceId = deviceId;
+    }
+
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR 2: For the App (Creation)
+    // -------------------------------------------------------------------------
+    /**
+     * Convenience constructor for creating NEW sessions.
+     * Automatically generates a random UUID and sets default values.
+     * Annotated with @Ignore so Room doesn't try to use it.
+     */
+    @Ignore
+    public SessionEntity(@NonNull String materialId, @NonNull String deviceId) {
+        this.id = UUID.randomUUID().toString();
+        this.materialId = materialId;
         this.startTime = System.currentTimeMillis();
         this.endTime = 0;
         this.status = SessionStatus.ACTIVE;
-        this.deviceId = "";
+        this.deviceId = deviceId;
     }
 
     // Getters and Setters
@@ -59,9 +91,7 @@ public class SessionEntity {
         return id;
     }
 
-    public void setId(@NonNull String id) {
-        this.id = id;
-    }
+
 
     @NonNull
     public String getMaterialId() {
