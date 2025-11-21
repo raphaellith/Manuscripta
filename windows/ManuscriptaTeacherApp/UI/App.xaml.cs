@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace ManuscriptaTeachingApp
+namespace UI
 {
     public partial class App : Application
     {

@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace ManuscriptaTeachingApp
+namespace UI
 {
     [Application]
     public class MainApplication : MauiApplication

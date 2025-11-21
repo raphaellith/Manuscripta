@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace ManuscriptaTeachingApp
+namespace UI
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

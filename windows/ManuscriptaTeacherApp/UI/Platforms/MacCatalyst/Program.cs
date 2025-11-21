@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace ManuscriptaTeachingApp
+namespace UI
 {
     public class Program
     {

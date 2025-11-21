@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace ManuscriptaTeachingApp
+namespace UI
 {
     public static class MauiProgram
     {

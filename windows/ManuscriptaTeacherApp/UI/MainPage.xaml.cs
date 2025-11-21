@@ -1,4 +1,4 @@
-﻿namespace ManuscriptaTeachingApp
+﻿namespace UI
 {
     public partial class MainPage : ContentPage
     {
