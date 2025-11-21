@@ -63,7 +63,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT2**	The Lesson Library must be organised using the following hierarchical structure. The Lesson Library consists of zero or more *units*; each unit consists of zero or more *lessons*; and each lesson consists of zero or more *materials*.
 
-**MAT3**	Each material must belong to a specified *material type*. Possible material types include lessons, polls, worksheets and quizzes.
+**MAT3**	Each material must belong to a specified *material type*. Possible material types include reading, polls, worksheets and quizzes.
 
 **MAT4**	The application must include a search function for teachers to locate materials across all units and lessons.
 
@@ -75,21 +75,20 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT8**	When creating a new material, the application must prompt the teacher for a textual description of the expected content.
 
-**MAT9**	When creating a new material, the application must prompt the teacher to upload zero or more source material documents. Supported file formats must include .pdf, .txt and .docx.
+**MAT9**	When creating a new material, the application must prompt the teacher to upload zero or more source material documents. Supported file formats must include .pdf, .txt and .docx.  
+**MAT10**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
 
-**MAT10**	When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, either by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) or by referencing reading level categories established by other standardised frameworks.
+**MAT11**  After creating a new material, the teacher must be able to modify and refine its contents via an editor.
 
-**MAT13**	 After creating a new material, the teacher must be able to modify and refine its contents via an editor.
+**MAT12** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
 
-**MAT14** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
+**MAT13**	 Each material should be associated with metadata such as its deployment status and creation date.
 
-**MAT15**	 Each material should be associated with metadata such as its deployment status and creation date.
+**MAT14** The application could provide an AI-powered conversational teaching assistance to offer teachers support with lesson planning and differentiation strategies through a chat interface.
 
-**MAT16** The application could provide an AI-powered conversational teaching assistance to offer teachers support with lesson planning and differentiation strategies through a chat interface.
+**MAT15**	 When deploying a material, the application should provide the option to mark individual student’s responses either manually or with AI assistance.
 
-**MAT-X**	When deploying a material, the application must provide the option to mark individual student’s responses either manually or with AI assistance.
-
-**MAT-X**	When deploying a material, the application must provide an optional point system where points are awarded for correct responses as positive reinforcement.
+**MAT16** When deploying a material, the application should provide an optional point system where points are awarded for correct responses as positive reinforcement.
 
 **CLASSROOM CONTROL (CON)**
 
@@ -151,7 +150,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT1**	The application must be able to display all supported material types, such as quizzes, worksheets and polls.
 
-**MAT2**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message with a brief explanation that identifies the correct parts of their reasoning and guides them towards the right answer, without directly giving it to them.
+**MAT2**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
 
 **MAT3**	When answering questions, the application must provide a "Try Again" option for incorrect responses.
 
@@ -165,6 +164,8 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT8** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
 
+**MAT9** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. Explore dynamic generation vs static pre-defined responses. 
+
 **ACCESSIBILITY (ACC)**
 
 **ACC1**	The application must support tapping, typing and the use of styluses as input methods.
@@ -173,9 +174,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **ACC3**	If enabled by the teacher, the application must include a text-to-speech button which, when pressed, reads the on-screen text aloud.
 
-**ACC-X** If enabled by the teacher, the application should include animated mascots or avatars to act as learning companions.
-
 **ACC4**	The application must have a monochromatic display with minimal audiovisual stimuli to avoid distractions.
+
+**ACC5  \-** If enabled by the teacher, the application should include animated mascots or avatars to act as learning companions.
 
 ### **NETWORKING (NET)**
 
