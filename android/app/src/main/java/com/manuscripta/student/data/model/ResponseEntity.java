@@ -36,7 +36,7 @@ public class ResponseEntity {
     private String questionId;
 
     @NonNull
-    private String selectedAnswer;
+    private String answer;
 
     private boolean isCorrect;
 
@@ -56,13 +56,13 @@ public class ResponseEntity {
      */
     public ResponseEntity(@NonNull String id,
                           @NonNull String questionId,
-                          @NonNull String selectedAnswer,
+                          @NonNull String answer,
                           boolean isCorrect,
                           long timestamp,
                           boolean synced) {
         this.id = id;
         this.questionId = questionId;
-        this.selectedAnswer = selectedAnswer;
+        this.answer = answer;
         this.isCorrect = isCorrect;
         this.timestamp = timestamp;
         this.synced = synced;
@@ -77,11 +77,11 @@ public class ResponseEntity {
      * Annotated with @Ignore so Room doesn't try to use it.
      */
     @Ignore
-    public ResponseEntity(@NonNull String questionId, @NonNull String selectedAnswer) {
+    public ResponseEntity(@NonNull String questionId, @NonNull String answer) {
         this(
             UUID.randomUUID().toString(),
             questionId,
-            selectedAnswer,
+            answer,
             false,
             System.currentTimeMillis(),
             false
@@ -106,11 +106,11 @@ public class ResponseEntity {
 
     @NonNull
     public String getSelectedAnswer() {
-        return selectedAnswer;
+        return answer;
     }
 
-    public void setSelectedAnswer(@NonNull String selectedAnswer) {
-        this.selectedAnswer = selectedAnswer;
+    public void setSelectedAnswer(@NonNull String answer) {
+        this.answer = answer;
     }
 
     public boolean isCorrect() {
