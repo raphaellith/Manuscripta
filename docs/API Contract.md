@@ -231,7 +231,7 @@ Status Update JSON payload:
   "status": "ON_TASK",
   "batteryLevel": 85,
   "currentMaterialId": "mat-uuid-1",
-  "placeholderStudentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
+  "studentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
 }
 ```
 
