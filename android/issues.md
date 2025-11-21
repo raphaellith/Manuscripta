@@ -312,7 +312,7 @@ Create domain model classes separate from entities for business logic layer (Cle
 Create enum for different material types (quiz, worksheet, poll).
 
 **Tasks:**
-- Create `MaterialType.java` enum with values: QUIZ, WORKSHEET, POLL
+- Create `MaterialType.java` enum with values: LESSON, QUIZ, WORKSHEET, POLL
 - Add helper methods (fromString, getDisplayName)
 - Write unit tests
 
@@ -350,7 +350,7 @@ Create enum for different question types (multiple choice, true/false, open-ende
 Create entity to track device status for reporting to teacher.
 
 **Tasks:**
-- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED), batteryLevel, lastUpdated
+- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED, LOCKED, IDLE), batteryLevel, currentMaterialId, studentView (for teacher live view feature), lastUpdated
 - Create `DeviceStatusDao.java` interface
 - Write unit tests
 
@@ -358,6 +358,34 @@ Create entity to track device status for reporting to teacher.
 - [ ] DeviceStatusEntity created
 - [ ] DeviceStatusDao implemented
 - [ ] Status enum defined
+- [ ] 100% test coverage
+
+---
+
+### 1.9 [Android] Update Material Data Pipeline for Attachments
+
+- Labels: `android`, `data-layer`, `refactor`
+
+**Description:**
+Update the `MaterialEntity` and `MaterialRepository` to support the new `attachments` field in the API response. This involves adding a local-only field to store file paths, implementing the logic to decode and save Base64 attachments, and populating this field in the Repository layer.
+
+**Requirements:**
+- Add `localAttachments` field to `MaterialEntity` (String, JSON array format) - **NOT** part of the DTO/API
+- Update `MaterialDto` to include `attachments` map (Base64 strings from API)
+- Implement `FileRepository` to handle Base64 decoding and saving to device storage
+- Update `MaterialRepository` to coordinate: fetch DTO → save files → populate `localAttachments` → insert entity
+
+**Tasks:**
+- Add `localAttachments` field to `MaterialEntity.java` (local-only, not in DTO)
+- Create `FileRepository` helper class for Base64 decoding/saving
+- Update `MaterialRepository` to process attachments and populate `localAttachments`
+- Write unit tests for file handling and repository coordination
+
+**Acceptance Criteria:**
+- [ ] `MaterialEntity` has `localAttachments` field (not in DTO)
+- [ ] Base64 attachments are decoded and saved to disk
+- [ ] Local file paths are stored in `localAttachments` field
+- [ ] `metadata` field preserves server data unchanged
 - [ ] 100% test coverage
 
 ---
@@ -510,7 +538,7 @@ Create Data Transfer Objects for material-related API communication.
 **Tasks:**
 - Create `MaterialDto.java` with @SerializedName annotations, including id field (String/UUID)
 - Include vocabularyTerms field for MAT6 support
-- Create `MaterialListResponseDto.java`
+- Create `MaterialListResponseDto.java` - Contains a `materials` field with a list of material IDs in presentation order
 - Create `VocabularyTermDto.java` for key vocabulary
 - Create mapper methods (DTO → Domain) that preserve entity IDs
 - Write unit tests
@@ -575,7 +603,7 @@ Create DTOs for submitting responses to teacher.
 Create DTOs for device status reporting.
 
 **Tasks:**
-- Create `DeviceStatusDto.java`
+- Create `DeviceStatusDto.java` with fields: deviceId, status, batteryLevel, currentMaterialId, placeholderStudentView
 - Create `DeviceInfoDto.java` (device metadata)
 - Create mapper methods
 - Write unit tests
@@ -598,7 +626,7 @@ Define all Retrofit API endpoints for communication with teacher server.
 **Related Requirements:** NET1, NET2, MAT7
 
 **Tasks:**
-- Add `@GET` method for fetching materials: `getMaterials()`
+- Add `@GET` method for fetching materials: `getMaterials()` - Returns a list of material IDs in presentation order
 - Add `@GET` method for material details: `getMaterialById(@Path id)`
 - Add `@POST` method for submitting response: `submitResponse(@Body)`
 - Add `@POST` method for batch responses: `submitBatchResponses(@Body)`
