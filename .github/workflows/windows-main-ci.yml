@@ -1,0 +1,54 @@
+name: Windows Main CI
+
+on:
+  push:
+    paths:
+      - 'windows/ManuscriptaTeacherApp/Main/**'
+      - 'windows/Main/**'
+  pull_request:
+    branches:
+      - 'windows-app'
+      - 'main'
+    paths:
+      - 'windows/ManuscriptaTeacherApp/Main/**'
+
+jobs:
+  build-and-test:
+    name: Build, test and coverage
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj"
+
+      - name: Build
+        run: dotnet build "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj" --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: |
+          dotnet test "windows/ManuscriptaTeacherApp/Main" --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml /p:Threshold=90 /p:ThresholdType=line
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-coverage
+          path: windows/ManuscriptaTeacherApp/Main/TestResults/**
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: windows/ManuscriptaTeacherApp/Main/TestResults/**
+
+      - name: Notes
+        run: |
+          echo "Coverage files are uploaded as artifacts named 'main-coverage'."
+          echo "If you want a human-readable report, consider adding 'reportgenerator' to parse the opencover file and publish HTML output."

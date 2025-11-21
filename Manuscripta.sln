@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{AF50D07C-CBCD-524F-DB50-1B7C7AC32620}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ManuscriptaTeacherApp", "ManuscriptaTeacherApp", "{71BD4D41-F91F-F37D-9A45-1EFF44361389}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Manuscripta.Main", "windows\ManuscriptaTeacherApp\Main\Manuscripta.Main.csproj", "{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{71BD4D41-F91F-F37D-9A45-1EFF44361389} = {AF50D07C-CBCD-524F-DB50-1B7C7AC32620}
+		{2A918EF1-6BBF-717C-7B2A-AE0DDAA62F45} = {71BD4D41-F91F-F37D-9A45-1EFF44361389}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F81769F0-C1C6-484B-8DFE-D57D99CA8E1D}
+	EndGlobalSection
+EndGlobal
