@@ -312,7 +312,7 @@ Create domain model classes separate from entities for business logic layer (Cle
 Create enum for different material types (quiz, worksheet, poll).
 
 **Tasks:**
-- Create `MaterialType.java` enum with values: QUIZ, WORKSHEET, POLL
+- Create `MaterialType.java` enum with values: LESSON, QUIZ, WORKSHEET, POLL
 - Add helper methods (fromString, getDisplayName)
 - Write unit tests
 
@@ -358,6 +358,34 @@ Create entity to track device status for reporting to teacher.
 - [ ] DeviceStatusEntity created
 - [ ] DeviceStatusDao implemented
 - [ ] Status enum defined
+- [ ] 100% test coverage
+
+---
+
+### 1.9 [Android] Update Material Data Pipeline for Attachments
+
+- Labels: `android`, `data-layer`, `refactor`
+
+**Description:**
+Update the `MaterialEntity` and `MaterialRepository` to support the new `attachments` field in the API response. This involves adding a local-only field to store file paths, implementing the logic to decode and save Base64 attachments, and populating this field in the Repository layer.
+
+**Requirements:**
+- Add `localAttachments` field to `MaterialEntity` (String, JSON array format) - **NOT** part of the DTO/API
+- Update `MaterialDto` to include `attachments` map (Base64 strings from API)
+- Implement `FileRepository` to handle Base64 decoding and saving to device storage
+- Update `MaterialRepository` to coordinate: fetch DTO → save files → populate `localAttachments` → insert entity
+
+**Tasks:**
+- Add `localAttachments` field to `MaterialEntity.java` (local-only, not in DTO)
+- Create `FileRepository` helper class for Base64 decoding/saving
+- Update `MaterialRepository` to process attachments and populate `localAttachments`
+- Write unit tests for file handling and repository coordination
+
+**Acceptance Criteria:**
+- [ ] `MaterialEntity` has `localAttachments` field (not in DTO)
+- [ ] Base64 attachments are decoded and saved to disk
+- [ ] Local file paths are stored in `localAttachments` field
+- [ ] `metadata` field preserves server data unchanged
 - [ ] 100% test coverage
 
 ---
