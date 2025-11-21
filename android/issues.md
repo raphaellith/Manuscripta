@@ -350,7 +350,7 @@ Create enum for different question types (multiple choice, true/false, open-ende
 Create entity to track device status for reporting to teacher.
 
 **Tasks:**
-- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED), batteryLevel, lastUpdated
+- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED, LOCKED, IDLE), batteryLevel, currentMaterialId, studentView (for teacher live view feature), lastUpdated
 - Create `DeviceStatusDao.java` interface
 - Write unit tests
 
@@ -538,7 +538,7 @@ Create Data Transfer Objects for material-related API communication.
 **Tasks:**
 - Create `MaterialDto.java` with @SerializedName annotations, including id field (String/UUID)
 - Include vocabularyTerms field for MAT6 support
-- Create `MaterialListResponseDto.java`
+- Create `MaterialListResponseDto.java` - Contains a `materials` field with a list of material IDs in presentation order
 - Create `VocabularyTermDto.java` for key vocabulary
 - Create mapper methods (DTO → Domain) that preserve entity IDs
 - Write unit tests
@@ -603,7 +603,7 @@ Create DTOs for submitting responses to teacher.
 Create DTOs for device status reporting.
 
 **Tasks:**
-- Create `DeviceStatusDto.java`
+- Create `DeviceStatusDto.java` with fields: deviceId, status, batteryLevel, currentMaterialId, placeholderStudentView
 - Create `DeviceInfoDto.java` (device metadata)
 - Create mapper methods
 - Write unit tests
@@ -626,7 +626,7 @@ Define all Retrofit API endpoints for communication with teacher server.
 **Related Requirements:** NET1, NET2, MAT7
 
 **Tasks:**
-- Add `@GET` method for fetching materials: `getMaterials()`
+- Add `@GET` method for fetching materials: `getMaterials()` - Returns a list of material IDs in presentation order
 - Add `@GET` method for material details: `getMaterialById(@Path id)`
 - Add `@POST` method for submitting response: `submitResponse(@Body)`
 - Add `@POST` method for batch responses: `submitBatchResponses(@Body)`
