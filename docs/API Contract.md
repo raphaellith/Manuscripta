@@ -36,7 +36,7 @@ Fetches a list of available materials for the current session.
       {
         "id": "uuid-string",
         "title": "Algebra Basics",
-        "type": "QUIZ", // or LESSON, WORKSHEET, POLL
+        "type": "QUIZ", // or READING, WORKSHEET, POLL
         "description": "Introduction to variables",
         "timestamp": "2023-10-27T10:00:00Z"
       }
@@ -212,7 +212,7 @@ Sent when the student presses the "Raise Hand" button.
 -   **Responses/Sessions:** Created by Android (Client), ID assigned by Client. Windows (Server) **must preserve** this ID.
 
 ### 3.2. Material Types
--   `LESSON`: Reading material or informational content.
+-   `READING`: Reading material or informational content.
 -   `QUIZ`: Interactive questions with immediate feedback.
 -   `WORKSHEET`: Content for reading and annotation.
 -   `POLL`: Quick class voting.
