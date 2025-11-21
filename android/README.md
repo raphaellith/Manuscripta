@@ -26,6 +26,39 @@ com.manuscripta.student/
 2. **Domain Layer**: Business logic and use cases (to be added as needed)
 3. **Data Layer** (`data/`, `network/`): Repositories, data sources, API services
 
+## Features
+
+The Manuscripta Student Client implements the following key features based on project requirements:
+
+### Lesson Materials (MAT)
+- **Material Display**: Display all supported material types including quizzes, worksheets, and polls
+- **Immediate Feedback**: Provide formative feedback on quiz responses with ✓ or ✗ indicators and explanations
+- **Try Again**: Allow students to retry incorrect answers with guidance
+- **Content Transformation**: Simplify, expand, or summarize text content to support different reading levels
+- **AI Assistance**: Provide AI-powered scaffolding tools to guide student learning
+- **Key Vocabulary Display** (MAT6): Dedicated area to highlight and display teacher-defined key vocabulary terms for each lesson
+- **Raise Hand Button** (MAT7): Send help requests to the teacher's dashboard when assistance is needed
+- **Handwriting Annotation** (MAT8): Support stylus-based annotation directly on worksheets and PDF documents
+
+### Accessibility (ACC)
+- **Multiple Input Methods**: Support touch, typing, and stylus input for diverse learning needs
+- **Text-to-Speech**: Read on-screen content aloud when enabled by the teacher
+- **Monochrome Display**: Optimized for e-ink displays with minimal audiovisual stimuli to reduce distraction
+- **Eye Gaze Control**: Optional support via third-party hardware (future consideration)
+
+### Device Management (SYS)
+- **Kiosk Mode**: Lock the device to the Manuscripta app to prevent access to other applications
+- **E-ink Optimization**: Performance tuning for e-ink display characteristics (reduced refresh rates, partial updates)
+- **Connection Monitoring**: Track and report connection status to the teacher's server
+- **Battery Monitoring**: Report battery levels and alert when power is low
+- **Remote Control**: Support teacher-initiated screen locks and session management
+
+### Networking (NET)
+- **Local Area Network**: Communicate with the teacher's Windows application over LAN
+- **Material Synchronization**: Receive lesson materials and content from the teacher
+- **Response Submission**: Send quiz answers, poll responses, and student progress data
+- **Offline Queue**: Queue responses when disconnected and sync when connection is restored
+
 ## Technology Stack
 
 ### Core Technologies
@@ -253,6 +286,21 @@ android/
 
 The app requires the following permissions:
 - `INTERNET`: For network communication with the Manuscripta API
+- `WAKE_LOCK`: For maintaining connection during active sessions
+- `BATTERY_STATS`: For monitoring battery level
+
+## Hardware Requirements
+
+The student client is designed for Android-based e-ink tablets such as:
+- **Boox** series (e.g., Boox Tab, Boox Note Air)
+- **AiPaper** devices
+- Other Android e-ink tablets with API 27+ support
+
+**Key Considerations:**
+- **Stylus Support**: For handwriting annotation features (MAT8)
+- **Display**: Monochrome e-ink optimized for reduced distraction (ACC4)
+- **Connectivity**: WiFi required for LAN communication with teacher device
+- **Kiosk Mode**: Android Enterprise features required for full device lockdown
 
 ## Development Guidelines
 

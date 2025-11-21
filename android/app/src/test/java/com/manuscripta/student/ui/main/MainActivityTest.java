@@ -1,26 +1,47 @@
 package com.manuscripta.student.ui.main;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
+import android.widget.TextView;
+
+import androidx.lifecycle.Lifecycle;
+import androidx.test.core.app.ActivityScenario;
+
+import com.manuscripta.student.R;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
-/**
- * Unit tests for MainActivity.
- * Note: Full Hilt + Robolectric testing requires additional setup.
- * These are simplified tests to pass the build.
- */
+import dagger.hilt.android.testing.HiltAndroidRule;
+import dagger.hilt.android.testing.HiltAndroidTest;
+import dagger.hilt.android.testing.HiltTestApplication;
+
+@HiltAndroidTest
+@RunWith(RobolectricTestRunner.class)
+@Config(application = HiltTestApplication.class, sdk = 33)
 public class MainActivityTest {
 
-    @Test
-    public void testConstructor() {
-        // Basic test to ensure class exists
-        assertNotNull(MainActivity.class);
-    }
+    @Rule
+    public HiltAndroidRule hiltRule = new HiltAndroidRule(this);
 
     @Test
-    public void testClassInstantiation() {
-        // Verify the class can be referenced
-        assertTrue(MainActivity.class.isAssignableFrom(MainActivity.class));
+    public void activityLaunches_andSetsTextCorrectly() {
+        hiltRule.inject();
+
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+
+            scenario.moveToState(Lifecycle.State.CREATED);
+
+            scenario.onActivity(activity -> {
+                TextView textView = activity.findViewById(R.id.textView);
+
+                assertNotNull("TextView should exist", textView);
+                assertEquals("Hello, Manuscripta!", textView.getText().toString());
+            });
+        }
     }
 }
