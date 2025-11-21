@@ -33,10 +33,6 @@ jobs:
 
       - name: Test with coverage
         run: |
-          # Run tests and collect coverage (uses coverlet.msbuild if installed in test projects)
-          # The coverage threshold is set to 90% (line coverage). For this option to work,
-          # test projects should include the 'coverlet.msbuild' package. If not present,
-          # tests will still run and coverage will be produced by the 'XPlat Code Coverage' collector.
           dotnet test "windows/ManuscriptaTeacherApp/Main" --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml /p:Threshold=90 /p:ThresholdType=line
 
       - name: Upload coverage artifact
@@ -45,7 +41,7 @@ jobs:
           name: main-coverage
           path: windows/ManuscriptaTeacherApp/Main/TestResults/**
 
-      - name: Publish test results (optional)
+      - name: Publish test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -56,10 +52,3 @@ jobs:
         run: |
           echo "Coverage files are uploaded as artifacts named 'main-coverage'."
           echo "If you want a human-readable report, consider adding 'reportgenerator' to parse the opencover file and publish HTML output."
-
-# Notes:
-# - This workflow runs on Windows to match the Windows app focus, but the project is ASP.NET Core and
-#   can also build on Linux/macOS if desired (change `runs-on`).
-# - Enforcing coverage thresholds via the `/p:Threshold` properties requires the test projects to reference
-#   the `coverlet.msbuild` NuGet package. If you prefer to compute coverage from the produced 'coverage.opencover.xml',
-#   add a ReportGenerator step to create an HTML summary and a script step to parse and enforce thresholds.
