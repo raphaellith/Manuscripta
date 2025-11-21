@@ -116,7 +116,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON12** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
 
-**CON13** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting.
+**CON13** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
 
 **NETWORKING (NET)**
 
