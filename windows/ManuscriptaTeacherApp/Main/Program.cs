@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +14,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // Minimal default endpoint to confirm the app is running.
-app.MapGet("/", () => Results.Ok("Manuscripta Main API (net9.0) is running"));
+app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 
 app.MapControllers();
 
