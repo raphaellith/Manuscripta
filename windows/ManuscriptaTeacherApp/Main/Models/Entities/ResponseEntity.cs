@@ -16,7 +16,7 @@ public class ResponseEntity
 
     [Required]
     [MaxLength(1000)]
-    public string Answer { get; set; } = null!;
+    public string? Answer { get; set; }
 
     public bool IsCorrect { get; set; }
 
@@ -27,5 +27,5 @@ public class ResponseEntity
 
     // Foreign key navigation
     [ForeignKey("QuestionId")]
-    public virtual QuestionEntity Question { get; set; } = null!;
+    public QuestionEntity? Question { get; set; }
 }

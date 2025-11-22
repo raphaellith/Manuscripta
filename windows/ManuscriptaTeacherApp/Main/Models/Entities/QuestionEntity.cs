@@ -16,22 +16,22 @@ public class QuestionEntity
 
     [Required]
     [MaxLength(1000)]
-    public string QuestionText { get; set; } = null!;
+    public string? QuestionText { get; set; }
 
     [Required]
     [MaxLength(100)]
-    public string QuestionType { get; set; } = null!;
+    public string? QuestionType { get; set; }
 
     [Column(TypeName = "nvarchar(max)")]
-    public string Options { get; set; } = null!; // JSON
+    public string? Options { get; set; } // JSON
 
     [MaxLength(500)]
-    public string CorrectAnswer { get; set; } = null!;
+    public string? CorrectAnswer { get; set; }
 
     // Foreign key navigation
     [ForeignKey("MaterialId")]
-    public virtual MaterialEntity Material { get; set; } = null!;
+    public MaterialEntity? Material { get; set; }
 
     // Navigation property
-    public virtual ICollection<ResponseEntity> Responses { get; set; } = new List<ResponseEntity>();
+    public ICollection<ResponseEntity> Responses { get; set; } = new List<ResponseEntity>();
 }

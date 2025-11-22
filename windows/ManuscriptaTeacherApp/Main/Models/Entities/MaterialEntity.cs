@@ -18,13 +18,13 @@ public class MaterialEntity
 
     [Required]
     [MaxLength(500)]
-    public string Title {get; set;} = null!;
+    public string? Title {get; set;}
 
     [Required]
-    public string Content {get; set;} = null!;
+    public string? Content {get; set;}
 
     [Column(TypeName = "nvarchar(max)")]
-    public string Metadata {get; set;} = null!;
+    public string? Metadata {get; set;}
 
     [Column(TypeName = "nvarchar(max)")]
     public JsonArray VocabularyTerms { get; set; } = new();
@@ -32,5 +32,5 @@ public class MaterialEntity
     [Required]
     public long Timestamp {get; set;}
 
-    public virtual ICollection<QuestionEntity> Questions { get; set; } = new List<QuestionEntity>();
+    public ICollection<QuestionEntity> Questions { get; set; } = new List<QuestionEntity>();
 }
