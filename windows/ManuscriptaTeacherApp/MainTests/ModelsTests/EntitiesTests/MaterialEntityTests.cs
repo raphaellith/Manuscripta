@@ -1,0 +1,44 @@
+using System.Text.Json.Nodes;
+using Xunit;
+using Main.Models.Entities;
+using Main.Models.Enums;
+
+namespace MainTests;
+
+public class MaterialEntityTests
+{
+    [Fact]
+    public void DefaultConstructor_InitializesCollectionsAndDefaults()
+    {
+        var m = new MaterialEntity();
+
+        Assert.NotNull(m.VocabularyTerms);
+        Assert.Empty(m.VocabularyTerms);
+
+        Assert.NotNull(m.Questions);
+        Assert.Empty(m.Questions);
+
+        // Defaults
+        Assert.Equal(0, m.Id);
+        Assert.Equal(0, m.Timestamp);
+    }
+
+    [Fact]
+    public void CanSetProperties()
+    {
+        var m = new MaterialEntity
+        {
+            Type = MaterialType.QUIZ,
+            Title = "Sample",
+            Content = "Body",
+            Metadata = "{\"a\":1}",
+            Timestamp = 12345
+        };
+
+        Assert.Equal(MaterialType.QUIZ, m.Type);
+        Assert.Equal("Sample", m.Title);
+        Assert.Equal("Body", m.Content);
+        Assert.Equal("{\"a\":1}", m.Metadata);
+        Assert.Equal(12345, m.Timestamp);
+    }
+}
