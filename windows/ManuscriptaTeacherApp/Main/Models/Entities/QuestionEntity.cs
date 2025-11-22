@@ -22,7 +22,6 @@ public class QuestionEntity
     [MaxLength(100)]
     public string? QuestionType { get; set; }
 
-    [Column(TypeName = "nvarchar(max)")]
     public string? Options { get; set; } // JSON
 
     [MaxLength(500)]

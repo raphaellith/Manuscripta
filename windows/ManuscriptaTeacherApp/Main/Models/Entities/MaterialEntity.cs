@@ -23,10 +23,8 @@ public class MaterialEntity
     [Required]
     public string? Content {get; set;}
 
-    [Column(TypeName = "nvarchar(max)")]
     public string? Metadata {get; set;}
 
-    [Column(TypeName = "nvarchar(max)")]
     public JsonArray VocabularyTerms { get; set; } = new();
 
     [Required]

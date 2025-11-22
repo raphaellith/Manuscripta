@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Nodes;
 
 using Main.Models.Entities;
 
@@ -10,12 +11,16 @@ public class MainDbContext : DbContext
     {
     }
 
-    public DbSet<MaterialEntity> Materials { get; set; } = null!;
-    public DbSet<QuestionEntity> Questions { get; set; } = null!;
-    public DbSet<ResponseEntity> Responses { get; set; } = null!;
+    // Create a DbSet<TEntity> property for each entity set, corresponding to a database table
+    public DbSet<MaterialEntity> Materials { get; set; }
+    public DbSet<QuestionEntity> Questions { get; set; }
+    public DbSet<ResponseEntity> Responses { get; set; }
 
+    // Called when MainDbContext has been initialized but before the model has been secured and used to initialize the context.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Ignore<JsonNode>();
+        
         base.OnModelCreating(modelBuilder);
 
         // Configure MaterialEntity
