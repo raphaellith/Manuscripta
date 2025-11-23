@@ -9,12 +9,7 @@ public class ResponseEntityTests
     [Fact]
     public void DefaultValues_AreSet()
     {
-        var r = new ResponseEntity
-        {
-            Id = 1,
-            QuestionId = 2,
-            Answer = "Yes"
-        };
+        var r = new ResponseEntity(1, 2, "Yes");
 
         Assert.Equal(1, r.Id);
         Assert.Equal(2, r.QuestionId);

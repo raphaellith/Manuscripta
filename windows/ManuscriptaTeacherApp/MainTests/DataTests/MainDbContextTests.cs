@@ -31,29 +31,27 @@ public class MainDbContextTests
                 Timestamp = 1000
             };
 
+            ctx.Materials.Add(material);
+            ctx.SaveChanges();
+
             var question = new QuestionEntity
             {
                 QuestionText = "Q",
                 QuestionType = "MCQ",
-                Material = material
+                MaterialId = material.Id
             };
 
-            var response = new ResponseEntity
-            {
-                Id = 1,
-                Answer = "A",
-                Question = question
-            };
-
-            ctx.Materials.Add(material);
             ctx.Questions.Add(question);
+            ctx.SaveChanges();
+
+            var response = new ResponseEntity(1, question.Id, "A");
             ctx.Responses.Add(response);
             ctx.SaveChanges();
         }
 
         using (var ctx = new MainDbContext(options))
         {
-            var mat = ctx.Materials.Include(m => m.Questions).FirstOrDefault();
+            var mat = ctx.Materials.FirstOrDefault();
             Assert.NotNull(mat);
             Assert.Equal(MaterialType.WORKSHEET, mat!.Type);
             Assert.Equal(1, ctx.Questions.Count());
