@@ -37,11 +37,6 @@ public class MainDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.MaterialId);
-            
-            entity.HasOne(q => q.Material)
-                .WithMany(m => m.Questions)
-                .HasForeignKey(q => q.MaterialId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure ResponseEntity
@@ -51,11 +46,6 @@ public class MainDbContext : DbContext
             entity.HasIndex(e => e.QuestionId);
             entity.HasIndex(e => e.Synced);
             entity.HasIndex(e => e.Timestamp);
-            
-            entity.HasOne(r => r.Question)
-                .WithMany(q => q.Responses)
-                .HasForeignKey(r => r.QuestionId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
