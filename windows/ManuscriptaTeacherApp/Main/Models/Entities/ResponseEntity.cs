@@ -12,20 +12,20 @@ public class ResponseEntity
     public int Id { get; set; }
 
     [Required]
-    public int QuestionId { get; set; }
+    public int QuestionId { get; }
 
     [Required]
     [MaxLength(1000)]
-    public string? Answer { get; set; }
+    public string? Answer { get; }
 
-    public bool IsCorrect { get; set; }
+    public bool IsCorrect { get; }
 
     [Required]
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
 
-    public bool Synced { get; set; } = false;
+    public bool Synced { get; } = false;
 
     // Foreign key navigation
     [ForeignKey("QuestionId")]
-    public QuestionEntity? Question { get; set; }
+    public QuestionEntity? Question { get; }
 }
