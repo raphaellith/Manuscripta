@@ -29,6 +29,4 @@ public class MaterialEntity
 
     [Required]
     public long Timestamp {get; set;}
-
-    public ICollection<QuestionEntity> Questions { get; set; } = new List<QuestionEntity>();
 }

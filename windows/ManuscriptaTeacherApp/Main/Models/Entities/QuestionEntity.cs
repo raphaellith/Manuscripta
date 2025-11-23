@@ -30,7 +30,4 @@ public class QuestionEntity
     // Foreign key navigation
     [ForeignKey("MaterialId")]
     public MaterialEntity? Material { get; set; }
-
-    // Navigation property
-    public ICollection<ResponseEntity> Responses { get; set; } = new List<ResponseEntity>();
 }
