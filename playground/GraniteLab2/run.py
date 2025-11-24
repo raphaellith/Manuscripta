@@ -65,7 +65,7 @@ def check_ollama():
 def run_streamlit():
     """Launches the Streamlit app."""
     print("🚀 Launching GraniteLab...")
-    app_path = os.path.join(os.path.dirname(__file__), "app.py")
+    app_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "01_Chat.py")
     try:
         subprocess.run([sys.executable, "-m", "streamlit", "run", app_path], check=True)
     except KeyboardInterrupt:

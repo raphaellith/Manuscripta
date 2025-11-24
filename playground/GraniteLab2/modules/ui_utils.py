@@ -11,15 +11,13 @@ def init_session_state():
     if "context_window" not in st.session_state:
         st.session_state.context_window = 4096
 
+def render_sidebar_header():
+    st.sidebar.markdown('<h1 class="sidebar-header">GRANITE LABS 2</h1>', unsafe_allow_html=True)
+    st.sidebar.divider()
+
 def render_sidebar(llm_client: LLMClient):
     with st.sidebar:
-        # Custom Badge
-        st.markdown("""
-            <div style="text-align: center; margin-bottom: 20px; border: 2px solid #C84630; padding: 10px; background-color: #E6D6AA;">
-                <h1 style="color: #C84630 !important; font-size: 2rem; margin: 0;">GRANITE</h1>
-                <p style="font-family: 'Space Mono', monospace; font-size: 0.8rem; margin: 0; color: #1A1A1A;">LABORATORY ENV v2.0</p>
-            </div>
-        """, unsafe_allow_html=True)
+        render_sidebar_header()
 
         st.header("⚙️ Configuration")
         

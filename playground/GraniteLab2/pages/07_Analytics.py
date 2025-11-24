@@ -3,10 +3,12 @@ import pandas as pd
 import plotly.express as px
 from modules.db_manager import DBManager
 from modules.analytics import process_results_to_dataframe, get_average_metrics_by_model, create_pivot_table
+from modules.style_manager import load_custom_css
 
 st.set_page_config(page_title="Lab Analytics", layout="wide")
+load_custom_css()
 
-st.title("🧪 Lab Analytics")
+st.title("Lab Analytics")
 
 db = DBManager()
 
@@ -31,7 +33,7 @@ if not results:
 df = process_results_to_dataframe(results)
 
 # --- 3. Visuals (Plotly) ---
-st.subheader("📊 Performance Metrics")
+st.subheader("Performance Metrics")
 
 col1, col2 = st.columns(2)
 
@@ -48,14 +50,14 @@ with col2:
     st.plotly_chart(fig_latency, use_container_width=True)
 
 # --- 4. Pivot Table ---
-st.subheader("🧩 Qualitative Comparison")
+st.subheader("Qualitative Comparison")
 
 pivot_df = create_pivot_table(df)
 
 st.dataframe(pivot_df, use_container_width=True)
 
 # --- 5. Drill-Down / Detail Inspector ---
-st.subheader("🔍 Drill-Down Inspector")
+st.subheader("Drill-Down Inspector")
 
 st.markdown("Select a specific result to view full details.")
 
@@ -93,7 +95,10 @@ if event.selection.rows:
     # st.dataframe selection index corresponds to the displayed dataframe index (0 to N-1)
     # We need to access the row by integer location in the filtered_df
     selected_row = filtered_df.iloc[selected_index]
-    
+    with st.sidebar:
+        from modules.ui_utils import render_sidebar_header
+        render_sidebar_header()
+        st.header("Filters")
     st.divider()
     st.markdown(f"### Result Details (ID: {selected_row['id']})")
     

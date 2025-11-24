@@ -2,22 +2,26 @@ import streamlit as st
 from modules.llm_client import LLMClient
 from modules.ui_utils import init_session_state, render_sidebar
 from modules.prompt_ui import render_prompt_selector
+from modules.style_manager import load_custom_css
 from PIL import Image
 import io
 
 def main():
     st.set_page_config(page_title="Vision Lab", layout="wide")
+    load_custom_css()
     init_session_state()
     
     client = LLMClient()
     render_sidebar(client)
     
     with st.sidebar:
-        st.divider()
+        from modules.ui_utils import render_sidebar_header
+        render_sidebar_header()
+        st.header("Configuration")
         st.header("System Prompt")
         system_prompt = render_prompt_selector(key="vision_system_prompt")
 
-    st.title("👁️ Vision Lab")
+    st.title("Vision Lab")
     st.markdown("Experiment with image-to-text capabilities (OCR, Description, Extraction).")
 
     col1, col2 = st.columns([1, 1])

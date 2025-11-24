@@ -4,8 +4,10 @@ import json
 from modules.db_manager import DBManager
 from modules.llm_client import LLMClient
 from modules.prompt_ui import render_prompt_selector
+from modules.style_manager import load_custom_css
 
 st.set_page_config(page_title="The Matrix", layout="wide")
+load_custom_css()
 
 st.title("The Matrix: Batch Experiment Engine")
 st.markdown("Define and execute large-scale validation runs.")
@@ -14,7 +16,10 @@ db = DBManager()
 llm = LLMClient()
 
 # --- Configuration Wizard ---
-st.header("1. Configuration")
+with st.sidebar:
+    from modules.ui_utils import render_sidebar_header
+    render_sidebar_header()
+    st.header("Matrix Configuration")
 
 col1, col2 = st.columns(2)
 

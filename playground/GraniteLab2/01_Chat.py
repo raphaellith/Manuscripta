@@ -13,7 +13,7 @@ def init_chat_state():
         st.session_state.json_mode = False
 
 def main():
-    st.set_page_config(page_title="GraniteLab", layout="wide")
+    st.set_page_config(page_title="Granite Lab", layout="wide")
     load_custom_css()
     init_session_state()
     init_chat_state()

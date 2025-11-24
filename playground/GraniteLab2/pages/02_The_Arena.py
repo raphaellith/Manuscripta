@@ -3,10 +3,13 @@ import time
 from modules.llm_client import LLMClient
 from modules.prompt_ui import render_prompt_selector
 
+from modules.style_manager import load_custom_css
+
 def main():
     st.set_page_config(page_title="The Arena", layout="wide")
+    load_custom_css()
     
-    st.title("⚔️ The Arena")
+    st.title("The Arena")
     st.markdown("Compare two models side-by-side.")
 
     client = LLMClient()
@@ -16,6 +19,8 @@ def main():
         return
 
     with st.sidebar:
+        from modules.ui_utils import render_sidebar_header
+        render_sidebar_header()
         st.header("Settings")
         system_prompt = render_prompt_selector(key="arena_system_prompt")
 

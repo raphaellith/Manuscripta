@@ -1,11 +1,18 @@
 import streamlit as st
 import pandas as pd
 from modules.db_manager import DBManager
+from modules.style_manager import load_custom_css
 
 def render_prompt_library():
-    st.header("📚 Prompt Library")
+    load_custom_css()
+    st.header("Prompt Library")
     
     db = DBManager()
+    
+    with st.sidebar:
+        from modules.ui_utils import render_sidebar_header
+        render_sidebar_header()
+        st.header("Settings")
     
     tab1, tab2 = st.tabs(["User Prompts", "System Prompts"])
     
@@ -13,7 +20,7 @@ def render_prompt_library():
         st.subheader("Manage User Prompts")
         
         # Add New Prompt Form
-        with st.expander("➕ Add New Prompt"):
+        with st.expander("Add New Prompt"):
             with st.form("add_prompt_form"):
                 new_alias = st.text_input("Alias (Unique Name)")
                 new_content = st.text_area("Prompt Content")
@@ -100,7 +107,7 @@ def render_prompt_library():
         st.subheader("Manage System Prompts (Personas)")
         
         # Add New System Prompt Form
-        with st.expander("➕ Add New Persona"):
+        with st.expander("Add New Persona"):
             with st.form("add_sys_prompt_form"):
                 sys_alias = st.text_input("Alias (e.g., 'Strict Coder')")
                 sys_content = st.text_area("System Prompt Content")

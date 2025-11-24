@@ -4,9 +4,10 @@ from typing import List, Dict, Optional, Any
 import json
 
 class DBManager:
-    def __init__(self, db_path: str = "db/workbench.db", schema_path: str = "db/schema.sql"):
-        self.db_path = db_path
-        self.schema_path = schema_path
+    def __init__(self, db_path: str = None, schema_path: str = None):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.db_path = db_path or os.path.join(base_dir, "db", "workbench.db")
+        self.schema_path = schema_path or os.path.join(base_dir, "db", "schema.sql")
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:

@@ -3,8 +3,10 @@ import os
 from modules.llm_client import LLMClient
 from modules.rag_engine import RAGEngine
 from modules.prompt_ui import render_prompt_selector
+from modules.style_manager import load_custom_css
 
 st.set_page_config(page_title="RAG Lab", layout="wide")
+load_custom_css()
 
 def init_session_state():
     if "rag_engine" not in st.session_state:
@@ -21,6 +23,8 @@ def main():
     
     # Sidebar Configuration
     with st.sidebar:
+        from modules.ui_utils import render_sidebar_header
+        render_sidebar_header()
         st.header("⚙️ Configuration")
         
         # Model Selector
@@ -57,7 +61,7 @@ def main():
         chunk_overlap = st.slider("Chunk Overlap", 0, 500, 200, 50)
         top_k = st.slider("Retrieval Top K", 1, 10, 4, 1)
 
-    st.title("🔍 RAG Lab & X-Ray")
+    st.title("RAG Lab & X-Ray")
     st.markdown("Upload a document and chat with it using Retrieval Augmented Generation.")
 
     # File Uploader

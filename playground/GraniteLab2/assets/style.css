@@ -1,0 +1,271 @@
+/* Global Reset & Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+    /* Apple-inspired Color Palette */
+    --color-bg: #FFFFFF;
+    --color-bg-secondary: #F5F5F7;
+    /* Light gray background for sidebar */
+    --color-text: #1D1D1F;
+    /* Almost black */
+    --color-text-secondary: #86868B;
+    /* Gray text */
+    --color-accent: #0071E3;
+    /* Apple Blue */
+    --color-accent-hover: #0077ED;
+    --color-border: #D2D2D7;
+    --color-success: #34C759;
+    --color-warning: #FF9F0A;
+    --color-error: #FF3B30;
+
+    /* Spacing & Layout */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.12);
+
+    /* Typography */
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Streamlit Main Container */
+html,
+body,
+[class*="st-"],
+.stApp {
+    font-family: var(--font-primary) !important;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--color-bg-secondary);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-testid="stSidebar"] .block-container {
+    padding-top: 1rem;
+    /* Reduced from 3rem */
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+/* Headers */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-md);
+}
+
+h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, #1D1D1F 0%, #434344 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Buttons */
+.stButton button {
+    background-color: var(--color-accent) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 980px !important;
+    /* Pill shape */
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.stButton button:hover {
+    background-color: var(--color-accent-hover) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.stButton button:active {
+    transform: scale(0.98) !important;
+}
+
+/* Secondary/Outline Buttons (if applicable via specific selectors or general override) */
+/* For now, we treat all primary buttons as accent. */
+
+/* Input Styling - Fix Visibility */
+.stTextInput input,
+.stTextArea textarea {
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--color-border) !important;
+    background-color: #FFFFFF !important;
+    /* Ensure white background */
+    padding: 0.75rem 1rem !important;
+    box-shadow: var(--shadow-sm) !important;
+    color: var(--color-text) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15) !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Chat Messages */
+[data-testid="stChatMessage"] {
+    background-color: transparent;
+    padding: 1rem 1.5rem !important;
+    border-radius: var(--radius-lg) !important;
+    margin-bottom: 0.2rem !important;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease;
+}
+
+[data-testid="stChatMessage"]:hover {
+    background-color: var(--color-bg-secondary);
+}
+
+/* User Message Styling */
+[data-testid="stChatMessage"][data-testid*="user"] {
+    background-color: rgba(0, 113, 227, 0.15) !important;
+    /* Increased opacity/contrast */
+    border: 1px solid rgba(0, 113, 227, 0.25) !important;
+    box-shadow: 0 1px 2px rgba(0, 113, 227, 0.1) !important;
+}
+
+/* Assistant Message Styling */
+[data-testid="stChatMessage"][data-testid*="assistant"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* Sidebar Header Styling */
+.sidebar-header {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--color-text);
+    margin-bottom: 0;
+    padding-bottom: 0;
+    background: linear-gradient(90deg, var(--color-accent), #5E5CE6);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-testid="stChatMessageContent"] {
+    font-family: var(--font-primary);
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+/* Avatars */
+.stChatMessage .stAvatar {
+    background-color: var(--color-accent);
+    color: white;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
+    width: 2rem !important;
+    height: 2rem !important;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] {
+    font-weight: 600;
+    font-size: 1.8rem;
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Divider */
+hr {
+    margin: 1.5rem 0;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Toggle */
+.stToggle label {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+    background-color: white;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: 1rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+}
+
+.streamlit-expanderContent {
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Code Blocks */
+code {
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    background-color: var(--color-bg-secondary);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    color: #D63384;
+    /* Pinkish for inline code */
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #C1C1C1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #A8A8A8;
+}
