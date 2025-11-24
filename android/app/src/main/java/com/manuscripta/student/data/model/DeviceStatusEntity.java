@@ -18,8 +18,14 @@ public class DeviceStatusEntity {
 
     @NonNull
     private DeviceStatus status;
-
+    
     private int batteryLevel;
+
+    @androidx.annotation.Nullable
+    private String currentMaterialId;
+
+    @androidx.annotation.Nullable
+    private String studentView;
 
     private long lastUpdated;
 
@@ -30,12 +36,16 @@ public class DeviceStatusEntity {
      * Standard constructor used by Room to recreate objects from the database.
      */
     public DeviceStatusEntity(@NonNull String deviceId,
-                              @NonNull DeviceStatus status,
-                              int batteryLevel,
-                              long lastUpdated) {
+            @NonNull DeviceStatus status,
+            int batteryLevel,
+            String currentMaterialId,
+            String studentView,
+            long lastUpdated) {
         this.deviceId = deviceId;
         this.status = status;
         this.batteryLevel = batteryLevel;
+        this.currentMaterialId = currentMaterialId;
+        this.studentView = studentView;
         this.lastUpdated = lastUpdated;
     }
 
@@ -48,11 +58,15 @@ public class DeviceStatusEntity {
      */
     @Ignore
     public DeviceStatusEntity(@NonNull String deviceId,
-                              @NonNull DeviceStatus status,
-                              int batteryLevel) {
+            @NonNull DeviceStatus status,
+            int batteryLevel,
+            String currentMaterialId,
+            String studentView) {
         this.deviceId = deviceId;
         this.status = status;
         this.batteryLevel = batteryLevel;
+        this.currentMaterialId = currentMaterialId;
+        this.studentView = studentView;
         this.lastUpdated = System.currentTimeMillis();
     }
 
@@ -80,6 +94,22 @@ public class DeviceStatusEntity {
 
     public void setBatteryLevel(int batteryLevel) {
         this.batteryLevel = batteryLevel;
+    }
+
+    public String getCurrentMaterialId() {
+        return currentMaterialId;
+    }
+
+    public void setCurrentMaterialId(String currentMaterialId) {
+        this.currentMaterialId = currentMaterialId;
+    }
+
+    public String getStudentView() {
+        return studentView;
+    }
+
+    public void setStudentView(String studentView) {
+        this.studentView = studentView;
     }
 
     public long getLastUpdated() {
