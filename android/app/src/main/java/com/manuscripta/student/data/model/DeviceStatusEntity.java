@@ -93,9 +93,11 @@ public class DeviceStatusEntity {
     }
 
     public void setBatteryLevel(int batteryLevel) {
+        if (batteryLevel < 0 || batteryLevel > 100) {
+            throw new IllegalArgumentException("Battery level must be between 0 and 100");
+        }
         this.batteryLevel = batteryLevel;
     }
-
     public String getCurrentMaterialId() {
         return currentMaterialId;
     }
