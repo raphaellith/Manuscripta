@@ -181,7 +181,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT9** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
 
-**MAT10** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. Explore dynamic generation vs static pre-defined responses. 
+**MAT10** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. This assumes the use of dynamic feedback generation as opposed to static pre-defined responses.
 
 **ACCESSIBILITY (ACC)**
 
