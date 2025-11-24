@@ -12,7 +12,7 @@ public enum DeviceStatus {
     /**
      * Student has requested help.
      */
-    NEEDS_HELP,
+    HAND_RAISED,
 
     /**
      * Device is disconnected or offline.
