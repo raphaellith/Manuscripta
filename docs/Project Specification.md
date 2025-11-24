@@ -169,7 +169,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT2**	[REMOVED] See MAT2A.
 
-**MAT2A**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
+**MAT2A**	[REMOVED] See MAT2B.
+
+**MAT2B**	When answering questions, the application must display feedback as configured by the teacher: either a "Correct" (✓) or "Not quite right" (✗) message, or a neutral acknowledgment (e.g., "Response submitted").
 
 **MAT3**	When answering questions, the application must provide a "Try Again" option for incorrect responses.
 
