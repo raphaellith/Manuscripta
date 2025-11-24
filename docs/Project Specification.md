@@ -2,6 +2,8 @@
 
 Raphael Li, Nemo Shu, Priya Bargota, Will Stephen
 
+**Version:** 1.00
+
 ### **1\. Project Overview**
 
 This document provides the detailed specifications for the Manuscripta Project, which aims to develop a classroom orchestration system that enables teachers to use on-device Generative AI (GenAI) to create and distribute educational materials onto students’ e-ink devices, such as those supplied by Boox or AiPaper.
