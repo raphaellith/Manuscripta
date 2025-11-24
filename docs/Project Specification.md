@@ -63,38 +63,47 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT2**	The Lesson Library must be organised using the following hierarchical structure. The Lesson Library consists of zero or more *units*; each unit consists of zero or more *lessons*; and each lesson consists of zero or more *materials*.
 
-**MAT3**	Each material must belong to a specified *material type*. Possible material types include reading, polls, worksheets and quizzes.
+**MAT3**	[REMOVED] See MAT15.
 
 **MAT4**	The application must include a search function for teachers to locate materials across all units and lessons.
 
 **MAT5**	The application must allow a teacher to generate and store materials using one or more on-device GenAI models.
 
-**MAT6** The application must allow the import and display of static images and PDF documents as lesson materials.
+**MAT6**	When creating a new material, the application must prompt the teacher for the material type.
 
-**MAT7**	When creating a new material, the application must prompt the teacher for a material type.
+**MAT7**	When creating a new material, the application must prompt the teacher for a textual description of the expected content.
 
-**MAT8**	When creating a new material, the application must prompt the teacher for a textual description of the expected content.
+**MAT8**	When creating a new material, the application must prompt the teacher to upload zero or more source material documents. Supported file formats must include .pdf, .txt and .docx.
 
-**MAT9**	When creating a new material, the application must prompt the teacher to upload zero or more source material documents. Supported file formats must include .pdf, .txt and .docx.  
-**MAT10**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
+**MAT9**	[REMOVED] See MAT18.
 
-**MAT11**  After creating a new material, the teacher must be able to modify and refine its contents via an editor.
+**MAT10**	[REMOVED] See MAT18.
 
-**MAT12** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
+**MAT11**	[REMOVED] See MAT18.
+
+**MAT12**  After creating a new material, the teacher must be able to modify and refine its contents via an editor.
 
 **MAT13**	 Each material should be associated with metadata such as its deployment status and creation date.
 
 **MAT14** The application could provide an AI-powered conversational teaching assistance to offer teachers support with lesson planning and differentiation strategies through a chat interface.
 
-**MAT15**	 When deploying a material, the application should provide the option to mark individual student’s responses either manually or with AI assistance.
+**MAT15**	Each material must belong to a specified *material type*. Possible material types include reading, polls, worksheets and quizzes.
 
-**MAT16** When deploying a material, the application should provide an optional point system where points are awarded for correct responses as positive reinforcement.
+**MAT16** The application must allow the import and display of static images and PDF documents as lesson materials.
+
+**MAT17** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
+
+**MAT18**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
+
+**MAT19**	 When deploying a material, the application should provide the option to mark individual student’s responses either manually or with AI assistance.
+
+**MAT20** When deploying a material, the application should provide an optional point system where points are awarded for correct responses as positive reinforcement.
 
 **CLASSROOM CONTROL (CON)**
 
 **CON1**	The application must provide a continuously updated *dashboard* displaying aggregated and anonymised data.
 
-**CON2**   The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
+**CON2**   [REMOVED] See CON10.
 
 **CON3**	The dashboard must include a panel displaying the number of connected devices.
 
@@ -110,13 +119,15 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON9**	The information associated with the dashboard, as enumerated above, should be split into two different tabs or sections. This allows the teacher to share their screen without simultaneously disclosing sensitive information.
 
-**CON10** The dashboard must support simultaneous differentiation, allowing the teacher to deploy different materials (e.g., high, middle, low ability worksheets) to specific sub-groups of devices at the same time.
+**CON10**   The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
 
-**CON11** The application must allow the teacher to export and save session data (such as student progress and quiz results) to a local file for offline tracking.
+**CON11** The dashboard must support simultaneous differentiation, allowing the teacher to deploy different materials (e.g., high, middle, low ability worksheets) to specific sub-groups of devices at the same time.
 
-**CON12** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
+**CON12** The application must allow the teacher to export and save session data (such as student progress and quiz results) to a local file for offline tracking.
 
-**CON13** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
+**CON13** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
+
+**CON14** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
 
 **NETWORKING (NET)**
 
@@ -130,7 +141,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **ACC2**	The teacher must be able to configure their application settings and preferences on their laptop.
 
-**ACC3**	The teacher must be able to enable and disable accessibility features, such as text-to-speech buttons, AI summary options and animated avatars, on a per tablet basis.
+**ACC3**	[REMOVED] See ACC4.
+
+**ACC4**	The teacher must be able to enable and disable accessibility features, such as text-to-speech buttons, AI summary options and animated avatars, on a per tablet basis.
 
 **SYSTEM REQUIREMENTS (SYS)**
 
@@ -150,7 +163,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT1**	The application must be able to display all supported material types, such as quizzes, worksheets and polls.
 
-**MAT2**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
+**MAT2**	[REMOVED] See MAT6.
 
 **MAT3**	When answering questions, the application must provide a "Try Again" option for incorrect responses.
 
@@ -158,13 +171,15 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT5**	The application must provide students with AI assistance tools, possibly through a chat interface, to dynamically scaffold and guide their learning.
 
-**MAT6** The application must provide a dedicated area or highlighting mechanism to display the "Key Vocabulary" defined by the teacher for the current lesson.
+**MAT6**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
 
-**MAT7** The application must include a "Raise Hand" button that sends a help request to the teacher's dashboard
+**MAT7** The application must provide a dedicated area or highlighting mechanism to display the "Key Vocabulary" defined by the teacher for the current lesson.
 
-**MAT8** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
+**MAT8** The application must include a "Raise Hand" button that sends a help request to the teacher's dashboard.
 
-**MAT9** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. Explore dynamic generation vs static pre-defined responses. 
+**MAT9** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
+
+**MAT10** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. Explore dynamic generation vs static pre-defined responses. 
 
 **ACCESSIBILITY (ACC)**
 
