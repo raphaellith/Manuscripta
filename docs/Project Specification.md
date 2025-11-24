@@ -167,7 +167,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT1**	The application must be able to display all supported material types, such as quizzes, worksheets and polls.
 
-**MAT2**	[REMOVED] See MAT6.
+**MAT2**	[REMOVED] See MAT2A.
+
+**MAT2A**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
 
 **MAT3**	When answering questions, the application must provide a "Try Again" option for incorrect responses.
 
@@ -175,15 +177,13 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT5**	The application must provide students with AI assistance tools, possibly through a chat interface, to dynamically scaffold and guide their learning.
 
-**MAT6**	When answering questions, the application must provide immediate and formative feedback to submitted responses, displaying a "Correct" (✓) or "Not quite right" (✗) message.
+**MAT6** The application must provide a dedicated area or highlighting mechanism to display the "Key Vocabulary" defined by the teacher for the current lesson.
 
-**MAT7** The application must provide a dedicated area or highlighting mechanism to display the "Key Vocabulary" defined by the teacher for the current lesson.
+**MAT7** The application must include a "Raise Hand" button that sends a help request to the teacher's dashboard.
 
-**MAT8** The application must include a "Raise Hand" button that sends a help request to the teacher's dashboard.
+**MAT8** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
 
-**MAT9** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
-
-**MAT10** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. This assumes the use of dynamic feedback generation as opposed to static pre-defined responses.
+**MAT9** Question feedback should identify the correct parts of their reasoning and guide them towards the right answer, without directly giving it to them. This assumes the use of dynamic feedback generation as opposed to static pre-defined responses.
 
 **ACCESSIBILITY (ACC)**
 
