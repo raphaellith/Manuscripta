@@ -1,7 +1,6 @@
 package com.manuscripta.student.data.model;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -110,5 +109,17 @@ public class DeviceStatusEntityTest {
 
         deviceStatusEntity.setStatus(DeviceStatus.IDLE);
         assertEquals(DeviceStatus.IDLE, deviceStatusEntity.getStatus());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetBatteryLevelInvalidLow() {
+        // battery below 0 should throw
+        deviceStatusEntity.setBatteryLevel(-1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetBatteryLevelInvalidHigh() {
+        // battery above 100 should throw
+        deviceStatusEntity.setBatteryLevel(101);
     }
 }
