@@ -119,7 +119,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON8**	The dashboard must include a panel for launching and delivering a previously created material to all students.
 
-**CON9**	The information associated with the dashboard, as enumerated above, should be split into two different tabs or sections. This allows the teacher to share their screen without simultaneously disclosing sensitive information.
+**CON9**	[REMOVED] See CON15.
 
 **CON10**   The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
 
@@ -130,6 +130,8 @@ The requirements are grouped into the following categories: lesson materials (MA
 **CON13** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
 
 **CON14** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
+
+**CON15** The dashboard information should be split into two different tabs or sections. This allows the teacher to share their screen without simultaneously disclosing sensitive information.
 
 **NETWORKING (NET)**
 
