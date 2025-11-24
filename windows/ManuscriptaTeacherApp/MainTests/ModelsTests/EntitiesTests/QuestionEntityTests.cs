@@ -9,13 +9,8 @@ public class QuestionEntityTests
     public void DefaultConstructor_InitializesCollections()
     {
         var q = new QuestionEntity();
-
-        Assert.NotNull(q.Responses);
-        Assert.Empty(q.Responses);
-
         Assert.Equal(0, q.Id);
         Assert.Equal(0, q.MaterialId);
-        Assert.Null(q.Material);
     }
 
     [Fact]

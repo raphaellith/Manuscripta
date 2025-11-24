@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Nodes;
+using System.Collections.Generic;
 
 namespace Main.Models.Entities;
 
@@ -27,7 +28,7 @@ public class QuestionEntity
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
 
-    // Foreign key navigation
+    // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("MaterialId")]
-    public MaterialEntity? Material { get; set; }
+    internal MaterialEntity? Material { get; set; }
 }

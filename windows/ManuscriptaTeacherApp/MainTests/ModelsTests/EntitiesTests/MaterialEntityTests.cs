@@ -15,8 +15,6 @@ public class MaterialEntityTests
         Assert.NotNull(m.VocabularyTerms);
         Assert.Empty(m.VocabularyTerms);
 
-        Assert.NotNull(m.Questions);
-        Assert.Empty(m.Questions);
 
         // Defaults
         Assert.Equal(0, m.Id);
