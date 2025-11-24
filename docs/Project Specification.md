@@ -65,7 +65,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT2**	The Lesson Library must be organised using the following hierarchical structure. The Lesson Library consists of zero or more *units*; each unit consists of zero or more *lessons*; and each lesson consists of zero or more *materials*.
 
-**MAT3**	[REMOVED] See MAT15.
+**MAT3**	[REMOVED] See MAT3A.
+
+**MAT3A**	The Lesson Library must be organised using the following hierarchical structure. The Lesson Library consists of zero or more *units*; each unit consists of zero or more *lessons*; and each lesson consists of zero or more *materials*.
 
 **MAT4**	The application must include a search function for teachers to locate materials across all units and lessons.
 
@@ -77,11 +79,11 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT8**	When creating a new material, the application must prompt the teacher to upload zero or more source material documents. Supported file formats must include .pdf, .txt and .docx.
 
-**MAT9**	[REMOVED] See MAT18.
+**MAT9**	[REMOVED] See MAT17.
 
-**MAT10**	[REMOVED] See MAT18.
+**MAT10**	[REMOVED] See MAT17.
 
-**MAT11**	[REMOVED] See MAT18.
+**MAT11**	[REMOVED] See MAT17.
 
 **MAT12**  After creating a new material, the teacher must be able to modify and refine its contents via an editor.
 
@@ -89,17 +91,15 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT14** The application could provide an AI-powered conversational teaching assistance to offer teachers support with lesson planning and differentiation strategies through a chat interface.
 
-**MAT15**	Each material must belong to a specified *material type*. Possible material types include reading, polls, worksheets and quizzes.
+**MAT15** The application must allow the import and display of static images and PDF documents as lesson materials.
 
-**MAT16** The application must allow the import and display of static images and PDF documents as lesson materials.
+**MAT16** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
 
-**MAT17** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
+**MAT17**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
 
-**MAT18**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
+**MAT18**	 When deploying a material, the application should provide the option to mark individual student’s responses either manually or with AI assistance.
 
-**MAT19**	 When deploying a material, the application should provide the option to mark individual student’s responses either manually or with AI assistance.
-
-**MAT20** When deploying a material, the application should provide an optional point system where points are awarded for correct responses as positive reinforcement.
+**MAT19** When deploying a material, the application should provide an optional point system where points are awarded for correct responses as positive reinforcement.
 
 **CLASSROOM CONTROL (CON)**
 
