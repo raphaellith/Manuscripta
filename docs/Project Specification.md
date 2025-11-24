@@ -105,7 +105,9 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON1**	The application must provide a continuously updated *dashboard* displaying aggregated and anonymised data.
 
-**CON2**   [REMOVED] See CON10.
+**CON2**   [REMOVED] See CON2A.
+
+**CON2A**   The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
 
 **CON3**	The dashboard must include a panel displaying the number of connected devices.
 
@@ -121,17 +123,15 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON9**	[REMOVED] See CON15.
 
-**CON10**   The dashboard must include an overview, in the form of a colour-coded grid, of the individual statuses of each student tablet. Each cell of the grid must clearly state whether the student is on task, needs help, is disconnected, is locked, or is idle.
+**CON10** The dashboard must support simultaneous differentiation, allowing the teacher to deploy different materials (e.g., high, middle, low ability worksheets) to specific sub-groups of devices at the same time.
 
-**CON11** The dashboard must support simultaneous differentiation, allowing the teacher to deploy different materials (e.g., high, middle, low ability worksheets) to specific sub-groups of devices at the same time.
+**CON11** The application must allow the teacher to export and save session data (such as student progress and quiz results) to a local file for offline tracking.
 
-**CON12** The application must allow the teacher to export and save session data (such as student progress and quiz results) to a local file for offline tracking.
+**CON12** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
 
-**CON13** The dashboard must provide a visual alert when a specific student triggers a "Help" request from their device.
+**CON13** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
 
-**CON14** The dashboard could provide a "Live View" allowing the teacher to view the current screen of a specific student's device to assist with troubleshooting. This will be supported via status update messages that include student view data.
-
-**CON15** The dashboard information should be split into two different tabs or sections. This allows the teacher to share their screen without simultaneously disclosing sensitive information.
+**CON14** The dashboard information should be split into two different tabs or sections. This allows the teacher to share their screen without simultaneously disclosing sensitive information.
 
 **NETWORKING (NET)**
 
