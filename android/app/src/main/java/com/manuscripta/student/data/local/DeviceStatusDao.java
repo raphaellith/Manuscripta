@@ -52,6 +52,36 @@ public interface DeviceStatusDao {
     void update(DeviceStatusEntity deviceStatus);
 
     /**
+     * Insert multiple device status records in a batch.
+     *
+     * @param deviceStatusList List of device status entities to insert
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertAll(List<DeviceStatusEntity> deviceStatusList);
+
+    /**
+     * Delete a device status by entity reference.
+     *
+     * @param deviceStatus The device status entity to delete
+     */
+    @androidx.room.Delete
+    void delete(DeviceStatusEntity deviceStatus);
+
+    /**
+     * Delete all device status records.
+     */
+    @Query("DELETE FROM device_status")
+    void deleteAll();
+
+    /**
+     * Get the total count of device status records.
+     *
+     * @return The total number of device status records
+     */
+    @Query("SELECT COUNT(*) FROM device_status")
+    int getCount();
+
+    /**
      * Delete a device status by its unique identifier.
      *
      * @param deviceId The unique identifier of the device to delete
