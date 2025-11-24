@@ -362,34 +362,6 @@ Create entity to track device status for reporting to teacher.
 
 ---
 
-### 1.9 [Android] Update Material Data Pipeline for Attachments
-
-- Labels: `android`, `data-layer`, `refactor`
-
-**Description:**
-Update the `MaterialEntity` and `MaterialRepository` to support the new `attachments` field in the API response. This involves adding a local-only field to store file paths, implementing the logic to decode and save Base64 attachments, and populating this field in the Repository layer.
-
-**Requirements:**
-- Add `localAttachments` field to `MaterialEntity` (String, JSON array format) - **NOT** part of the DTO/API
-- Update `MaterialDto` to include `attachments` map (Base64 strings from API)
-- Implement `FileRepository` to handle Base64 decoding and saving to device storage
-- Update `MaterialRepository` to coordinate: fetch DTO → save files → populate `localAttachments` → insert entity
-
-**Tasks:**
-- Add `localAttachments` field to `MaterialEntity.java` (local-only, not in DTO)
-- Create `FileRepository` helper class for Base64 decoding/saving
-- Update `MaterialRepository` to process attachments and populate `localAttachments`
-- Write unit tests for file handling and repository coordination
-
-**Acceptance Criteria:**
-- [ ] `MaterialEntity` has `localAttachments` field (not in DTO)
-- [ ] Base64 attachments are decoded and saved to disk
-- [ ] Local file paths are stored in `localAttachments` field
-- [ ] `metadata` field preserves server data unchanged
-- [ ] 100% test coverage
-
----
-
 ## Sub-tasks: Repository Layer
 
 ### 2.1 [Android] Create MaterialRepository
@@ -397,19 +369,34 @@ Update the `MaterialEntity` and `MaterialRepository` to support the new `attachm
 - Labels: `android`, `repository-layer`
 
 **Description:**
-Implement repository for managing material data with network and local database synchronization.
+Implement repository for managing material data with network and local database synchronisation. Orchestrates attachment file downloads when materials contain file references.
+
+**Related Requirements:** MAT1, MAT8 (Teacher), MAT15
 
 **Tasks:**
 - Create `MaterialRepository.java` interface
 - Create `MaterialRepositoryImpl.java` implementation
 - Implement caching strategy (network-first with fallback)
-- Handle data synchronization
+- Create `FileStorageManager.java` utility:
+  - Save binary attachment data to internal app storage
+  - Use predictable path pattern: `/internal/attachments/{materialId}/{attachmentId}.{ext}`
+  - Delete attachments when parent material is deleted (cleanup on "end lesson")
+- Orchestrate attachment downloads:
+  1. Fetch MaterialDto from network
+  2. Parse content for `/attachments/{id}` references using ContentParser
+  3. Download each attachment via ApiService.getAttachment()
+  4. Save binary data to internal storage via FileStorageManager
+  5. Convert MaterialDto to MaterialEntity
+  6. Insert into Room database
+- Handle HTTP errors appropriately (return error Result if download fails)
 - Write unit tests with mocked dependencies
 
 **Acceptance Criteria:**
 - [ ] Interface and implementation created
+- [ ] Attachment download orchestration implemented
+- [ ] FileStorageManager handles binary file storage
 - [ ] Caching logic implemented
-- [ ] Error handling with Result pattern
+- [ ] Error handling with Result pattern (fails gracefully on attachment errors)
 - [ ] 100% test coverage
 
 ---
@@ -529,22 +516,27 @@ Create Hilt module for providing repository instances.
 - Labels: `android`, `network-layer`  
 
 **Description:**
-Create Data Transfer Objects for material-related API communication.
+Create Data Transfer Objects for material-related API communication. Materials may reference attachment files (PDFs, images) via URLs in the content field.
 
 **Important:** DTOs must include the entity ID field (String/UUID) assigned by the Windows teacher application. The Android client must preserve these IDs exactly as received, without modification or regeneration.
 
-**Related Requirements:** MAT1, MAT6
+**Related Requirements:** MAT1, MAT6, MAT8 (Teacher), MAT15
 
 **Tasks:**
-- Create `MaterialDto.java` with @SerializedName annotations, including id field (String/UUID)
-- Include vocabularyTerms field for MAT6 support
+- Create `MaterialDto.java` with @SerializedName annotations, including:
+  - id field (String/UUID)
+  - content field (may contain `/attachments/{id}` URL references)
+  - vocabularyTerms field for MAT6 support
+  - metadata field
 - Create `MaterialListResponseDto.java` - Contains a `materials` field with a list of material IDs in presentation order
 - Create `VocabularyTermDto.java` for key vocabulary
+- Create `ContentParser.java` utility to extract attachment IDs from content URLs (e.g., `/attachments/abc-123` → `abc-123`)
 - Create mapper methods (DTO → Domain) that preserve entity IDs
 - Write unit tests
 
 **Acceptance Criteria:**
 - [ ] DTOs with proper JSON annotations
+- [ ] Content parser extracts attachment references
 - [ ] Vocabulary terms field included
 - [ ] Mappers implemented
 - [ ] 100% test coverage
@@ -621,21 +613,23 @@ Create DTOs for device status reporting.
 - Labels: `android`, `network-layer`
 
 **Description:**
-Define all Retrofit API endpoints for communication with teacher server.
+Define all Retrofit API endpoints for communication with teacher server, including binary attachment downloads.
 
-**Related Requirements:** NET1, NET2, MAT7
+**Related Requirements:** NET1, NET2, MAT7, MAT8 (Teacher), MAT15
 
 **Tasks:**
 - Add `@GET` method for fetching materials: `getMaterials()` - Returns a list of material IDs in presentation order
 - Add `@GET` method for material details: `getMaterialById(@Path id)`
+- Add `@GET` method for attachments: `getAttachment(@Path id)` - Returns `ResponseBody` for binary data (PDF, images)
 - Add `@POST` method for submitting response: `submitResponse(@Body)`
 - Add `@POST` method for batch responses: `submitBatchResponses(@Body)`
 - Add `@POST` method for device status: `reportDeviceStatus(@Body)`
 - Add `@POST` method for raise hand request: `raiseHand(@Body)` (MAT7)
-- Write tests with MockWebServer
+- Write tests with MockWebServer (including binary response mocking for attachments)
 
 **Acceptance Criteria:**
 - [ ] All endpoints defined
+- [ ] Attachment endpoint returns `ResponseBody` for binary data
 - [ ] Proper HTTP methods used
 - [ ] Path/query parameters configured
 - [ ] Raise hand endpoint included for MAT7
