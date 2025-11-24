@@ -121,7 +121,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **CON8**	The dashboard must include a panel for launching and delivering a previously created material to all students.
 
-**CON9**	[REMOVED] See CON15.
+**CON9**	[REMOVED] See CON14.
 
 **CON10** The dashboard must support simultaneous differentiation, allowing the teacher to deploy different materials (e.g., high, middle, low ability worksheets) to specific sub-groups of devices at the same time.
 
@@ -141,13 +141,13 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **ACCESSIBILITY (ACC)**
 
-#### **ACC1**	The user interface must be intuitive for teachers with standard computer literacy.
+**ACC1**	The user interface must be intuitive for teachers with standard computer literacy.
 
 **ACC2**	The teacher must be able to configure their application settings and preferences on their laptop.
 
-**ACC3**	[REMOVED] See ACC4.
+**ACC3**	[REMOVED] See ACC3A.
 
-**ACC4**	The teacher must be able to enable and disable accessibility features, such as text-to-speech buttons, AI summary options and animated avatars, on a per tablet basis.
+**ACC3A**	The teacher must be able to enable and disable accessibility features, such as text-to-speech buttons, AI summary options and animated avatars, on a per tablet basis.
 
 **SYSTEM REQUIREMENTS (SYS)**
 
