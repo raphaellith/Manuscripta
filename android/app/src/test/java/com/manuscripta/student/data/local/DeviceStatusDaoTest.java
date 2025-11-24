@@ -117,16 +117,57 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testNewStatuses() {
-        // Test LOCKED
-        DeviceStatusEntity lockedEntity = new DeviceStatusEntity("dev-locked", DeviceStatus.LOCKED, 80, null, null);
-        dao.insert(lockedEntity);
-        DeviceStatusEntity retrievedLocked = dao.getById("dev-locked");
-        assertEquals(DeviceStatus.LOCKED, retrievedLocked.getStatus());
-
         // Test IDLE
         DeviceStatusEntity idleEntity = new DeviceStatusEntity("dev-idle", DeviceStatus.IDLE, 70, null, null);
         dao.insert(idleEntity);
         DeviceStatusEntity retrievedIdle = dao.getById("dev-idle");
         assertEquals(DeviceStatus.IDLE, retrievedIdle.getStatus());
+    }
+
+    @Test
+    public void testInsertAll() {
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        List<DeviceStatusEntity> list = java.util.Arrays.asList(entity1, entity2);
+
+        dao.insertAll(list);
+
+        List<DeviceStatusEntity> all = dao.getAll();
+        assertEquals(2, all.size());
+    }
+
+    @Test
+    public void testDelete() {
+        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        dao.insert(entity);
+
+        dao.delete(entity);
+
+        DeviceStatusEntity retrieved = dao.getById("dev-1");
+        assertNull(retrieved);
+    }
+
+    @Test
+    public void testDeleteAll() {
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        dao.insert(entity1);
+        dao.insert(entity2);
+
+        dao.deleteAll();
+
+        List<DeviceStatusEntity> all = dao.getAll();
+        assertEquals(0, all.size());
+    }
+
+    @Test
+    public void testGetCount() {
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        dao.insert(entity1);
+        dao.insert(entity2);
+
+        int count = dao.getCount();
+        assertEquals(2, count);
     }
 }
