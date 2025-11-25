@@ -6,7 +6,7 @@ import com.manuscripta.student.data.model.DeviceStatusEntity;
 import com.manuscripta.student.domain.model.DeviceStatus;
 
 /**
- * Mapper class to convert between DeviceStatusEntity (data layer) and DeviceStatusModel (domain layer).
+ * Mapper class to convert between DeviceStatusEntity (data layer) and DeviceStatus (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
 public class DeviceStatusMapper {
@@ -19,10 +19,10 @@ public class DeviceStatusMapper {
     }
 
     /**
-     * Converts a DeviceStatusEntity to a DeviceStatusModel domain model.
+     * Converts a DeviceStatusEntity to a DeviceStatus domain model.
      *
      * @param entity The DeviceStatusEntity to convert
-     * @return DeviceStatusModel domain model
+     * @return DeviceStatus domain model
      */
     @NonNull
     public static DeviceStatus toDomain(@NonNull DeviceStatusEntity entity) {
@@ -37,9 +37,9 @@ public class DeviceStatusMapper {
     }
 
     /**
-     * Converts a DeviceStatusModel domain model to a DeviceStatusEntity.
+     * Converts a DeviceStatus domain model to a DeviceStatusEntity.
      *
-     * @param domain The DeviceStatusModel domain model to convert
+     * @param domain The DeviceStatus domain model to convert
      * @return DeviceStatusEntity for persistence
      */
     @NonNull
