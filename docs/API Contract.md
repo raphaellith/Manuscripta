@@ -208,6 +208,7 @@ Each TCP message consists of:
 
 The length and encoding/decoding of the operand depends on the specific opcode.
 
+| Opcode | Name | Operand | Description |
 |--------|------|---------|-------------|
 | `0x01` | LOCK_SCREEN | None | Locks the student's screen |
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
