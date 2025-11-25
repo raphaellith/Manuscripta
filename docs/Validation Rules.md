@@ -82,20 +82,23 @@ All rules in this document shall be enumerated for the convinence of referencing
 ### Section 2D - Data Validation Rules of `SessionEntity`
 
 (1) A `SessionEntity` object must have the following data fields to be considered valid:
-(a) `MaterialId` (UUID): References the material the student should work on during the lesson.
-(b) `StartTime` (long): Start unix timestamp of the last interaction.
-(c) `SessionStatus`(enum SessionStatus). Possible values are:
-(i) `ACTIVE`: Session is currently active/ongoing.
-(ii) `PAUSED`: Session has been paused.
-(iii) `COMPLETED`: Session completed normally.
-(iv) `CANCELLED`: Session was cancelled before completion.
-(d) `DeviceId`: The device ID the session is related to
+
+    (a) `MaterialId` (UUID): References the material the student should work on during the lesson.
+    (b) `StartTime` (long): Start unix timestamp of the last interaction.
+    (c) `SessionStatus`(enum SessionStatus). Possible values are:
+        (i) `ACTIVE`: Session is currently active/ongoing.
+        (ii) `PAUSED`: Session has been paused.
+        (iii) `COMPLETED`: Session completed normally.
+        (iv) `CANCELLED`: Session was cancelled before completion.
+    (d) `DeviceId`: The device ID the session is related to
 
 (2) In addition to the mandatory fields in (1), a `SessionEntity` object may have the following fields:
-(a) `EndTime` (long): End unix timestamp, for non-active sessions
+
+    (a) `EndTime` (long): End unix timestamp, for non-active sessions
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
-(a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specifiecd in 2(a).
+
+    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specifiecd in 2(a).
 
 ### Section 3 - ID Generation Policy
 
