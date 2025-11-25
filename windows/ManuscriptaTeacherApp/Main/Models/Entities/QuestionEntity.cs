@@ -23,7 +23,7 @@ public class QuestionEntity
     [MaxLength(100)]
     public string? QuestionType { get; set; }
     
-    public string? Options { get; set; } // JSON
+    public List<string>? Options { get; set; }
 
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
