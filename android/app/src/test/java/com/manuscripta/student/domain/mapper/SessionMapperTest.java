@@ -184,4 +184,12 @@ public class SessionMapperTest {
         Session cancelledDomain = SessionMapper.toDomain(cancelledEntity);
         assertEquals(SessionStatus.CANCELLED, cancelledDomain.getStatus());
     }
+
+    @Test(expected = AssertionError.class)
+    public void testPrivateConstructorThrowsException() throws Exception {
+        // Use reflection to access private constructor
+        java.lang.reflect.Constructor<SessionMapper> constructor = SessionMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        constructor.newInstance();
+    }
 }

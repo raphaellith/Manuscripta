@@ -139,4 +139,12 @@ public class QuestionMapperTest {
         assertEquals(originalDomain.getOptions(), resultDomain.getOptions());
         assertEquals(originalDomain.getCorrectAnswer(), resultDomain.getCorrectAnswer());
     }
+
+    @Test(expected = AssertionError.class)
+    public void testPrivateConstructorThrowsException() throws Exception {
+        // Use reflection to access private constructor
+        java.lang.reflect.Constructor<QuestionMapper> constructor = QuestionMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        constructor.newInstance();
+    }
 }
