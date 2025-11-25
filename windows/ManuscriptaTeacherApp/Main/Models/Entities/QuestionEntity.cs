@@ -27,6 +27,9 @@ public class QuestionEntity
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
     
+    // TODO: Change this to type HashSet<SessionEntity> 
+    // The HashSet contains SessionEntity instances for which
+    // the Android device's corresponding QuestionEntity data is synchronised with this one
     [Required]
     public bool Synced { get; set; }
 
