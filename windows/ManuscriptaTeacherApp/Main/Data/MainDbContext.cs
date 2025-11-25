@@ -30,6 +30,7 @@ public class MainDbContext : DbContext
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.Synced);
         });
 
         // Configure QuestionEntity
@@ -37,6 +38,7 @@ public class MainDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.MaterialId);
+            entity.HasIndex(e => e.Synced);
         });
 
         // Configure ResponseEntity
@@ -44,7 +46,6 @@ public class MainDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.QuestionId);
-            entity.HasIndex(e => e.Synced);
             entity.HasIndex(e => e.Timestamp);
         });
     }

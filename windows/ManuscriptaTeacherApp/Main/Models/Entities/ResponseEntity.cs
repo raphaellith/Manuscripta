@@ -23,8 +23,6 @@ public class ResponseEntity
     [Required]
     public DateTime Timestamp { get; private set; }
 
-    public bool Synced { get; private set; }
-
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("QuestionId")]
     internal QuestionEntity? Question { get; private set; }
@@ -38,6 +36,5 @@ public class ResponseEntity
         Answer = answer;
         IsCorrect = isCorrect;
         Timestamp = timestamp ?? DateTime.UtcNow;
-        Synced = synced;
     }
 }

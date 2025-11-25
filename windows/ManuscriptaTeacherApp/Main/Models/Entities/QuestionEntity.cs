@@ -22,11 +22,14 @@ public class QuestionEntity
     [Required]
     [MaxLength(100)]
     public string? QuestionType { get; set; }
-
+    
     public string? Options { get; set; } // JSON
 
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
+    
+    [Required]
+    public bool Synced { get; set; }
 
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("MaterialId")]

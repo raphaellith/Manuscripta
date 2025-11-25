@@ -30,4 +30,7 @@ public class MaterialEntity
 
     [Required]
     public long Timestamp {get; set;}
+    
+    [Required]
+    public bool Synced { get; set; }
 }
