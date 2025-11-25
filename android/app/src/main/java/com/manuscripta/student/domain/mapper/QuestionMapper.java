@@ -12,6 +12,13 @@ import com.manuscripta.student.domain.model.Question;
 public class QuestionMapper {
 
     /**
+     * Private constructor to prevent instantiation of utility class.
+     */
+    private QuestionMapper() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
+    /**
      * Converts a QuestionEntity to a Question domain model.
      *
      * @param entity The QuestionEntity to convert

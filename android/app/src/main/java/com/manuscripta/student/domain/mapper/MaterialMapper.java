@@ -12,6 +12,13 @@ import com.manuscripta.student.domain.model.Material;
 public class MaterialMapper {
 
     /**
+     * Private constructor to prevent instantiation of utility class.
+     */
+    private MaterialMapper() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
+    /**
      * Converts a MaterialEntity to a Material domain model.
      *
      * @param entity The MaterialEntity to convert

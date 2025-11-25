@@ -122,4 +122,12 @@ public class MaterialMapperTest {
         assertEquals(originalDomain.getVocabularyTerms(), resultDomain.getVocabularyTerms());
         assertEquals(originalDomain.getTimestamp(), resultDomain.getTimestamp());
     }
+
+    @Test(expected = AssertionError.class)
+    public void testPrivateConstructorThrowsException() throws Exception {
+        // Use reflection to access private constructor
+        java.lang.reflect.Constructor<MaterialMapper> constructor = MaterialMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        constructor.newInstance();
+    }
 }

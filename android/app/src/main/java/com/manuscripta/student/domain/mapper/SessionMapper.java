@@ -12,6 +12,13 @@ import com.manuscripta.student.domain.model.Session;
 public class SessionMapper {
 
     /**
+     * Private constructor to prevent instantiation of utility class.
+     */
+    private SessionMapper() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
+    /**
      * Converts a SessionEntity to a Session domain model.
      *
      * @param entity The SessionEntity to convert

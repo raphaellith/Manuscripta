@@ -159,4 +159,12 @@ public class ResponseMapperTest {
         assertEquals(originalDomain.getTimestamp(), resultDomain.getTimestamp());
         assertEquals(originalDomain.isSynced(), resultDomain.isSynced());
     }
+
+    @Test(expected = AssertionError.class)
+    public void testPrivateConstructorThrowsException() throws Exception {
+        // Use reflection to access private constructor
+        java.lang.reflect.Constructor<ResponseMapper> constructor = ResponseMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        constructor.newInstance();
+    }
 }

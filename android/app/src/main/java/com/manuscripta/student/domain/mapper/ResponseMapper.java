@@ -12,6 +12,13 @@ import com.manuscripta.student.domain.model.Response;
 public class ResponseMapper {
 
     /**
+     * Private constructor to prevent instantiation of utility class.
+     */
+    private ResponseMapper() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
+    /**
      * Converts a ResponseEntity to a Response domain model.
      *
      * @param entity The ResponseEntity to convert
