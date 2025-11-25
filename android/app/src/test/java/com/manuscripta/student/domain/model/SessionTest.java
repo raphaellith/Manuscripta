@@ -3,6 +3,7 @@ package com.manuscripta.student.domain.model;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.data.model.SessionStatus;
@@ -62,5 +63,266 @@ public class SessionTest {
         Session session2 = Session.create("mat-1", "dev-1");
 
         assertNotEquals(session1.getId(), session2.getId());
+    }
+
+    @Test
+    public void testConstructorWithZeroTimestamps() {
+        // Zero timestamps are valid (e.g., active session with no end time)
+        Session s = new Session(
+                "id",
+                "mat-id",
+                0L,
+                0L,
+                SessionStatus.ACTIVE,
+                "dev-id"
+        );
+        assertEquals(0L, s.getStartTime());
+        assertEquals(0L, s.getEndTime());
+    }
+
+    @Test
+    public void testConstructor_nullId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        null,
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session id cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_emptyId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "",
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session id cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_blankId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "   ",
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session id cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_nullMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        null,
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_emptyMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_blankMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "   ",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_negativeStartTime_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        -1L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session startTime cannot be negative", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_negativeEndTime_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        0L,
+                        -1L,
+                        SessionStatus.ACTIVE,
+                        "device-id"
+                )
+        );
+        assertEquals("Session endTime cannot be negative", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_nullStatus_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        0L,
+                        0L,
+                        null,
+                        "device-id"
+                )
+        );
+        assertEquals("Session status cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_nullDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        null
+                )
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_emptyDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        ""
+                )
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_blankDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Session(
+                        "id",
+                        "material-id",
+                        0L,
+                        0L,
+                        SessionStatus.ACTIVE,
+                        "   "
+                )
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_nullMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create(null, "device-id")
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_emptyMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create("", "device-id")
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_blankMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create("   ", "device-id")
+        );
+        assertEquals("Session materialId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_nullDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create("material-id", null)
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_emptyDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create("material-id", "")
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_blankDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Session.create("material-id", "   ")
+        );
+        assertEquals("Session deviceId cannot be null or empty", exception.getMessage());
     }
 }

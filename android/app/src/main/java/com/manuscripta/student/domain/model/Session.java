@@ -37,9 +37,17 @@ public class Session {
      * @param materialId UUID of the parent material
      * @param deviceId   Identifier of the device running the session
      * @return A new Session instance with generated ID and default values
+     * @throws IllegalArgumentException if materialId is null or empty
+     * @throws IllegalArgumentException if deviceId is null or empty
      */
     @NonNull
     public static Session create(@NonNull String materialId, @NonNull String deviceId) {
+        if (materialId == null || materialId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Session materialId cannot be null or empty");
+        }
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Session deviceId cannot be null or empty");
+        }
         return new Session(
                 UUID.randomUUID().toString(),
                 materialId,
@@ -59,6 +67,12 @@ public class Session {
      * @param endTime    Session end timestamp (0 if still active)
      * @param status     Current status (ACTIVE, PAUSED, COMPLETED, CANCELLED)
      * @param deviceId   Identifier of the device running the session
+     * @throws IllegalArgumentException if id is null or empty
+     * @throws IllegalArgumentException if materialId is null or empty
+     * @throws IllegalArgumentException if startTime is negative
+     * @throws IllegalArgumentException if endTime is negative
+     * @throws IllegalArgumentException if status is null
+     * @throws IllegalArgumentException if deviceId is null or empty
      */
     public Session(@NonNull String id,
                    @NonNull String materialId,
@@ -66,6 +80,25 @@ public class Session {
                    long endTime,
                    @NonNull SessionStatus status,
                    @NonNull String deviceId) {
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Session id cannot be null or empty");
+        }
+        if (materialId == null || materialId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Session materialId cannot be null or empty");
+        }
+        if (startTime < 0) {
+            throw new IllegalArgumentException("Session startTime cannot be negative");
+        }
+        if (endTime < 0) {
+            throw new IllegalArgumentException("Session endTime cannot be negative");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Session status cannot be null");
+        }
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Session deviceId cannot be null or empty");
+        }
+
         this.id = id;
         this.materialId = materialId;
         this.startTime = startTime;
