@@ -368,6 +368,66 @@ Create entity to track device status for reporting to teacher.
 
 ---
 
+Based on our analysis, here is a draft for the GitHub issue. I have identified that this refactoring specifically applies to **`SessionEntity`**, **`ResponseEntity`**, and **`DeviceStatusEntity`**, as `MaterialEntity` and `QuestionEntity` correctly rely on server-provided IDs and do not contain this anti-pattern.
+
+### 1.9 [Android] Refactor Entity Initialization Logic to Domain Layer
+
+  - **Labels:** `android`, `refactor`, `data-layer`, `clean-architecture`
+
+**Description:**
+Currently, several Room entities (`SessionEntity`, `ResponseEntity`, `DeviceStatusEntity`) contain business logic within convenience constructors (annotated with `@Ignore`). This includes generating UUIDs, capturing `System.currentTimeMillis()`, and setting default enum states.
+
+This pattern violates Clean Architecture principles by coupling business rules (like ID generation and default states) to the Data Layer. It also bypasses the Domain Layer, making it possible to create valid entities without going through the proper domain model validation.
+
+**Affected Classes:**
+
+  - `SessionEntity` (Generates UUID, sets `ACTIVE` status, captures start time)
+  - `ResponseEntity` (Generates UUID, captures timestamp, sets `synced=false`)
+  - `DeviceStatusEntity` (Captures `lastUpdated` timestamp)
+
+**Note:** `MaterialEntity` and `QuestionEntity` are **not** affected as they correctly treat IDs as immutable fields provided by the server.
+
+**Proposed Solution:**
+
+1.  **Remove Convenience Constructors:** Delete the `@Ignore` annotated constructors in the affected Entity classes. Entities should only have the single, all-args constructor used by Room and Mappers.
+2.  **Add Factory Methods to Domain Models:** Implement static factory methods (e.g., `create()`) in the corresponding Domain classes (`Session`, `Response`, `DeviceStatus`).
+3.  **Move Logic:** Move the ID generation (`UUID.randomUUID()`), timestamp capture, and default value assignment to these new factory methods.
+4.  **Update Mappers:** Ensure Mappers (`SessionMapper`, etc.) strictly map fields without generating new data.
+
+**Example (Session):**
+
+*Domain Model (`Session.java`):*
+
+```java
+public static Session create(String materialId, String deviceId) {
+    return new Session(
+        UUID.randomUUID().toString(),
+        materialId,
+        System.currentTimeMillis(),
+        0,
+        SessionStatus.ACTIVE,
+        deviceId
+    );
+}
+```
+
+*Entity (`SessionEntity.java`):*
+
+```java
+// Remove the public SessionEntity(String materialId, String deviceId) constructor entirely.
+// Keep only the full constructor used by Room.
+```
+
+**Acceptance Criteria:**
+
+  - [ ] `SessionEntity`, `ResponseEntity`, and `DeviceStatusEntity` contain **only** the primary constructor required by Room.
+  - [ ] `Session`, `Response`, and `DeviceStatus` domain models contain static `create()` factory methods.
+  - [ ] All business logic (UUIDs, timestamps, defaults) is moved to the Domain models.
+  - [ ] Unit tests for Mappers are updated to reflect these changes.
+  - [ ] Unit tests for Entities are updated to use the full constructor only.
+
+---
+
 ## Sub-tasks: Repository Layer
 
 ### 2.1 [Android] Create MaterialRepository
