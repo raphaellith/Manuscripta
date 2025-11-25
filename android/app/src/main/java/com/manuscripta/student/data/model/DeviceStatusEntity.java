@@ -98,6 +98,7 @@ public class DeviceStatusEntity {
         }
         this.batteryLevel = batteryLevel;
     }
+
     public String getCurrentMaterialId() {
         return currentMaterialId;
     }

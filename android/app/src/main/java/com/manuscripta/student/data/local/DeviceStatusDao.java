@@ -1,6 +1,7 @@
 package com.manuscripta.student.data.local;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
@@ -64,7 +65,7 @@ public interface DeviceStatusDao {
      *
      * @param deviceStatus The device status entity to delete
      */
-    @androidx.room.Delete
+    @Delete
     void delete(DeviceStatusEntity deviceStatus);
 
     /**
