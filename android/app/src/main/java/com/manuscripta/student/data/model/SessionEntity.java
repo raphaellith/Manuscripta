@@ -5,9 +5,6 @@ import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
-import androidx.room.Ignore;
-
-import java.util.UUID;
 
 /**
  * Room entity representing a learning session.
@@ -45,9 +42,6 @@ public class SessionEntity {
     @NonNull
     private String deviceId;
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 1: For Room (Rehydration)
-    // -------------------------------------------------------------------------
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
@@ -66,25 +60,7 @@ public class SessionEntity {
         this.deviceId = deviceId;
     }
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 2: For the App (Creation)
-    // -------------------------------------------------------------------------
-    /**
-     * Convenience constructor for creating NEW sessions.
-     * Automatically generates a random UUID and sets default values.
-     * Annotated with @Ignore so Room doesn't try to use it.
-     */
-    @Ignore
-    public SessionEntity(@NonNull String materialId, @NonNull String deviceId) {
-        this.id = UUID.randomUUID().toString();
-        this.materialId = materialId;
-        this.startTime = System.currentTimeMillis();
-        this.endTime = 0;
-        this.status = SessionStatus.ACTIVE;
-        this.deviceId = deviceId;
-    }
-
-    // Getters and Setters
+    // Getters
 
     @NonNull
     public String getId() {
@@ -96,24 +72,12 @@ public class SessionEntity {
         return materialId;
     }
 
-    public void setMaterialId(@NonNull String materialId) {
-        this.materialId = materialId;
-    }
-
     public long getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(long startTime) {
-        this.startTime = startTime;
-    }
-
     public long getEndTime() {
         return endTime;
-    }
-
-    public void setEndTime(long endTime) {
-        this.endTime = endTime;
     }
 
     @NonNull
@@ -121,16 +85,8 @@ public class SessionEntity {
         return status;
     }
 
-    public void setStatus(@NonNull SessionStatus status) {
-        this.status = status;
-    }
-
     @NonNull
     public String getDeviceId() {
         return deviceId;
-    }
-
-    public void setDeviceId(@NonNull String deviceId) {
-        this.deviceId = deviceId;
     }
 }
