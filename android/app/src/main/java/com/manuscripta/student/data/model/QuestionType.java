@@ -16,12 +16,13 @@ public enum QuestionType {
     TRUE_FALSE,
 
     /**
-     * Short answer - student types their response
+     * Written answer - student types their response
      */
-    SHORT_ANSWER;
+    WRITTEN_ANSWER;
 
     /**
      * Check if this question type requires predefined options.
+     * Written answer does not require options as student types their response.
      *
      * @return true if options are needed (multiple choice, true/false)
      */
@@ -38,7 +39,7 @@ public enum QuestionType {
         return switch (this) {
             case MULTIPLE_CHOICE -> "Multiple Choice";
             case TRUE_FALSE      -> "True/False";
-            case SHORT_ANSWER    -> "Short Answer";
+            case WRITTEN_ANSWER  -> "Written Answer";
         };
     }
 }

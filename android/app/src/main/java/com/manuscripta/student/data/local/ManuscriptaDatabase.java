@@ -7,12 +7,13 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.SessionEntity;
 import com.manuscripta.student.data.model.ResponseEntity;
+import com.manuscripta.student.data.model.DeviceStatusEntity;
 
 /**
  * Room database for Manuscripta application.
  * This is the main database configuration.
  */
-@Database(entities = {MaterialEntity.class, QuestionEntity.class, ResponseEntity.class, SessionEntity.class}, version = 6, exportSchema = false)
+@Database(entities = {MaterialEntity.class, QuestionEntity.class, ResponseEntity.class, SessionEntity.class, DeviceStatusEntity.class}, version = 7, exportSchema = false)
 public abstract class ManuscriptaDatabase extends RoomDatabase {
 
     /**
@@ -42,4 +43,11 @@ public abstract class ManuscriptaDatabase extends RoomDatabase {
      * @return ResponseDao instance
      */
     public abstract ResponseDao responseDao();
+
+    /**
+     * Get the DeviceStatus DAO for database operations on device status.
+     *
+     * @return DeviceStatusDao instance
+     */
+    public abstract DeviceStatusDao deviceStatusDao();
 }
