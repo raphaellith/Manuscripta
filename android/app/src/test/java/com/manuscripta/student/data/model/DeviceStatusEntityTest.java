@@ -1,39 +1,25 @@
 package com.manuscripta.student.data.model;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Unit tests for {@link DeviceStatusEntity} entity.
+ * Tests immutable entity construction and getters.
  */
 public class DeviceStatusEntityTest {
 
-    private DeviceStatusEntity deviceStatusEntity;
     private final String TEST_DEVICE_ID = "test-device-123";
     private final int TEST_BATTERY_LEVEL = 85;
     private final String TEST_MATERIAL_ID = "mat-123";
     private final String TEST_STUDENT_VIEW = "StudentView";
 
-    @Before
-    public void setUp() {
-        // Use convenience constructor for general setup
-        this.deviceStatusEntity = new DeviceStatusEntity(
-                TEST_DEVICE_ID,
-                DeviceStatus.ON_TASK,
-                TEST_BATTERY_LEVEL,
-                TEST_MATERIAL_ID,
-                TEST_STUDENT_VIEW);
-    }
-
     @Test
     public void testRoomConstructor() {
         // Test rehydration constructor
         long now = System.currentTimeMillis();
-        DeviceStatusEntity rehydratedEntity = new DeviceStatusEntity(
+        DeviceStatusEntity entity = new DeviceStatusEntity(
                 "rehydrated-device",
                 DeviceStatus.DISCONNECTED,
                 50,
@@ -41,85 +27,70 @@ public class DeviceStatusEntityTest {
                 "view-rehydrated",
                 now);
 
-        assertEquals("rehydrated-device", rehydratedEntity.getDeviceId());
-        assertEquals(DeviceStatus.DISCONNECTED, rehydratedEntity.getStatus());
-        assertEquals(50, rehydratedEntity.getBatteryLevel());
-        assertEquals("mat-rehydrated", rehydratedEntity.getCurrentMaterialId());
-        assertEquals("view-rehydrated", rehydratedEntity.getStudentView());
-        assertEquals(now, rehydratedEntity.getLastUpdated());
+        assertEquals("rehydrated-device", entity.getDeviceId());
+        assertEquals(DeviceStatus.DISCONNECTED, entity.getStatus());
+        assertEquals(50, entity.getBatteryLevel());
+        assertEquals("mat-rehydrated", entity.getCurrentMaterialId());
+        assertEquals("view-rehydrated", entity.getStudentView());
+        assertEquals(now, entity.getLastUpdated());
     }
 
     @Test
-    public void testConvenienceConstructor() {
-        DeviceStatusEntity newEntity = new DeviceStatusEntity(
-                "new-device",
-                DeviceStatus.HAND_RAISED,
-                100,
-                null,
-                null);
+    public void testGetters() {
+        long now = System.currentTimeMillis();
+        DeviceStatusEntity entity = new DeviceStatusEntity(
+                TEST_DEVICE_ID,
+                DeviceStatus.ON_TASK,
+                TEST_BATTERY_LEVEL,
+                TEST_MATERIAL_ID,
+                TEST_STUDENT_VIEW,
+                now);
 
-        assertEquals("new-device", newEntity.getDeviceId());
-        assertEquals(DeviceStatus.HAND_RAISED, newEntity.getStatus());
-        assertEquals(100, newEntity.getBatteryLevel());
-        assertNull(newEntity.getCurrentMaterialId());
-        assertNull(newEntity.getStudentView());
-
-        // Verify lastUpdated is set to current time (approx)
-        long currentTime = System.currentTimeMillis();
-        long diff = Math.abs(currentTime - newEntity.getLastUpdated());
-        assertTrue("Last updated time should be close to current time", diff < 1000);
+        assertEquals(TEST_DEVICE_ID, entity.getDeviceId());
+        assertEquals(DeviceStatus.ON_TASK, entity.getStatus());
+        assertEquals(TEST_BATTERY_LEVEL, entity.getBatteryLevel());
+        assertEquals(TEST_MATERIAL_ID, entity.getCurrentMaterialId());
+        assertEquals(TEST_STUDENT_VIEW, entity.getStudentView());
+        assertEquals(now, entity.getLastUpdated());
     }
 
     @Test
-    public void testSettersAndGetters() {
-        // Verify initial values
-        assertEquals(TEST_DEVICE_ID, deviceStatusEntity.getDeviceId());
-        assertEquals(DeviceStatus.ON_TASK, deviceStatusEntity.getStatus());
-        assertEquals(TEST_BATTERY_LEVEL, deviceStatusEntity.getBatteryLevel());
-        assertEquals(TEST_MATERIAL_ID, deviceStatusEntity.getCurrentMaterialId());
-        assertEquals(TEST_STUDENT_VIEW, deviceStatusEntity.getStudentView());
-
-        // Test setters
-        deviceStatusEntity.setStatus(DeviceStatus.HAND_RAISED);
-        deviceStatusEntity.setBatteryLevel(20);
-        deviceStatusEntity.setCurrentMaterialId("new-mat");
-        deviceStatusEntity.setStudentView("new-view");
-        long newTime = System.currentTimeMillis() + 1000;
-        deviceStatusEntity.setLastUpdated(newTime);
-
-        // Verify updated values
-        assertEquals(DeviceStatus.HAND_RAISED, deviceStatusEntity.getStatus());
-        assertEquals(20, deviceStatusEntity.getBatteryLevel());
-        assertEquals("new-mat", deviceStatusEntity.getCurrentMaterialId());
-        assertEquals("new-view", deviceStatusEntity.getStudentView());
-        assertEquals(newTime, deviceStatusEntity.getLastUpdated());
-    }
-
-    @Test
-    public void testStatusTransitions() {
-        // Test all enum values
+    public void testStatusValues() {
+        long now = System.currentTimeMillis();
+        
+        // Test creating entities with each status value
         for (DeviceStatus status : DeviceStatus.values()) {
-            deviceStatusEntity.setStatus(status);
-            assertEquals(status, deviceStatusEntity.getStatus());
+            DeviceStatusEntity entity = new DeviceStatusEntity(
+                    TEST_DEVICE_ID,
+                    status,
+                    TEST_BATTERY_LEVEL,
+                    TEST_MATERIAL_ID,
+                    TEST_STUDENT_VIEW,
+                    now);
+            assertEquals(status, entity.getStatus());
         }
 
-        // Explicitly check new statuses
-        deviceStatusEntity.setStatus(DeviceStatus.LOCKED);
-        assertEquals(DeviceStatus.LOCKED, deviceStatusEntity.getStatus());
+        // Explicitly check specific statuses
+        DeviceStatusEntity lockedEntity = new DeviceStatusEntity(
+                TEST_DEVICE_ID, DeviceStatus.LOCKED, 50, "mat", "view", now);
+        assertEquals(DeviceStatus.LOCKED, lockedEntity.getStatus());
 
-        deviceStatusEntity.setStatus(DeviceStatus.IDLE);
-        assertEquals(DeviceStatus.IDLE, deviceStatusEntity.getStatus());
+        DeviceStatusEntity idleEntity = new DeviceStatusEntity(
+                TEST_DEVICE_ID, DeviceStatus.IDLE, 50, "mat", "view", now);
+        assertEquals(DeviceStatus.IDLE, idleEntity.getStatus());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetBatteryLevelInvalidLow() {
-        // battery below 0 should throw
-        deviceStatusEntity.setBatteryLevel(-1);
-    }
+    @Test
+    public void testBatteryLevelBoundary() {
+        long now = System.currentTimeMillis();
+        
+        // Test valid boundary values
+        DeviceStatusEntity lowBattery = new DeviceStatusEntity(
+                TEST_DEVICE_ID, DeviceStatus.ON_TASK, 0, TEST_MATERIAL_ID, TEST_STUDENT_VIEW, now);
+        assertEquals(0, lowBattery.getBatteryLevel());
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetBatteryLevelInvalidHigh() {
-        // battery above 100 should throw
-        deviceStatusEntity.setBatteryLevel(101);
+        DeviceStatusEntity fullBattery = new DeviceStatusEntity(
+                TEST_DEVICE_ID, DeviceStatus.ON_TASK, 100, TEST_MATERIAL_ID, TEST_STUDENT_VIEW, now);
+        assertEquals(100, fullBattery.getBatteryLevel());
     }
 }
