@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Nodes;
-using System.Collections.Generic;
+using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
@@ -21,7 +20,7 @@ public class QuestionEntity
 
     [Required]
     [MaxLength(100)]
-    public string? QuestionType { get; set; }
+    public QuestionType QuestionType { get; set; }
     
     public List<string>? Options { get; set; }
 

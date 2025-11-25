@@ -27,8 +27,8 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<MaterialEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Type).HasConversion<string>();
-            entity.HasIndex(e => e.Type);
+            entity.Property(e => e.MaterialType).HasConversion<string>();
+            entity.HasIndex(e => e.MaterialType);
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.Synced);
         });
@@ -37,6 +37,8 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<QuestionEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.QuestionType).HasConversion<string>();
+            entity.HasIndex(e => e.QuestionType);
             entity.HasIndex(e => e.MaterialId);
             entity.HasIndex(e => e.Synced);
         });

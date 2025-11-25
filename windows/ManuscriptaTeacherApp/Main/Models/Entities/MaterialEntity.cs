@@ -15,7 +15,7 @@ public class MaterialEntity
     public int Id {get; set;}
 
     [Required]
-    public MaterialType Type {get; set;}
+    public MaterialType MaterialType {get; set;}
 
     [Required]
     [MaxLength(500)]
