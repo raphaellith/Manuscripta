@@ -2,6 +2,8 @@ package com.manuscripta.student.domain.model;
 
 import androidx.annotation.NonNull;
 
+import java.util.UUID;
+
 /**
  * Domain model representing a student's response to a question.
  * This is a clean domain object without persistence annotations, used in the business logic layer.
@@ -24,6 +26,26 @@ public class Response {
     private final long timestamp;
 
     private final boolean synced;
+
+    /**
+     * Factory method for creating a NEW response.
+     * Generates a random UUID, captures the current timestamp, and sets default values.
+     *
+     * @param questionId     UUID of the parent question
+     * @param selectedAnswer The student's selected answer
+     * @return A new Response instance with generated ID and default values
+     */
+    @NonNull
+    public static Response create(@NonNull String questionId, @NonNull String selectedAnswer) {
+        return new Response(
+                UUID.randomUUID().toString(),
+                questionId,
+                selectedAnswer,
+                false,
+                System.currentTimeMillis(),
+                false
+        );
+    }
 
     /**
      * Constructor with all fields.

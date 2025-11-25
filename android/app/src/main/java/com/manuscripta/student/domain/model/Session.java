@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 
 import com.manuscripta.student.data.model.SessionStatus;
 
+import java.util.UUID;
+
 /**
  * Domain model representing a learning session.
  * This is a clean domain object without persistence annotations, used in the business logic layer.
@@ -27,6 +29,26 @@ public class Session {
 
     @NonNull
     private final String deviceId;
+
+    /**
+     * Factory method for creating a NEW session.
+     * Generates a random UUID, captures the current timestamp, and sets default values.
+     *
+     * @param materialId UUID of the parent material
+     * @param deviceId   Identifier of the device running the session
+     * @return A new Session instance with generated ID and default values
+     */
+    @NonNull
+    public static Session create(@NonNull String materialId, @NonNull String deviceId) {
+        return new Session(
+                UUID.randomUUID().toString(),
+                materialId,
+                System.currentTimeMillis(),
+                0,
+                SessionStatus.ACTIVE,
+                deviceId
+        );
+    }
 
     /**
      * Constructor with all fields.
