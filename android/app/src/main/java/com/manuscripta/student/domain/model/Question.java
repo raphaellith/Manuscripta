@@ -39,6 +39,12 @@ public class Question {
      * @param questionType  The type of question (MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER)
      * @param options       JSON string of options (empty string if none)
      * @param correctAnswer The correct answer string (empty string if none)
+     * @throws IllegalArgumentException if id is null or empty
+     * @throws IllegalArgumentException if materialId is null or empty
+     * @throws IllegalArgumentException if questionText is null or empty
+     * @throws IllegalArgumentException if questionType is null
+     * @throws IllegalArgumentException if options is null
+     * @throws IllegalArgumentException if correctAnswer is null
      */
     public Question(@NonNull String id,
                     @NonNull String materialId,
@@ -46,6 +52,25 @@ public class Question {
                     @NonNull QuestionType questionType,
                     @NonNull String options,
                     @NonNull String correctAnswer) {
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Question id cannot be null or empty");
+        }
+        if (materialId == null || materialId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Question materialId cannot be null or empty");
+        }
+        if (questionText == null || questionText.trim().isEmpty()) {
+            throw new IllegalArgumentException("Question questionText cannot be null or empty");
+        }
+        if (questionType == null) {
+            throw new IllegalArgumentException("Question questionType cannot be null");
+        }
+        if (options == null) {
+            throw new IllegalArgumentException("Question options cannot be null");
+        }
+        if (correctAnswer == null) {
+            throw new IllegalArgumentException("Question correctAnswer cannot be null");
+        }
+
         this.id = id;
         this.materialId = materialId;
         this.questionText = questionText;
