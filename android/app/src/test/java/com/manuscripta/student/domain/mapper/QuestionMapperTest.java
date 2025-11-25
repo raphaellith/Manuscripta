@@ -66,13 +66,13 @@ public class QuestionMapperTest {
     }
 
     @Test
-    public void testToDomain_ShortAnswerQuestion() {
+    public void testToDomain_WrittenAnswerQuestion() {
         // Given
         QuestionEntity entity = new QuestionEntity(
-                "short-answer-id",
+                "written-answer-id",
                 "material-id-999",
                 "Explain photosynthesis",
-                QuestionType.SHORT_ANSWER,
+                QuestionType.WRITTEN_ANSWER,
                 "",
                 "Process where plants convert sunlight to energy"
         );
@@ -85,7 +85,7 @@ public class QuestionMapperTest {
         assertEquals(entity.getId(), domain.getId());
         assertEquals(entity.getMaterialId(), domain.getMaterialId());
         assertEquals(entity.getQuestionText(), domain.getQuestionText());
-        assertEquals(QuestionType.SHORT_ANSWER, domain.getQuestionType());
+        assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
         assertEquals("", domain.getOptions());
         assertEquals(entity.getCorrectAnswer(), domain.getCorrectAnswer());
     }
