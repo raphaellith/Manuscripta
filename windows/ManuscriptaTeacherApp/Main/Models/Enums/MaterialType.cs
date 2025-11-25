@@ -5,5 +5,5 @@ public enum MaterialType
     QUIZ,
     WORKSHEET,
     POLL,
-    LESSON
+    READING
 }
