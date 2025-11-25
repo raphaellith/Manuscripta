@@ -42,6 +42,13 @@ public class Material {
      * @param metadata         Additional metadata in JSON format
      * @param vocabularyTerms  Key vocabulary terms in JSON array format
      * @param timestamp        Timestamp when the material was created or last modified (Unix epoch milliseconds)
+     * @throws IllegalArgumentException if id is null or empty
+     * @throws IllegalArgumentException if type is null
+     * @throws IllegalArgumentException if title is null or empty
+     * @throws IllegalArgumentException if content is null
+     * @throws IllegalArgumentException if metadata is null
+     * @throws IllegalArgumentException if vocabularyTerms is null
+     * @throws IllegalArgumentException if timestamp is negative
      */
     public Material(@NonNull String id,
                     @NonNull MaterialType type,
@@ -50,6 +57,28 @@ public class Material {
                     @NonNull String metadata,
                     @NonNull String vocabularyTerms,
                     long timestamp) {
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Material id cannot be null or empty");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("Material type cannot be null");
+        }
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Material title cannot be null or empty");
+        }
+        if (content == null) {
+            throw new IllegalArgumentException("Material content cannot be null");
+        }
+        if (metadata == null) {
+            throw new IllegalArgumentException("Material metadata cannot be null");
+        }
+        if (vocabularyTerms == null) {
+            throw new IllegalArgumentException("Material vocabularyTerms cannot be null");
+        }
+        if (timestamp < 0) {
+            throw new IllegalArgumentException("Material timestamp cannot be negative");
+        }
+
         this.id = id;
         this.type = type;
         this.title = title;
