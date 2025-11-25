@@ -185,11 +185,17 @@ public class SessionMapperTest {
         assertEquals(SessionStatus.CANCELLED, cancelledDomain.getStatus());
     }
 
-    @Test(expected = AssertionError.class)
+    @Test
     public void testPrivateConstructorThrowsException() throws Exception {
         // Use reflection to access private constructor
         java.lang.reflect.Constructor<SessionMapper> constructor = SessionMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
-        constructor.newInstance();
+        try {
+            constructor.newInstance();
+            throw new AssertionError("Expected constructor to throw AssertionError");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            // Verify the cause is AssertionError
+            assertEquals(AssertionError.class, e.getCause().getClass());
+        }
     }
 }
