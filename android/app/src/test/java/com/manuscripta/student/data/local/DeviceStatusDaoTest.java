@@ -47,7 +47,7 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testInsertAndGetById() {
-        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1");
+        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1", System.currentTimeMillis());
         dao.insert(entity);
 
         DeviceStatusEntity retrieved = dao.getById("dev-1");
@@ -61,10 +61,10 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testInsertReplacement() {
-        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1");
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1", System.currentTimeMillis());
         dao.insert(entity1);
 
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-1", DeviceStatus.HAND_RAISED, 90, "mat-2", "view-2");
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-1", DeviceStatus.HAND_RAISED, 90, "mat-2", "view-2", System.currentTimeMillis());
         dao.insert(entity2);
 
         DeviceStatusEntity retrieved = dao.getById("dev-1");
@@ -77,8 +77,8 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testGetAll() {
-        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
         dao.insert(entity1);
         dao.insert(entity2);
 
@@ -88,14 +88,13 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testUpdate() {
-        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1");
+        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1", System.currentTimeMillis());
         dao.insert(entity);
 
-        entity.setStatus(DeviceStatus.LOCKED);
-        entity.setBatteryLevel(50);
-        entity.setCurrentMaterialId("mat-updated");
-        entity.setStudentView("view-updated");
-        dao.update(entity);
+        // Create a new entity with updated values since entities are immutable
+        DeviceStatusEntity updatedEntity = new DeviceStatusEntity(
+                "dev-1", DeviceStatus.LOCKED, 50, "mat-updated", "view-updated", System.currentTimeMillis());
+        dao.update(updatedEntity);
 
         DeviceStatusEntity retrieved = dao.getById("dev-1");
         assertEquals(DeviceStatus.LOCKED, retrieved.getStatus());
@@ -106,7 +105,7 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testDeleteById() {
-        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
         dao.insert(entity);
 
         dao.deleteById("dev-1");
@@ -118,7 +117,7 @@ public class DeviceStatusDaoTest {
     @Test
     public void testNewStatuses() {
         // Test IDLE
-        DeviceStatusEntity idleEntity = new DeviceStatusEntity("dev-idle", DeviceStatus.IDLE, 70, null, null);
+        DeviceStatusEntity idleEntity = new DeviceStatusEntity("dev-idle", DeviceStatus.IDLE, 70, null, null, System.currentTimeMillis());
         dao.insert(idleEntity);
         DeviceStatusEntity retrievedIdle = dao.getById("dev-idle");
         assertEquals(DeviceStatus.IDLE, retrievedIdle.getStatus());
@@ -126,8 +125,8 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testInsertAll() {
-        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
         List<DeviceStatusEntity> list = java.util.Arrays.asList(entity1, entity2);
 
         dao.insertAll(list);
@@ -138,7 +137,7 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testDelete() {
-        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
+        DeviceStatusEntity entity = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
         dao.insert(entity);
 
         dao.delete(entity);
@@ -149,8 +148,8 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testDeleteAll() {
-        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
         dao.insert(entity1);
         dao.insert(entity2);
 
@@ -162,8 +161,8 @@ public class DeviceStatusDaoTest {
 
     @Test
     public void testGetCount() {
-        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null);
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null);
+        DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
         dao.insert(entity1);
         dao.insert(entity2);
 
