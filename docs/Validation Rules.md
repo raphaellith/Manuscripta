@@ -1,8 +1,8 @@
 # Validation Rules for Common Data Models
 
-As the project chooses composition over inheritance, the integrity of data models shall be explicitly managed to reject invalid states.
+As the project chooses composition over inheritance, the integrity of data models shall be explicitly managed so as to reject invalid states.
 
-All rules in this document shall be enumerated for the convenience of referencing. Numbering shall not be changed after approval in a PR.
+All rules in this document shall be enumerated for the convinence of referencing. Numbering shall not be changed after approval in a PR.
 
 
 ### Section 1 — General Principles
@@ -31,8 +31,7 @@ All rules in this document shall be enumerated for the convenience of referencin
         (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
         (iv) QUIZ - Multiple Choice Quizzes
     (b) `Title` (String). Maximum Length = 500 Characters.
-    (c) `Content` (String).
-    (d) `Timestamp` (Long). The unix timestamp of the previous modification.
+    (c) `Content` (String)
 
 (2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
 
@@ -49,11 +48,10 @@ All rules in this document shall be enumerated for the convenience of referencin
         (i) `MULTIPLE_CHOICE`: A question with a list of possible options.
         (ii) `TRUE_FALSE`: A question whose response will be expected to be either true or false.
         (iii) `WRITTEN_ANSWER`: A question whose response will be expected to be typed or handwritten.
-    (c) `QuestionText` (String).
 
 (2) In addition to the mandatory fields in (1), a `QuestionEntity` object may have the following fields:
 
-    (a) `Options` (List<String>): The list of the options available, for multiple choice questions.
+    (a) `Options` (List<String>): The list of of the options available, for multiple choice questions.
     (b) `CorrectAnswer` (Generic / Optional): The expected correct answer.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
@@ -61,52 +59,43 @@ All rules in this document shall be enumerated for the convenience of referencin
     (a) The `MaterialId` specified in (1)(a) must associate with a `MaterialEntity` (M) whose `MaterialType` is not `READING`.
     (b) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, M's MaterialType must not be `POLL` or `QUIZ`.
     (c) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `Options`, as specified in (2)(a) must be non-empty.
-    (d) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid index in its `Options`.
+    (d) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid index in Q's `Options`.
     (e) When `QuestionType` specified in (1)(b) is `TRUE_FALSE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid boolean value.
-    (f) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, its `CorrectAnswer`, as specified in (2)(b), must be a valid String.
 
 ### Section 2C - Data Validation Rules for `ResponseEntity` Objects
 
 (1) A `ResponseEntity` object must have the following data fields to be considered valid:
 
     (a) `QuestionId` (UUID): The question the response is related to.
-    (b) `Answer` (Generic Typing): The answer the student provides.
-    (c) `Timestamp`: Time stamp of response.
-    (d) `DeviceId` (UUID): The device ID the response is from.
 
 (2) In addition to the mandatory fields in (1), a `ResponseEntity` object may have the following fields:
 
-    (a) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice, True/False or simple blank filling). 
+    (a) `Answer` (Generic Typing): The answer the student provides.
+    (b) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice, True/False or simple blank filling). 
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `QuestionId` specified in 1(a) must associate with a `QuestionMaterial` (Q).
     (b) If Q's `QuestionType` is `MULTIPLE_CHOICE`, the `Answer`, specified in 2(a), must be a valid index in Q's `Options`.
     (c) If Q's `QuestionType` is `TRUE_FALSE`, the `Answer`, specified in 2(a), must be a valid boolean value.
-    (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
-    (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
 
 ### Section 2D - Data Validation Rules of `SessionEntity`
 
 (1) A `SessionEntity` object must have the following data fields to be considered valid:
-
-    (a) `MaterialId` (UUID): References the material the student should work on during the lesson.
-    (b) `StartTime` (long): Start unix timestamp of the last interaction.
-    (c) `SessionStatus`(enum SessionStatus). Possible values are:
-        (i) `ACTIVE`: Session is currently active/ongoing.
-        (ii) `PAUSED`: Session has been paused.
-        (iii) `COMPLETED`: Session completed normally.
-        (iv) `CANCELLED`: Session was cancelled before completion.
-    (d) `DeviceId` (UUID): The device ID the session is related to.
+(a) `MaterialId` (UUID): References the material the student should work on during the lesson.
+(b) `StartTime` (long): Start unix timestamp of the last interaction.
+(c) `SessionStatus`(enum SessionStatus). Possible values are:
+(i) `ACTIVE`: Session is currently active/ongoing.
+(ii) `PAUSED`: Session has been paused.
+(iii) `COMPLETED`: Session completed normally.
+(iv) `CANCELLED`: Session was cancelled before completion.
+(d) `DeviceId`: The device ID the session is related to
 
 (2) In addition to the mandatory fields in (1), a `SessionEntity` object may have the following fields:
-
-    (a) `EndTime` (long): End unix timestamp, for non-active sessions
+(a) `EndTime` (long): End unix timestamp, for non-active sessions
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
-
-    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specified in 2(a).
-    (b) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+(a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specifiecd in 2(a).
 
 ### Section 3 - ID Generation Policy
 
@@ -118,5 +107,3 @@ All rules in this document shall be enumerated for the convenience of referencin
     (b) `ResponseEntity` objects should be generated by the Android client.
 
 (3) The client which receives the ID should treat it as immutable.
-
-(4) Device IDs should be generated by the Android client on successful pairing. 
