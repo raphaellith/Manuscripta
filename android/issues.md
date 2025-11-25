@@ -331,7 +331,7 @@ Create enum for different material types (quiz, worksheet, poll).
 Create enum for different question types (multiple choice, true/false, open-ended).
 
 **Tasks:**
-- Create `QuestionType.java` enum with values: MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, POLL
+- Create `QuestionType.java` enum with values: MULTIPLE_CHOICE, TRUE_FALSE, WRITTEN_ANSWER, POLL
 - Add helper methods
 - Write unit tests
 
