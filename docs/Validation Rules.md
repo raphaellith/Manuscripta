@@ -31,7 +31,8 @@ All rules in this document shall be enumerated for the convenience of referencin
         (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
         (iv) QUIZ - Multiple Choice Quizzes
     (b) `Title` (String). Maximum Length = 500 Characters.
-    (c) `Content` (String)
+    (c) `Content` (String).
+    (d) `Timestamp` (Long). The unix timestamp of the previous modification.
 
 (2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
 
@@ -48,6 +49,7 @@ All rules in this document shall be enumerated for the convenience of referencin
         (i) `MULTIPLE_CHOICE`: A question with a list of possible options.
         (ii) `TRUE_FALSE`: A question whose response will be expected to be either true or false.
         (iii) `WRITTEN_ANSWER`: A question whose response will be expected to be typed or handwritten.
+    (c) `QuestionText` (String).
 
 (2) In addition to the mandatory fields in (1), a `QuestionEntity` object may have the following fields:
 
@@ -68,11 +70,12 @@ All rules in this document shall be enumerated for the convenience of referencin
 (1) A `ResponseEntity` object must have the following data fields to be considered valid:
 
     (a) `QuestionId` (UUID): The question the response is related to.
+    (b) `Answer` (Generic Typing): The answer the student provides.
+    (c) `Timestamp`: Time stamp of response.
 
 (2) In addition to the mandatory fields in (1), a `ResponseEntity` object may have the following fields:
 
-    (a) `Answer` (Generic Typing): The answer the student provides.
-    (b) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice, True/False or simple blank filling). 
+    (a) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice, True/False or simple blank filling). 
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
