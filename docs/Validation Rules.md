@@ -1,8 +1,8 @@
 # Validation Rules for Common Data Models
 
-As the project chooses composition over inheritance, the integrity of data models shall be explicitly managed so as to reject invalid states.
+As the project chooses composition over inheritance, the integrity of data models shall be explicitly managed to reject invalid states.
 
-All rules in this document shall be enumerated for the convinence of referencing. Numbering shall not be changed after approval in a PR.
+All rules in this document shall be enumerated for the convenience of referencing. Numbering shall not be changed after approval in a PR.
 
 
 ### Section 1 — General Principles
@@ -51,7 +51,7 @@ All rules in this document shall be enumerated for the convinence of referencing
 
 (2) In addition to the mandatory fields in (1), a `QuestionEntity` object may have the following fields:
 
-    (a) `Options` (List<String>): The list of of the options available, for multiple choice questions.
+    (a) `Options` (List<String>): The list of the options available, for multiple choice questions.
     (b) `CorrectAnswer` (Generic / Optional): The expected correct answer.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
