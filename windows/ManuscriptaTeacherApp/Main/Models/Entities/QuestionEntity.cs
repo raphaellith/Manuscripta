@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Nodes;
-using System.Collections.Generic;
+using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
@@ -21,12 +20,18 @@ public class QuestionEntity
 
     [Required]
     [MaxLength(100)]
-    public string? QuestionType { get; set; }
-
-    public string? Options { get; set; } // JSON
+    public QuestionType QuestionType { get; set; }
+    
+    public List<string>? Options { get; set; }
 
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
+    
+    // TODO: Change this to type HashSet<SessionEntity> 
+    // The HashSet contains SessionEntity instances for which
+    // the Android device's corresponding QuestionEntity data is synchronised with this one
+    [Required]
+    public bool Synced { get; set; }
 
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("MaterialId")]

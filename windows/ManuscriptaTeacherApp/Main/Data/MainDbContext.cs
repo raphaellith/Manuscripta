@@ -27,16 +27,20 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<MaterialEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Type).HasConversion<string>();
-            entity.HasIndex(e => e.Type);
+            entity.Property(e => e.MaterialType).HasConversion<string>();
+            entity.HasIndex(e => e.MaterialType);
             entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.Synced);
         });
 
         // Configure QuestionEntity
         modelBuilder.Entity<QuestionEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.QuestionType).HasConversion<string>();
+            entity.HasIndex(e => e.QuestionType);
             entity.HasIndex(e => e.MaterialId);
+            entity.HasIndex(e => e.Synced);
         });
 
         // Configure ResponseEntity
@@ -44,7 +48,6 @@ public class MainDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.QuestionId);
-            entity.HasIndex(e => e.Synced);
             entity.HasIndex(e => e.Timestamp);
         });
     }
