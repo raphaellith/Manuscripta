@@ -61,6 +61,7 @@ All rules in this document shall be enumerated for the convenience of referencin
     (c) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `Options`, as specified in (2)(a) must be non-empty.
     (d) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid index in Q's `Options`.
     (e) When `QuestionType` specified in (1)(b) is `TRUE_FALSE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid boolean value.
+    (f) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, its `CorrectAnswer`, as specified in (2)(b), must be a valid String.
 
 ### Section 2C - Data Validation Rules for `ResponseEntity` Objects
 
@@ -78,6 +79,7 @@ All rules in this document shall be enumerated for the convenience of referencin
     (a) The `QuestionId` specified in 1(a) must associate with a `QuestionMaterial` (Q).
     (b) If Q's `QuestionType` is `MULTIPLE_CHOICE`, the `Answer`, specified in 2(a), must be a valid index in Q's `Options`.
     (c) If Q's `QuestionType` is `TRUE_FALSE`, the `Answer`, specified in 2(a), must be a valid boolean value.
+    (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
 
 ### Section 2D - Data Validation Rules of `SessionEntity`
 
@@ -98,7 +100,7 @@ All rules in this document shall be enumerated for the convenience of referencin
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
-    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specifiecd in 2(a).
+    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specified in 2(a).
 
 ### Section 3 - ID Generation Policy
 
