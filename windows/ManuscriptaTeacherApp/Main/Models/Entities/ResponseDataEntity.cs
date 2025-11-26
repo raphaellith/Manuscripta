@@ -1,18 +1,21 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Nodes;
 
 namespace Main.Models.Entities;
 
+/// <summary>
+/// Data entity for persisting responses to the database.
+/// Uses compositional design with generic Answer field.
+/// </summary>
 [Table("Responses")]
-public class ResponseEntity
+public class ResponseDataEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public int Id { get; private set; }
+    public Guid Id { get; private set; }
 
     [Required]
-    public int QuestionId { get; private set; }
+    public Guid QuestionId { get; private set; }
 
     [Required]
     [MaxLength(1000)]
@@ -25,11 +28,11 @@ public class ResponseEntity
 
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("QuestionId")]
-    internal QuestionEntity? Question { get; private set; }
+    internal QuestionDataEntity? Question { get; private set; }
 
-    private ResponseEntity() { }
+    private ResponseDataEntity() { }
 
-    public ResponseEntity(int id, int questionId, string? answer, bool isCorrect = false, DateTime? timestamp = null, bool synced = false)
+    public ResponseDataEntity(Guid id, Guid questionId, string? answer, bool isCorrect = false, DateTime? timestamp = null, bool synced = false)
     {
         Id = id;
         QuestionId = questionId;
