@@ -11,8 +11,8 @@ namespace Main.Models.Entities;
 public class MaterialEntity
 {
     [Key]  // Primary key
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id {get; set;}
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public Guid Id {get; set;}
 
     [Required]
     public MaterialType MaterialType {get; set;}
