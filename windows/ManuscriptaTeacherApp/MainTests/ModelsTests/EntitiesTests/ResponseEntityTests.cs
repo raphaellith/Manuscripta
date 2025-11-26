@@ -4,20 +4,61 @@ using Main.Models.Entities;
 
 namespace MainTests;
 
-public class ResponseEntityTests
+/// <summary>
+/// Tests for ResponseDataEntity (persistence layer entity)
+/// </summary>
+public class ResponseDataEntityTests
 {
     [Fact]
-    public void DefaultValues_AreSet()
+    public void Constructor_SetsProperties()
     {
-        var r = new ResponseEntity(1, 2, "Yes");
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var answer = "Yes";
+        var timestamp = DateTime.UtcNow;
 
-        Assert.Equal(1, r.Id);
-        Assert.Equal(2, r.QuestionId);
-        Assert.Equal("Yes", r.Answer);
-        Assert.False(r.Synced);
-        Assert.False(r.IsCorrect);
-        // Timestamp is set to roughly now
-        var diff = DateTime.UtcNow - r.Timestamp;
-        Assert.True(diff.TotalSeconds < 10, "Timestamp should be near now");
+        // Act
+        var r = new ResponseDataEntity(id, questionId, answer, true, timestamp, true);
+
+        // Assert
+        Assert.Equal(id, r.Id);
+        Assert.Equal(questionId, r.QuestionId);
+        Assert.Equal(answer, r.Answer);
+        Assert.True(r.IsCorrect);
+        Assert.Equal(timestamp, r.Timestamp);
+    }
+
+    [Fact]
+    public void Constructor_WithDefaultTimestamp_SetsCurrentTime()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var beforeCreation = DateTime.UtcNow;
+
+        // Act
+        var r = new ResponseDataEntity(id, questionId, "answer");
+        var afterCreation = DateTime.UtcNow;
+
+        // Assert
+        Assert.True(r.Timestamp >= beforeCreation && r.Timestamp <= afterCreation);
+    }
+
+    [Fact]
+    public void Constructor_WithDefaultValues_SetsDefaults()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+
+        // Act
+        var r = new ResponseDataEntity(id, questionId, "answer");
+
+        // Assert
+        Assert.Equal(id, r.Id);
+        Assert.Equal(questionId, r.QuestionId);
+        Assert.Equal("answer", r.Answer);
+        Assert.False(r.IsCorrect); // Default is false
     }
 }
