@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Main.Data;
 using Main.Models.Entities;
+using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Models.Enums;
@@ -44,15 +45,11 @@ public class RepositoryTests
             var rRepo = new EfResponseRepository(ctx, qRepo);
 
             // Add material
-            var material = new MaterialEntity
-            {
-                Id = materialId,
-                MaterialType = MaterialType.WORKSHEET,
-                Title = "Test Material",
-                Content = "Content",
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Synced = false
-            };
+            var material = new WorksheetMaterialEntity(
+                materialId,
+                "Test Material",
+                "Content"
+            );
             await mRepo.AddAsync(material);
 
             // Add question using polymorphic entity
@@ -80,6 +77,7 @@ public class RepositoryTests
             // Test material retrieval
             var m = await mRepo.GetByIdAsync(materialId);
             Assert.NotNull(m);
+            Assert.IsType<WorksheetMaterialEntity>(m);
             Assert.Equal("Test Material", m!.Title);
 
             // Test question retrieval
@@ -127,15 +125,11 @@ public class RepositoryTests
             var qRepo = new EfQuestionRepository(ctx);
 
             // Add material
-            var material = new MaterialEntity
-            {
-                Id = materialId,
-                MaterialType = MaterialType.QUIZ,
-                Title = "Original Title",
-                Content = "Original Content",
-                Timestamp = 1000,
-                Synced = false
-            };
+            var material = new QuizMaterialEntity(
+                materialId,
+                "Original Title",
+                "Original Content"
+            );
             await mRepo.AddAsync(material);
 
             // Add question
@@ -151,8 +145,15 @@ public class RepositoryTests
             // Update material
             var material = await mRepo.GetByIdAsync(materialId);
             Assert.NotNull(material);
-            material!.Title = "Updated Title";
-            await mRepo.UpdateAsync(material);
+            Assert.IsType<QuizMaterialEntity>(material);
+            
+            var updatedMaterial = new QuizMaterialEntity(
+                materialId,
+                "Updated Title",
+                material!.Content,
+                material.Timestamp
+            );
+            await mRepo.UpdateAsync(updatedMaterial);
 
             // Update question
             var updatedQuestion = new TrueFalseQuestionEntity(questionId, materialId, "Updated?", false);
@@ -165,6 +166,7 @@ public class RepositoryTests
             var qRepo = new EfQuestionRepository(ctx);
 
             var material = await mRepo.GetByIdAsync(materialId);
+            Assert.NotNull(material);
             Assert.Equal("Updated Title", material!.Title);
 
             var question = await qRepo.GetByIdAsync(questionId) as TrueFalseQuestionEntity;
@@ -190,15 +192,11 @@ public class RepositoryTests
 
             var mRepo = new EfMaterialRepository(ctx);
 
-            var material = new MaterialEntity
-            {
-                Id = materialId,
-                MaterialType = MaterialType.READING,
-                Title = "To Delete",
-                Content = "Content",
-                Timestamp = 1000,
-                Synced = false
-            };
+            var material = new ReadingMaterialEntity(
+                materialId,
+                "To Delete",
+                "Content"
+            );
             await mRepo.AddAsync(material);
         }
 
