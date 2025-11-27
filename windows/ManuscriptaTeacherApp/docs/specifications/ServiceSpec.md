@@ -20,18 +20,17 @@ The Service layer provides the interface which downstream layers should use to a
 
 ## Section 2A - Material Service
 
-(1) The Service layer should include Material Service class(es) which manages materials, and their related questions, that are not associated to any particular session.
+(1) The Service layer should include Material Service class(es) which manages materials, and their related questions.
 
 (2) The class(es) described in (1) must provide the following high-level functionalities:
 
     (a) Creating a material of any valid type.
     (b) Creating a question of any valid type.
     (c) Modifying existing data fields on a material or a question.
-    (d) Associating a question to a material.
-    (e) Deassociating a question from a material.
-    (f) Retrieving all materials.
-    (g) Retrieving all questions under a material.
-    (h) Retrieving a material by its uuid.
-    (i) Retrieving a question by its uuid.
-    (j) Deleting a question.
-    (k) Deleting a material, and all associated questions.
+    (d) Associating a question with a material.
+    (e) Retrieving all materials.
+    (f) Retrieving all questions under a material.
+    (g) Retrieving a material by its uuid.
+    (h) Retrieving a question by its uuid.
+    (i) Deleting a question.
+    (j) Deleting a material, and all associated questions.
