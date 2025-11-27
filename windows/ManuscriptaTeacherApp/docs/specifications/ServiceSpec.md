@@ -27,10 +27,9 @@ The Service layer provides the interface which downstream layers should use to a
     (a) Creating a material of any valid type.
     (b) Creating a question of any valid type.
     (c) Modifying existing data fields on a material or a question.
-    (d) Associating a question with a material.
-    (e) Retrieving all materials.
-    (f) Retrieving all questions under a material.
-    (g) Retrieving a material by its uuid.
-    (h) Retrieving a question by its uuid.
-    (i) Deleting a question.
-    (j) Deleting a material, and all associated questions.
+    (d) Retrieving all materials.
+    (e) Retrieving all questions under a material.
+    (f) Retrieving a material by its uuid.
+    (g) Retrieving a question by its uuid.
+    (h) Deleting a question.
+    (i) Deleting a material, and all associated questions.
