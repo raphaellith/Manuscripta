@@ -18,11 +18,9 @@ The Service layer provides the interface which downstream layers should use to a
     (b) An 'upstream layer' means a layer which the Service layer will make calls to. This includes the Entity layer.
     (c) A 'downstreamn layer' means a layer which the Service layer will be called by. This includes the Controller layer.
 
-## Section 2A - Material Service
+## Section 2 - Services and required functionalities
 
-(1) The Service layer should include Material Service class(es) which manages materials, and their related questions.
-
-(2) The class(es) described in (1) must provide the following high-level functionalities:
+(1) The Service layer should include Material Service class(es) which manages materials, and their related questions. The class(es) must provide the following high-level functionalities:
 
     (a) Creating a material of any valid type.
     (b) Creating a question of any valid type.
