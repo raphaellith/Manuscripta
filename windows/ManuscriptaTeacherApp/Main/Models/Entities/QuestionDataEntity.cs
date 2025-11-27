@@ -39,5 +39,5 @@ public class QuestionDataEntity
 
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("MaterialId")]
-    internal MaterialEntity? Material { get; set; }
+    internal MaterialDataEntity? Material { get; set; }
 }

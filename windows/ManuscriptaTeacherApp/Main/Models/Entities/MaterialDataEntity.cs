@@ -7,8 +7,12 @@ using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
+/// <summary>
+/// Data entity for persisting materials to the database.
+/// Uses compositional design for different material types.
+/// </summary>
 [Table("Materials")]
-public class MaterialEntity
+public class MaterialDataEntity
 {
     [Key]  // Primary key
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
