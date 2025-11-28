@@ -8,7 +8,7 @@ The Service layer provides the interface which downstream layers should use to a
 
 (1) No service may access Data Entities directly without using polymorphic Entity classes.
 
-(2) The Service layer should be functionally complete to any downstream layer. That is to say, the service layer should remove the need of a downstream layer to access any upstream layers directly.
+(2) The Service layer should be functionally complete in relation to any downstream layer. That is to say, the service layer should remove the need of a downstream layer to access any upstream layers directly.
 
 (3) The Service layer, collectively with all upstream layers, must enforce all constraints defined in the Data Validation Specification. This requirement will not be reiterated in later Sections.
 
@@ -16,7 +16,7 @@ The Service layer provides the interface which downstream layers should use to a
 
     (a) The service layer means any class placed in the `/Main/Services` directory but not in its `Repositories` subdirectory.
     (b) An 'upstream layer' means a layer which the Service layer will make calls to. This includes the Entity layer.
-    (c) A 'downstreamn layer' means a layer which the Service layer will be called by. This includes the Controller layer.
+    (c) A 'downstream layer' means a layer which will make calls to the Service layer. This includes the Controller layer.
 
 ## Section 2 - Services and required functionalities
 
