@@ -4,15 +4,19 @@ using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
+/// <summary>
+/// Data entity for persisting questions to the database.
+/// Uses compositional design with optional fields for different question types.
+/// </summary>
 [Table("Questions")]
-public class QuestionEntity
+public class QuestionDataEntity
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public Guid Id { get; set; }
 
     [Required]
-    public int MaterialId { get; set; }
+    public Guid MaterialId { get; set; }
 
     [Required]
     [MaxLength(1000)]

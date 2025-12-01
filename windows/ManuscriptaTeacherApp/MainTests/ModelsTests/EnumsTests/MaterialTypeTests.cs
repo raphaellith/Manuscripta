@@ -13,7 +13,7 @@ public class MaterialTypeTests
         Assert.Contains("QUIZ", names);
         Assert.Contains("WORKSHEET", names);
         Assert.Contains("POLL", names);
-        Assert.Contains("LESSON", names);
+        Assert.Contains("READING", names);
     }
 
     [Fact]

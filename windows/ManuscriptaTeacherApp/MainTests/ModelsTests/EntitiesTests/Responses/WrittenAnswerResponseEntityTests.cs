@@ -1,0 +1,72 @@
+using System;
+using Xunit;
+using Main.Models.Entities.Responses;
+
+namespace MainTests.ModelsTests.EntitiesTests.Responses;
+
+public class WrittenAnswerResponseEntityTests
+{
+    [Fact]
+    public void Constructor_WithValidData_CreatesEntity()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var answer = "Paris";
+        var timestamp = DateTime.UtcNow;
+        var isCorrect = true;
+
+        // Act
+        var entity = new WrittenAnswerResponseEntity(id, questionId, answer, timestamp, isCorrect);
+
+        // Assert
+        Assert.Equal(id, entity.Id);
+        Assert.Equal(questionId, entity.QuestionId);
+        Assert.Equal(answer, entity.Answer);
+        Assert.Equal(timestamp, entity.Timestamp);
+        Assert.Equal(isCorrect, entity.IsCorrect);
+    }
+
+    [Fact]
+    public void Constructor_WithNullAnswer_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new WrittenAnswerResponseEntity(id, questionId, null!));
+    }
+
+    [Fact]
+    public void Constructor_WithEmptyAnswer_CreatesEntity()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var answer = "";
+
+        // Act
+        var entity = new WrittenAnswerResponseEntity(id, questionId, answer);
+
+        // Assert
+        Assert.Equal(string.Empty, entity.Answer);
+    }
+
+    [Fact]
+    public void Constructor_WithDefaultTimestamp_SetsCurrentTime()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var beforeCreation = DateTime.UtcNow;
+
+        // Act
+        var entity = new WrittenAnswerResponseEntity(id, questionId, "answer");
+        var afterCreation = DateTime.UtcNow;
+
+        // Assert
+        Assert.True(entity.Timestamp >= beforeCreation && entity.Timestamp <= afterCreation);
+    }
+}
