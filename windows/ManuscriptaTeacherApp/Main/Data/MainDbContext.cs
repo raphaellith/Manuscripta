@@ -12,7 +12,7 @@ public class MainDbContext : DbContext
     }
 
     // Create a DbSet<TEntity> property for each entity set, corresponding to a database table
-    public DbSet<MaterialEntity> Materials { get; set; }
+    public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
     public DbSet<ResponseDataEntity> Responses { get; set; }
 
@@ -23,8 +23,8 @@ public class MainDbContext : DbContext
         
         base.OnModelCreating(modelBuilder);
 
-        // Configure MaterialEntity
-        modelBuilder.Entity<MaterialEntity>(entity =>
+        // Configure MaterialDataEntity
+        modelBuilder.Entity<MaterialDataEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.MaterialType).HasConversion<string>();

@@ -28,7 +28,7 @@ public class MainDbContextTests
             var questionId = Guid.NewGuid();
             var responseId = Guid.NewGuid();
 
-            var material = new MaterialEntity
+            var material = new MaterialDataEntity
             {
                 Id = materialId,
                 MaterialType = MaterialType.WORKSHEET,
@@ -87,7 +87,7 @@ public class MainDbContextTests
         using (var ctx = new MainDbContext(options))
         {
             materialId = Guid.NewGuid();
-            var material = new MaterialEntity
+            var material = new MaterialDataEntity
             {
                 Id = materialId,
                 MaterialType = MaterialType.QUIZ,

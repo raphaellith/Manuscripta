@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Main.Models.Entities;
+using Main.Models.Entities.Materials;
 
 namespace Main.Services.Repositories;
 

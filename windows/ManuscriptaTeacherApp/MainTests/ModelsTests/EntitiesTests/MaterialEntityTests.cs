@@ -6,12 +6,15 @@ using Main.Models.Enums;
 
 namespace MainTests;
 
-public class MaterialEntityTests
+/// <summary>
+/// Tests for MaterialDataEntity (persistence layer entity)
+/// </summary>
+public class MaterialDataEntityTests
 {
     [Fact]
     public void DefaultConstructor_InitializesCollectionsAndDefaults()
     {
-        var m = new MaterialEntity();
+        var m = new MaterialDataEntity();
 
         Assert.NotNull(m.VocabularyTerms);
         Assert.Empty(m.VocabularyTerms);
@@ -25,7 +28,7 @@ public class MaterialEntityTests
     public void CanSetProperties()
     {
         var id = Guid.NewGuid();
-        var m = new MaterialEntity
+        var m = new MaterialDataEntity
         {
             Id = id,
             MaterialType = MaterialType.QUIZ,
@@ -43,5 +46,20 @@ public class MaterialEntityTests
         Assert.Equal("{\"a\":1}", m.Metadata);
         Assert.Equal(12345, m.Timestamp);
         Assert.True(m.Synced);
+    }
+
+    [Fact]
+    public void CanSetAllMaterialTypes()
+    {
+        // Test each material type
+        var reading = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.READING, Title = "R", Content = "C", Timestamp = 1 };
+        var worksheet = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.WORKSHEET, Title = "W", Content = "C", Timestamp = 1 };
+        var poll = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.POLL, Title = "P", Content = "C", Timestamp = 1 };
+        var quiz = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.QUIZ, Title = "Q", Content = "C", Timestamp = 1 };
+
+        Assert.Equal(MaterialType.READING, reading.MaterialType);
+        Assert.Equal(MaterialType.WORKSHEET, worksheet.MaterialType);
+        Assert.Equal(MaterialType.POLL, poll.MaterialType);
+        Assert.Equal(MaterialType.QUIZ, quiz.MaterialType);
     }
 }
