@@ -104,8 +104,8 @@ public class SessionDaoTest {
         // Add another material
         materialDao.insert(new MaterialEntity(
                 "mat-2",
-                MaterialType.LESSON,
-                "Lesson",
+                MaterialType.READING,
+                "Reading",
                 "Content",
                 "{}",
                 "[]",
