@@ -18,21 +18,21 @@ public class DeviceStatusEntity {
 
     /** The current status of the device. */
     @NonNull
-    private DeviceStatus status;
+    private final DeviceStatus status;
 
     /** The battery level percentage (0-100). */
-    private int batteryLevel;
+    private final int batteryLevel;
 
     /** The ID of the material currently being viewed (nullable). */
     @androidx.annotation.Nullable
-    private String currentMaterialId;
+    private final String currentMaterialId;
 
     /** The current student view state (nullable). */
     @androidx.annotation.Nullable
-    private String studentView;
+    private final String studentView;
 
     /** The timestamp of the last update (Unix epoch milliseconds). */
-    private long lastUpdated;
+    private final long lastUpdated;
 
     /**
      * Standard constructor used by Room to recreate objects from the database.
