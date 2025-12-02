@@ -36,7 +36,7 @@ public enum MaterialType {
      */
     public String getDisplayName() {
         return switch (this) {
-            case READING   -> "Reading Material";
+            case READING   -> "Reading";
             case QUIZ      -> "Quiz";
             case WORKSHEET -> "Worksheet";
             case POLL      -> "Poll";
