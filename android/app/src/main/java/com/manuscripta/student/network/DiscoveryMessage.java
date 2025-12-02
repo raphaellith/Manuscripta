@@ -2,11 +2,22 @@ package com.manuscripta.student.network;
 
 import androidx.annotation.NonNull;
 
+import java.util.regex.Pattern;
+
 /**
  * DiscoveryMessage is a class that represents a discovery message.
  * @author William Stephen
  *  */
 public class DiscoveryMessage {
+
+    /**
+     * Regex pattern for validating IPv4 addresses.
+     * Matches xxx.xxx.xxx.xxx where each octet is 0-255.
+     */
+    private static final Pattern IPV4_PATTERN = Pattern.compile(
+            "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}"
+            + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    );
 
     /**
      * The IP address of the device.
@@ -38,6 +49,9 @@ public class DiscoveryMessage {
         }
         if (ipAddress.isEmpty()) {
             throw new IllegalArgumentException("IP Address cannot be Empty");
+        }
+        if (!IPV4_PATTERN.matcher(ipAddress).matches()) {
+            throw new IllegalArgumentException("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)");
         }
         if (httpPort < 0 || httpPort > 65535) {
             throw new IllegalArgumentException("HTTP Port must be between 0 and 65535 inclusive");

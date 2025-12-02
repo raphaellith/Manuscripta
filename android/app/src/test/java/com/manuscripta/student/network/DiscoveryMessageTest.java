@@ -79,6 +79,51 @@ public class DiscoveryMessageTest {
     }
 
     @Test
+    public void testConstructor_invalidIpAddressOctetTooLarge_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new DiscoveryMessage("192.168.1.256", 8080, 9090)
+        );
+        assertEquals("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_invalidIpAddressFormat_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new DiscoveryMessage("192.168.1", 8080, 9090)
+        );
+        assertEquals("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_invalidIpAddressNonNumeric_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new DiscoveryMessage("192.168.1.abc", 8080, 9090)
+        );
+        assertEquals("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_invalidIpAddressTooManyOctets_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new DiscoveryMessage("192.168.1.1.1", 8080, 9090)
+        );
+        assertEquals("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_invalidIpAddressNegativeOctet_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new DiscoveryMessage("192.168.-1.1", 8080, 9090)
+        );
+        assertEquals("IP Address must be a valid IPv4 address (xxx.xxx.xxx.xxx)", exception.getMessage());
+    }
+
+    @Test
     public void testConstructor_httpPortNegative_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
