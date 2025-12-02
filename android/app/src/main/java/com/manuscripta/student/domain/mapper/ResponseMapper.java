@@ -29,7 +29,7 @@ public final class ResponseMapper {
         return new Response(
                 entity.getId(),
                 entity.getQuestionId(),
-                entity.getSelectedAnswer(),
+                entity.getAnswer(),
                 entity.isCorrect(),
                 entity.getTimestamp(),
                 entity.isSynced(),
@@ -48,7 +48,7 @@ public final class ResponseMapper {
         return new ResponseEntity(
                 domain.getId(),
                 domain.getQuestionId(),
-                domain.getSelectedAnswer(),
+                domain.getAnswer(),
                 domain.isCorrect(),
                 domain.getTimestamp(),
                 domain.isSynced(),

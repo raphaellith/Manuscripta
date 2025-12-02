@@ -34,7 +34,7 @@ public class ResponseTest {
         assertNotNull(response);
         assertEquals("response-id", response.getId());
         assertEquals("question-id", response.getQuestionId());
-        assertEquals("Answer B", response.getSelectedAnswer());
+        assertEquals("Answer B", response.getAnswer());
         assertTrue(response.isCorrect());
         assertEquals(1234567890L, response.getTimestamp());
         assertFalse(response.isSynced());
@@ -49,7 +49,7 @@ public class ResponseTest {
         assertNotNull(newResponse.getId());
         assertFalse(newResponse.getId().isEmpty());
         assertEquals("q-123", newResponse.getQuestionId());
-        assertEquals("Answer A", newResponse.getSelectedAnswer());
+        assertEquals("Answer A", newResponse.getAnswer());
         assertFalse(newResponse.isCorrect());
         assertTrue(newResponse.getTimestamp() > 0);
         assertFalse(newResponse.isSynced());
@@ -76,7 +76,7 @@ public class ResponseTest {
                 true,
                 "device-empty-ans"
         );
-        assertEquals("", r.getSelectedAnswer());
+        assertEquals("", r.getAnswer());
     }
 
     @Test
@@ -197,7 +197,7 @@ public class ResponseTest {
     }
 
     @Test
-    public void testConstructor_nullSelectedAnswer_throwsException() {
+    public void testConstructor_nullAnswer_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> new Response(
@@ -210,7 +210,7 @@ public class ResponseTest {
                         "device-null-ans"
                 )
         );
-        assertEquals("Response selectedAnswer cannot be null", exception.getMessage());
+        assertEquals("Response answer cannot be null", exception.getMessage());
     }
 
     @Test
@@ -258,19 +258,19 @@ public class ResponseTest {
     }
 
     @Test
-    public void testCreate_nullSelectedAnswer_throwsException() {
+    public void testCreate_nullAnswer_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> Response.create("q-id", null, "device-create-null-ans")
         );
-        assertEquals("Response selectedAnswer cannot be null", exception.getMessage());
+        assertEquals("Response answer cannot be null", exception.getMessage());
     }
 
     @Test
     public void testCreateFactoryMethodWithEmptyAnswer() {
         // Empty answer is valid for create
         Response r = Response.create("q-id", "", "device-empty-create-ans");
-        assertEquals("", r.getSelectedAnswer());
+        assertEquals("", r.getAnswer());
     }
 
     @Test

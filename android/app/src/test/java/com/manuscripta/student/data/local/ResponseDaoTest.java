@@ -101,7 +101,7 @@ public class ResponseDaoTest {
         assertNotNull(retrieved);
         assertEquals("r-1", retrieved.getId());
         assertEquals("q-1", retrieved.getQuestionId());
-        assertEquals("4", retrieved.getSelectedAnswer());
+        assertEquals("4", retrieved.getAnswer());
         assertTrue(retrieved.isCorrect());
     }
 
@@ -208,7 +208,7 @@ public class ResponseDaoTest {
         responseDao.update(updatedResponse);
 
         ResponseEntity retrieved = responseDao.getById("r-1");
-        assertEquals("3", retrieved.getSelectedAnswer());
+        assertEquals("3", retrieved.getAnswer());
         assertFalse(retrieved.isCorrect());
     }
 
@@ -312,7 +312,7 @@ public class ResponseDaoTest {
         responseDao.insert(updated);
 
         ResponseEntity retrieved = responseDao.getById("r-1");
-        assertEquals("4", retrieved.getSelectedAnswer());
+        assertEquals("4", retrieved.getAnswer());
         assertEquals(1, responseDao.getCount());
     }
 }
