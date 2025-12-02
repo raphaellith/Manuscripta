@@ -11,7 +11,7 @@ public class ReadingMaterialEntity : MaterialEntity
 {
     private ReadingMaterialEntity() : base() { }
 
-    public ReadingMaterialEntity(Guid id, string title, string content, long? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
+    public ReadingMaterialEntity(Guid id, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
         : base(id, title, content, MaterialType.READING, timestamp, metadata, vocabularyTerms)
     {
     }

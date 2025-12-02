@@ -29,17 +29,17 @@ public abstract class MaterialEntity
     public JsonArray? VocabularyTerms { get; set; }
 
     [Required]
-    public long Timestamp { get; set; }
+    public DateTime Timestamp { get; set; }
 
     protected MaterialEntity() { }
 
-    protected MaterialEntity(Guid id, string title, string content, MaterialType materialType, long? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
+    protected MaterialEntity(Guid id, string title, string content, MaterialType materialType, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
     {
         Id = id;
         Title = title ?? throw new ArgumentNullException(nameof(title));
         Content = content ?? throw new ArgumentNullException(nameof(content));
         MaterialType = materialType;
-        Timestamp = timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        Timestamp = timestamp ?? DateTimeOffset.UtcNow.DateTime;
         Metadata = metadata;
         VocabularyTerms = vocabularyTerms;
     }
