@@ -19,7 +19,7 @@ import java.nio.ByteOrder;
  * +------------+--------+--------+------------------------------------------------+
  * </pre>
  * 
- * @Author William Stephen
+ * @author William Stephen
  */
 public class DiscoveryMessageParser {
     /**

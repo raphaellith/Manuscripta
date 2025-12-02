@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 /**
  * DiscoveryMessage is a class that represents a discovery message.
- * @Author William Stephen
+ * @author William Stephen
  *  */
 public class DiscoveryMessage {
 
