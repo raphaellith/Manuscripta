@@ -17,20 +17,26 @@ public class DeviceStatus {
     /** Maximum valid battery level. */
     public static final int MAX_BATTERY_LEVEL = 100;
 
+    /** The unique identifier for the device. */
     @NonNull
     private final String deviceId;
 
+    /** The current status of the device. */
     @NonNull
     private final com.manuscripta.student.data.model.DeviceStatus status;
 
+    /** The battery level percentage (0-100). */
     private final int batteryLevel;
 
+    /** The ID of the material currently being viewed (nullable). */
     @Nullable
     private final String currentMaterialId;
 
+    /** The current student view state (nullable). */
     @Nullable
     private final String studentView;
 
+    /** The timestamp of the last update (Unix epoch milliseconds). */
     private final long lastUpdated;
 
     /**

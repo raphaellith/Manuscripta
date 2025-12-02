@@ -87,7 +87,8 @@ public class ResponseDaoTest {
                 "4",
                 true,
                 System.currentTimeMillis(),
-                false
+                false,
+                "device-test-123"
         );
     }
 
@@ -141,12 +142,12 @@ public class ResponseDaoTest {
     public void testGetUnsynced() {
         // Create synced response using constructor
         ResponseEntity synced = new ResponseEntity(
-                "r-1", "q-1", "4", true, System.currentTimeMillis(), true);
+                "r-1", "q-1", "4", true, System.currentTimeMillis(), true, "device-1");
         responseDao.insert(synced);
 
         // Create unsynced response using constructor
         ResponseEntity unsynced = new ResponseEntity(
-                "r-2", "q-1", "4", true, System.currentTimeMillis(), false);
+                "r-2", "q-1", "4", true, System.currentTimeMillis(), false, "device-2");
         responseDao.insert(unsynced);
 
         List<ResponseEntity> unsyncedList = responseDao.getUnsynced();
@@ -158,7 +159,7 @@ public class ResponseDaoTest {
     public void testGetUnsyncedCount() {
         // Create synced response using constructor
         ResponseEntity synced = new ResponseEntity(
-                "r-1", "q-1", "4", true, System.currentTimeMillis(), true);
+                "r-1", "q-1", "4", true, System.currentTimeMillis(), true, "device-synced");
         responseDao.insert(synced);
 
         responseDao.insert(createResponse("r-2", "q-1"));
@@ -202,7 +203,8 @@ public class ResponseDaoTest {
 
         // Create a new entity with updated values since entities are immutable
         ResponseEntity updatedResponse = new ResponseEntity(
-                "r-1", "q-1", "3", false, response.getTimestamp(), response.isSynced());
+                "r-1", "q-1", "3", false, response.getTimestamp(), response.isSynced(),
+                "device-test-123");
         responseDao.update(updatedResponse);
 
         ResponseEntity retrieved = responseDao.getById("r-1");
@@ -301,12 +303,12 @@ public class ResponseDaoTest {
     public void testInsertReplaceOnConflict() {
         // Create response with answer "3"
         ResponseEntity response = new ResponseEntity(
-                "r-1", "q-1", "3", true, System.currentTimeMillis(), false);
+                "r-1", "q-1", "3", true, System.currentTimeMillis(), false, "device-conflict");
         responseDao.insert(response);
 
         // Create new response with same ID but different answer
         ResponseEntity updated = new ResponseEntity(
-                "r-1", "q-1", "4", true, response.getTimestamp(), false);
+                "r-1", "q-1", "4", true, response.getTimestamp(), false, "device-conflict");
         responseDao.insert(updated);
 
         ResponseEntity retrieved = responseDao.getById("r-1");

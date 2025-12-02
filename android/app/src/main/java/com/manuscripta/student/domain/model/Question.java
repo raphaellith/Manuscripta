@@ -12,21 +12,27 @@ import com.manuscripta.student.data.model.QuestionType;
  */
 public class Question {
 
+    /** The unique identifier for the question. */
     @NonNull
     private final String id;
 
+    /** The ID of the parent material. */
     @NonNull
     private final String materialId;
 
+    /** The text of the question. */
     @NonNull
     private final String questionText;
 
+    /** The type of question. */
     @NonNull
     private final QuestionType questionType;
 
+    /** JSON string of options (empty string if none). */
     @NonNull
     private final String options;
 
+    /** The correct answer string (empty string if none). */
     @NonNull
     private final String correctAnswer;
 

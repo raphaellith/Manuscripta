@@ -24,7 +24,8 @@ public class ResponseTest {
                 "Answer B",
                 true,
                 1234567890L,
-                false
+                false,
+                "device-test-id"
         );
     }
 
@@ -37,11 +38,12 @@ public class ResponseTest {
         assertTrue(response.isCorrect());
         assertEquals(1234567890L, response.getTimestamp());
         assertFalse(response.isSynced());
+        assertEquals("device-test-id", response.getDeviceId());
     }
 
     @Test
     public void testCreateFactoryMethod() {
-        Response newResponse = Response.create("q-123", "Answer A");
+        Response newResponse = Response.create("q-123", "Answer A", "device-factory-id");
 
         assertNotNull(newResponse);
         assertNotNull(newResponse.getId());
@@ -51,12 +53,13 @@ public class ResponseTest {
         assertFalse(newResponse.isCorrect());
         assertTrue(newResponse.getTimestamp() > 0);
         assertFalse(newResponse.isSynced());
+        assertEquals("device-factory-id", newResponse.getDeviceId());
     }
 
     @Test
     public void testCreateFactoryMethodGeneratesUniqueIds() {
-        Response response1 = Response.create("q-1", "A");
-        Response response2 = Response.create("q-1", "B");
+        Response response1 = Response.create("q-1", "A", "device-unique-1");
+        Response response2 = Response.create("q-1", "B", "device-unique-2");
 
         assertNotEquals(response1.getId(), response2.getId());
     }
@@ -70,7 +73,8 @@ public class ResponseTest {
                 "",
                 false,
                 0L,
-                true
+                true,
+                "device-empty-ans"
         );
         assertEquals("", r.getSelectedAnswer());
     }
@@ -84,7 +88,8 @@ public class ResponseTest {
                 "answer",
                 false,
                 0L,
-                false
+                false,
+                "device-zero-ts"
         );
         assertEquals(0L, r.getTimestamp());
     }
@@ -99,7 +104,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-null-id"
                 )
         );
         assertEquals("Response id cannot be null or empty", exception.getMessage());
@@ -115,7 +121,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-empty-id"
                 )
         );
         assertEquals("Response id cannot be null or empty", exception.getMessage());
@@ -131,7 +138,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-blank-id"
                 )
         );
         assertEquals("Response id cannot be null or empty", exception.getMessage());
@@ -147,7 +155,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-null-qid"
                 )
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
@@ -163,7 +172,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-empty-qid"
                 )
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
@@ -179,7 +189,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         0L,
-                        false
+                        false,
+                        "device-blank-qid"
                 )
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
@@ -195,7 +206,8 @@ public class ResponseTest {
                         null,
                         false,
                         0L,
-                        false
+                        false,
+                        "device-null-ans"
                 )
         );
         assertEquals("Response selectedAnswer cannot be null", exception.getMessage());
@@ -211,7 +223,8 @@ public class ResponseTest {
                         "Answer",
                         false,
                         -1L,
-                        false
+                        false,
+                        "device-neg-ts"
                 )
         );
         assertEquals("Response timestamp cannot be negative", exception.getMessage());
@@ -221,7 +234,7 @@ public class ResponseTest {
     public void testCreate_nullQuestionId_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> Response.create(null, "Answer")
+                () -> Response.create(null, "Answer", "device-create-null-qid")
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
     }
@@ -230,7 +243,7 @@ public class ResponseTest {
     public void testCreate_emptyQuestionId_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> Response.create("", "Answer")
+                () -> Response.create("", "Answer", "device-create-empty-qid")
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
     }
@@ -239,7 +252,7 @@ public class ResponseTest {
     public void testCreate_blankQuestionId_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> Response.create("   ", "Answer")
+                () -> Response.create("   ", "Answer", "device-create-blank-qid")
         );
         assertEquals("Response questionId cannot be null or empty", exception.getMessage());
     }
@@ -248,7 +261,7 @@ public class ResponseTest {
     public void testCreate_nullSelectedAnswer_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> Response.create("q-id", null)
+                () -> Response.create("q-id", null, "device-create-null-ans")
         );
         assertEquals("Response selectedAnswer cannot be null", exception.getMessage());
     }
@@ -256,7 +269,85 @@ public class ResponseTest {
     @Test
     public void testCreateFactoryMethodWithEmptyAnswer() {
         // Empty answer is valid for create
-        Response r = Response.create("q-id", "");
+        Response r = Response.create("q-id", "", "device-empty-create-ans");
         assertEquals("", r.getSelectedAnswer());
+    }
+
+    @Test
+    public void testConstructor_nullDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Response(
+                        "id",
+                        "question-id",
+                        "Answer",
+                        false,
+                        0L,
+                        false,
+                        null
+                )
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_emptyDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Response(
+                        "id",
+                        "question-id",
+                        "Answer",
+                        false,
+                        0L,
+                        false,
+                        ""
+                )
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_blankDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Response(
+                        "id",
+                        "question-id",
+                        "Answer",
+                        false,
+                        0L,
+                        false,
+                        "   "
+                )
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_nullDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Response.create("q-id", "Answer", null)
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_emptyDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Response.create("q-id", "Answer", "")
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testCreate_blankDeviceId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> Response.create("q-id", "Answer", "   ")
+        );
+        assertEquals("Response deviceId cannot be null or empty", exception.getMessage());
     }
 }

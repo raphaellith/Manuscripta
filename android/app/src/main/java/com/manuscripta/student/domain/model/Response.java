@@ -12,20 +12,30 @@ import java.util.UUID;
  */
 public class Response {
 
+    /** The unique identifier for the response. */
     @NonNull
     private final String id;
 
+    /** The ID of the parent question. */
     @NonNull
     private final String questionId;
 
+    /** The answer selected by the student. */
     @NonNull
     private final String selectedAnswer;
 
+    /** Whether the response is correct. */
     private final boolean isCorrect;
 
+    /** The timestamp when the response was recorded (Unix epoch milliseconds). */
     private final long timestamp;
 
+    /** Whether the response has been synced to the teacher's Windows app. */
     private final boolean synced;
+
+    /** The device identifier for the tablet that submitted this response. */
+    @NonNull
+    private final String deviceId;
 
     /**
      * Factory method for creating a NEW response.
@@ -33,17 +43,24 @@ public class Response {
      *
      * @param questionId     UUID of the parent question
      * @param selectedAnswer The student's selected answer
+     * @param deviceId       The device identifier for the tablet submitting this response
      * @return A new Response instance with generated ID and default values
      * @throws IllegalArgumentException if questionId is null or empty
      * @throws IllegalArgumentException if selectedAnswer is null
+     * @throws IllegalArgumentException if deviceId is null or empty
      */
     @NonNull
-    public static Response create(@NonNull String questionId, @NonNull String selectedAnswer) {
+    public static Response create(@NonNull String questionId,
+                                  @NonNull String selectedAnswer,
+                                  @NonNull String deviceId) {
         if (questionId == null || questionId.trim().isEmpty()) {
             throw new IllegalArgumentException("Response questionId cannot be null or empty");
         }
         if (selectedAnswer == null) {
             throw new IllegalArgumentException("Response selectedAnswer cannot be null");
+        }
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Response deviceId cannot be null or empty");
         }
         return new Response(
                 UUID.randomUUID().toString(),
@@ -51,7 +68,8 @@ public class Response {
                 selectedAnswer,
                 false,
                 System.currentTimeMillis(),
-                false
+                false,
+                deviceId
         );
     }
 
@@ -64,17 +82,20 @@ public class Response {
      * @param isCorrect      Whether the response is correct
      * @param timestamp      When the response was recorded (Unix epoch milliseconds)
      * @param synced         Whether response has been synced to teacher's Windows app
+     * @param deviceId       The device identifier for the tablet that submitted this response
      * @throws IllegalArgumentException if id is null or empty
      * @throws IllegalArgumentException if questionId is null or empty
      * @throws IllegalArgumentException if selectedAnswer is null
      * @throws IllegalArgumentException if timestamp is negative
+     * @throws IllegalArgumentException if deviceId is null or empty
      */
     public Response(@NonNull String id,
                     @NonNull String questionId,
                     @NonNull String selectedAnswer,
                     boolean isCorrect,
                     long timestamp,
-                    boolean synced) {
+                    boolean synced,
+                    @NonNull String deviceId) {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("Response id cannot be null or empty");
         }
@@ -87,6 +108,9 @@ public class Response {
         if (timestamp < 0) {
             throw new IllegalArgumentException("Response timestamp cannot be negative");
         }
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Response deviceId cannot be null or empty");
+        }
 
         this.id = id;
         this.questionId = questionId;
@@ -94,6 +118,7 @@ public class Response {
         this.isCorrect = isCorrect;
         this.timestamp = timestamp;
         this.synced = synced;
+        this.deviceId = deviceId;
     }
 
     @NonNull
@@ -121,5 +146,10 @@ public class Response {
 
     public boolean isSynced() {
         return synced;
+    }
+
+    @NonNull
+    public String getDeviceId() {
+        return deviceId;
     }
 }

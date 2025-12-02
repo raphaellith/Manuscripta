@@ -12,24 +12,31 @@ import com.manuscripta.student.data.model.MaterialType;
  */
 public class Material {
 
+    /** The unique identifier for the material. */
     @NonNull
     private final String id;
 
+    /** The type of material (LESSON, QUIZ, WORKSHEET, POLL). */
     @NonNull
     private final MaterialType type;
 
+    /** The title of the material. */
     @NonNull
     private final String title;
 
+    /** The main content of the material. */
     @NonNull
     private final String content;
 
+    /** Additional metadata in JSON format. */
     @NonNull
     private final String metadata;
 
+    /** Key vocabulary terms in JSON array format. */
     @NonNull
     private final String vocabularyTerms;
 
+    /** Timestamp when the material was created or last modified (Unix epoch milliseconds). */
     private final long timestamp;
 
     /**
