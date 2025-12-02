@@ -8,7 +8,7 @@ import com.manuscripta.student.data.model.MaterialType;
  * Domain model representing educational material in the Manuscripta system.
  * This is a clean domain object without persistence annotations, used in the business logic layer.
  *
- * <p>Materials can be lessons, quizzes, worksheets, or polls delivered from the teacher's Windows app.</p>
+ * <p>Materials can be readings, quizzes, worksheets, or polls delivered from the teacher's Windows app.</p>
  */
 public class Material {
 
@@ -16,7 +16,7 @@ public class Material {
     @NonNull
     private final String id;
 
-    /** The type of material (LESSON, QUIZ, WORKSHEET, POLL). */
+    /** The type of material (READING, QUIZ, WORKSHEET, POLL). */
     @NonNull
     private final MaterialType type;
 
@@ -43,7 +43,7 @@ public class Material {
      * Constructor with all fields.
      *
      * @param id               Unique identifier (UUID)
-     * @param type             Type of material (LESSON, QUIZ, WORKSHEET, POLL)
+     * @param type             Type of material (READING, QUIZ, WORKSHEET, POLL)
      * @param title            Title of the material
      * @param content          Main content of the material
      * @param metadata         Additional metadata in JSON format
