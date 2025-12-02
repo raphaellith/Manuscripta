@@ -9,7 +9,7 @@ import com.manuscripta.student.domain.model.Session;
  * Mapper class to convert between SessionEntity (data layer) and Session (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
-public class SessionMapper {
+public final class SessionMapper {
 
     /**
      * Private constructor to prevent instantiation of utility class.

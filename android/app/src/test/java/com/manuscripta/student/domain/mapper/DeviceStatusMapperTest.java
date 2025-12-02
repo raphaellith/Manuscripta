@@ -11,7 +11,7 @@ import org.junit.Test;
 
 /**
  * Unit tests for {@link DeviceStatusMapper}.
- * Tests bidirectional mapping between DeviceStatusEntity and DeviceStatusModel domain model.
+ * Tests bidirectional mapping between DeviceStatusEntity and DeviceStatus domain model.
  */
 public class DeviceStatusMapperTest {
 

@@ -11,25 +11,38 @@ import androidx.room.PrimaryKey;
 @Entity(tableName = "device_status")
 public class DeviceStatusEntity {
 
+    /** The unique identifier for the device. */
     @PrimaryKey
     @NonNull
     private final String deviceId;
 
+    /** The current status of the device. */
     @NonNull
     private DeviceStatus status;
-    
+
+    /** The battery level percentage (0-100). */
     private int batteryLevel;
 
+    /** The ID of the material currently being viewed (nullable). */
     @androidx.annotation.Nullable
     private String currentMaterialId;
 
+    /** The current student view state (nullable). */
     @androidx.annotation.Nullable
     private String studentView;
 
+    /** The timestamp of the last update (Unix epoch milliseconds). */
     private long lastUpdated;
 
     /**
      * Standard constructor used by Room to recreate objects from the database.
+     *
+     * @param deviceId          The unique identifier for the device
+     * @param status            The current status of the device
+     * @param batteryLevel      The battery level percentage (0-100)
+     * @param currentMaterialId The ID of the material currently being viewed (nullable)
+     * @param studentView       The current student view state (nullable)
+     * @param lastUpdated       The timestamp of the last update (Unix epoch milliseconds)
      */
     public DeviceStatusEntity(@NonNull String deviceId,
             @NonNull DeviceStatus status,
