@@ -51,10 +51,6 @@ public class ResponseEntity {
     @NonNull
     private final String deviceId;
 
-    /** The device identifier for the tablet that submitted this response. */
-    @NonNull
-    private final String deviceId;
-
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
