@@ -25,26 +25,39 @@ import androidx.room.PrimaryKey;
 )
 public class SessionEntity {
 
+    /** The unique identifier for the session. */
     @PrimaryKey
     @NonNull
     private final String id;
 
+    /** The ID of the material this session is associated with. */
     @NonNull
     private String materialId;
 
+    /** The timestamp when the session started (Unix epoch milliseconds). */
     private long startTime;
 
+    /** The timestamp when the session ended (Unix epoch milliseconds), or 0 if still active. */
     private long endTime;
 
+    /** The current status of the session. */
     @NonNull
     private SessionStatus status;
 
+    /** The identifier of the device running the session. */
     @NonNull
     private String deviceId;
 
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
+     *
+     * @param id         The unique identifier for the session
+     * @param materialId The ID of the material this session is associated with
+     * @param startTime  The timestamp when the session started (Unix epoch milliseconds)
+     * @param endTime    The timestamp when the session ended (0 if still active)
+     * @param status     The current status of the session
+     * @param deviceId   The identifier of the device running the session
      */
     public SessionEntity(@NonNull String id,
                          @NonNull String materialId,

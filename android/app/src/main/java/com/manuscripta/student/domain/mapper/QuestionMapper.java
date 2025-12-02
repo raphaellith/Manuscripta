@@ -9,7 +9,7 @@ import com.manuscripta.student.domain.model.Question;
  * Mapper class to convert between QuestionEntity (data layer) and Question (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
-public class QuestionMapper {
+public final class QuestionMapper {
 
     /**
      * Private constructor to prevent instantiation of utility class.

@@ -9,7 +9,7 @@ import com.manuscripta.student.domain.model.DeviceStatus;
  * Mapper class to convert between DeviceStatusEntity (data layer) and DeviceStatus (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
-public class DeviceStatusMapper {
+public final class DeviceStatusMapper {
 
     /**
      * Private constructor to prevent instantiation of utility class.

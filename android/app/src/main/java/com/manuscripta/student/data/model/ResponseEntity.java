@@ -25,28 +25,38 @@ import androidx.room.PrimaryKey;
 )
 public class ResponseEntity {
 
+    /** The unique identifier for the response. */
     @PrimaryKey
     @NonNull
     private final String id;
 
+    /** The ID of the question this response is for. */
     @NonNull
     private String questionId;
 
+    /** The answer selected by the student. */
     @NonNull
     private String selectedAnswer;
 
+    /** Whether the response is correct. */
     private boolean isCorrect;
 
+    /** The timestamp when the response was recorded (Unix epoch milliseconds). */
     private long timestamp;
 
-    /**
-     * Indicates whether this response has been synced to the teacher's Windows app.
-     */
+    /** Indicates whether this response has been synced to the teacher's Windows app. */
     private boolean synced;
 
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
+     *
+     * @param id             The unique identifier for the response
+     * @param questionId     The ID of the question this response is for
+     * @param selectedAnswer The answer selected by the student
+     * @param isCorrect      Whether the response is correct
+     * @param timestamp      The timestamp when the response was recorded
+     * @param synced         Whether the response has been synced
      */
     public ResponseEntity(@NonNull String id,
                           @NonNull String questionId,

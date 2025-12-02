@@ -12,19 +12,25 @@ import java.util.UUID;
  */
 public class Response {
 
+    /** The unique identifier for the response. */
     @NonNull
     private final String id;
 
+    /** The ID of the parent question. */
     @NonNull
     private final String questionId;
 
+    /** The answer selected by the student. */
     @NonNull
     private final String selectedAnswer;
 
+    /** Whether the response is correct. */
     private final boolean isCorrect;
 
+    /** The timestamp when the response was recorded (Unix epoch milliseconds). */
     private final long timestamp;
 
+    /** Whether the response has been synced to the teacher's Windows app. */
     private final boolean synced;
 
     /**

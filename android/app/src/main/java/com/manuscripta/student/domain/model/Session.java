@@ -14,19 +14,25 @@ import java.util.UUID;
  */
 public class Session {
 
+    /** The unique identifier for the session. */
     @NonNull
     private final String id;
 
+    /** The ID of the parent material. */
     @NonNull
     private final String materialId;
 
+    /** The timestamp when the session started (Unix epoch milliseconds). */
     private final long startTime;
 
+    /** The timestamp when the session ended (0 if still active). */
     private final long endTime;
 
+    /** The current status of the session. */
     @NonNull
     private final SessionStatus status;
 
+    /** The identifier of the device running the session. */
     @NonNull
     private final String deviceId;
 

@@ -6,17 +6,18 @@ package com.manuscripta.student.data.model;
  */
 public enum QuestionType {
     /**
-     * Multiple choice question with several options (A, B, C, D)
+     * Multiple choice question with several options (A, B, C, D).
      */
     MULTIPLE_CHOICE,
 
     /**
-     * True or False question
+     * True or False question.
      */
     TRUE_FALSE,
 
     /**
-     * Written answer - student types their response
+     * Written answer.
+     * Student types their response.
      */
     WRITTEN_ANSWER;
 

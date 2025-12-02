@@ -13,7 +13,17 @@ import com.manuscripta.student.data.model.DeviceStatusEntity;
  * Room database for Manuscripta application.
  * This is the main database configuration.
  */
-@Database(entities = {MaterialEntity.class, QuestionEntity.class, ResponseEntity.class, SessionEntity.class, DeviceStatusEntity.class}, version = 7, exportSchema = false)
+@Database(
+    entities = {
+        MaterialEntity.class,
+        QuestionEntity.class,
+        ResponseEntity.class,
+        SessionEntity.class,
+        DeviceStatusEntity.class
+    },
+    version = 7,
+    exportSchema = false
+)
 public abstract class ManuscriptaDatabase extends RoomDatabase {
 
     /**

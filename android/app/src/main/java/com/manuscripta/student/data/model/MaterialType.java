@@ -6,22 +6,26 @@ package com.manuscripta.student.data.model;
  */
 public enum MaterialType {
     /**
-     * Reading lesson content - informational text for students to read and learn from
+     * Reading lesson content.
+     * Informational text for students to read and learn from.
      */
     LESSON,
 
     /**
-     * Assessment with questions - tests student understanding
+     * Assessment with questions.
+     * Tests student understanding.
      */
     QUIZ,
 
     /**
-     * Practice exercises - activities for students to complete
+     * Practice exercises.
+     * Activities for students to complete.
      */
     WORKSHEET,
 
     /**
-     * Quick survey or poll - gather student opinions or check understanding
+     * Quick survey or poll.
+     * Gathers student opinions or checks understanding.
      */
     POLL;
 

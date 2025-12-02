@@ -25,27 +25,27 @@ import androidx.room.PrimaryKey;
 )
 public class QuestionEntity {
 
+    /** The unique identifier for the question. */
     @PrimaryKey
     @NonNull
     private String id;
 
+    /** The ID of the material this question belongs to. */
     @NonNull
     private String materialId;
 
+    /** The text of the question. */
     @NonNull
     private String questionText;
 
+    /** The type of question. */
     @NonNull
     private QuestionType questionType;
 
-    /**
-     * JSON string representing options (e.g., for Multiple Choice).
-     */
+    /** JSON string representing options (e.g., for Multiple Choice). */
     private String options;
 
-    /**
-     * String representing the correct answer.
-     */
+    /** String representing the correct answer. */
     private String correctAnswer;
 
     /**

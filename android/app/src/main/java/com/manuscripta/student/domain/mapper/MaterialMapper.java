@@ -9,7 +9,7 @@ import com.manuscripta.student.domain.model.Material;
  * Mapper class to convert between MaterialEntity (data layer) and Material (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
-public class MaterialMapper {
+public final class MaterialMapper {
 
     /**
      * Private constructor to prevent instantiation of utility class.

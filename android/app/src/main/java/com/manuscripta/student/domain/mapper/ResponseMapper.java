@@ -9,7 +9,7 @@ import com.manuscripta.student.domain.model.Response;
  * Mapper class to convert between ResponseEntity (data layer) and Response (domain layer).
  * Provides bidirectional mapping for Clean Architecture separation.
  */
-public class ResponseMapper {
+public final class ResponseMapper {
 
     /**
      * Private constructor to prevent instantiation of utility class.
