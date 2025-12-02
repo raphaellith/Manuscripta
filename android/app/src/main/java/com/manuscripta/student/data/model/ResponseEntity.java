@@ -32,20 +32,20 @@ public class ResponseEntity {
 
     /** The ID of the question this response is for. */
     @NonNull
-    private String questionId;
+    private final String questionId;
 
     /** The answer selected by the student. */
     @NonNull
-    private String selectedAnswer;
+    private final String selectedAnswer;
 
     /** Whether the response is correct. */
-    private boolean isCorrect;
+    private final boolean isCorrect;
 
     /** The timestamp when the response was recorded (Unix epoch milliseconds). */
-    private long timestamp;
+    private final long timestamp;
 
     /** Indicates whether this response has been synced to the teacher's Windows app. */
-    private boolean synced;
+    private final boolean synced;
 
     /** The device identifier for the tablet that submitted this response. */
     @NonNull
