@@ -81,15 +81,12 @@ public class ResponseService : IResponseService
             throw new InvalidOperationException($"Question with ID {response.QuestionId} not found.");
 
         // Rule 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
-        if (response is MultipleChoiceResponseEntity mcResponse)
+        if (response is MultipleChoiceResponseEntity mcResponse && question is MultipleChoiceQuestionEntity mcQuestion)
         {
-            if (question is MultipleChoiceQuestionEntity mcQuestion)
-            {
-                if (mcResponse.AnswerIndex < 0 || mcResponse.AnswerIndex >= mcQuestion.Options.Count)
-                    throw new InvalidOperationException(
-                        $"Answer index {mcResponse.AnswerIndex} is out of range. " +
-                        $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
-            }
+            if (mcResponse.AnswerIndex < 0 || mcResponse.AnswerIndex >= mcQuestion.Options.Count)
+                throw new InvalidOperationException(
+                    $"Answer index {mcResponse.AnswerIndex} is out of range. " +
+                    $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
         }
 
         // Additional validation: ensure response type matches question type
