@@ -21,17 +21,25 @@ import java.nio.ByteOrder;
  * 
  * @author William Stephen
  */
-public class DiscoveryMessageParser {
+public final class DiscoveryMessageParser {
+    /**
+     * Private constructor to prevent instantiation.
+     */
+    private DiscoveryMessageParser() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
     /**
      * Parses a discovery message.
      * @param data The discovery message to parse.
      * @return The parsed discovery message.
      */
     @NonNull
-    public static DiscoveryMessage parse(@NonNull byte[] data){
+    public static DiscoveryMessage parse(@NonNull byte[] data) {
         // Validate length
-        if (data.length != 9){
-            throw new IllegalArgumentException("Message length must be 9 bytes. Message length received: " + data.length + " bytes");
+        if (data.length != 9) {
+            throw new IllegalArgumentException(
+                    "Message length must be 9 bytes. Message length received: " + data.length + " bytes");
         }
 
         // Wrap the bytes in a ByteBuffer
@@ -39,14 +47,15 @@ public class DiscoveryMessageParser {
 
         // Parse and validate opcode
         byte opcode = buffer.get();
-        if (opcode != 0x00){
+        if (opcode != 0x00) {
             throw new IllegalArgumentException("Opcode must be 0x00. Opcode received: " + opcode);
         }
 
         // Parse IP Address into String
         byte[] ipBytes = new byte[4];
         buffer.get(ipBytes);
-        String ipAddress = String.format("%d.%d.%d.%d", ipBytes[0] & 0xFF, ipBytes[1] & 0xFF, ipBytes[2] & 0xFF, ipBytes[3] & 0xFF);
+        String ipAddress = String.format("%d.%d.%d.%d",
+                ipBytes[0] & 0xFF, ipBytes[1] & 0xFF, ipBytes[2] & 0xFF, ipBytes[3] & 0xFF);
 
         // Parse Ports
         buffer.order(ByteOrder.LITTLE_ENDIAN);

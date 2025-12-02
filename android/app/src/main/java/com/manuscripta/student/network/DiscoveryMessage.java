@@ -31,18 +31,18 @@ public class DiscoveryMessage {
      */
     public DiscoveryMessage(@NonNull String ipAddress,
                             int httpPort,
-                            int tcpPort){
+                            int tcpPort) {
         // Constructor validation
-        if (ipAddress == null){
+        if (ipAddress == null) {
             throw new IllegalArgumentException("IP Address cannot be Null");
         }
-        if (ipAddress.isEmpty()){
+        if (ipAddress.isEmpty()) {
             throw new IllegalArgumentException("IP Address cannot be Empty");
         }
-        if (httpPort < 0 || httpPort > 65535){
+        if (httpPort < 0 || httpPort > 65535) {
             throw new IllegalArgumentException("HTTP Port must be between 0 and 65535 inclusive");
         }
-        if (tcpPort < 0 || tcpPort > 65535){
+        if (tcpPort < 0 || tcpPort > 65535) {
             throw new IllegalArgumentException("TCP Port must be between 0 and 65535 inclusive");
         }
         this.ipAddress = ipAddress;
