@@ -36,7 +36,7 @@ public class ResponseMapperTest {
         assertNotNull(domain);
         assertEquals(entity.getId(), domain.getId());
         assertEquals(entity.getQuestionId(), domain.getQuestionId());
-        assertEquals(entity.getSelectedAnswer(), domain.getSelectedAnswer());
+        assertEquals(entity.getAnswer(), domain.getAnswer());
         assertEquals(entity.isCorrect(), domain.isCorrect());
         assertEquals(entity.getTimestamp(), domain.getTimestamp());
         assertEquals(entity.isSynced(), domain.isSynced());
@@ -63,7 +63,7 @@ public class ResponseMapperTest {
         assertNotNull(entity);
         assertEquals(domain.getId(), entity.getId());
         assertEquals(domain.getQuestionId(), entity.getQuestionId());
-        assertEquals(domain.getSelectedAnswer(), entity.getSelectedAnswer());
+        assertEquals(domain.getAnswer(), entity.getAnswer());
         assertEquals(domain.isCorrect(), entity.isCorrect());
         assertEquals(domain.getTimestamp(), entity.getTimestamp());
         assertEquals(domain.isSynced(), entity.isSynced());
@@ -90,7 +90,7 @@ public class ResponseMapperTest {
         assertNotNull(domain);
         assertTrue(domain.isCorrect());
         assertTrue(domain.isSynced());
-        assertEquals("Answer A", domain.getSelectedAnswer());
+        assertEquals("Answer A", domain.getAnswer());
         assertEquals("device-id-synced", domain.getDeviceId());
     }
 
@@ -114,7 +114,7 @@ public class ResponseMapperTest {
         assertNotNull(domain);
         assertFalse(domain.isCorrect());
         assertFalse(domain.isSynced());
-        assertEquals("Wrong answer", domain.getSelectedAnswer());
+        assertEquals("Wrong answer", domain.getAnswer());
         assertEquals("device-id-unsynced", domain.getDeviceId());
     }
 
@@ -138,7 +138,7 @@ public class ResponseMapperTest {
         // Then
         assertEquals(originalEntity.getId(), resultEntity.getId());
         assertEquals(originalEntity.getQuestionId(), resultEntity.getQuestionId());
-        assertEquals(originalEntity.getSelectedAnswer(), resultEntity.getSelectedAnswer());
+        assertEquals(originalEntity.getAnswer(), resultEntity.getAnswer());
         assertEquals(originalEntity.isCorrect(), resultEntity.isCorrect());
         assertEquals(originalEntity.getTimestamp(), resultEntity.getTimestamp());
         assertEquals(originalEntity.isSynced(), resultEntity.isSynced());
@@ -165,7 +165,7 @@ public class ResponseMapperTest {
         // Then
         assertEquals(originalDomain.getId(), resultDomain.getId());
         assertEquals(originalDomain.getQuestionId(), resultDomain.getQuestionId());
-        assertEquals(originalDomain.getSelectedAnswer(), resultDomain.getSelectedAnswer());
+        assertEquals(originalDomain.getAnswer(), resultDomain.getAnswer());
         assertEquals(originalDomain.isCorrect(), resultDomain.isCorrect());
         assertEquals(originalDomain.getTimestamp(), resultDomain.getTimestamp());
         assertEquals(originalDomain.isSynced(), resultDomain.isSynced());
