@@ -458,6 +458,34 @@ public class ResponseServiceTests
     }
 
     [Fact]
+    public async Task UpdateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    {
+        // Arrange - Multiple choice response for true/false question
+        var questionId = Guid.NewGuid();
+        var question = new TrueFalseQuestionEntity(
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            true
+        );
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(),
+            questionId,
+            0
+        );
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.GetByIdAsync(response.Id))
+            .ReturnsAsync(response);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateResponseAsync(response));
+        Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task DeleteResponseAsync_CallsRepository()
     {
         // Arrange
@@ -472,4 +500,3 @@ public class ResponseServiceTests
         _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 }
-

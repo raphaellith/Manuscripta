@@ -426,6 +426,83 @@ public class QuestionServiceTests
     }
 
     [Fact]
+    public async Task UpdateQuestionAsync_EmptyQuestionText_ThrowsArgumentException()
+    {
+        // Arrange
+        var materialId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(materialId, "Material", "Content");
+        var question = new TrueFalseQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "   ",
+            true
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(question.Id))
+            .ReturnsAsync(question);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateQuestionAsync(question));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_WrittenQuestionInPoll_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2B(3)(b): Written question cannot be in a poll
+        var materialId = Guid.NewGuid();
+        var material = new PollMaterialEntity(
+            materialId,
+            "Poll",
+            "Content"
+        );
+        var question = new WrittenAnswerQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "Written Question",
+            "Answer"
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(question.Id))
+            .ReturnsAsync(question);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateQuestionAsync(question));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_WrittenQuestionInQuiz_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2B(3)(b): Written question cannot be in a quiz
+        var materialId = Guid.NewGuid();
+        var material = new QuizMaterialEntity(
+            materialId,
+            "Quiz",
+            "Content"
+        );
+        var question = new WrittenAnswerQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "Written Question",
+            "Answer"
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(question.Id))
+            .ReturnsAsync(question);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateQuestionAsync(question));
+    }
+
+    [Fact]
     public async Task DeleteQuestionAsync_CallsRepository()
     {
         // Arrange
@@ -440,4 +517,3 @@ public class QuestionServiceTests
         _mockQuestionRepo.Verify(r => r.DeleteAsync(questionId), Times.Once);
     }
 }
-

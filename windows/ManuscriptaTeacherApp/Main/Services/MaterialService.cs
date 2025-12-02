@@ -92,7 +92,5 @@ public class MaterialService : IMaterialService
         if (string.IsNullOrWhiteSpace(material.Content))
             throw new ArgumentException("Material content cannot be empty.", nameof(material));
     }
-
-
     #endregion
 }
