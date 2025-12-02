@@ -42,7 +42,7 @@ public class Question {
      * @param id            Unique identifier (UUID)
      * @param materialId    UUID of the parent material
      * @param questionText  The text of the question
-     * @param questionType  The type of question (MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER)
+     * @param questionType  The type of question (MULTIPLE_CHOICE, TRUE_FALSE, WRITTEN_ANSWER)
      * @param options       JSON string of options (empty string if none)
      * @param correctAnswer The correct answer string (empty string if none)
      * @throws IllegalArgumentException if id is null or empty
