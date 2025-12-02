@@ -72,7 +72,7 @@ public class QuestionEntity {
         this.correctAnswer = correctAnswer;
     }
 
-    // Getters Only (Immutable)
+    // Getters
 
     @NonNull
     public String getId() {

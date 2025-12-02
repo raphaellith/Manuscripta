@@ -125,12 +125,13 @@ public class SessionDaoTest {
 
     @Test
     public void testGetByStatus() {
-        SessionEntity active = createSession("s-1", "mat-1");
-        active.setStatus(SessionStatus.ACTIVE);
+        // Create sessions with specific statuses using constructor
+        SessionEntity active = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-1");
         sessionDao.insert(active);
 
-        SessionEntity completed = createSession("s-2", "mat-1");
-        completed.setStatus(SessionStatus.COMPLETED);
+        SessionEntity completed = new SessionEntity(
+            "s-2", "mat-1", System.currentTimeMillis(), System.currentTimeMillis(), SessionStatus.COMPLETED, "device-1");
         sessionDao.insert(completed);
 
         List<SessionEntity> activeSessions = sessionDao.getByStatus(SessionStatus.ACTIVE);
@@ -144,12 +145,12 @@ public class SessionDaoTest {
 
     @Test
     public void testGetActiveSession() {
-        SessionEntity active = createSession("s-1", "mat-1");
-        active.setStatus(SessionStatus.ACTIVE);
+        SessionEntity active = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-1");
         sessionDao.insert(active);
 
-        SessionEntity completed = createSession("s-2", "mat-1");
-        completed.setStatus(SessionStatus.COMPLETED);
+        SessionEntity completed = new SessionEntity(
+            "s-2", "mat-1", System.currentTimeMillis(), System.currentTimeMillis(), SessionStatus.COMPLETED, "device-1");
         sessionDao.insert(completed);
 
         SessionEntity activeSession = sessionDao.getActiveSession();
@@ -159,8 +160,8 @@ public class SessionDaoTest {
 
     @Test
     public void testGetActiveSessionNone() {
-        SessionEntity completed = createSession("s-1", "mat-1");
-        completed.setStatus(SessionStatus.COMPLETED);
+        SessionEntity completed = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), System.currentTimeMillis(), SessionStatus.COMPLETED, "device-1");
         sessionDao.insert(completed);
 
         assertNull(sessionDao.getActiveSession());
@@ -168,12 +169,12 @@ public class SessionDaoTest {
 
     @Test
     public void testGetByDeviceId() {
-        SessionEntity session1 = createSession("s-1", "mat-1");
-        session1.setDeviceId("device-1");
+        SessionEntity session1 = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-1");
         sessionDao.insert(session1);
 
-        SessionEntity session2 = createSession("s-2", "mat-1");
-        session2.setDeviceId("device-2");
+        SessionEntity session2 = new SessionEntity(
+            "s-2", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-2");
         sessionDao.insert(session2);
 
         List<SessionEntity> device1Sessions = sessionDao.getByDeviceId("device-1");
@@ -209,8 +210,11 @@ public class SessionDaoTest {
         SessionEntity session = createSession("s-1", "mat-1");
         sessionDao.insert(session);
 
-        session.setDeviceId("device-2");
-        sessionDao.update(session);
+        // Create a new entity with updated values since entities are immutable
+        SessionEntity updatedSession = new SessionEntity(
+            "s-1", "mat-1", session.getStartTime(), session.getEndTime(), 
+            session.getStatus(), "device-2");
+        sessionDao.update(updatedSession);
 
         assertEquals("device-2", sessionDao.getById("s-1").getDeviceId());
     }
@@ -263,12 +267,13 @@ public class SessionDaoTest {
 
     @Test
     public void testGetCountByStatus() {
-        SessionEntity active = createSession("s-1", "mat-1");
-        active.setStatus(SessionStatus.ACTIVE);
+        // Create sessions with specific statuses using constructor
+        SessionEntity active = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-1");
         sessionDao.insert(active);
 
-        SessionEntity completed = createSession("s-2", "mat-1");
-        completed.setStatus(SessionStatus.COMPLETED);
+        SessionEntity completed = new SessionEntity(
+            "s-2", "mat-1", System.currentTimeMillis(), System.currentTimeMillis(), SessionStatus.COMPLETED, "device-1");
         sessionDao.insert(completed);
 
         assertEquals(1, sessionDao.getCountByStatus(SessionStatus.ACTIVE));
@@ -311,12 +316,14 @@ public class SessionDaoTest {
 
     @Test
     public void testInsertReplaceOnConflict() {
-        SessionEntity session = createSession("s-1", "mat-1");
-        session.setDeviceId("device-1");
+        // Create session with device-1
+        SessionEntity session = new SessionEntity(
+            "s-1", "mat-1", System.currentTimeMillis(), 0, SessionStatus.ACTIVE, "device-1");
         sessionDao.insert(session);
 
-        SessionEntity updated = createSession("s-1", "mat-1");
-        updated.setDeviceId("device-2");
+        // Create new session with same ID but different device
+        SessionEntity updated = new SessionEntity(
+            "s-1", "mat-1", session.getStartTime(), 0, SessionStatus.ACTIVE, "device-2");
         sessionDao.insert(updated);
 
         assertEquals("device-2", sessionDao.getById("s-1").getDeviceId());
