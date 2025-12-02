@@ -28,7 +28,7 @@ public class ResponseEntityTest {
         assertNotNull(response);
         assertEquals("response-1", response.getId());
         assertEquals("q-1", response.getQuestionId());
-        assertEquals("4", response.getSelectedAnswer());
+        assertEquals("4", response.getAnswer());
         assertTrue(response.isCorrect());
         assertEquals(1000L, response.getTimestamp());
         assertTrue(response.isSynced());
@@ -49,7 +49,7 @@ public class ResponseEntityTest {
 
         assertEquals("response-2", response.getId());
         assertEquals("q-2", response.getQuestionId());
-        assertEquals("3", response.getSelectedAnswer());
+        assertEquals("3", response.getAnswer());
         assertFalse(response.isCorrect());
         assertEquals(2000L, response.getTimestamp());
         assertFalse(response.isSynced());

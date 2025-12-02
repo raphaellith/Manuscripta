@@ -34,9 +34,9 @@ public class ResponseEntity {
     @NonNull
     private final String questionId;
 
-    /** The answer selected by the student. */
+    /** The answer provided by the student. */
     @NonNull
-    private final String selectedAnswer;
+    private final String answer;
 
     /** Whether the response is correct. */
     private final boolean isCorrect;
@@ -55,24 +55,24 @@ public class ResponseEntity {
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
      *
-     * @param id             The unique identifier for the response
-     * @param questionId     The ID of the question this response is for
-     * @param selectedAnswer The answer selected by the student
-     * @param isCorrect      Whether the response is correct
-     * @param timestamp      The timestamp when the response was recorded
-     * @param synced         Whether the response has been synced
-     * @param deviceId       The device identifier for the tablet that submitted this response
+     * @param id         The unique identifier for the response
+     * @param questionId The ID of the question this response is for
+     * @param answer     The answer provided by the student
+     * @param isCorrect  Whether the response is correct
+     * @param timestamp  The timestamp when the response was recorded
+     * @param synced     Whether the response has been synced
+     * @param deviceId   The device identifier for the tablet that submitted this response
      */
     public ResponseEntity(@NonNull String id,
                           @NonNull String questionId,
-                          @NonNull String selectedAnswer,
+                          @NonNull String answer,
                           boolean isCorrect,
                           long timestamp,
                           boolean synced,
                           @NonNull String deviceId) {
         this.id = id;
         this.questionId = questionId;
-        this.selectedAnswer = selectedAnswer;
+        this.answer = answer;
         this.isCorrect = isCorrect;
         this.timestamp = timestamp;
         this.synced = synced;
@@ -92,8 +92,8 @@ public class ResponseEntity {
     }
 
     @NonNull
-    public String getSelectedAnswer() {
-        return selectedAnswer;
+    public String getAnswer() {
+        return answer;
     }
 
     public boolean isCorrect() {
