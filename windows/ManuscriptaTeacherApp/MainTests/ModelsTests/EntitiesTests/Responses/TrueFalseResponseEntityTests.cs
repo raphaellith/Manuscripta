@@ -12,16 +12,18 @@ public class TrueFalseResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answer = true;
         var timestamp = DateTime.UtcNow;
         var isCorrect = true;
 
         // Act
-        var entity = new TrueFalseResponseEntity(id, questionId, answer, timestamp, isCorrect);
+        var entity = new TrueFalseResponseEntity(id, questionId, deviceId, answer, timestamp, isCorrect);
 
         // Assert
         Assert.Equal(id, entity.Id);
         Assert.Equal(questionId, entity.QuestionId);
+        Assert.Equal(deviceId, entity.DeviceId);
         Assert.Equal(answer, entity.Answer);
         Assert.Equal(timestamp, entity.Timestamp);
         Assert.Equal(isCorrect, entity.IsCorrect);
@@ -33,10 +35,11 @@ public class TrueFalseResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answer = false;
 
         // Act
-        var entity = new TrueFalseResponseEntity(id, questionId, answer);
+        var entity = new TrueFalseResponseEntity(id, questionId, deviceId, answer);
 
         // Assert
         Assert.False(entity.Answer);
@@ -48,10 +51,11 @@ public class TrueFalseResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var entity = new TrueFalseResponseEntity(id, questionId, true);
+        var entity = new TrueFalseResponseEntity(id, questionId, deviceId, true);
         var afterCreation = DateTime.UtcNow;
 
         // Assert

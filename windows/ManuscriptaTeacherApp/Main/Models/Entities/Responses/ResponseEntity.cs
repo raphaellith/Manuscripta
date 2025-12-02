@@ -5,6 +5,7 @@ namespace Main.Models.Entities.Responses;
 /// <summary>
 /// Base class for polymorphic response entities.
 /// Uses Table-Per-Hierarchy (TPH) inheritance strategy.
+/// Validation rules defined in Validation Rules §2C.
 /// </summary>
 public abstract class ResponseEntity
 {
@@ -18,14 +19,22 @@ public abstract class ResponseEntity
     [Required]
     public DateTime Timestamp { get; set; }
 
+    /// <summary>
+    /// The device ID the response is from.
+    /// §2C(1)(d)
+    /// </summary>
+    [Required]
+    public Guid DeviceId { get; set; }
+
     public bool? IsCorrect { get; set; }
 
     protected ResponseEntity() { }
 
-    protected ResponseEntity(Guid id, Guid questionId, DateTime? timestamp = null, bool? isCorrect = null)
+    protected ResponseEntity(Guid id, Guid questionId, Guid deviceId, DateTime? timestamp = null, bool? isCorrect = null)
     {
         Id = id;
         QuestionId = questionId;
+        DeviceId = deviceId;
         Timestamp = timestamp ?? DateTime.UtcNow;
         IsCorrect = isCorrect;
     }

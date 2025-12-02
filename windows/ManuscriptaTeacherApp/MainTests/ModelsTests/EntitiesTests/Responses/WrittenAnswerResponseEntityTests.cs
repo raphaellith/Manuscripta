@@ -12,16 +12,18 @@ public class WrittenAnswerResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answer = "Paris";
         var timestamp = DateTime.UtcNow;
         var isCorrect = true;
 
         // Act
-        var entity = new WrittenAnswerResponseEntity(id, questionId, answer, timestamp, isCorrect);
+        var entity = new WrittenAnswerResponseEntity(id, questionId, deviceId, answer, timestamp, isCorrect);
 
         // Assert
         Assert.Equal(id, entity.Id);
         Assert.Equal(questionId, entity.QuestionId);
+        Assert.Equal(deviceId, entity.DeviceId);
         Assert.Equal(answer, entity.Answer);
         Assert.Equal(timestamp, entity.Timestamp);
         Assert.Equal(isCorrect, entity.IsCorrect);
@@ -33,10 +35,11 @@ public class WrittenAnswerResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new WrittenAnswerResponseEntity(id, questionId, null!));
+            new WrittenAnswerResponseEntity(id, questionId, deviceId, null!));
     }
 
     [Fact]
@@ -45,10 +48,11 @@ public class WrittenAnswerResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answer = "";
 
         // Act
-        var entity = new WrittenAnswerResponseEntity(id, questionId, answer);
+        var entity = new WrittenAnswerResponseEntity(id, questionId, deviceId, answer);
 
         // Assert
         Assert.Equal(string.Empty, entity.Answer);
@@ -60,10 +64,11 @@ public class WrittenAnswerResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var entity = new WrittenAnswerResponseEntity(id, questionId, "answer");
+        var entity = new WrittenAnswerResponseEntity(id, questionId, deviceId, "answer");
         var afterCreation = DateTime.UtcNow;
 
         // Assert

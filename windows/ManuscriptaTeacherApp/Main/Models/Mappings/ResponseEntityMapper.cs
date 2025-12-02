@@ -29,9 +29,9 @@ public static class ResponseEntityMapper
             id: entity.Id,
             questionId: entity.QuestionId,
             answer: answer,
+            deviceId: entity.DeviceId,
             isCorrect: entity.IsCorrect ?? false,
-            timestamp: entity.Timestamp,
-            synced: false
+            timestamp: entity.Timestamp
         );
     }
 
@@ -51,6 +51,7 @@ public static class ResponseEntityMapper
             MultipleChoiceQuestionEntity _ => new MultipleChoiceResponseEntity(
                 id: dataEntity.Id,
                 questionId: dataEntity.QuestionId,
+                deviceId: dataEntity.DeviceId,
                 answerIndex: ParseInt(dataEntity.Answer),
                 timestamp: dataEntity.Timestamp,
                 isCorrect: dataEntity.IsCorrect
@@ -58,6 +59,7 @@ public static class ResponseEntityMapper
             TrueFalseQuestionEntity _ => new TrueFalseResponseEntity(
                 id: dataEntity.Id,
                 questionId: dataEntity.QuestionId,
+                deviceId: dataEntity.DeviceId,
                 answer: ParseBool(dataEntity.Answer),
                 timestamp: dataEntity.Timestamp,
                 isCorrect: dataEntity.IsCorrect
@@ -65,6 +67,7 @@ public static class ResponseEntityMapper
             WrittenAnswerQuestionEntity _ => new WrittenAnswerResponseEntity(
                 id: dataEntity.Id,
                 questionId: dataEntity.QuestionId,
+                deviceId: dataEntity.DeviceId,
                 answer: dataEntity.Answer ?? string.Empty,
                 timestamp: dataEntity.Timestamp,
                 isCorrect: dataEntity.IsCorrect

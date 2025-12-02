@@ -13,8 +13,8 @@ public class WrittenAnswerResponseEntity : ResponseEntity
 
     private WrittenAnswerResponseEntity() : base() { }
 
-    public WrittenAnswerResponseEntity(Guid id, Guid questionId, string answer, DateTime? timestamp = null, bool? isCorrect = null)
-        : base(id, questionId, timestamp, isCorrect)
+    public WrittenAnswerResponseEntity(Guid id, Guid questionId, Guid deviceId, string answer, DateTime? timestamp = null, bool? isCorrect = null)
+        : base(id, questionId, deviceId, timestamp, isCorrect)
     {
         Answer = answer ?? throw new ArgumentNullException(nameof(answer));
     }
