@@ -16,7 +16,7 @@ public class MaterialEntityMapperTests
         var id = Guid.NewGuid();
         var title = "Reading Material";
         var content = "Content here";
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var timestamp = DateTime.UtcNow;
         var entity = new ReadingMaterialEntity(id, title, content, timestamp);
 
         // Act
@@ -101,7 +101,7 @@ public class MaterialEntityMapperTests
         var id = Guid.NewGuid();
         var title = "Reading";
         var content = "Content";
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var timestamp = DateTime.UtcNow;
         var dataEntity = new MaterialDataEntity
         {
             Id = id,
@@ -134,7 +134,7 @@ public class MaterialEntityMapperTests
             MaterialType = MaterialType.WORKSHEET,
             Title = "Worksheet",
             Content = "Content",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Timestamp = DateTime.UtcNow,
             Synced = false
         };
 
@@ -156,7 +156,7 @@ public class MaterialEntityMapperTests
             MaterialType = MaterialType.POLL,
             Title = "Poll",
             Content = "Content",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Timestamp = DateTime.UtcNow,
             Synced = false
         };
 
@@ -178,7 +178,7 @@ public class MaterialEntityMapperTests
             MaterialType = MaterialType.QUIZ,
             Title = "Quiz",
             Content = "Content",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Timestamp = DateTime.UtcNow,
             Synced = false
         };
 
@@ -204,7 +204,7 @@ public class MaterialEntityMapperTests
         var id = Guid.NewGuid();
         var title = "Original Title";
         var content = "Original Content";
-        var timestamp = 1234567890L;
+        var timestamp = DateTime.UtcNow;
         var metadata = "{\"test\":true}";
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
 

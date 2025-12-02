@@ -21,7 +21,7 @@ public class MaterialDataEntityTests
 
         // Defaults
         Assert.Equal(Guid.Empty, m.Id);
-        Assert.Equal(0, m.Timestamp);
+        Assert.Equal(DateTime.MinValue, m.Timestamp);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class MaterialDataEntityTests
             Title = "Sample",
             Content = "Body",
             Metadata = "{\"a\":1}",
-            Timestamp = 12345,
+            Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(12345),
             Synced = true
         };
 
@@ -44,7 +44,7 @@ public class MaterialDataEntityTests
         Assert.Equal("Sample", m.Title);
         Assert.Equal("Body", m.Content);
         Assert.Equal("{\"a\":1}", m.Metadata);
-        Assert.Equal(12345, m.Timestamp);
+        Assert.Equal(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(12345), m.Timestamp);
         Assert.True(m.Synced);
     }
 
@@ -52,10 +52,11 @@ public class MaterialDataEntityTests
     public void CanSetAllMaterialTypes()
     {
         // Test each material type
-        var reading = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.READING, Title = "R", Content = "C", Timestamp = 1 };
-        var worksheet = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.WORKSHEET, Title = "W", Content = "C", Timestamp = 1 };
-        var poll = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.POLL, Title = "P", Content = "C", Timestamp = 1 };
-        var quiz = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.QUIZ, Title = "Q", Content = "C", Timestamp = 1 };
+        var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var reading = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.READING, Title = "R", Content = "C", Timestamp = epoch.AddSeconds(1) };
+        var worksheet = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.WORKSHEET, Title = "W", Content = "C", Timestamp = epoch.AddSeconds(1) };
+        var poll = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.POLL, Title = "P", Content = "C", Timestamp = epoch.AddSeconds(1) };
+        var quiz = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.QUIZ, Title = "Q", Content = "C", Timestamp = epoch.AddSeconds(1) };
 
         Assert.Equal(MaterialType.READING, reading.MaterialType);
         Assert.Equal(MaterialType.WORKSHEET, worksheet.MaterialType);
