@@ -1,24 +1,34 @@
 package com.manuscripta.student.network;
 
-import org.jetbrains.annotations.NotNull;
+import androidx.annotation.NonNull;
 
 public class DiscoveryMessage {
 
-    @NotNull private String ipAddress;
+    @NonNull private final String ipAddress;
 
-    @NotNull private int httpPort;
+    private final int httpPort;
 
-    @NotNull private int tcpPort;
+    private final int tcpPort;
 
-    public DiscoveryMessage(String ipAddress,
+    public DiscoveryMessage(@NonNull String ipAddress,
                             int httpPort,
                             int tcpPort){
-        // Validation to come
+
+        if (ipAddress == null || ipAddress.isEmpty()){
+            throw new IllegalArgumentException("IP Address cannot be Null or Empty");
+        }
+        if (httpPort < 0 || httpPort > 65535){
+            throw new IllegalArgumentException("HTTP Port must be between 0 and 65535 inclusive");
+        }
+        if (tcpPort < 0 || tcpPort > 65535){
+            throw new IllegalArgumentException("HTTP Port must be between 0 and 65535 inclusive");
+        }
         this.ipAddress = ipAddress;
         this.httpPort = httpPort;
         this.tcpPort = tcpPort;
     }
 
+    @NonNull
     public String getIpAddress() {
         return this.ipAddress;
     }
