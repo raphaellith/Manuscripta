@@ -172,6 +172,44 @@ public class MaterialServiceTests
     }
 
     [Fact]
+    public async Task UpdateMaterialAsync_NullMaterial_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _service.UpdateMaterialAsync(null!));
+    }
+
+    [Fact]
+    public async Task UpdateMaterialAsync_EmptyTitle_ThrowsArgumentException()
+    {
+        // Arrange
+        var material = new QuizMaterialEntity(
+            Guid.NewGuid(),
+            "",
+            "Content"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateMaterialAsync(material));
+    }
+
+    [Fact]
+    public async Task UpdateMaterialAsync_EmptyContent_ThrowsArgumentException()
+    {
+        // Arrange
+        var material = new PollMaterialEntity(
+            Guid.NewGuid(),
+            "Title",
+            ""
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateMaterialAsync(material));
+    }
+
+    [Fact]
     public async Task UpdateMaterialAsync_NonExistingMaterial_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -229,4 +267,3 @@ public class MaterialServiceTests
 
     #endregion
 }
-
