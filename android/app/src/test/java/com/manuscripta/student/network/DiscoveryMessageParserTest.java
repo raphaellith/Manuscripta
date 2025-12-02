@@ -130,7 +130,7 @@ public class DiscoveryMessageParserTest {
                 () -> DiscoveryMessageParser.parse(data)
         );
         assertEquals(
-                "Message length must be 9 Bytes. Message length received: 8 bytes",
+                "Message length must be 9 bytes. Message length received: 8 bytes",
                 exception.getMessage()
         );
     }
@@ -146,7 +146,7 @@ public class DiscoveryMessageParserTest {
                 () -> DiscoveryMessageParser.parse(data)
         );
         assertEquals(
-                "Message length must be 9 Bytes. Message length received: 10 bytes",
+                "Message length must be 9 bytes. Message length received: 10 bytes",
                 exception.getMessage()
         );
     }
@@ -162,7 +162,7 @@ public class DiscoveryMessageParserTest {
                 () -> DiscoveryMessageParser.parse(data)
         );
         assertEquals(
-                "Message length must be 9 Bytes. Message length received: 0 bytes",
+                "Message length must be 9 bytes. Message length received: 0 bytes",
                 exception.getMessage()
         );
     }
