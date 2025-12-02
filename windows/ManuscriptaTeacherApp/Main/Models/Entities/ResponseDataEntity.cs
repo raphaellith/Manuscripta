@@ -40,15 +40,15 @@ public class ResponseDataEntity
 
     private ResponseDataEntity() { }
 
-    public ResponseDataEntity(Guid id, Guid questionId, string? answer, Guid deviceId, bool isCorrect = false, DateTime? timestamp = null)
+    public ResponseDataEntity(Guid id, Guid questionId, Guid deviceId, string? answer, bool isCorrect = false, DateTime? timestamp = null)
     {
         // TODO: Validate §2C(3)(e): DeviceId must correspond to a valid device
         // This requires DeviceIdValidator.IsValidDeviceId(deviceId) once device registration is implemented
 
         Id = id;
         QuestionId = questionId;
-        Answer = answer;
         DeviceId = deviceId;
+        Answer = answer;
         IsCorrect = isCorrect;
         Timestamp = timestamp ?? DateTime.UtcNow;
     }
