@@ -34,7 +34,7 @@ public class MainDbContextTests
                 MaterialType = MaterialType.WORKSHEET,
                 Title = "Test Worksheet",
                 Content = "Worksheet Content",
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Timestamp = DateTime.UtcNow,
                 Synced = false
             };
 
@@ -93,7 +93,7 @@ public class MainDbContextTests
                 MaterialType = MaterialType.QUIZ,
                 Title = "Quiz",
                 Content = "Content",
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Timestamp = DateTime.UtcNow,
                 Synced = false
             };
             ctx.Materials.Add(material);

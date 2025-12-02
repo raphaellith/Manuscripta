@@ -16,8 +16,10 @@ public class MultipleChoiceResponseEntity : ResponseEntity
     public MultipleChoiceResponseEntity(Guid id, Guid questionId, int answerIndex, DateTime? timestamp = null, bool? isCorrect = null)
         : base(id, questionId, timestamp, isCorrect)
     {
-        if (answerIndex < 0)
-            throw new ArgumentOutOfRangeException(nameof(answerIndex), "Answer index must be non-negative.");
+        // Allow any integer here (including negative). Business-rule validation
+        // (e.g., index range checks and type matching) is performed in the
+        // ResponseService so that errors are surfaced as InvalidOperationException
+        // with consistent messages during service operations.
 
         AnswerIndex = answerIndex;
     }

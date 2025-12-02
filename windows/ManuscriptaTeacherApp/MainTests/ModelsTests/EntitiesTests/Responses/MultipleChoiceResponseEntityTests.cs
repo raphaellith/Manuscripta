@@ -44,18 +44,6 @@ public class MultipleChoiceResponseEntityTests
     }
 
     [Fact]
-    public void Constructor_WithNegativeAnswerIndex_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var questionId = Guid.NewGuid();
-
-        // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new MultipleChoiceResponseEntity(id, questionId, -1));
-    }
-
-    [Fact]
     public void Constructor_WithNullIsCorrect_SetsNull()
     {
         // Arrange

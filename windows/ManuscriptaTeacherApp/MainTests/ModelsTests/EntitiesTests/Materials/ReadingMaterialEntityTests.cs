@@ -14,7 +14,7 @@ public class ReadingMaterialEntityTests
         var id = Guid.NewGuid();
         var title = "Chapter 1: Introduction";
         var content = "This is the introduction content...";
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var timestamp = DateTime.UtcNow;
 
         // Act
         var entity = new ReadingMaterialEntity(id, title, content, timestamp);
@@ -36,7 +36,7 @@ public class ReadingMaterialEntityTests
         var id = Guid.NewGuid();
         var title = "Chapter 1";
         var content = "Content";
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var timestamp = DateTime.UtcNow;
         var metadata = "{\"author\":\"John Doe\"}";
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
 
@@ -53,11 +53,11 @@ public class ReadingMaterialEntityTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var beforeCreation = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var beforeCreation = DateTime.UtcNow;
 
         // Act
         var entity = new ReadingMaterialEntity(id, "Title", "Content");
-        var afterCreation = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var afterCreation = DateTime.UtcNow;
 
         // Assert
         Assert.True(entity.Timestamp >= beforeCreation && entity.Timestamp <= afterCreation);
