@@ -22,7 +22,7 @@ import com.manuscripta.student.data.model.DeviceStatusEntity;
         DeviceStatusEntity.class
     },
     version = 7,
-    exportSchema = false
+    exportSchema = true
 )
 public abstract class ManuscriptaDatabase extends RoomDatabase {
 

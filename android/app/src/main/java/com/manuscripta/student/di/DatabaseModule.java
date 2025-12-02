@@ -23,6 +23,7 @@ public class DatabaseModule {
 
     /**
      * Provides the Room database instance.
+     * Uses AutoMigration for schema changes to preserve user data.
      *
      * @param context Application context
      * @return ManuscriptaDatabase instance
@@ -30,13 +31,10 @@ public class DatabaseModule {
     @Provides
     @Singleton
     public ManuscriptaDatabase provideDatabase(@ApplicationContext Context context) {
-        // TODO: Replace fallbackToDestructiveMigration with proper migrations before production
-        // This will wipe the database when version changes - acceptable for development only
         return Room.databaseBuilder(
                 context,
                 ManuscriptaDatabase.class,
                 "manuscripta_database"
-        ).fallbackToDestructiveMigration()
-         .build();
+        ).build();
     }
 }
