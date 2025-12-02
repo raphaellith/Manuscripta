@@ -25,7 +25,8 @@ public class ResponseMapperTest {
                 "4",
                 true,
                 1234567890L,
-                false
+                false,
+                "device-id-abc"
         );
 
         // When
@@ -39,6 +40,7 @@ public class ResponseMapperTest {
         assertEquals(entity.isCorrect(), domain.isCorrect());
         assertEquals(entity.getTimestamp(), domain.getTimestamp());
         assertEquals(entity.isSynced(), domain.isSynced());
+        assertEquals(entity.getDeviceId(), domain.getDeviceId());
     }
 
     @Test
@@ -50,7 +52,8 @@ public class ResponseMapperTest {
                 "true",
                 false,
                 9876543210L,
-                true
+                true,
+                "device-id-xyz"
         );
 
         // When
@@ -64,6 +67,7 @@ public class ResponseMapperTest {
         assertEquals(domain.isCorrect(), entity.isCorrect());
         assertEquals(domain.getTimestamp(), entity.getTimestamp());
         assertEquals(domain.isSynced(), entity.isSynced());
+        assertEquals(domain.getDeviceId(), entity.getDeviceId());
     }
 
     @Test
@@ -75,7 +79,8 @@ public class ResponseMapperTest {
                 "Answer A",
                 true,
                 5555555555L,
-                true
+                true,
+                "device-id-synced"
         );
 
         // When
@@ -86,6 +91,7 @@ public class ResponseMapperTest {
         assertTrue(domain.isCorrect());
         assertTrue(domain.isSynced());
         assertEquals("Answer A", domain.getSelectedAnswer());
+        assertEquals("device-id-synced", domain.getDeviceId());
     }
 
     @Test
@@ -97,7 +103,8 @@ public class ResponseMapperTest {
                 "Wrong answer",
                 false,
                 7777777777L,
-                false
+                false,
+                "device-id-unsynced"
         );
 
         // When
@@ -108,6 +115,7 @@ public class ResponseMapperTest {
         assertFalse(domain.isCorrect());
         assertFalse(domain.isSynced());
         assertEquals("Wrong answer", domain.getSelectedAnswer());
+        assertEquals("device-id-unsynced", domain.getDeviceId());
     }
 
     @Test
@@ -119,7 +127,8 @@ public class ResponseMapperTest {
                 "Selected option C",
                 true,
                 1111111111L,
-                false
+                false,
+                "device-round-trip"
         );
 
         // When
@@ -133,6 +142,7 @@ public class ResponseMapperTest {
         assertEquals(originalEntity.isCorrect(), resultEntity.isCorrect());
         assertEquals(originalEntity.getTimestamp(), resultEntity.getTimestamp());
         assertEquals(originalEntity.isSynced(), resultEntity.isSynced());
+        assertEquals(originalEntity.getDeviceId(), resultEntity.getDeviceId());
     }
 
     @Test
@@ -144,7 +154,8 @@ public class ResponseMapperTest {
                 "My short answer response",
                 false,
                 2222222222L,
-                true
+                true,
+                "device-domain-trip"
         );
 
         // When
@@ -158,6 +169,7 @@ public class ResponseMapperTest {
         assertEquals(originalDomain.isCorrect(), resultDomain.isCorrect());
         assertEquals(originalDomain.getTimestamp(), resultDomain.getTimestamp());
         assertEquals(originalDomain.isSynced(), resultDomain.isSynced());
+        assertEquals(originalDomain.getDeviceId(), resultDomain.getDeviceId());
     }
 
     @Test

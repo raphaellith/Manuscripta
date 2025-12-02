@@ -21,7 +21,8 @@ public class ResponseEntityTest {
                 "4",
                 true,
                 1000L,
-                true
+                true,
+                "device-id-1"
         );
 
         assertNotNull(response);
@@ -31,6 +32,7 @@ public class ResponseEntityTest {
         assertTrue(response.isCorrect());
         assertEquals(1000L, response.getTimestamp());
         assertTrue(response.isSynced());
+        assertEquals("device-id-1", response.getDeviceId());
     }
 
     @Test
@@ -41,7 +43,8 @@ public class ResponseEntityTest {
                 "3",
                 false,
                 2000L,
-                false
+                false,
+                "device-id-2"
         );
 
         assertEquals("response-2", response.getId());
@@ -50,6 +53,7 @@ public class ResponseEntityTest {
         assertFalse(response.isCorrect());
         assertEquals(2000L, response.getTimestamp());
         assertFalse(response.isSynced());
+        assertEquals("device-id-2", response.getDeviceId());
     }
 
     @Test
@@ -61,7 +65,8 @@ public class ResponseEntityTest {
                 "4",
                 false,
                 1000L,
-                true
+                true,
+                "device-synced"
         );
         assertTrue(syncedResponse.isSynced());
 
@@ -72,7 +77,8 @@ public class ResponseEntityTest {
                 "4",
                 false,
                 1000L,
-                false
+                false,
+                "device-unsynced"
         );
         assertFalse(unsyncedResponse.isSynced());
     }
@@ -86,7 +92,8 @@ public class ResponseEntityTest {
                 "4",
                 true,
                 1000L,
-                false
+                false,
+                "device-correct"
         );
         assertTrue(correctResponse.isCorrect());
 
@@ -97,7 +104,8 @@ public class ResponseEntityTest {
                 "4",
                 false,
                 1000L,
-                false
+                false,
+                "device-incorrect"
         );
         assertFalse(incorrectResponse.isCorrect());
     }

@@ -32,21 +32,21 @@ public class SessionEntity {
 
     /** The ID of the material this session is associated with. */
     @NonNull
-    private String materialId;
+    private final String materialId;
 
     /** The timestamp when the session started (Unix epoch milliseconds). */
-    private long startTime;
+    private final long startTime;
 
     /** The timestamp when the session ended (Unix epoch milliseconds), or 0 if still active. */
-    private long endTime;
+    private final long endTime;
 
     /** The current status of the session. */
     @NonNull
-    private SessionStatus status;
+    private final SessionStatus status;
 
     /** The identifier of the device running the session. */
     @NonNull
-    private String deviceId;
+    private final String deviceId;
 
     /**
      * Standard constructor used by Room to recreate objects from the database.
