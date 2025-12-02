@@ -29,7 +29,7 @@ public abstract class MaterialEntity
     public JsonArray? VocabularyTerms { get; set; }
 
     [Required]
-    public long Timestamp { get; set; }
+    public DateTime Timestamp { get; set; }
 
     protected MaterialEntity() { }
 
