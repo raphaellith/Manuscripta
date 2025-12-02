@@ -31,7 +31,7 @@ public class DiscoveryMessageParser {
     public static DiscoveryMessage parse(@NonNull byte[] data){
         // Validate length
         if (data.length != 9){
-            throw new IllegalArgumentException("Message length must be 9 Bytes. Message length received: " + data.length + " bytes");
+            throw new IllegalArgumentException("Message length must be 9 bytes. Message length received: " + data.length + " bytes");
         }
 
         // Wrap the bytes in a ByteBuffer
