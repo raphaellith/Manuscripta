@@ -16,12 +16,14 @@ public enum QuestionType {
     TRUE_FALSE,
 
     /**
-     * Written answer - student types their response.
+     * Written answer.
+     * Student types their response.
      */
     WRITTEN_ANSWER;
 
     /**
      * Check if this question type requires predefined options.
+     * Written answer does not require options as student types their response.
      *
      * @return true if options are needed (multiple choice, true/false)
      */

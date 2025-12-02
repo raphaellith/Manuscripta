@@ -70,7 +70,7 @@ Implement the repository layer following Clean Architecture principles, providin
 - Labels: `android`, `enhancement`, `network-layer`
 
 **Description:**
-Implement the network layer using Retrofit for HTTP communication with the teacher's Windows application server.
+Implement the HTTP/REST network layer using Retrofit for content transmission with the teacher's Windows application server. This layer handles material downloads, response submissions, and configuration fetching. Real-time control signals (TCP) and server discovery (UDP) are covered under Device Management (issues 6.8 and 6.9).
 
 **Requirements:**
 - Define DTOs (Data Transfer Objects) for network communication
@@ -82,7 +82,7 @@ Implement the network layer using Retrofit for HTTP communication with the teach
 **Related Requirements:** NET1, NET2
 
 **Acceptance Criteria:**
-- [ ] All API endpoints defined in ApiService
+- [ ] All HTTP API endpoints defined in ApiService
 - [ ] DTOs created for all request/response types
 - [ ] Network interceptors configured
 - [ ] Connection error handling implemented
@@ -91,6 +91,8 @@ Implement the network layer using Retrofit for HTTP communication with the teach
 - [ ] Javadoc for all public methods
 
 **Dependencies:** Data Model Layer (for DTOs)
+
+**Note:** TCP socket layer (6.8) and UDP discovery (6.9) are separate sub-issues under Device Management.
 
 ---
 
@@ -167,8 +169,10 @@ Implement device management features including kiosk mode, battery monitoring, c
 - "Help needed" signal functionality
 - Screen lock capability (teacher-controlled)
 - Session end handling
+- TCP socket layer for real-time control messages
+- UDP broadcast listener for automatic server discovery
 
-**Related Requirements:** SYS1, CON2, CON5
+**Related Requirements:** SYS1, CON2, CON5, NET1, NET2
 
 **Acceptance Criteria:**
 - [ ] Kiosk mode implemented and tested
@@ -176,11 +180,13 @@ Implement device management features including kiosk mode, battery monitoring, c
 - [ ] Connection status tracking implemented
 - [ ] Help signal functionality working
 - [ ] Remote control handlers implemented
+- [ ] TCP socket layer functional
+- [ ] UDP discovery layer functional
 - [ ] 100% unit test coverage
 - [ ] Integration tests passed
 - [ ] Checkstyle compliant
 
-**Dependencies:** Network Layer must be completed
+**Dependencies:** Network Layer (HTTP) must be completed first
 
 ---
 
@@ -331,7 +337,7 @@ Create enum for different material types (quiz, worksheet, poll).
 Create enum for different question types (multiple choice, true/false, open-ended).
 
 **Tasks:**
-- Create `QuestionType.java` enum with values: MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, POLL
+- Create `QuestionType.java` enum with values: MULTIPLE_CHOICE, TRUE_FALSE, WRITTEN_ANSWER, POLL
 - Add helper methods
 - Write unit tests
 
@@ -350,7 +356,7 @@ Create enum for different question types (multiple choice, true/false, open-ende
 Create entity to track device status for reporting to teacher.
 
 **Tasks:**
-- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, NEEDS_HELP, DISCONNECTED, LOCKED, IDLE), batteryLevel, currentMaterialId, studentView (for teacher live view feature), lastUpdated
+- Create `DeviceStatusEntity.java` with fields: deviceId, status (ON_TASK, HAND_RAISED, DISCONNECTED, LOCKED, IDLE), batteryLevel, currentMaterialId, studentView (for teacher live view feature), lastUpdated
 - Create `DeviceStatusDao.java` interface
 - Write unit tests
 
@@ -362,6 +368,66 @@ Create entity to track device status for reporting to teacher.
 
 ---
 
+Based on our analysis, here is a draft for the GitHub issue. I have identified that this refactoring specifically applies to **`SessionEntity`**, **`ResponseEntity`**, and **`DeviceStatusEntity`**, as `MaterialEntity` and `QuestionEntity` correctly rely on server-provided IDs and do not contain this anti-pattern.
+
+### 1.9 [Android] Refactor Entity Initialization Logic to Domain Layer
+
+  - **Labels:** `android`, `refactor`, `data-layer`, `clean-architecture`
+
+**Description:**
+Currently, several Room entities (`SessionEntity`, `ResponseEntity`, `DeviceStatusEntity`) contain business logic within convenience constructors (annotated with `@Ignore`). This includes generating UUIDs, capturing `System.currentTimeMillis()`, and setting default enum states.
+
+This pattern violates Clean Architecture principles by coupling business rules (like ID generation and default states) to the Data Layer. It also bypasses the Domain Layer, making it possible to create valid entities without going through the proper domain model validation.
+
+**Affected Classes:**
+
+  - `SessionEntity` (Generates UUID, sets `ACTIVE` status, captures start time)
+  - `ResponseEntity` (Generates UUID, captures timestamp, sets `synced=false`)
+  - `DeviceStatusEntity` (Captures `lastUpdated` timestamp)
+
+**Note:** `MaterialEntity` and `QuestionEntity` are **not** affected as they correctly treat IDs as immutable fields provided by the server.
+
+**Proposed Solution:**
+
+1.  **Remove Convenience Constructors:** Delete the `@Ignore` annotated constructors in the affected Entity classes. Entities should only have the single, all-args constructor used by Room and Mappers.
+2.  **Add Factory Methods to Domain Models:** Implement static factory methods (e.g., `create()`) in the corresponding Domain classes (`Session`, `Response`, `DeviceStatus`).
+3.  **Move Logic:** Move the ID generation (`UUID.randomUUID()`), timestamp capture, and default value assignment to these new factory methods.
+4.  **Update Mappers:** Ensure Mappers (`SessionMapper`, etc.) strictly map fields without generating new data.
+
+**Example (Session):**
+
+*Domain Model (`Session.java`):*
+
+```java
+public static Session create(String materialId, String deviceId) {
+    return new Session(
+        UUID.randomUUID().toString(),
+        materialId,
+        System.currentTimeMillis(),
+        0,
+        SessionStatus.ACTIVE,
+        deviceId
+    );
+}
+```
+
+*Entity (`SessionEntity.java`):*
+
+```java
+// Remove the public SessionEntity(String materialId, String deviceId) constructor entirely.
+// Keep only the full constructor used by Room.
+```
+
+**Acceptance Criteria:**
+
+  - [ ] `SessionEntity`, `ResponseEntity`, and `DeviceStatusEntity` contain **only** the primary constructor required by Room.
+  - [ ] `Session`, `Response`, and `DeviceStatus` domain models contain static `create()` factory methods.
+  - [ ] All business logic (UUIDs, timestamps, defaults) is moved to the Domain models.
+  - [ ] Unit tests for Mappers are updated to reflect these changes.
+  - [ ] Unit tests for Entities are updated to use the full constructor only.
+
+---
+
 ## Sub-tasks: Repository Layer
 
 ### 2.1 [Android] Create MaterialRepository
@@ -369,23 +435,24 @@ Create entity to track device status for reporting to teacher.
 - Labels: `android`, `repository-layer`
 
 **Description:**
-Implement repository for managing material data with network and local database synchronisation. Orchestrates attachment file downloads when materials contain file references.
+Implement repository for managing material data with network and local database synchronisation. Orchestrates attachment file downloads when materials contain file references, delegating file storage to `FileStorageManager`.
 
-**Related Requirements:** MAT1, MAT8 (Teacher), MAT15
+**Integration with TCP Layer (Heartbeat-Triggered Fetch):**
+The MaterialRepository must integrate with the TCP socket layer to receive notifications when new materials are available. When TcpSocketManager receives a `FETCH_MATERIALS` (0x04) signal from the server (in response to a heartbeat), it notifies the MaterialRepository to initiate an HTTP material fetch. This is the primary mechanism for material distribution since the server cannot push HTTP requests.
+
+**Related Requirements:** MAT1, MAT8 (Teacher), MAT15, NET1
 
 **Tasks:**
 - Create `MaterialRepository.java` interface
 - Create `MaterialRepositoryImpl.java` implementation
 - Implement caching strategy (network-first with fallback)
-- Create `FileStorageManager.java` utility:
-  - Save binary attachment data to internal app storage
-  - Use predictable path pattern: `/internal/attachments/{materialId}/{attachmentId}.{ext}`
-  - Delete attachments when parent material is deleted (cleanup on "end lesson")
+- **Register as listener for FETCH_MATERIALS signal from TcpSocketManager (issue 6.8)**
+- **Implement `onFetchMaterialsSignal()` callback to trigger HTTP material sync**
 - Orchestrate attachment downloads:
-  1. Fetch MaterialDto from network
+  1. Fetch MaterialDto from network via HTTP GET /materials
   2. Parse content for `/attachments/{id}` references using ContentParser
   3. Download each attachment via ApiService.getAttachment()
-  4. Save binary data to internal storage via FileStorageManager
+  4. Save binary data to internal storage via FileStorageManager (from issue 2.1a)
   5. Convert MaterialDto to MaterialEntity
   6. Insert into Room database
 - Handle HTTP errors appropriately (return error Result if download fails)
@@ -393,10 +460,42 @@ Implement repository for managing material data with network and local database 
 
 **Acceptance Criteria:**
 - [ ] Interface and implementation created
+- [ ] FETCH_MATERIALS signal listener registered with TcpSocketManager
 - [ ] Attachment download orchestration implemented
-- [ ] FileStorageManager handles binary file storage
 - [ ] Caching logic implemented
 - [ ] Error handling with Result pattern (fails gracefully on attachment errors)
+- [ ] 100% test coverage
+
+**Dependencies:** Issue 2.1a (FileStorageManager), Issue 6.8 (TCP Socket Layer - for FETCH_MATERIALS signal) from the issues.md document.
+
+---
+
+### 2.1a [Android] Create FileStorageManager Utility
+
+- Labels: `android`, `repository-layer`, `utility`
+
+**Description:**
+Create a utility class for managing binary file storage (attachments such as PDFs and images) in the app's internal storage. This separates file system concerns from repository logic.
+
+**Related Requirements:** MAT8 (Teacher), MAT15
+
+**Tasks:**
+- Create `FileStorageManager.java` utility class
+- Implement `saveAttachment(materialId, attachmentId, extension, bytes)` method
+  - Use predictable path pattern: `/internal/attachments/{materialId}/{attachmentId}.{ext}`
+- Implement `getAttachmentFile(materialId, attachmentId)` to retrieve saved files
+- Implement `deleteAttachmentsForMaterial(materialId)` for cleanup on "end lesson"
+- Implement `clearAllAttachments()` for full cache clear
+- Handle file I/O exceptions gracefully
+- Ensure thread-safety for concurrent access
+- Write unit tests with mocked file system or temporary directories
+
+**Acceptance Criteria:**
+- [ ] FileStorageManager created with clear API
+- [ ] Save, retrieve, and delete operations functional
+- [ ] Predictable file path structure
+- [ ] Exception handling implemented
+- [ ] Thread-safe implementation
 - [ ] 100% test coverage
 
 ---
@@ -450,20 +549,28 @@ Implement repository for managing learning sessions.
 - Labels: `android`, `repository-layer`
 
 **Description:**
-Implement repository for reporting device status to teacher.
+Implement repository for managing and reporting device status to teacher. Acts as a facade over the TCP socket layer for status updates and the local database for status persistence.
+
+**Related Requirements:** CON2A, CON5
 
 **Tasks:**
 - Create `DeviceStatusRepository.java` interface
 - Create `DeviceStatusRepositoryImpl.java` implementation
-- Implement periodic status reporting
-- Handle battery level monitoring
+- Implement periodic status reporting via TCP socket (using TcpSocketManager from issue 6.8 in the issues.md document.)
+- Implement local status persistence for offline resilience
+- Handle battery level monitoring integration
+- Provide observable status state for UI (LiveData/StateFlow)
 - Write unit tests
 
 **Acceptance Criteria:**
 - [ ] Interface and implementation created
-- [ ] Periodic reporting implemented
+- [ ] Status reporting via TCP socket implemented
+- [ ] Local status persistence working
 - [ ] Battery monitoring integrated
+- [ ] Observable status for UI
 - [ ] 100% test coverage
+
+**Dependencies:** Issue 6.8 (TCP Socket Layer) from the issues.md document.
 
 ---
 
@@ -613,27 +720,29 @@ Create DTOs for device status reporting.
 - Labels: `android`, `network-layer`
 
 **Description:**
-Define all Retrofit API endpoints for communication with teacher server, including binary attachment downloads.
+Define all Retrofit API endpoints for HTTP communication with teacher server, including binary attachment downloads. Note: Real-time control signals (lock/unlock, status updates, raise hand) are handled via TCP socket (issue 6.8), not HTTP.
 
-**Related Requirements:** NET1, NET2, MAT7, MAT8 (Teacher), MAT15
+**Related Requirements:** NET1, NET2, MAT8 (Teacher), MAT15
 
 **Tasks:**
 - Add `@GET` method for fetching materials: `getMaterials()` - Returns a list of material IDs in presentation order
 - Add `@GET` method for material details: `getMaterialById(@Path id)`
 - Add `@GET` method for attachments: `getAttachment(@Path id)` - Returns `ResponseBody` for binary data (PDF, images)
+- Add `@GET` method for configuration: `getConfig()` - Fetches tablet configuration
 - Add `@POST` method for submitting response: `submitResponse(@Body)`
 - Add `@POST` method for batch responses: `submitBatchResponses(@Body)`
-- Add `@POST` method for device status: `reportDeviceStatus(@Body)`
-- Add `@POST` method for raise hand request: `raiseHand(@Body)` (MAT7)
+- Add `@POST` method for device registration: `registerDevice(@Body)` - Initial device pairing
 - Write tests with MockWebServer (including binary response mocking for attachments)
 
 **Acceptance Criteria:**
-- [ ] All endpoints defined
+- [ ] All HTTP endpoints defined
 - [ ] Attachment endpoint returns `ResponseBody` for binary data
 - [ ] Proper HTTP methods used
 - [ ] Path/query parameters configured
-- [ ] Raise hand endpoint included for MAT7
+- [ ] Registration endpoint included
 - [ ] 100% test coverage
+
+**Note:** Device status updates, raise hand, and lock/unlock commands use TCP socket (issue 6.8), not HTTP.
 
 ---
 
@@ -1126,22 +1235,28 @@ Create service to monitor battery level and report to teacher.
 - Labels: `android`, `device-management`
 
 **Description:**
-Track connection status to teacher server and report disconnections.
+Track connection status to teacher server and report disconnections. Uses TCP socket connection state as the primary connection indicator.
+
+**Related Requirements:** CON2A (device status grid)
 
 **Tasks:**
 - Create `ConnectionMonitorService.java`
-- Implement heartbeat mechanism (periodic ping)
-- Detect disconnections
-- Attempt reconnection with backoff
-- Update device status accordingly
+- Monitor TCP socket connection state (from TcpSocketManager, issue 6.8)
+- Implement heartbeat mechanism via TCP keep-alive
+- Detect disconnections (socket closed/timeout)
+- Trigger reconnection via TcpSocketManager with exponential backoff
+- Update device status (CONNECTED/DISCONNECTED) and notify UI
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Service created
+- [ ] TCP connection state monitoring working
 - [ ] Heartbeat mechanism working
-- [ ] Reconnection logic implemented
+- [ ] Reconnection logic delegated to TcpSocketManager
 - [ ] Status updates sent
 - [ ] 100% test coverage
+
+**Dependencies:** Issue 6.8 (TCP Socket Layer) from the issues.md document.
 
 ---
 
@@ -1150,24 +1265,26 @@ Track connection status to teacher server and report disconnections.
 - Labels: `android`, `device-management`  
 
 **Description:**
-Create "Raise Hand" button and signal functionality to request teacher assistance.
+Create "Raise Hand" button and signal functionality to request teacher assistance. The hand raised signal is sent via TCP socket (opcode 0x11) for immediate delivery.
 
 **Related Requirements:** MAT7, CON12
 
 **Tasks:**
-- Add Raise Hand button to status bar
+- Add Raise Hand button to status bar (issue 4.5 in issues.md document.)
 - Create `RaiseHandManager.java`
-- Send help request to teacher via API (triggers visual alert on teacher dashboard)
-- Show confirmation to student
-- Handle teacher response/acknowledgment
+- Send HAND_RAISED message (opcode 0x11) via TCP socket (TcpSocketManager, issue 6.8 in the issues.md document.)
+- Show confirmation to student (visual feedback that request was sent)
+- Handle teacher acknowledgment (optional - via TCP response)
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Raise Hand button functional
-- [ ] Request sent to teacher dashboard
+- [ ] Request sent via TCP socket
 - [ ] Confirmation shown to student
-- [ ] Teacher acknowledgment handled
+- [ ] Teacher acknowledgment handled (if implemented)
 - [ ] 100% test coverage
+
+**Dependencies:** Issue 6.8 (TCP Socket Layer ), Issue 4.5 (Session Status Bar) from the issues.md document.
 
 ---
 
@@ -1176,22 +1293,29 @@ Create "Raise Hand" button and signal functionality to request teacher assistanc
 - Labels: `android`, `device-management`
 
 **Description:**
-Implement ability for teacher to remotely lock student screen.
+Implement ability for teacher to remotely lock student screen. Lock/unlock commands are received via TCP socket (opcodes 0x01 and 0x02).
+
+**Related Requirements:** CON6
 
 **Tasks:**
 - Create `RemoteControlService.java`
-- Add screen lock endpoint to ApiService
-- Listen for lock commands via polling/push
-- Display lock overlay when commanded
-- Handle unlock command
+- Register as listener for TCP messages (via TcpSocketManager, issue 6.8)
+- Handle LOCK_SCREEN (0x01) command - display lock overlay
+- Handle UNLOCK_SCREEN (0x02) command - remove lock overlay
+- Handle REFRESH_CONFIG (0x03) command - trigger HTTP config refresh
+- Create lock overlay UI (full-screen, blocks input)
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Service created
-- [ ] Lock command received and handled
-- [ ] Lock overlay displayed
-- [ ] Unlock command working
+- [ ] TCP message listener registered
+- [ ] Lock command received and handled via TCP
+- [ ] Unlock command working via TCP
+- [ ] Config refresh command working
+- [ ] Lock overlay displayed correctly
 - [ ] 100% test coverage
+
+**Dependencies:** Issue 6.8 (TCP Socket Layer) from the issues.md document. 
 
 ---
 
@@ -1230,17 +1354,144 @@ Implement device registration/identification with teacher server on first launch
 **Tasks:**
 - Create device ID generation (UUID)
 - Create registration UI
-- Implement server discovery (mDNS or manual IP)
-- Send device info to server
+- Use server discovery from UDP layer (issue 6.9 from the issues.md document).
+- Send device info to server via HTTP registration endpoint
 - Store registration status
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Device ID generated
 - [ ] Registration UI created
-- [ ] Server discovery working
+- [ ] Server discovery integration (UDP)
 - [ ] Registration persisted
 - [ ] 100% test coverage
+
+**Dependencies:** Issue 6.9 (UDP Discovery Layer) from the issues.md document. 
+
+---
+
+### 6.8 [Android] Implement TCP Socket Layer
+
+- Labels: `android`, `device-management`, `network-layer`
+
+**Description:**
+Implement TCP socket communication for low-latency, real-time control signals between the Android client and teacher server. This handles bidirectional messaging using a binary protocol with opcodes as defined in the API Contract.
+
+**Critical Design Pattern - Heartbeat-Triggered Material Fetch:**
+Since the Windows server cannot initiate HTTP requests to Android clients, material distribution uses a heartbeat-triggered pattern:
+1. Android sends periodic `STATUS_UPDATE` (0x10) heartbeat via TCP
+2. Server checks if new materials are available for this device
+3. If materials pending, server responds with `FETCH_MATERIALS` (0x04)
+4. Android receives signal and initiates HTTP `GET /materials` to download content
+
+This pattern applies to all server-initiated content delivery (materials, config changes, etc.).
+
+**Related Requirements:** CON2A, CON6, CON12, NET1, SYS (30 device support)
+
+**Protocol Reference (API Contract Section 3):**
+- **Port:** 5912 (TCP_PORT)
+- **Message Structure:** 1-byte opcode + variable-length operand
+- **Server → Client:** LOCK_SCREEN (0x01), UNLOCK_SCREEN (0x02), REFRESH_CONFIG (0x03), FETCH_MATERIALS (0x04)
+- **Client → Server:** STATUS_UPDATE (0x10), HAND_RAISED (0x11)
+
+**Tasks:**
+- Create `TcpSocketManager.java` singleton/service class
+- Implement TCP socket connection to teacher server (using discovered IP from UDP layer)
+- Create `TcpMessage.java` base class with opcode and operand
+- Create message encoder/decoder for binary protocol:
+  - `TcpMessageEncoder.java` - serialize messages to bytes
+  - `TcpMessageDecoder.java` - deserialize bytes to messages
+- Implement specific message types:
+  - `LockScreenMessage.java` (opcode 0x01, no operand)
+  - `UnlockScreenMessage.java` (opcode 0x02, no operand)
+  - `RefreshConfigMessage.java` (opcode 0x03, no operand)
+  - `FetchMaterialsMessage.java` (opcode 0x04, no operand) - triggers HTTP material fetch
+  - `StatusUpdateMessage.java` (opcode 0x10, JSON operand)
+  - `HandRaisedMessage.java` (opcode 0x11, device ID operand)
+- Implement message listener interface for incoming commands
+- **Implement heartbeat-response handling:**
+  - Send periodic STATUS_UPDATE as heartbeat
+  - Listen for FETCH_MATERIALS response after each heartbeat
+  - Notify MaterialRepository when FETCH_MATERIALS received to trigger HTTP download
+- Handle connection lifecycle (connect, reconnect with backoff, disconnect)
+- Ensure thread-safe message sending
+- Handle unknown opcodes gracefully (log and ignore)
+- Write unit tests with mock sockets
+
+**Acceptance Criteria:**
+- [ ] TcpSocketManager created and manages connection lifecycle
+- [ ] Binary message encoding/decoding functional
+- [ ] All message types implemented per API Contract (including FETCH_MATERIALS 0x04)
+- [ ] Heartbeat-triggered material fetch pattern implemented
+- [ ] Listener interface for incoming server commands
+- [ ] Reconnection with exponential backoff
+- [ ] Heartbeat mechanism functional
+- [ ] Thread-safe implementation
+- [ ] Unknown opcodes handled gracefully
+- [ ] 100% test coverage
+- [ ] Checkstyle compliant
+- [ ] Javadoc for all public methods
+
+**Dependencies:** Issue 6.9 (UDP Discovery Layer - for server IP) from the issues.md document.
+
+---
+
+### 6.9 [Android] Implement UDP Discovery Layer
+
+- Labels: `android`, `device-management`, `network-layer`
+
+**Description:**
+Implement UDP broadcast listener for automatic teacher server discovery on the local network. This allows student tablets to discover the teacher laptop without manual IP configuration.
+
+**Related Requirements:** NET1 (LAN communication)
+
+**Protocol Reference (API Contract Section 1.1):**
+- **Port:** 5913 (UDP_PORT)
+- **Discovery Message Format:**
+  ```json
+  {
+    "type": "DISCOVERY",
+    "teacherIp": "192.168.1.100",
+    "httpPort": 5911,
+    "tcpPort": 5912,
+    "sessionId": "session-uuid",
+    "timestamp": "2023-10-27T10:00:00Z"
+  }
+  ```
+- Teacher broadcasts every 3 seconds
+
+**Tasks:**
+- Create `UdpDiscoveryManager.java` singleton/service class
+- Implement UDP broadcast listener on port 5913
+- Create `DiscoveryMessage.java` data class matching the JSON structure
+- Parse incoming discovery messages (JSON deserialization with Gson)
+- Validate discovery messages (check type, required fields)
+- Verify session identifier to connect to correct teacher session
+- Store discovered server info (teacherIp, httpPort, tcpPort, sessionId)
+- Provide observable discovery state for UI (LiveData: Searching/Found/Error)
+- Handle multiple discovery sources (if multiple teachers on network)
+- Implement timeout handling (no discovery after X seconds)
+- Handle network permission requirements
+- Write unit tests with mock UDP sockets
+
+**Acceptance Criteria:**
+- [ ] UdpDiscoveryManager created and listens on UDP port
+- [ ] Discovery message parsing functional
+- [ ] Session ID validation implemented
+- [ ] Server info stored and accessible
+- [ ] Observable discovery state for UI
+- [ ] Multiple teacher handling (show selection or use most recent)
+- [ ] Timeout handling implemented
+- [ ] Network permissions handled
+- [ ] 100% test coverage
+- [ ] Checkstyle compliant
+- [ ] Javadoc for all public methods
+
+**Technical Notes:**
+- Use `DatagramSocket` for UDP listening
+- Run listener on background thread (ExecutorService or Coroutine)
+- Consider Android 12+ restrictions on broadcasts
+- May need to request CHANGE_WIFI_MULTICAST_STATE permission for some devices
 
 ---
 
@@ -1276,7 +1527,7 @@ Create dedicated UI component to display teacher-defined Key Vocabulary terms wi
 - [ ] Checkstyle compliant
 - [ ] Javadoc for all public methods
 
-**Dependencies:** Issue 1.1 (Material Entity with vocabulary field), Issue 3.1 (Material DTOs), Issue 4 (UI screens)
+**Dependencies:** Issue 1.1 (Material Entity with vocabulary field), Issue 3.1 (Material DTOs), Issue 4 (UI screens) from the issues.md document.
 
 ---
 
@@ -1318,7 +1569,7 @@ Implement comprehensive handwriting annotation capability for worksheets and PDF
 - [ ] 100% test coverage
 - [ ] Checkstyle compliant
 
-**Dependencies:** Issue 4.3 (Worksheet Screen), Issue 2 (Repository Layer), Issue 3 (Network Layer), Issue 5.5 (Stylus Optimization)
+**Dependencies:** Issue 4.3 (Worksheet Screen), Issue 2 (Repository Layer), Issue 3 (Network Layer), Issue 5.5 (Stylus Optimisation) from the issues.md document.
 
 **Technical Notes:**
 - Consider third-party libraries: MyScript SDK, Google ML Kit (handwriting recognition - future), or custom Canvas implementation

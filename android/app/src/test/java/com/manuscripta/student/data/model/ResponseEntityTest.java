@@ -2,7 +2,6 @@ package com.manuscripta.student.data.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -10,6 +9,7 @@ import org.junit.Test;
 
 /**
  * Unit tests for {@link ResponseEntity} entity.
+ * Tests immutable entity construction and getters.
  */
 public class ResponseEntityTest {
 
@@ -21,7 +21,8 @@ public class ResponseEntityTest {
                 "4",
                 true,
                 1000L,
-                true
+                true,
+                "device-id-1"
         );
 
         assertNotNull(response);
@@ -31,76 +32,81 @@ public class ResponseEntityTest {
         assertTrue(response.isCorrect());
         assertEquals(1000L, response.getTimestamp());
         assertTrue(response.isSynced());
+        assertEquals("device-id-1", response.getDeviceId());
     }
 
     @Test
-    public void testAppConstructor() {
-        ResponseEntity response = new ResponseEntity("q-1", "4");
-
-        assertNotNull(response);
-        assertNotNull(response.getId());
-        assertFalse(response.getId().isEmpty());
-        assertEquals("q-1", response.getQuestionId());
-        assertEquals("4", response.getSelectedAnswer());
-        assertFalse(response.isCorrect());
-        assertTrue(response.getTimestamp() > 0);
-        assertFalse(response.isSynced());
-    }
-
-    @Test
-    public void testAppConstructorGeneratesUniqueIds() {
-        ResponseEntity response1 = new ResponseEntity("q-1", "A");
-        ResponseEntity response2 = new ResponseEntity("q-1", "B");
-
-        assertNotEquals(response1.getId(), response2.getId());
-    }
-
-    @Test
-    public void testSettersAndGetters() {
+    public void testGetters() {
         ResponseEntity response = new ResponseEntity(
-                "response-1",
-                "q-1",
+                "response-2",
+                "q-2",
                 "3",
                 false,
-                1000L,
-                false
+                2000L,
+                false,
+                "device-id-2"
         );
 
-        response.setQuestionId("q-2");
-        response.setSelectedAnswer("4");
-        response.setCorrect(true);
-        response.setTimestamp(2000L);
-        response.setSynced(true);
-
-        assertEquals("response-1", response.getId());
+        assertEquals("response-2", response.getId());
         assertEquals("q-2", response.getQuestionId());
-        assertEquals("4", response.getSelectedAnswer());
-        assertTrue(response.isCorrect());
+        assertEquals("3", response.getSelectedAnswer());
+        assertFalse(response.isCorrect());
         assertEquals(2000L, response.getTimestamp());
-        assertTrue(response.isSynced());
+        assertFalse(response.isSynced());
+        assertEquals("device-id-2", response.getDeviceId());
     }
 
     @Test
-    public void testSyncedStatus() {
-        ResponseEntity response = new ResponseEntity("q-1", "4");
-        assertFalse(response.isSynced());
+    public void testSyncedValues() {
+        // Test creating entity with synced = true
+        ResponseEntity syncedResponse = new ResponseEntity(
+                "response-sync-true",
+                "q-1",
+                "4",
+                false,
+                1000L,
+                true,
+                "device-synced"
+        );
+        assertTrue(syncedResponse.isSynced());
 
-        response.setSynced(true);
-        assertTrue(response.isSynced());
-
-        response.setSynced(false);
-        assertFalse(response.isSynced());
+        // Test creating entity with synced = false
+        ResponseEntity unsyncedResponse = new ResponseEntity(
+                "response-sync-false",
+                "q-1",
+                "4",
+                false,
+                1000L,
+                false,
+                "device-unsynced"
+        );
+        assertFalse(unsyncedResponse.isSynced());
     }
 
     @Test
-    public void testCorrectStatus() {
-        ResponseEntity response = new ResponseEntity("q-1", "4");
-        assertFalse(response.isCorrect());
+    public void testCorrectValues() {
+        // Test creating entity with correct = true
+        ResponseEntity correctResponse = new ResponseEntity(
+                "response-correct-true",
+                "q-1",
+                "4",
+                true,
+                1000L,
+                false,
+                "device-correct"
+        );
+        assertTrue(correctResponse.isCorrect());
 
-        response.setCorrect(true);
-        assertTrue(response.isCorrect());
-
-        response.setCorrect(false);
-        assertFalse(response.isCorrect());
+        // Test creating entity with correct = false
+        ResponseEntity incorrectResponse = new ResponseEntity(
+                "response-correct-false",
+                "q-1",
+                "4",
+                false,
+                1000L,
+                false,
+                "device-incorrect"
+        );
+        assertFalse(incorrectResponse.isCorrect());
     }
 }
