@@ -47,9 +47,9 @@ public class MaterialMapperTest {
         // Given
         Material domain = new Material(
                 "test-id-456",
-                MaterialType.LESSON,
-                "Test Lesson Title",
-                "Test lesson content about science",
+                MaterialType.READING,
+                "Test Reading Title",
+                "Test reading content about science",
                 "{\"author\":\"Professor\",\"subject\":\"Science\"}",
                 "[\"physics\",\"chemistry\"]",
                 9876543210L

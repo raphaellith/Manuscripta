@@ -19,7 +19,7 @@ public class MaterialTest {
     public void setUp() {
         this.material = new Material(
                 "test-id",
-                MaterialType.LESSON,
+                MaterialType.READING,
                 "Test Title",
                 "Test Content",
                 "{\"meta\":\"data\"}",
@@ -32,7 +32,7 @@ public class MaterialTest {
     public void testConstructorAndGetters() {
         assertNotNull(material);
         assertEquals("test-id", material.getId());
-        assertEquals(MaterialType.LESSON, material.getType());
+        assertEquals(MaterialType.READING, material.getType());
         assertEquals("Test Title", material.getTitle());
         assertEquals("Test Content", material.getContent());
         assertEquals("{\"meta\":\"data\"}", material.getMetadata());
@@ -92,7 +92,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         null,
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         "{}",
@@ -109,7 +109,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         "{}",
@@ -126,7 +126,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "   ",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         "{}",
@@ -160,7 +160,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         null,
                         "Content",
                         "{}",
@@ -177,7 +177,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "",
                         "Content",
                         "{}",
@@ -194,7 +194,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "   ",
                         "Content",
                         "{}",
@@ -211,7 +211,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         null,
                         "{}",
@@ -228,7 +228,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         null,
@@ -245,7 +245,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         "{}",
@@ -262,7 +262,7 @@ public class MaterialTest {
                 IllegalArgumentException.class,
                 () -> new Material(
                         "id",
-                        MaterialType.LESSON,
+                        MaterialType.READING,
                         "Title",
                         "Content",
                         "{}",
