@@ -13,23 +13,11 @@ This API contract conforms to requirements **NET1** (distributing material conte
 
 The system uses a **hybrid multi-channel networking approach** with separate protocols for different types of communication:
 
--   **HTTP (REST)**: For transmission of large chunks of data, such as lesson materials (Server→Client) and student responses (Client→Server). Messages are primarily transmitted in JSON format. **Note:** The Windows server cannot initiate HTTP requests to clients, so material distribution is triggered via TCP signals (see below).
--   **TCP (Socket)**: For low-latency control signals that require real-time transmission, such as lock screen commands (Server→Client) and student tablet status changes (Client→Server). Also used to notify clients when new materials are available.
+-   **HTTP (REST)**: For transmission of large chunks of data, such as lesson materials (Server→Client) and student responses (Client→Server). Messages are primarily transmitted in JSON format.
+-   **TCP (Socket)**: For low-latency control signals that require real-time transmission, such as lock screen commands (Server→Client) and student tablet status changes (Client→Server).
 -   **UDP Broadcasting**: For device discovery and pairing, allowing student tablets to discover the teacher laptop on the local network.
 
 If a performance bottleneck is observed during implementation, UDP may be introduced for additional message types.
-
-### Material Distribution Pattern (Heartbeat-Triggered Fetch)
-
-Since the Windows server cannot push HTTP requests to Android clients, material distribution uses a **heartbeat-triggered fetch** pattern:
-
-1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
-2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
-3. **If materials are available**, the server responds with a `FETCH_MATERIALS` (0x04) TCP message
-4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
-5. **Android Client** downloads individual materials via `GET /materials/{id}`
-
-This pattern ensures material distribution works within the constraint that the server cannot initiate connections to clients.
 
 **Connection Establishment:**
 Each protocol operates on its own channel. A connection is deemed established only after pairing procedures on **all channels** (HTTP and TCP) have been completed successfully.
@@ -60,28 +48,37 @@ The teacher laptop broadcasts its presence on the local network using UDP, allow
    - Teacher IP address
    - HTTP port
    - TCP port
-   - Session identifier
 
 2. **Student Discovery:** Student tablets listen for UDP broadcast messages on the same port. Upon receiving a broadcast, they:
    - Extract the teacher's IP address and port information
    - Initiate HTTP and TCP connections using the discovered information
-   - Complete the pairing handshake on both channels
+   - Complete the pairing handshake on both channels, as specified in `Pairing Process.md` §2
 
-**Broadcast Message Format:**
-```json
-{
-  "type": "DISCOVERY",
-  "teacherIp": "192.168.1.100",
-  "httpPort": 5911,
-  "tcpPort": 5912,
-  "sessionId": "session-uuid",
-  "timestamp": "2023-10-27T10:00:00Z"
-}
+**Broadcast Message Format (Binary):**
+
+UDP discovery messages use the same opcode-operand binary format as TCP messages for consistency and efficiency.
+
+| Field | Offset | Size | Description |
+|-------|--------|------|-------------|
+| Opcode | 0 | 1 byte | `0x00` = DISCOVERY |
+| IP Address | 1 | 4 bytes | IPv4 address (network byte order, big-endian) |
+| HTTP Port | 5 | 2 bytes | Unsigned, little-endian |
+| TCP Port | 7 | 2 bytes | Unsigned, little-endian |
+
+**Total message size:** 9 bytes
+
+**Example: Discovery Message for 192.168.1.100, HTTP 5911, TCP 5912**
+```
+Byte 0:      0x00                         (DISCOVERY opcode)
+Bytes 1-4:   0xC0 0xA8 0x01 0x64          (192.168.1.100)
+Bytes 5-6:   0x17 0x17                    (5911 little-endian)
+Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 ```
 
 **Notes:**
 - The teacher application should broadcast discovery messages at regular intervals (3 seconds).
-- Student tablets should verify the session identifier to ensure they're connecting to the correct teacher session.
+- IP address uses network byte order (big-endian) as per standard networking conventions.
+- Ports use little-endian to maintain consistency with TCP message operands.
 
 ---
 
@@ -161,6 +158,24 @@ Tablet configuration is an object associated with lesson materials but handled s
 
 Students submit their work to the teacher.
 
+### 2.4. Device Pairing (Client -> Server)
+
+Used during the pairing handshake to register a student device with the teacher server. See `Pairing Process.md` §2 for the full pairing sequence.
+
+#### Register Device
+-   **Endpoint:** `POST /pair`
+-   **Body:**
+    ```json
+    {
+      "deviceId": "device-uuid-generated-by-client"
+    }
+    ```
+-   **Response:** `201 Created`
+    ```json
+    {} // Empty 201 to confirm successful pairing
+    ```
+-   **Error Response:** `409 Conflict` (if deviceId is already paired)
+
 #### Submit Response
 Submits a single answer to a question.
 
@@ -171,7 +186,7 @@ Submits a single answer to a question.
       "id": "resp-uuid-generated-by-client",
       "questionId": "q-uuid-1",
       "materialId": "mat-uuid-1",
-      "deviceId": "device-uuid",
+      "studentId": "device-id-or-student-uuid",
       "answer": "3",
       "timestamp": "2023-10-27T10:05:00Z"
     }
@@ -196,44 +211,73 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
 
 ---
 
-## 3. TCP Protocol (Real-time Control)
+## 3. Binary Protocol (TCP & UDP)
 
-Used for low-latency control signals that require immediate transmission. TCP messages use a **binary protocol** with opcode-based message structure.
+Both TCP and UDP use a unified **binary protocol** with opcode-based message structure for consistency and efficiency.
 
-### 3.1. TCP Message Structure
+### 3.1. Message Structure
 
-Each TCP message consists of:
-1. **Opcode** (1 byte, unsigned, little-endian): Identifies the message type
+Each binary message consists of:
+1. **Opcode** (1 byte, unsigned): Identifies the message type
 2. **Operand** (variable length, optional): Custom data associated with the message type
 
 The length and encoding/decoding of the operand depends on the specific opcode.
+
+### 3.2. Opcode Registry
+
+| Range | Purpose |
+|-------|---------|
+| `0x00` | UDP Discovery |
+| `0x01` - `0x0F` | Server → Client Control (TCP) |
+| `0x10` - `0x1F` | Client → Server Status (TCP) |
+| `0x20` - `0x2F` | Pairing (TCP) |
+
+### 3.3. UDP Messages
+
+#### Server Broadcast
+
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x00` | DISCOVERY | IP (4 bytes) + HTTP port (2 bytes) + TCP port (2 bytes) | Broadcasts server presence |
+
+See §1.1 for detailed format.
+
+### 3.4. TCP Control Messages (Server → Client)
 
 | Opcode | Name | Operand | Description |
 |--------|------|---------|-------------|
 | `0x01` | LOCK_SCREEN | None | Locks the student's screen |
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
-| `0x04` | FETCH_MATERIALS | None | Signals client to fetch materials via HTTP GET /materials |
 
-**Heartbeat Response Pattern:**
-When the server receives a `STATUS_UPDATE` (0x10) from a client, it checks if there are pending materials for that device. If so, it responds with `FETCH_MATERIALS` (0x04). The client then initiates an HTTP request to download materials. This pattern is necessary because the Windows server cannot initiate HTTP connections to clients.
+### 3.5. TCP Pairing Messages
 
-**Example: Fetch Materials Message**
-```
-Byte 0: 0x04 (FETCH_MATERIALS opcode)
-```
+Used during the pairing handshake to establish TCP connectivity. See `Pairing Process.md` §2 for the full pairing sequence.
 
-**Example: Lock Screen Message**
-```
-Byte 0: 0x01 (LOCK_SCREEN opcode)
-```
+#### Client → Server Pairing Request
 
-**Example: Unlock Screen Message**
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x20` | PAIRING_REQUEST | Device ID (UTF-8 string) | Client requests pairing with server |
+
+**Example: Pairing Request Message**
 ```
-Byte 0: 0x02 (UNLOCK_SCREEN opcode)
+Byte 0: 0x20 (PAIRING_REQUEST opcode)
+Bytes 1-N: "device-uuid" (UTF-8 encoded device ID)
 ```
 
-#### Client → Server Status Updates
+#### Server → Client Pairing Acknowledgement
+
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x21` | PAIRING_ACK | None | Server acknowledges successful TCP pairing |
+
+**Example: Pairing Acknowledgement Message**
+```
+Byte 0: 0x21 (PAIRING_ACK opcode)
+```
+
+### 3.6. TCP Status Messages (Client → Server)
 
 | Opcode | Name | Operand | Description |
 |--------|------|---------|-------------|
@@ -263,7 +307,7 @@ Byte 0: 0x11 (HAND_RAISED opcode)
 Bytes 1-N: "device-123" (UTF-8 encoded device ID)
 ```
 
-### 3.3. Extensibility
+### 3.7. Extensibility
 
 Additional opcodes can be defined as needed. Both applications should:
 - Maintain a registry of opcode definitions
