@@ -31,3 +31,12 @@ The Service layer provides the interface which downstream layers should use to a
     (g) Retrieving a question by its uuid.
     (h) Deleting a question.
     (i) Deleting a material, and all associated questions.
+
+
+(2) The Service layer should include a Response Service class which manages responses to questions. The class must provide the following high-level functionalities:
+
+    (a) Creating a response to a question.
+    (b) Modifying existing data fields on a response.
+    (c) Retrieving all responses under a question.
+    (d) Retrieving a response by its uuid.
+    (e) Deleting a response.
