@@ -32,7 +32,8 @@ public final class ResponseMapper {
                 entity.getSelectedAnswer(),
                 entity.isCorrect(),
                 entity.getTimestamp(),
-                entity.isSynced()
+                entity.isSynced(),
+                entity.getDeviceId()
         );
     }
 
@@ -50,7 +51,8 @@ public final class ResponseMapper {
                 domain.getSelectedAnswer(),
                 domain.isCorrect(),
                 domain.getTimestamp(),
-                domain.isSynced()
+                domain.isSynced(),
+                domain.getDeviceId()
         );
     }
 }

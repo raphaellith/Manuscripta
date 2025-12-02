@@ -47,6 +47,10 @@ public class ResponseEntity {
     /** Indicates whether this response has been synced to the teacher's Windows app. */
     private boolean synced;
 
+    /** The device identifier for the tablet that submitted this response. */
+    @NonNull
+    private final String deviceId;
+
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
@@ -57,19 +61,22 @@ public class ResponseEntity {
      * @param isCorrect      Whether the response is correct
      * @param timestamp      The timestamp when the response was recorded
      * @param synced         Whether the response has been synced
+     * @param deviceId       The device identifier for the tablet that submitted this response
      */
     public ResponseEntity(@NonNull String id,
                           @NonNull String questionId,
                           @NonNull String selectedAnswer,
                           boolean isCorrect,
                           long timestamp,
-                          boolean synced) {
+                          boolean synced,
+                          @NonNull String deviceId) {
         this.id = id;
         this.questionId = questionId;
         this.selectedAnswer = selectedAnswer;
         this.isCorrect = isCorrect;
         this.timestamp = timestamp;
         this.synced = synced;
+        this.deviceId = deviceId;
     }
 
     // Getters
@@ -99,5 +106,10 @@ public class ResponseEntity {
 
     public boolean isSynced() {
         return synced;
+    }
+
+    @NonNull
+    public String getDeviceId() {
+        return deviceId;
     }
 }

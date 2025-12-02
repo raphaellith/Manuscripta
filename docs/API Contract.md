@@ -171,7 +171,7 @@ Submits a single answer to a question.
       "id": "resp-uuid-generated-by-client",
       "questionId": "q-uuid-1",
       "materialId": "mat-uuid-1",
-      "studentId": "device-id-or-student-uuid",
+      "deviceId": "device-uuid",
       "answer": "3",
       "timestamp": "2023-10-27T10:05:00Z"
     }
