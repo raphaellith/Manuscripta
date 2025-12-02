@@ -11,7 +11,7 @@ public class PollMaterialEntity : MaterialEntity
 {
     private PollMaterialEntity() : base() { }
 
-    public PollMaterialEntity(Guid id, string title, string content, long? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
+    public PollMaterialEntity(Guid id, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
         : base(id, title, content, MaterialType.POLL, timestamp, metadata, vocabularyTerms)
     {
     }

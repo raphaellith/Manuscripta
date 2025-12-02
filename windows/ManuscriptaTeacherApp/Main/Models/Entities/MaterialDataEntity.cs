@@ -33,7 +33,7 @@ public class MaterialDataEntity
     public JsonArray VocabularyTerms { get; set; } = new();
 
     [Required]
-    public long Timestamp {get; set;}
+    public DateTime Timestamp {get; set;}
     
     // TODO: Change this to type HashSet<SessionEntity> 
     // The HashSet contains SessionEntity instances for which

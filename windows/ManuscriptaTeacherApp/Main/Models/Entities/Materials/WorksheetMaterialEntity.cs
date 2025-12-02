@@ -11,7 +11,7 @@ public class WorksheetMaterialEntity : MaterialEntity
 {
     private WorksheetMaterialEntity() : base() { }
 
-    public WorksheetMaterialEntity(Guid id, string title, string content, long? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
+    public WorksheetMaterialEntity(Guid id, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
         : base(id, title, content, MaterialType.WORKSHEET, timestamp, metadata, vocabularyTerms)
     {
     }
