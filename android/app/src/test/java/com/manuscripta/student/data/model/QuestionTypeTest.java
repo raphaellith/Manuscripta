@@ -15,13 +15,13 @@ public class QuestionTypeTest {
     public void testRequiresOptions() {
         assertTrue(QuestionType.MULTIPLE_CHOICE.requiresOptions());
         assertTrue(QuestionType.TRUE_FALSE.requiresOptions());
-        assertFalse(QuestionType.SHORT_ANSWER.requiresOptions());
+        assertFalse(QuestionType.WRITTEN_ANSWER.requiresOptions());
     }
 
     @Test
     public void testGetDisplayName() {
         assertEquals("Multiple Choice", QuestionType.MULTIPLE_CHOICE.getDisplayName());
         assertEquals("True/False", QuestionType.TRUE_FALSE.getDisplayName());
-        assertEquals("Short Answer", QuestionType.SHORT_ANSWER.getDisplayName());
+        assertEquals("Written Answer", QuestionType.WRITTEN_ANSWER.getDisplayName());
     }
 }

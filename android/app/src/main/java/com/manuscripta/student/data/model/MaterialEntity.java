@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey;
 
 /**
  * Room entity representing educational material in the Manuscripta system.
- * Materials can be lessons, quizzes, worksheets, or polls delivered from the teacher's Windows app.
+ * Materials can be readings, quizzes, worksheets, or polls delivered from the teacher's Windows app.
  *
  * <p>Entity IDs are persistent across services - materials created by the Windows teacher
  * application will have IDs assigned by that application, and the Android client preserves
@@ -24,7 +24,7 @@ public class MaterialEntity {
     private final String id;
 
     /**
-     * The type of material (LESSON, QUIZ, WORKSHEET, POLL).
+     * The type of material (READING, QUIZ, WORKSHEET, POLL).
      */
     @NonNull
     private final MaterialType type;

@@ -78,9 +78,9 @@ public class MaterialDaoTest {
         materialDao.insert(defaultMaterial);
         
         MaterialEntity material2 = new MaterialEntity(
-                "mat-2", 
-                MaterialType.LESSON, 
-                "Lesson 1",
+                "mat-2",
+                MaterialType.READING,
+                "Reading 1",
                 "Lesson Content",
                 "{}",
                 "[]",
@@ -100,14 +100,14 @@ public class MaterialDaoTest {
                 "Quiz",
                 "Content", "{}", "[]", 0
         );
-        MaterialEntity lesson = new MaterialEntity(
-                "mat-2", 
-                MaterialType.LESSON, 
-                "Lesson",
+        MaterialEntity reading = new MaterialEntity(
+                "mat-2",
+                MaterialType.READING,
+                "Reading",
                 "Content", "{}", "[]", 0
         );
         materialDao.insert(quiz);
-        materialDao.insert(lesson);
+        materialDao.insert(reading);
 
         List<MaterialEntity> quizzes = materialDao.getByType(MaterialType.QUIZ);
         assertEquals(1, quizzes.size());
@@ -171,7 +171,7 @@ public class MaterialDaoTest {
 
     @Test
     public void testInsertAll() {
-        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson 1", "C", "{}", "[]", 0);
+        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.READING, "Reading 1", "C", "{}", "[]", 0);
         materialDao.insertAll(Arrays.asList(defaultMaterial, mat2));
 
         assertEquals(2, materialDao.getCount());
