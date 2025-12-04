@@ -55,7 +55,7 @@ public class MainDbContextTests
             ctx.Questions.Add(question);
             ctx.SaveChanges();
 
-            var response = new ResponseDataEntity(responseId, questionId, "1", true);
+            var response = new ResponseDataEntity(responseId, questionId, Guid.NewGuid(), "1", true);
             ctx.Responses.Add(response);
             ctx.SaveChanges();
         }
