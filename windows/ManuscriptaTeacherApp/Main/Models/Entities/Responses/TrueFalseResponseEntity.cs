@@ -12,8 +12,8 @@ public class TrueFalseResponseEntity : ResponseEntity
 
     private TrueFalseResponseEntity() : base() { }
 
-    public TrueFalseResponseEntity(Guid id, Guid questionId, bool answer, DateTime? timestamp = null, bool? isCorrect = null)
-        : base(id, questionId, timestamp, isCorrect)
+    public TrueFalseResponseEntity(Guid id, Guid questionId, Guid deviceId, bool answer, DateTime? timestamp = null, bool? isCorrect = null)
+        : base(id, questionId, deviceId, timestamp, isCorrect)
     {
         Answer = answer;
     }

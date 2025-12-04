@@ -15,16 +15,18 @@ public class ResponseDataEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answer = "Yes";
         var timestamp = DateTime.UtcNow;
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, answer, true, timestamp, true);
+        var r = new ResponseDataEntity(id, questionId, answer, deviceId, true, timestamp);
 
         // Assert
         Assert.Equal(id, r.Id);
         Assert.Equal(questionId, r.QuestionId);
         Assert.Equal(answer, r.Answer);
+        Assert.Equal(deviceId, r.DeviceId);
         Assert.True(r.IsCorrect);
         Assert.Equal(timestamp, r.Timestamp);
     }
@@ -35,10 +37,11 @@ public class ResponseDataEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, "answer");
+        var r = new ResponseDataEntity(id, questionId, "answer", deviceId);
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -51,14 +54,16 @@ public class ResponseDataEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, "answer");
+        var r = new ResponseDataEntity(id, questionId, "answer", deviceId);
 
         // Assert
         Assert.Equal(id, r.Id);
         Assert.Equal(questionId, r.QuestionId);
         Assert.Equal("answer", r.Answer);
+        Assert.Equal(deviceId, r.DeviceId);
         Assert.False(r.IsCorrect); // Default is false
     }
 }

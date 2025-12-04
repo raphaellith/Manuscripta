@@ -13,8 +13,8 @@ public class MultipleChoiceResponseEntity : ResponseEntity
 
     private MultipleChoiceResponseEntity() : base() { }
 
-    public MultipleChoiceResponseEntity(Guid id, Guid questionId, int answerIndex, DateTime? timestamp = null, bool? isCorrect = null)
-        : base(id, questionId, timestamp, isCorrect)
+    public MultipleChoiceResponseEntity(Guid id, Guid questionId, Guid deviceId, int answerIndex, DateTime? timestamp = null, bool? isCorrect = null)
+        : base(id, questionId, deviceId, timestamp, isCorrect)
     {
         // Allow any integer here (including negative). Business-rule validation
         // (e.g., index range checks and type matching) is performed in the

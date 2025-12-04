@@ -12,16 +12,18 @@ public class MultipleChoiceResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var answerIndex = 2;
         var timestamp = DateTime.UtcNow;
         var isCorrect = true;
 
         // Act
-        var entity = new MultipleChoiceResponseEntity(id, questionId, answerIndex, timestamp, isCorrect);
+        var entity = new MultipleChoiceResponseEntity(id, questionId, deviceId, answerIndex, timestamp, isCorrect);
 
         // Assert
         Assert.Equal(id, entity.Id);
         Assert.Equal(questionId, entity.QuestionId);
+        Assert.Equal(deviceId, entity.DeviceId);
         Assert.Equal(answerIndex, entity.AnswerIndex);
         Assert.Equal(timestamp, entity.Timestamp);
         Assert.Equal(isCorrect, entity.IsCorrect);
@@ -33,10 +35,11 @@ public class MultipleChoiceResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var entity = new MultipleChoiceResponseEntity(id, questionId, 1);
+        var entity = new MultipleChoiceResponseEntity(id, questionId, deviceId, 1);
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -49,9 +52,10 @@ public class MultipleChoiceResponseEntityTests
         // Arrange
         var id = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
 
         // Act
-        var entity = new MultipleChoiceResponseEntity(id, questionId, 0, null, null);
+        var entity = new MultipleChoiceResponseEntity(id, questionId, deviceId, 0, null, null);
 
         // Assert
         Assert.Null(entity.IsCorrect);
