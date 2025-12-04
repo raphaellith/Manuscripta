@@ -43,7 +43,7 @@ The Service layer provides the interface which downstream layers should use to a
 (3) The Service layer should include a Session Service class which manages sessions. The class must provide the following high-level functionalities:
 
     (a) Creating a session.
-    (b) Modifying existing data fields on a session, including its session status.
+    (b) Activating, pausing, completing or cancelling a session by modifying its session status, start time and end time.
     (c) Retrieving all sessions.
     (d) Retrieving a session by its uuid.
     (e) Deleting a session.
