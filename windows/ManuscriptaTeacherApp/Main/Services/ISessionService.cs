@@ -49,7 +49,7 @@ public interface ISessionService
     Task<IEnumerable<SessionEntity>> GetAllSessionsAsync();
 
     /// <summary>
-    /// Retrieves a session by its uuid.
+    /// Retrieves a session by its ID.
     /// §2(3)(d)
     /// </summary>
     Task<SessionEntity?> GetSessionByIdAsync(Guid id);
