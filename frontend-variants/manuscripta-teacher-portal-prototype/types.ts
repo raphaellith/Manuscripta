@@ -16,6 +16,16 @@ export interface Unit {
   description: string;
 }
 
+export interface Collection {
+  id: string;
+  name: string;           // e.g., "Year 7 History", "GCSE Cohort 2025"
+  description?: string;
+  color?: string;         // Accent color for visual distinction
+  unitIds: string[];      // Units belonging to this collection
+}
+
+export type LibraryVariant = 'tree' | 'columns' | 'cards';
+
 export interface VocabularyTerm {
   term: string;
   definition: string;

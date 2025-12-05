@@ -7,7 +7,7 @@ import { AiAssistant } from './components/AiAssistant';
 import { ClassroomControl } from './components/ClassroomControl';
 import { ResponsesView } from './components/ResponsesView';
 import { Settings } from './components/Settings';
-import type { View, ContentItem, LessonFolder, Unit } from './types';
+import type { View, ContentItem, LessonFolder, Unit, Collection } from './types';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 
 
@@ -93,6 +93,37 @@ const initialLessonFolders: LessonFolder[] = Object.values(initialContentItems.r
     return acc;
   }, {} as Record<string, LessonFolder>));
 
+// Sample Collections - organizing units by cohort/subject area
+const initialCollections: Collection[] = [
+  {
+    id: 'collection-1',
+    name: 'Year 7 History',
+    description: 'History curriculum for Year 7 students',
+    color: '#FF6106',
+    unitIds: ['unit-0', 'unit-2', 'unit-3'], // Norman Conquest, Medieval Life, Viking Age
+  },
+  {
+    id: 'collection-2',
+    name: 'Year 8 History',
+    description: 'History curriculum for Year 8 students',
+    color: '#15502E',
+    unitIds: ['unit-1'], // The Roman Empire
+  },
+  {
+    id: 'collection-3',
+    name: 'GCSE Art & Design',
+    description: 'Art and Design materials for GCSE students',
+    color: '#ABD8F9',
+    unitIds: ['unit-4'], // Digital Art Techniques
+  },
+  {
+    id: 'collection-4',
+    name: 'A-Level Computer Science',
+    description: 'Advanced computing resources',
+    color: '#FFE782',
+    unitIds: ['unit-5'], // AI Research Papers
+  },
+];
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('lesson-library');
@@ -135,6 +166,7 @@ const App: React.FC = () => {
         return <ClassDashboard />;
       case 'lesson-library':
         return <LessonLibrary 
+                    collections={initialCollections}
                     units={units}
                     lessonFolders={lessonFolders}
                     contentItems={contentItems} 
