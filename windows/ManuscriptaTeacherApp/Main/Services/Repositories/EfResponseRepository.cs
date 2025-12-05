@@ -80,4 +80,21 @@ public class EfResponseRepository : IResponseRepository
             await _ctx.SaveChangesAsync();
         }
     }
+
+    /// <summary>
+    /// Deletes all responses associated with a specific question.
+    /// Implements orphan removal per PersistenceAndCascadingRules.md §2(2).
+    /// </summary>
+    public async Task DeleteByQuestionIdAsync(Guid questionId)
+    {
+        var responses = await _ctx.Responses
+            .Where(r => r.QuestionId == questionId)
+            .ToListAsync();
+
+        if (responses.Any())
+        {
+            _ctx.Responses.RemoveRange(responses);
+            await _ctx.SaveChangesAsync();
+        }
+    }
 }

@@ -14,8 +14,9 @@ public class MainDbContext : DbContext
     // Create a DbSet<TEntity> property for each entity set, corresponding to a database table
     public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
-    public DbSet<ResponseDataEntity> Responses { get; set; }
-    public DbSet<SessionDataEntity> Sessions { get; set; }
+    // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
+    // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
+    // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
 
     // Called when MainDbContext has been initialized but before the model has been secured and used to initialize the context.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -50,35 +51,9 @@ public class MainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure ResponseDataEntity
-        modelBuilder.Entity<ResponseDataEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.QuestionId);
-            entity.HasIndex(e => e.Timestamp);
-            
-            // Configure relationship with QuestionDataEntity
-            entity.HasOne(r => r.Question)
-                .WithMany()
-                .HasForeignKey(r => r.QuestionId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // Configure SessionDataEntity
-        modelBuilder.Entity<SessionDataEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.SessionStatus).HasConversion<string>();
-            entity.HasIndex(e => e.MaterialId);
-            entity.HasIndex(e => e.SessionStatus);
-            entity.HasIndex(e => e.DeviceId);
-            entity.HasIndex(e => e.StartTime);
-
-            // Configure relationship with MaterialDataEntity
-            entity.HasOne(s => s.Material)
-                .WithMany()
-                .HasForeignKey(s => s.MaterialId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
+        // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only
+        // and are managed by in-memory repositories (InMemoryResponseRepository, InMemorySessionRepository).
+        // Orphan removal for responses when a question is deleted (§2(2)) is handled at the service layer.
     }
 }
