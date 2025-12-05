@@ -372,11 +372,11 @@ export const ResponsesView: React.FC<ResponsesViewProps> = ({ contentItems }) =>
                                                 return (
                                                     <div
                                                         key={response.id}
-                                                        className={`p-3 rounded-lg border transition-all ${
+                                                        className={`p-3 rounded-lg border-2 transition-all ${
                                                             isMarked 
                                                                 ? isMarkedCorrect 
-                                                                    ? 'border-brand-green bg-brand-green/20' 
-                                                                    : 'border-red-400 bg-red-100'
+                                                                    ? 'border-brand-green bg-brand-green/10' 
+                                                                    : 'border-red-400 bg-red-50'
                                                                 : 'bg-white border-gray-200 hover:border-brand-orange/30'
                                                         }`}
                                                     >
@@ -541,7 +541,11 @@ export const ResponsesView: React.FC<ResponsesViewProps> = ({ contentItems }) =>
                                                                 const isMarkedCorrect = manualMarks[response.id] ?? response.isCorrect;
 
                                                                 return (
-                                                                    <tr key={response.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                                                    <tr key={response.id} className={`border-b transition-all ${
+                                                                        isMarkedCorrect 
+                                                                            ? 'bg-brand-green/10 border-brand-green/20' 
+                                                                            : 'bg-red-50 border-red-100'
+                                                                    }`}>
                                                                         <td className="py-2 px-3 font-sans text-text-body">
                                                                             {response.deviceId.replace('device-', 'Tablet ')}
                                                                         </td>
