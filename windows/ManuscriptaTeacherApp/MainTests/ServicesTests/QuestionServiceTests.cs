@@ -510,16 +510,27 @@ public class QuestionServiceTests
         // Arrange - Per PersistenceAndCascadingRules.md §2(2): 
         // Deletion of a question must delete any responses associated with it
         var questionId = Guid.NewGuid();
+        
+        // Use a sequence to verify the order of calls
+        var callOrder = new List<string>();
+        
         _mockResponseRepo.Setup(r => r.DeleteByQuestionIdAsync(questionId))
+            .Callback(() => callOrder.Add("DeleteResponses"))
             .Returns(Task.CompletedTask);
         _mockQuestionRepo.Setup(r => r.DeleteAsync(questionId))
+            .Callback(() => callOrder.Add("DeleteQuestion"))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.DeleteQuestionAsync(questionId);
 
-        // Assert - responses deleted first, then question
+        // Assert - verify both methods were called
         _mockResponseRepo.Verify(r => r.DeleteByQuestionIdAsync(questionId), Times.Once);
         _mockQuestionRepo.Verify(r => r.DeleteAsync(questionId), Times.Once);
+        
+        // Assert - verify responses were deleted BEFORE the question (order matters for orphan removal)
+        Assert.Equal(2, callOrder.Count);
+        Assert.Equal("DeleteResponses", callOrder[0]);
+        Assert.Equal("DeleteQuestion", callOrder[1]);
     }
 }

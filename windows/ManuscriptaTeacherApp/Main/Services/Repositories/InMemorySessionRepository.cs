@@ -32,7 +32,9 @@ public class InMemorySessionRepository : ISessionRepository
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
-        _sessions.TryAdd(entity.Id, entity);
+        if (!_sessions.TryAdd(entity.Id, entity))
+            throw new InvalidOperationException($"Session with ID {entity.Id} already exists.");
+        
         return Task.CompletedTask;
     }
 
@@ -41,7 +43,7 @@ public class InMemorySessionRepository : ISessionRepository
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
-        _sessions[entity.Id] = entity;
+        _sessions.AddOrUpdate(entity.Id, entity, (key, oldValue) => entity);
         return Task.CompletedTask;
     }
 

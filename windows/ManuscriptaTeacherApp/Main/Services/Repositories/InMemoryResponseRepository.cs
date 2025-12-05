@@ -35,7 +35,9 @@ public class InMemoryResponseRepository : IResponseRepository
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
-        _responses.TryAdd(entity.Id, entity);
+        if (!_responses.TryAdd(entity.Id, entity))
+            throw new InvalidOperationException($"Response with ID {entity.Id} already exists.");
+        
         return Task.CompletedTask;
     }
 
@@ -44,7 +46,7 @@ public class InMemoryResponseRepository : IResponseRepository
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
-        _responses[entity.Id] = entity;
+        _responses.AddOrUpdate(entity.Id, entity, (key, oldValue) => entity);
         return Task.CompletedTask;
     }
 
