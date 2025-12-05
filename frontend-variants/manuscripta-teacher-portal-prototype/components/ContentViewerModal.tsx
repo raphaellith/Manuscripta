@@ -11,8 +11,8 @@ export const ContentViewerModal: React.FC<ContentViewerModalProps> = ({ contentI
     // If it's a PDF type, show only the PDF viewer
     if (contentItem.type === 'PDF' && contentItem.pdfPath) {
         return (
-            <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col animate-fade-in-up overflow-hidden">
+            <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-[200] p-4 pt-24">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col animate-fade-in-up overflow-hidden">
                     <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white">
                         <div>
                             <h2 className="text-2xl font-serif text-text-heading">{contentItem.title}</h2>
@@ -49,8 +49,8 @@ export const ContentViewerModal: React.FC<ContentViewerModalProps> = ({ contentI
 
     // For lessons/readings with embedded images or regular content
     return (
-        <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in-up overflow-hidden">
+        <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-[200] p-4 pt-24">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col animate-fade-in-up overflow-hidden">
                 <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white">
                     <div>
                         <div className="flex items-center gap-3">
