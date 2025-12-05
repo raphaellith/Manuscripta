@@ -12,7 +12,24 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 
 
 const initialContentItems: ContentItem[] = [
-  { id: '1', unit: 'Norman Conquest', lessonNumber: 1, lessonTitle: 'The Battle of Hastings', title: 'Introduction to Hastings', type: 'Lesson', subject: 'History - Year 7-9', created: 'Oct 20, 2025', status: 'Deployed', content: '<h1>The Battle of Hastings</h1><p>The Battle of Hastings was fought on <b>14 October 1066</b> between the Norman-French army of William, the Duke of Normandy, and an English army under the Anglo-Saxon King Harold Godwinson, beginning the Norman conquest of England.</p><ul><li>Key Figure: William the Conqueror</li><li>Key Figure: Harold Godwinson</li></ul>' },
+  { 
+    id: '1', 
+    unit: 'Norman Conquest', 
+    lessonNumber: 1, 
+    lessonTitle: 'The Battle of Hastings', 
+    title: 'Introduction to Hastings', 
+    type: 'Lesson', 
+    subject: 'History - Year 7-9', 
+    created: 'Oct 20, 2025', 
+    status: 'Deployed', 
+    readingAge: 11,
+    vocabularyTerms: [
+      { term: 'Norman Conquest', definition: 'The invasion and occupation of England by William of Normandy in 1066.' },
+      { term: 'Anglo-Saxon', definition: 'The Germanic peoples who settled in England from the 5th century, and their culture and language.' },
+      { term: 'Succession', definition: 'The process by which someone inherits a position of power, like a throne.' },
+    ],
+    content: '<h1>The Battle of Hastings</h1><p>The Battle of Hastings was fought on <b>14 October 1066</b> between the Norman-French army of William, the Duke of Normandy, and an English army under the Anglo-Saxon King Harold Godwinson, beginning the Norman conquest of England.</p><ul><li>Key Figure: William the Conqueror</li><li>Key Figure: Harold Godwinson</li></ul>' 
+  },
   { id: '1a', unit: 'Norman Conquest', lessonNumber: 1, lessonTitle: 'The Battle of Hastings', title: 'Key Figures Worksheet', type: 'Worksheet', subject: 'History - Year 7-9', created: 'Oct 20, 2025', status: 'Draft', content: '<h3>Worksheet: Key Figures of 1066</h3><p><b>Instructions:</b> For each key figure below, research and write down their claim to the English throne and their role in the events of 1066.</p><br/><h4>1. William, Duke of Normandy</h4><p><b>Claim to the throne:</b></p><br/><p><b>Role in 1066:</b></p><br/><br/><h4>2. Harold Godwinson</h4><p><b>Claim to the throne:</b></p><br/><p><b>Role in 1066:</b></p><br/><br/><h4>3. Harald Hardrada</h4><p><b>Claim to the throne:</b></p><br/><p><b>Role in 1066:</b></p><br/><br/><h4>4. Edward the Confessor</h4><p><b>Role before 1066:</b></p><br/><p><b>Connection to the succession crisis:</b></p>' },
   { id: '1b', unit: 'Norman Conquest', lessonNumber: 1, lessonTitle: 'The Battle of Hastings', title: 'Battle Events Quiz', type: 'Quiz', subject: 'History - Year 7-9', created: 'Oct 20, 2025', status: 'Deployed', content: '<h3>Quiz: The Battle of Hastings</h3><p><b>Instructions:</b> Choose the best answer for each question.</p><br/><p><b>1. What was the date of the Battle of Hastings?</b></p><ul><li>A) 25th December 1066</li><li>B) 14th October 1066</li><li>C) 4th July 1066</li></ul><br/><p><b>2. Where did the battle take place?</b></p><ul><li>A) In London</li><li>B) Near the modern town of Battle, East Sussex</li><li>C) In Normandy, France</li></ul><br/><p><b>3. How was King Harold Godwinson famously depicted to have died in the Bayeux Tapestry?</b></p><ul><li>A) From a sword wound</li><li>B) Falling from his horse</li><li>C) With an arrow to the eye</li></ul>' },
   { id: '4', unit: 'Norman Conquest', lessonNumber: 2, lessonTitle: 'The Domesday Book', title: 'Understanding the Domesday Book', type: 'Lesson', subject: 'History - Year 7-9', created: 'Oct 21, 2025', status: 'Draft', content: '<h1>The Domesday Book</h1><p>The Domesday Book is a manuscript record of the "Great Survey" of much of England and parts of Wales completed in 1086 by order of King William the Conqueror.</p><h3>Why was it created?</h3><p>William needed to understand the country he had just conquered to effectively rule and tax it. The survey aimed to record:</p><ul><li>Who owned what land and property</li><li>What resources were available (ploughs, mills, livestock)</li><li>How much tax each landowner owed the King</li></ul><p>It was nicknamed the "Domesday" book by the English people because its judgements were seen as final and unappealable, like the Day of Judgement ("Doomsday").</p>' },

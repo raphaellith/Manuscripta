@@ -16,6 +16,11 @@ export interface Unit {
   description: string;
 }
 
+export interface VocabularyTerm {
+  term: string;
+  definition: string;
+}
+
 export interface ContentItem {
   id: string;
   title: string;
@@ -27,8 +32,10 @@ export interface ContentItem {
   lessonNumber?: number;
   lessonTitle?: string;
   content?: string;
-  pdfPath?: string;      // Path to PDF file for PDF type
-  imageUrl?: string;     // Embedded image URL for lessons with images
+  pdfPath?: string;           // Path to PDF file for PDF type
+  imageUrl?: string;          // Embedded image URL for lessons with images
+  vocabularyTerms?: VocabularyTerm[];  // Keywords with definitions
+  readingAge?: number;        // Target reading age (e.g., 8 for "reading age of 8 years")
 }
 
 export interface LessonFolder {
