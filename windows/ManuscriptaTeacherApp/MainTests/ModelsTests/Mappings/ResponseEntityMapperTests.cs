@@ -99,7 +99,7 @@ public class ResponseEntityMapperTests
             1
         );
 
-        var dataEntity = new ResponseDataEntity(id, questionId, "1", deviceId, true, timestamp);
+        var dataEntity = new ResponseDataEntity(id, questionId, deviceId, "1", true, timestamp);
 
         // Act
         var entity = ResponseEntityMapper.ToEntity(dataEntity, question);
@@ -126,7 +126,7 @@ public class ResponseEntityMapperTests
         var timestamp = DateTime.UtcNow;
 
         var question = new TrueFalseQuestionEntity(questionId, materialId, "Question?", true);
-        var dataEntity = new ResponseDataEntity(id, questionId, "True", deviceId, true, timestamp);
+        var dataEntity = new ResponseDataEntity(id, questionId, deviceId, "True", true, timestamp);
 
         // Act
         var entity = ResponseEntityMapper.ToEntity(dataEntity, question);
@@ -153,7 +153,7 @@ public class ResponseEntityMapperTests
         var timestamp = DateTime.UtcNow;
 
         var question = new WrittenAnswerQuestionEntity(questionId, materialId, "Question?", "Paris");
-        var dataEntity = new ResponseDataEntity(id, questionId, "Paris", deviceId, false, timestamp);
+        var dataEntity = new ResponseDataEntity(id, questionId, deviceId, "Paris", false, timestamp);
 
         // Act
         var entity = ResponseEntityMapper.ToEntity(dataEntity, question);
@@ -183,7 +183,7 @@ public class ResponseEntityMapperTests
     public void ToEntity_WithNullQuestion_ThrowsArgumentNullException()
     {
         // Arrange
-        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), Guid.NewGuid(), "answer", Guid.NewGuid());
+        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "answer");
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => ResponseEntityMapper.ToEntity(dataEntity, null!));
@@ -198,7 +198,7 @@ public class ResponseEntityMapperTests
             new List<string> { "A", "B" }, 
             0
         );
-        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, "not a number", Guid.NewGuid());
+        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, Guid.NewGuid(), "not a number");
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => ResponseEntityMapper.ToEntity(dataEntity, question));
@@ -209,7 +209,7 @@ public class ResponseEntityMapperTests
     {
         // Arrange
         var question = new TrueFalseQuestionEntity(Guid.NewGuid(), Guid.NewGuid(), "Question?", true);
-        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, "maybe", Guid.NewGuid());
+        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, Guid.NewGuid(), "maybe");
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => ResponseEntityMapper.ToEntity(dataEntity, question));

@@ -15,6 +15,7 @@ public class MainDbContext : DbContext
     public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
     public DbSet<ResponseDataEntity> Responses { get; set; }
+    public DbSet<SessionDataEntity> Sessions { get; set; }
 
     // Called when MainDbContext has been initialized but before the model has been secured and used to initialize the context.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -60,6 +61,23 @@ public class MainDbContext : DbContext
             entity.HasOne(r => r.Question)
                 .WithMany()
                 .HasForeignKey(r => r.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure SessionDataEntity
+        modelBuilder.Entity<SessionDataEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SessionStatus).HasConversion<string>();
+            entity.HasIndex(e => e.MaterialId);
+            entity.HasIndex(e => e.SessionStatus);
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => e.StartTime);
+
+            // Configure relationship with MaterialDataEntity
+            entity.HasOne(s => s.Material)
+                .WithMany()
+                .HasForeignKey(s => s.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

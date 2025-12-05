@@ -39,6 +39,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             1
         );
 
@@ -72,6 +73,7 @@ public class ResponseServiceTests
         var response = new TrueFalseResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             true
         );
 
@@ -99,6 +101,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             5  // Invalid index - only 3 options (0-2)
         );
 
@@ -126,6 +129,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             -1  // Invalid negative index
         );
 
@@ -153,6 +157,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             2  // Last valid index for 3 options
         );
 
@@ -183,6 +188,7 @@ public class ResponseServiceTests
         var response = new TrueFalseResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             false
         );
 
@@ -213,6 +219,7 @@ public class ResponseServiceTests
         var response = new WrittenAnswerResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             "Student Answer"
         );
 
@@ -243,6 +250,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             0
         );
 
@@ -270,6 +278,7 @@ public class ResponseServiceTests
         var response = new TrueFalseResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             true
         );
 
@@ -296,6 +305,7 @@ public class ResponseServiceTests
         var response = new WrittenAnswerResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             "Some answer"
         );
 
@@ -315,6 +325,7 @@ public class ResponseServiceTests
         var responseId = Guid.NewGuid();
         var response = new TrueFalseResponseEntity(
             responseId,
+            Guid.NewGuid(),
             Guid.NewGuid(),
             true
         );
@@ -353,8 +364,8 @@ public class ResponseServiceTests
         var questionId = Guid.NewGuid();
         var responses = new List<ResponseEntity>
         {
-            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, true),
-            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, false)
+            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), true),
+            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), false)
         };
 
         _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
@@ -383,6 +394,7 @@ public class ResponseServiceTests
         var response = new TrueFalseResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             false
         );
 
@@ -416,7 +428,7 @@ public class ResponseServiceTests
         // Arrange
         var questionId = Guid.NewGuid();
         var question = new TrueFalseQuestionEntity(questionId, Guid.NewGuid(), "Q", true);
-        var response = new TrueFalseResponseEntity(Guid.NewGuid(), questionId, true);
+        var response = new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), true);
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
             .ReturnsAsync(question);
@@ -444,6 +456,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             10  // Invalid index
         );
 
@@ -471,6 +484,7 @@ public class ResponseServiceTests
         var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
+            Guid.NewGuid(),
             0
         );
 

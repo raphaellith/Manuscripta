@@ -20,7 +20,7 @@ public class ResponseDataEntityTests
         var timestamp = DateTime.UtcNow;
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, answer, deviceId, true, timestamp);
+        var r = new ResponseDataEntity(id, questionId, deviceId, answer, true, timestamp);
 
         // Assert
         Assert.Equal(id, r.Id);
@@ -41,7 +41,7 @@ public class ResponseDataEntityTests
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, "answer", deviceId);
+        var r = new ResponseDataEntity(id, questionId, deviceId, "answer");
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -57,7 +57,7 @@ public class ResponseDataEntityTests
         var deviceId = Guid.NewGuid();
 
         // Act
-        var r = new ResponseDataEntity(id, questionId, "answer", deviceId);
+        var r = new ResponseDataEntity(id, questionId, deviceId, "answer");
 
         // Assert
         Assert.Equal(id, r.Id);
