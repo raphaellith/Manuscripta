@@ -30,8 +30,8 @@ const QuizView: React.FC<QuizViewProps> = ({ onBackToLesson, onSubmit, selectedA
       <Button variant="back" onClick={onBackToLesson}>
         ◄ Back to Lesson
       </Button>
-      <div className="bg-[#e8e6e0] border-4 border-black p-8 mb-8 shadow-md">
-        <p className="text-4xl font-bold leading-normal text-black">
+      <div className="bg-eink-light border-4 border-eink-black p-8 mb-8">
+        <p className="text-4xl font-bold leading-normal text-eink-black">
           {question.question}
         </p>
       </div>
@@ -41,12 +41,9 @@ const QuizView: React.FC<QuizViewProps> = ({ onBackToLesson, onSubmit, selectedA
             key={index}
             onClick={() => setSelectedAnswer(index)}
             className={`
-              bg-[#e8e6e0] border-4 border-black p-5 text-3xl min-h-[70px] flex items-center
-              shadow-md cursor-pointer transition-all user-select-none text-black
-              ${selectedAnswer === index
-                ? 'bg-[#c8c6c0]'
-                : 'hover:bg-[#d8d6d0]'
-              }
+              bg-eink-light border-4 border-eink-black p-5 text-3xl min-h-[70px] flex items-center
+              cursor-pointer select-none text-eink-black
+              ${selectedAnswer === index ? 'bg-eink-mid' : ''}
             `}
           >
             {`${String.fromCharCode(65 + index)}) ${option}`}

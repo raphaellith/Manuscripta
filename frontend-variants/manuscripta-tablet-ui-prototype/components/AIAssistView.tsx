@@ -9,23 +9,23 @@ interface AIAssistViewProps {
   onBack: () => void;
 }
 
-const LoadingSpinner: React.FC = () => (
+const LoadingIndicator: React.FC = () => (
     <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-black"></div>
+        <p className="text-3xl text-eink-dark font-medium">Loading...</p>
     </div>
 );
 
 const AIAssistView: React.FC<AIAssistViewProps> = ({ task, content, isLoading, onBack }) => {
   return (
     <div className="flex flex-col h-full">
-      <h1 className="text-4xl font-bold text-black mb-6 pb-4 border-b-4 border-black">
+      <h1 className="text-4xl font-serif font-medium text-eink-black mb-6 pb-4 border-b-4 border-eink-black">
         {task || 'AI Assistant'}
       </h1>
-      <div className="bg-[#e8e6e0] border-4 border-black p-6 shadow-md overflow-y-auto">
+      <div className="bg-eink-light border-4 border-eink-black p-6 overflow-y-auto flex-1">
         {isLoading ? (
-          <LoadingSpinner />
+          <LoadingIndicator />
         ) : (
-          <p className="text-3xl whitespace-pre-wrap leading-relaxed text-black">
+          <p className="text-3xl whitespace-pre-wrap leading-relaxed text-eink-black">
             {content}
           </p>
         )}

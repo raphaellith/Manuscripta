@@ -6,7 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button: React.FC<ButtonProps> = ({ children, variant = 'large', className, ...props }) => {
-  const baseClasses = "flex items-center justify-center w-full border-4 border-black shadow-md cursor-pointer transition-all user-select-none text-black bg-[#e8e6e0] hover:bg-[#d8d6d0] active:bg-[#c8c6c0]";
+  const baseClasses = "flex items-center justify-center w-full border-4 border-eink-black cursor-pointer select-none text-eink-black bg-eink-light";
   
   const variantClasses = {
     large: 'min-h-[60px] text-3xl font-bold mt-12 p-4',

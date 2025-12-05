@@ -5,7 +5,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manuscripta - AI Lesson Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              eink: {
+                white: 'var(--color-eink-white)',
+                cream: 'var(--color-eink-cream)',
+                light: 'var(--color-eink-light)',
+                mid: 'var(--color-eink-mid)',
+                dark: 'var(--color-eink-dark)',
+                black: 'var(--color-eink-black)',
+              }
+            },
+            fontFamily: {
+              serif: ['Fraunces', 'serif'],
+              sans: ['IBM Plex Sans', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -17,7 +42,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-100">
+  <body class="bg-eink-cream font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

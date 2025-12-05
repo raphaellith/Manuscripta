@@ -85,7 +85,7 @@ const App: React.FC = () => {
       <Tablet>
         <div className="flex flex-col h-full">
             <nav className="flex-shrink-0 mb-4">
-                <div className="flex border-b-4 border-black">
+                <div className="flex border-b-4 border-eink-black">
                     <TabButton title="Lesson" isActive={currentView === View.Lesson} onClick={() => setCurrentView(View.Lesson)} />
                     <TabButton title="Quiz" isActive={currentView === View.Quiz} onClick={() => setCurrentView(View.Quiz)} />
                     <TabButton title="Worksheet" isActive={currentView === View.Worksheet} onClick={() => setCurrentView(View.Worksheet)} />
@@ -110,12 +110,10 @@ interface TabButtonProps {
 }
 
 const TabButton: React.FC<TabButtonProps> = ({ title, isActive, onClick }) => {
-    const activeClasses = 'bg-[#e8e6e0] text-black underline';
-    const inactiveClasses = 'bg-[#d8d6d0] text-black hover:bg-[#c8c6c0]';
     return (
         <button 
             onClick={onClick}
-            className={`flex-1 py-3 text-2xl font-bold border-4 border-b-0 border-black transition-colors ${isActive ? activeClasses : inactiveClasses}`}
+            className={`flex-1 py-3 text-2xl font-bold border-4 border-b-0 border-eink-black text-eink-black ${isActive ? 'bg-eink-light underline' : 'bg-eink-cream'}`}
         >
             {title}
         </button>
@@ -127,7 +125,7 @@ interface AIAssistToolbarProps {
     onAIAssist: (task: AITask) => void;
 }
 const AIAssistToolbar: React.FC<AIAssistToolbarProps> = ({ onAIAssist }) => (
-    <div className="bg-[#e8e6e0] border-4 border-black p-3 shadow-sm">
+    <div className="bg-eink-light border-4 border-eink-black p-3">
         <div className="grid grid-cols-3 gap-3">
             <AIAssistButton onClick={() => onAIAssist(AITask.Simplify)}>
                 {AITask.Simplify}
@@ -149,7 +147,7 @@ interface AIAssistButtonProps {
 const AIAssistButton: React.FC<AIAssistButtonProps> = ({ onClick, children }) => (
     <button 
         onClick={onClick}
-        className="px-4 py-2 bg-[#e8e6e0] border-2 border-black text-black text-lg font-semibold hover:bg-[#d8d6d0] active:bg-[#c8c6c0] transition-all shadow-sm w-full text-center"
+        className="px-4 py-2 bg-eink-cream border-2 border-eink-black text-eink-black text-lg font-semibold w-full text-center"
     >
         {children}
     </button>

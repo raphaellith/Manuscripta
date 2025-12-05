@@ -13,7 +13,7 @@ const AudioButton: React.FC<AudioButtonProps> = ({ onClick, title = "Read aloud"
              <button 
                 onClick={onClick} 
                 title={title}
-                className="w-16 h-16 bg-[#e8e6e0] border-4 border-black rounded-md flex items-center justify-center cursor-pointer transition-all user-select-none shadow-md text-black hover:bg-[#d8d6d0] active:bg-black active:text-[#e8e6e0]"
+                className="w-16 h-16 bg-eink-light border-4 border-eink-black rounded-md flex items-center justify-center cursor-pointer select-none text-eink-black"
             >
                 <AudioIcon className="w-8 h-8" />
             </button>

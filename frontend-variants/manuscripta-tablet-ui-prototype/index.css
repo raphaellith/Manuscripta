@@ -1,0 +1,14 @@
+:root {
+  /* E-ink Greyscale Palette */
+  --color-eink-white: #FFFFFF;
+  --color-eink-cream: #F5F5F0;
+  --color-eink-light: #E8E6E0;
+  --color-eink-mid: #D4D4D4;
+  --color-eink-dark: #8A8A8A;
+  --color-eink-black: #1A1A1A;
+}
+
+body {
+  background-color: var(--color-eink-cream);
+  color: var(--color-eink-black);
+}

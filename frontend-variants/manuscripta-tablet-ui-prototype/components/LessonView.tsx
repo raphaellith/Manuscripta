@@ -10,12 +10,12 @@ const LessonView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <h1 className="text-4xl font-bold text-black mb-10 pb-4 border-b-4 border-black">
+      <h1 className="text-4xl font-serif font-medium text-eink-black mb-10 pb-4 border-b-4 border-eink-black">
         {LESSON_TITLE}
       </h1>
       <div className="space-y-8 overflow-y-auto">
         {LESSON_CONTENT.map((paragraph, index) => (
-          <p key={index} className="text-4xl leading-relaxed text-black">
+          <p key={index} className="text-3xl leading-relaxed text-eink-black">
             {paragraph}
           </p>
         ))}
