@@ -69,6 +69,16 @@ export const Settings: React.FC = () => {
          <Card>
           <h4 className="text-xl font-sans font-semibold text-text-heading mb-4 pb-2 border-b border-gray-100">Notifications</h4>
           <SettingToggle
+            label="Help Request Sound"
+            description="Play a sound when a student raises their hand for help."
+            initialValue={true}
+          />
+          <SettingToggle
+            label="Help Request Toast"
+            description="Show a pop-up notification when a student requests help."
+            initialValue={true}
+          />
+          <SettingToggle
             label="Class Completion Alerts"
             description="Notify when the whole class completes a lesson."
             initialValue={true}

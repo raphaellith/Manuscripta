@@ -44,3 +44,41 @@ export interface LessonFolder {
   number: number;
   title: string;
 }
+
+// === Data Model Alignment with Validation Rules ===
+
+// Content type enum alignment
+export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL' | 'QUIZ' | 'LESSON';
+
+// Question types for quizzes
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'WRITTEN_ANSWER';
+
+// Device status alignment
+export type DeviceStatus = 'ON_TASK' | 'IDLE' | 'HAND_RAISED' | 'LOCKED' | 'DISCONNECTED';
+
+// Session status for tracking
+export type SessionStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
+
+// Per-tablet accessibility settings
+export interface TabletAccessibilitySettings {
+  textToSpeech: boolean;
+  aiSummary: boolean;
+  animatedAvatar: boolean;
+}
+
+// Tablet/Device interface with accessibility settings
+export interface Tablet {
+  id: number;
+  status: DeviceStatus;
+  studentName?: string;
+  batteryLevel?: number;
+  accessibility: TabletAccessibilitySettings;
+  lastHelpRequestTime?: number; // Timestamp of last help request for alerts
+}
+
+// Global app settings
+export interface AppSettings {
+  helpSoundEnabled: boolean;
+  helpNotificationsEnabled: boolean;
+  autoLockOnDisconnect: boolean;
+}
