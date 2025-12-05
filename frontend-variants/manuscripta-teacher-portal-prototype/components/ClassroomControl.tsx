@@ -154,7 +154,7 @@ const statusStyles: Record<DeviceStatus, {
   ON_TASK: { 
     cardBg: 'bg-blue-50 border-blue-100', 
     selectedCardBg: 'bg-blue-100 border-blue-200', 
-    badge: 'bg-brand-blue text-blue-900', 
+    badge: 'bg-brand-blue text-white', 
     ringColor: 'ring-brand-blue',
     label: 'On Task'
   },
@@ -367,7 +367,6 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
             <p className="font-sans font-semibold text-brand-orange-dark">
               {unacknowledgedHelpCount} student{unacknowledgedHelpCount > 1 ? 's' : ''} requesting help
             </p>
-            <p className="font-sans text-sm text-brand-orange">Click on a tablet card to view and acknowledge</p>
           </div>
           <button 
             onClick={() => {
@@ -435,7 +434,7 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
             <h4 className="font-sans font-semibold text-xl text-text-heading mb-6">Device Controls</h4>
             <div className='flex flex-wrap gap-4'>
                 <button 
-                    className="bg-brand-orange-light text-brand-orange hover:bg-orange-200 font-sans font-medium py-2 px-4 rounded-md transition-colors border border-transparent" 
+                    className="bg-brand-orange text-white hover:bg-brand-orange-dark font-sans font-medium py-2 px-4 rounded-md transition-colors shadow-sm" 
                     onClick={() => handleAction('Locking screens', targetTabletsForAction)}>
                         {hasSelection ? `Lock Selected (${selectedTablets.length})` : 'Lock All Screens'}
                 </button>

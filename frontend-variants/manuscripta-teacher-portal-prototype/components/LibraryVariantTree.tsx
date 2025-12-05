@@ -27,22 +27,29 @@ const ChevronRightIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
+// Collection: Stacked layers icon (represents grouping)
 const CollectionIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-orange flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.949 1.316H5a2 2 0 01-2-2V5zm0 9a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.949 1.316H5a2 2 0 01-2-2v-2.493z"/>
-    <path d="M13 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.949 1.316H15a2 2 0 01-2-2V5zm0 9a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.949 1.316H15a2 2 0 01-2-2v-2.493z"/>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-orange flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+    <path d="M2 12l10 5 10-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M2 17l10 5 10-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
 
+// Unit: Book with bookmark icon (represents a unit of study)
 const UnitIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-green flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-green flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v16l-5-3-5 3V4z"/>
+    <path d="M16 2h2a2 2 0 012 2v16l-2-1.2V4a2 2 0 00-2-2z" opacity="0.6"/>
   </svg>
 );
 
-const FolderIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-blue flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+// Lesson Folder: Document stack icon (represents a lesson folder)
+const LessonFolderIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-blue flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="4" y="4" width="14" height="16" rx="2" fill="currentColor" opacity="0.2"/>
+    <path d="M8 2h8a2 2 0 012 2v16a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#3B82F6" stroke="none"/>
+    <path d="M9 8h6M9 12h6M9 16h4" strokeLinecap="round" stroke="white" strokeWidth="1.5"/>
   </svg>
 );
 
@@ -191,9 +198,9 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
           )}
           {filteredData.collections.map(collection => (
             <div key={collection.id}>
-              {/* Collection Row */}
+              {/* Collection Row - Orange left border */}
               <div
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-100 transition-colors group"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-r-md cursor-pointer hover:bg-brand-orange/5 transition-colors group border-l-3 border-l-brand-orange bg-brand-orange/[0.02]"
                 onClick={() => toggleCollection(collection.id)}
               >
                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
@@ -204,12 +211,12 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
               
               {/* Units under Collection */}
               {expandedCollections.has(collection.id) && (
-                <div className="ml-4 border-l border-gray-200 pl-2 space-y-1 mt-1">
+                <div className="ml-4 pl-2 space-y-1 mt-1">
                   {getUnitsForCollection(collection).map(unit => (
                     <div key={unit.id}>
-                      {/* Unit Row */}
+                      {/* Unit Row - Green left border */}
                       <div
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-100 transition-colors group"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-r-md cursor-pointer hover:bg-brand-green/5 transition-colors group border-l-3 border-l-brand-green bg-brand-green/[0.02]"
                         onClick={() => toggleUnit(unit.id)}
                       >
                         <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
@@ -236,29 +243,29 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                       
                       {/* Folders and Items under Unit */}
                       {expandedUnits.has(unit.id) && (
-                        <div className="ml-4 border-l border-gray-200 pl-2 space-y-0.5 mt-1">
+                        <div className="ml-4 pl-2 space-y-0.5 mt-1">
                           {getFoldersForUnit(unit).map(folder => (
                             <div key={folder.id}>
-                              {/* Folder Row */}
+                              {/* Lesson Folder Row - Blue left border */}
                               <div
-                                className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 transition-colors"
+                                className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02]"
                                 onClick={() => toggleFolder(folder.id)}
                               >
                                 <ChevronRightIcon isOpen={expandedFolders.has(folder.id)} />
-                                <FolderIcon />
-                                <span className="text-xs text-gray-400">#{folder.number}</span>
+                                <LessonFolderIcon />
+                                <span className="text-xs font-medium text-brand-blue">L{folder.number}</span>
                                 <span className="text-sm text-text-body truncate flex-1">{folder.title}</span>
                                 <span className="text-xs text-gray-400">({getItemsForFolder(unit, folder).length})</span>
                               </div>
                               
-                              {/* Items in Folder */}
+                              {/* Items in Folder - No left border (leaf level) */}
                               {expandedFolders.has(folder.id) && (
-                                <div className="ml-4 border-l border-gray-200 pl-2 space-y-0.5 mt-0.5">
+                                <div className="ml-4 pl-2 space-y-0.5 mt-0.5">
                                   {getItemsForFolder(unit, folder).map(item => (
                                     <div
                                       key={item.id}
-                                      className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors ${
-                                        selectedItem?.id === item.id ? 'bg-brand-orange/10 border border-brand-orange/30' : 'hover:bg-gray-100'
+                                      className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 ${
+                                        selectedItem?.id === item.id ? 'bg-brand-orange/10 border-l-brand-orange' : 'hover:bg-gray-50'
                                       }`}
                                       onClick={() => setSelectedItem(item)}
                                     >
@@ -275,8 +282,8 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                           {getStandaloneItems(unit).map(item => (
                             <div
                               key={item.id}
-                              className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors ${
-                                selectedItem?.id === item.id ? 'bg-brand-orange/10 border border-brand-orange/30' : 'hover:bg-gray-100'
+                              className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 ${
+                                selectedItem?.id === item.id ? 'bg-brand-orange/10 border-l-brand-orange' : 'hover:bg-gray-50'
                               }`}
                               onClick={() => setSelectedItem(item)}
                             >
