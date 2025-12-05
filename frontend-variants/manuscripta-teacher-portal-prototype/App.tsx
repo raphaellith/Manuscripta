@@ -68,11 +68,39 @@ const initialContentItems: ContentItem[] = [
 ];
 
 const initialUnitData: Omit<Unit, 'id'>[] = [
-    { title: 'Norman Conquest', subject: 'History', ageRange: '10-13', description: 'A comprehensive study of the Norman conquest of England in 1066, its causes, and its consequences.' },
-    { title: 'The Roman Empire', subject: 'History', ageRange: '10-13', description: 'Exploring the rise and fall of the Roman Empire, from its origins to its eventual decline.' },
+    { 
+      title: 'Norman Conquest', 
+      subject: 'History', 
+      ageRange: '10-13', 
+      description: 'A comprehensive study of the Norman conquest of England in 1066, its causes, and its consequences.',
+      sourceMaterials: [
+        { id: 'sm-1', name: 'KS3 History: Medieval Britain Textbook', type: 'textbook', pages: 245, addedDate: 'Nov 15, 2025' },
+        { id: 'sm-2', name: 'Norman Invasion Teacher Notes.txt', type: 'notes', size: '45 KB', addedDate: 'Nov 18, 2025' },
+        { id: 'sm-3', name: 'Battle of Hastings Primary Sources.pdf', type: 'pdf', size: '2.4 MB', addedDate: 'Nov 20, 2025' },
+      ]
+    },
+    { 
+      title: 'The Roman Empire', 
+      subject: 'History', 
+      ageRange: '10-13', 
+      description: 'Exploring the rise and fall of the Roman Empire, from its origins to its eventual decline.',
+      sourceMaterials: [
+        { id: 'sm-4', name: 'Ancient Rome: A Complete History', type: 'textbook', pages: 312, addedDate: 'Oct 10, 2025' },
+        { id: 'sm-5', name: 'Teacher Notes - Roman Society.docx', type: 'document', size: '156 KB', addedDate: 'Oct 12, 2025' },
+      ]
+    },
     { title: 'Medieval Life', subject: 'History', ageRange: '7-9', description: 'An introduction to daily life, society, and key events during the Middle Ages.' },
     { title: 'Viking Age', subject: 'History', ageRange: '7-9', description: 'Discover the history, culture, and impact of the Vikings.' },
-    { title: 'Digital Art Techniques', subject: 'Art & Design', ageRange: '14+', description: 'Modern digital illustration techniques including flat design, texturing, and color theory.' },
+    { 
+      title: 'Digital Art Techniques', 
+      subject: 'Art & Design', 
+      ageRange: '14+', 
+      description: 'Modern digital illustration techniques including flat design, texturing, and color theory.',
+      sourceMaterials: [
+        { id: 'sm-6', name: 'Digital Illustration Masterclass', type: 'textbook', pages: 180, addedDate: 'Dec 1, 2025' },
+        { id: 'sm-7', name: 'Procreate Brush Pack Guide.pdf', type: 'pdf', size: '4.2 MB', addedDate: 'Dec 2, 2025' },
+      ]
+    },
     { title: 'AI Research Papers', subject: 'Computer Science', ageRange: '14+', description: 'Academic papers on cutting-edge AI and machine learning research.' },
 ];
 
@@ -160,6 +188,11 @@ const App: React.FC = () => {
     alert(`Content "${updatedItem.title}" has been updated.`);
   };
 
+  const handleUpdateUnit = (updatedUnit: Unit) => {
+    setUnits(prevUnits => prevUnits.map(unit => unit.id === updatedUnit.id ? updatedUnit : unit));
+    alert(`Unit "${updatedUnit.title}" settings have been saved.`);
+  };
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -174,6 +207,7 @@ const App: React.FC = () => {
                     setActiveView={setActiveView} 
                     onAddLessonFolder={handleAddLessonFolder}
                     onUpdateContentItem={handleUpdateContentItem}
+                    onUpdateUnit={handleUpdateUnit}
                 />;
       case 'lesson-creator':
         return <LessonCreator onBack={() => setActiveView('lesson-library')} onSave={handleCreateUnit} />;

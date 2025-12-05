@@ -14,6 +14,17 @@ export interface Unit {
   subject: string;
   ageRange: string;
   description: string;
+  sourceMaterials?: SourceMaterial[];  // Textbooks/resources for RAG-based lesson generation
+}
+
+// Source materials for units (textbooks, resources for RAG)
+export interface SourceMaterial {
+  id: string;
+  name: string;
+  type: 'textbook' | 'pdf' | 'document' | 'notes';
+  size?: string;        // e.g., "2.4 MB"
+  addedDate: string;    // e.g., "Dec 1, 2025"
+  pages?: number;       // For textbooks/PDFs
 }
 
 export interface Collection {

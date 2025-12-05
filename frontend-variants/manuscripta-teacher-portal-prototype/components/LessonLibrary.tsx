@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import type { ContentItem, View, LessonFolder, Unit, Collection, LibraryVariant } from '../types';
+import type { ContentItem, View, LessonFolder, Unit, Collection } from '../types';
 import { ContentCreatorModal } from './ContentCreatorModal';
 import { ContentEditorModal } from './ContentEditorModal';
 import { ContentViewerModal } from './ContentViewerModal';
 import { LibraryVariantTree } from './LibraryVariantTree';
 import { LibraryVariantColumns } from './LibraryVariantColumns';
+import { UnitSettingsModal } from './UnitSettingsModal';
 
 interface LessonFolderCreatorModalProps {
     unit: string;
@@ -63,6 +64,7 @@ interface LessonLibraryProps {
   setActiveView: (view: View) => void;
   onAddLessonFolder: (unit: string, title: string) => void;
   onUpdateContentItem: (item: ContentItem) => void;
+  onUpdateUnit: (unit: Unit) => void;
 }
 
 // Only Tree and Columns variants
@@ -89,23 +91,32 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
   setContentItems, 
   setActiveView, 
   onAddLessonFolder, 
-  onUpdateContentItem 
+  onUpdateContentItem,
+  onUpdateUnit,
 }) => {
   const [contentModalUnit, setContentModalUnit] = useState<string | null>(null);
   const [folderModalUnit, setFolderModalUnit] = useState<string | null>(null);
   const [editingContentItem, setEditingContentItem] = useState<ContentItem | null>(null);
   const [viewingContentItem, setViewingContentItem] = useState<ContentItem | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeVariant, setActiveVariant] = useState<ActiveVariant>('tree');
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
   const handleOpenContentModal = (unitTitle: string) => setContentModalUnit(unitTitle);
   const handleOpenFolderModal = (unitTitle: string) => setFolderModalUnit(unitTitle);
+  const handleOpenUnitSettings = (unit: Unit) => setSelectedUnit(unit);
   const handleCloseModals = () => {
       setContentModalUnit(null);
       setFolderModalUnit(null);
       setEditingContentItem(null);
       setViewingContentItem(null);
+      setSelectedUnit(null);
+  };
+
+  const handleSaveUnit = (updatedUnit: Unit) => {
+    onUpdateUnit(updatedUnit);
+    handleCloseModals();
   };
 
   const handleSaveEditedContent = (updatedItem: ContentItem) => {
@@ -144,6 +155,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
     onViewItem: setViewingContentItem,
     onOpenContentModal: handleOpenContentModal,
     onOpenFolderModal: handleOpenFolderModal,
+    onOpenUnitSettings: handleOpenUnitSettings,
     searchQuery,
   };
 
@@ -186,6 +198,13 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
         <ContentViewerModal
             contentItem={viewingContentItem}
             onClose={handleCloseModals}
+        />
+      )}
+      {selectedUnit && (
+        <UnitSettingsModal
+            unit={selectedUnit}
+            onClose={handleCloseModals}
+            onSave={handleSaveUnit}
         />
       )}
       
