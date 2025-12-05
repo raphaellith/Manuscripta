@@ -22,12 +22,12 @@ const ChevronRightIcon = () => (
 
 const getTypeStyles = (type: string) => {
   switch(type) {
-    case 'Lesson': return 'bg-brand-blue/20 text-blue-900 border-brand-blue';
-    case 'Reading': return 'bg-brand-green/20 text-green-900 border-brand-green';
-    case 'Worksheet': return 'bg-brand-yellow/30 text-yellow-900 border-brand-yellow';
-    case 'Quiz': return 'bg-brand-orange-light text-brand-orange-dark border-brand-orange';
-    case 'PDF': return 'bg-red-100 text-red-900 border-red-400';
-    default: return 'bg-gray-100 text-gray-600 border-gray-300';
+    case 'Lesson': return 'bg-brand-blue text-text-on-blue border-brand-blue';
+    case 'Reading': return 'bg-brand-green text-white border-brand-green';
+    case 'Worksheet': return 'bg-brand-yellow text-text-on-yellow border-brand-yellow';
+    case 'Quiz': return 'bg-brand-orange text-white border-brand-orange';
+    case 'PDF': return 'bg-brand-orange-dark text-white border-brand-orange-dark';
+    default: return 'bg-gray-200 text-text-body border-gray-300';
   }
 };
 
