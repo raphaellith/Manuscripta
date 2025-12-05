@@ -388,7 +388,7 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
                     <select 
                         value={selectedUnitId}
                         onChange={handleUnitChange}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none flex-grow"
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none flex-grow"
                     >
                         <option value="">-- Select Unit --</option>
                         {units.map(unit => (
@@ -400,7 +400,7 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
                         value={selectedFolderId}
                         onChange={handleFolderChange}
                         disabled={!selectedUnitId || foldersInSelectedUnit.length === 0}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="">-- Select Lesson Folder --</option>
                         {foldersInSelectedUnit.map(folder => (
@@ -413,7 +413,7 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
                         value={selectedContentId}
                         onChange={(e) => setSelectedContentId(e.target.value)}
                         disabled={!selectedFolderId || contentInSelectedFolder.length === 0}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="">-- Select Deployed Content --</option>
                         {contentInSelectedFolder.map(item => (

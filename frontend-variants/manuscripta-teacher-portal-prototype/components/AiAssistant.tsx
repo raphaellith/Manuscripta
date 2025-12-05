@@ -68,7 +68,7 @@ export const AiAssistant: React.FC = () => {
                             onChange={e => setInput(e.target.value)}
                             onKeyPress={e => e.key === 'Enter' && handleSend()}
                             placeholder="Ask about teaching or differentiation..."
-                            className="w-full p-4 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none"
+                            className="w-full p-4 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                         />
                     </div>
                     <button onClick={handleSend} className="px-8 py-3 bg-brand-green text-white font-sans font-medium rounded-md hover:bg-green-900 transition-colors shadow-sm">

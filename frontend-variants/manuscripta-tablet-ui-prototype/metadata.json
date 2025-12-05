@@ -1,0 +1,5 @@
+{
+  "name": "Manuscripta Tablet UI Prototype",
+  "description": "An interactive prototype for a classroom orchestration system that enables teachers to use Generative AI to create and distribute educational materials to students on low-distraction E-ink displays.",
+  "requestFramePermissions": []
+}

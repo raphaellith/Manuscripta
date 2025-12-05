@@ -37,7 +37,7 @@ const LessonFolderCreatorModal: React.FC<LessonFolderCreatorModalProps> = ({ uni
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none"
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                         placeholder="e.g., The Domesday Book"
                     />
                 </div>

@@ -52,7 +52,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
                     <select
                         value={selectedLessonKey}
                         onChange={(e) => setSelectedLessonKey(e.target.value)}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none disabled:opacity-50"
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50"
                         disabled={existingLessonFolders.length === 0}
                     >
                         {existingLessonFolders.length > 0 ? (
@@ -89,7 +89,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
                     <textarea 
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none resize-none" 
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none resize-none" 
                         placeholder={`e.g., A quiz on the key figures in the Battle of Hastings`}
                         rows={4}
                     />

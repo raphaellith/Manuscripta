@@ -254,7 +254,7 @@ export const ResponsesView: React.FC<ResponsesViewProps> = ({ contentItems }) =>
                         <select
                             value={selectedMaterialId}
                             onChange={(e) => setSelectedMaterialId(e.target.value)}
-                            className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none"
+                            className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                         >
                             <option value="">-- Select Material --</option>
                             {quizzes.map(quiz => (

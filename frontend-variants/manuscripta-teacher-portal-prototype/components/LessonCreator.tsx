@@ -60,7 +60,7 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
                         type="text" 
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none transition-all" 
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none transition-all" 
                         placeholder="e.g., The Norman Conquest" 
                     />
                 </div>
@@ -70,7 +70,7 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
                         type="text" 
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
-                        className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none transition-all" 
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none transition-all" 
                         placeholder="e.g., History" 
                     />
                 </div>
@@ -81,7 +81,7 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
                 <textarea 
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full p-3 bg-brand-gray text-text-body font-sans rounded-lg border-2 border-transparent focus:border-brand-orange focus:outline-none transition-all resize-none" 
+                    className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none transition-all resize-none" 
                     placeholder="e.g., Students will learn about the causes, events, and consequences of the Norman invasion of England."
                     rows={4}
                 />
