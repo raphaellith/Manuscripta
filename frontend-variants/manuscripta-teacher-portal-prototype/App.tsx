@@ -5,6 +5,7 @@ import { LessonCreator } from './components/LessonCreator';
 import { LessonLibrary } from './components/LessonLibrary';
 import { AiAssistant } from './components/AiAssistant';
 import { ClassroomControl } from './components/ClassroomControl';
+import { ResponsesView } from './components/ResponsesView';
 import { Settings } from './components/Settings';
 import type { View, ContentItem, LessonFolder, Unit } from './types';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
@@ -152,6 +153,8 @@ const App: React.FC = () => {
                     lessonFolders={lessonFolders} 
                     contentItems={contentItems} 
                 />;
+      case 'responses':
+        return <ResponsesView contentItems={contentItems} />;
       case 'settings':
         return <Settings />;
       default:

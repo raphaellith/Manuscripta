@@ -10,10 +10,11 @@ interface HeaderProps {
 const viewConfig: Record<View, { label: string, activeClass: string, textClass: string }> = {
   dashboard: { label: 'Dashboard', activeClass: 'bg-brand-blue/20 text-blue-800', textClass: 'hover:text-blue-600' },
   'lesson-library': { label: 'Library', activeClass: 'bg-brand-green/10 text-brand-green', textClass: 'hover:text-brand-green' },
+  'lesson-creator': { label: 'Creator', activeClass: 'bg-brand-yellow/30 text-yellow-900', textClass: 'hover:text-yellow-700' },
   'classroom-control': { label: 'Classroom', activeClass: 'bg-brand-orange/10 text-brand-orange', textClass: 'hover:text-brand-orange' },
+  responses: { label: 'Responses', activeClass: 'bg-purple-100 text-purple-800', textClass: 'hover:text-purple-600' },
   'ai-assistant': { label: 'AI Assistant', activeClass: 'bg-brand-yellow/50 text-yellow-900', textClass: 'hover:text-yellow-700' },
   settings: { label: 'Settings', activeClass: 'bg-gray-100 text-gray-800', textClass: 'hover:text-gray-800' },
-  'lesson-creator': { label: 'Creator', activeClass: 'bg-brand-yellow/30 text-yellow-900', textClass: 'hover:text-yellow-700' },
 };
 
 export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
     'dashboard',
     'lesson-library',
     'classroom-control',
+    'responses',
     'ai-assistant',
     'settings',
   ];

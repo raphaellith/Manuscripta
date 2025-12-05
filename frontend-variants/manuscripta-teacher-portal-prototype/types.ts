@@ -1,4 +1,4 @@
-export type View = 'dashboard' | 'lesson-library' | 'ai-assistant' | 'classroom-control' | 'settings' | 'lesson-creator';
+export type View = 'dashboard' | 'lesson-library' | 'lesson-creator' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
 
 export interface Message {
   id: number;
@@ -81,4 +81,26 @@ export interface AppSettings {
   helpSoundEnabled: boolean;
   helpNotificationsEnabled: boolean;
   autoLockOnDisconnect: boolean;
+}
+
+// Question entity for quizzes and polls
+export interface Question {
+  id: string;
+  materialId: string;
+  text: string;
+  type: QuestionType;
+  options?: string[];
+  correctAnswer?: string;
+}
+
+// Student response entity
+export interface StudentResponse {
+  id: string;
+  questionId: string;
+  answer: string;
+  isCorrect: boolean;
+  timestamp: number;
+  deviceId: string;
+  synced: boolean;
+  markedCorrect?: boolean; // Manual override by teacher (MAT18)
 }

@@ -9,20 +9,6 @@ This document outlines the UI/UX features missing from the **manuscripta-teacher
 
 ## Lesson Materials (MAT)
 
-### MAT8 — Source Document Upload in Content Creator
-**Current:** File upload only exists in the Unit Creator (`LessonCreator.tsx`).  
-**Missing:** The `ContentCreatorModal.tsx` should also allow uploading source documents (.pdf, .txt, .docx) when generating individual content items.
-
----
-
-### MAT15 — Import and Display Static Images and PDFs
-**Current:** No image/PDF import or display capability.  
-**Missing:** 
-- UI to import images and PDF files as lesson materials
-- Preview/display component for these file types within the content editor
-
----
-
 ### MAT16 — Vocabulary/Keywords Editor
 **Current:** Not implemented.  
 **Missing:**
@@ -82,15 +68,6 @@ This document outlines the UI/UX features missing from the **manuscripta-teacher
 
 ---
 
-### CON12 — Explicit Help Request Alert
-**Current:** "needs_help" status shows in the grid but no prominent alert.  
-**Missing:**
-- Toast notification or alert banner when a student raises their hand
-- Blinking/pulsing animation on the affected tablet card
-- Sound alert option (toggle in settings)
-
----
-
 ### CON13 — Live View Preview
 **Current:** Not implemented.  
 **Missing:**
@@ -106,16 +83,6 @@ This document outlines the UI/UX features missing from the **manuscripta-teacher
 - Two dashboard modes: **Presentation Mode** (safe for projector) and **Teacher Mode** (full details)
 - Tab or toggle to switch between modes
 - Presentation mode should hide sensitive info (e.g., individual student struggles, detailed alerts)
-
----
-
-## Content Types
-
-### Missing Material Types
-**Current:** `Lesson`, `Worksheet`, `Quiz`  
-**Missing:**
-- `Poll` — Quick voting material type
-- `Reading` — Read-only informational content
 
 ---
 
@@ -149,42 +116,6 @@ This document outlines the UI/UX features missing from the **manuscripta-teacher
 - Empty units
 - No search results
 - No deployed materials
-
----
-
-## Data Model Alignment
-
-### Type Definitions
-**Current `types.ts`** doesn't match the spec's Validation Rules.  
-**Recommended additions:**
-
-```typescript
-// Content type enum alignment
-export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL' | 'QUIZ' | 'LESSON';
-
-// Vocabulary support
-export interface VocabularyTerm {
-  term: string;
-  definition: string;
-}
-
-// Question types for quizzes
-export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'WRITTEN_ANSWER';
-
-// Device status alignment
-export type DeviceStatus = 'ON_TASK' | 'IDLE' | 'HAND_RAISED' | 'LOCKED' | 'DISCONNECTED';
-
-// Session status for tracking
-export type SessionStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
-
-// Extended ContentItem with vocabulary
-export interface ContentItem {
-  // ... existing fields ...
-  vocabularyTerms?: VocabularyTerm[];
-  pointsEnabled?: boolean;
-  pointsPerQuestion?: number;
-}
-```
 
 ---
 
