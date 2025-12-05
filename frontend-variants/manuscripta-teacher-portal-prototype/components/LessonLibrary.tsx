@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import type { ContentItem, View, LessonFolder, Unit } from '../types';
 import { ContentCreatorModal } from './ContentCreatorModal';
 import { ContentEditorModal } from './ContentEditorModal';
+import { ContentViewerModal } from './ContentViewerModal';
 import { ContentHeader } from './ContentHeader';
 
 interface LessonFolderCreatorModalProps {
@@ -65,6 +66,7 @@ interface LessonLibraryProps {
 interface ContentItemDisplayProps {
   contentItem: ContentItem;
   onEdit: (item: ContentItem) => void;
+  onView: (item: ContentItem) => void;
 }
 
 const FolderIcon = () => (
@@ -88,8 +90,10 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
 const getTypeStyles = (type: string) => {
     switch(type) {
         case 'Lesson': return 'bg-brand-blue/20 text-blue-900 border-brand-blue';
+        case 'Reading': return 'bg-brand-green/20 text-green-900 border-brand-green';
         case 'Worksheet': return 'bg-brand-yellow/30 text-yellow-900 border-brand-yellow';
         case 'Quiz': return 'bg-brand-orange-light text-brand-orange-dark border-brand-orange';
+        case 'PDF': return 'bg-red-100 text-red-900 border-red-400';
         default: return 'bg-gray-100 text-gray-600 border-gray-300';
     }
 }
@@ -97,33 +101,60 @@ const getTypeStyles = (type: string) => {
 const getTypeBorderColor = (type: string) => {
     switch(type) {
         case 'Lesson': return 'border-t-brand-blue';
+        case 'Reading': return 'border-t-brand-green';
         case 'Worksheet': return 'border-t-brand-yellow';
         case 'Quiz': return 'border-t-brand-orange';
+        case 'PDF': return 'border-t-red-400';
         default: return 'border-t-gray-300';
     }
 }
 
-const ContentItemDisplay: React.FC<ContentItemDisplayProps> = ({ contentItem, onEdit }) => (
-  <div className={`bg-white rounded-lg p-5 border border-gray-100 border-t-4 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group ${getTypeBorderColor(contentItem.type)}`}>
-    <div>
-      <div className="flex items-center gap-3">
-        <h4 className="font-sans font-semibold text-text-heading text-lg group-hover:text-brand-orange transition-colors">{contentItem.title}</h4>
-        <span className={`text-xs font-sans font-semibold px-2 py-1 rounded-md uppercase tracking-wide border ${getTypeStyles(contentItem.type)}`}>{contentItem.type}</span>
+const ContentItemDisplay: React.FC<ContentItemDisplayProps> = ({ contentItem, onEdit, onView }) => {
+  const hasPdfOrImage = contentItem.type === 'PDF' || contentItem.imageUrl;
+  
+  return (
+    <div className={`bg-white rounded-lg p-5 border border-gray-100 border-t-4 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group ${getTypeBorderColor(contentItem.type)}`}>
+      <div className="flex-1">
+        <div className="flex items-center gap-3">
+          {/* Show PDF icon for PDF type */}
+          {contentItem.type === 'PDF' && (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          )}
+          {/* Show image icon for lessons with images */}
+          {contentItem.imageUrl && contentItem.type !== 'PDF' && (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-brand-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          )}
+          <h4 className="font-sans font-semibold text-text-heading text-lg group-hover:text-brand-orange transition-colors">{contentItem.title}</h4>
+          <span className={`text-xs font-sans font-semibold px-2 py-1 rounded-md uppercase tracking-wide border ${getTypeStyles(contentItem.type)}`}>{contentItem.type}</span>
+        </div>
+        <p className="text-sm text-gray-500 mt-2 font-sans">{contentItem.subject} • Created {contentItem.created} • <span className={`font-medium ${contentItem.status === 'Deployed' ? 'text-brand-green' : 'text-brand-orange'}`}>{contentItem.status}</span></p>
       </div>
-      <p className="text-sm text-gray-500 mt-2 font-sans">{contentItem.subject} • Created {contentItem.created} • <span className={`font-medium ${contentItem.status === 'Deployed' ? 'text-brand-green' : 'text-brand-orange'}`}>{contentItem.status}</span></p>
+      <div className="flex gap-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          className="px-4 py-2 bg-brand-green text-white font-sans font-medium text-sm rounded-md hover:bg-green-800 transition-colors" 
+          onClick={() => onView(contentItem)}
+        >
+          View
+        </button>
+        {contentItem.type !== 'PDF' && (
+          <button className="px-4 py-2 bg-white text-text-heading border border-gray-300 font-sans font-medium text-sm rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors" onClick={() => onEdit(contentItem)}>Edit</button>
+        )}
+        <button className="px-4 py-2 bg-white text-text-heading border border-gray-300 font-sans font-medium text-sm rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors" onClick={() => alert(`Duplicating ${contentItem.title}`)}>Duplicate</button>
+      </div>
     </div>
-    <div className="flex gap-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-      <button className="px-4 py-2 bg-white text-text-heading border border-gray-300 font-sans font-medium text-sm rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors" onClick={() => onEdit(contentItem)}>Edit</button>
-      <button className="px-4 py-2 bg-white text-text-heading border border-gray-300 font-sans font-medium text-sm rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors" onClick={() => alert(`Duplicating ${contentItem.title}`)}>Duplicate</button>
-    </div>
-  </div>
-);
+  );
+};
 
 
 export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolders, contentItems, setContentItems, setActiveView, onAddLessonFolder, onUpdateContentItem }) => {
   const [contentModalUnit, setContentModalUnit] = useState<string | null>(null);
   const [folderModalUnit, setFolderModalUnit] = useState<string | null>(null);
   const [editingContentItem, setEditingContentItem] = useState<ContentItem | null>(null);
+  const [viewingContentItem, setViewingContentItem] = useState<ContentItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
@@ -158,6 +189,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolde
       setContentModalUnit(null);
       setFolderModalUnit(null);
       setEditingContentItem(null);
+      setViewingContentItem(null);
   };
 
   const handleSaveEditedContent = (updatedItem: ContentItem) => {
@@ -281,6 +313,12 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolde
             onSave={handleSaveEditedContent}
         />
       )}
+      {viewingContentItem && (
+        <ContentViewerModal
+            contentItem={viewingContentItem}
+            onClose={handleCloseModals}
+        />
+      )}
       
       
       <div className="mb-10 flex flex-col md:flex-row gap-4 sticky top-0 z-40 pb-4 bg-gradient-to-b from-brand-cream to-transparent">
@@ -313,7 +351,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolde
             </div>
         )}
         {displayData.map(unit => {
-            const contentSortOrder = { 'Lesson': 1, 'Worksheet': 2, 'Quiz': 3 };
+            const contentSortOrder: Record<string, number> = { 'Lesson': 1, 'Reading': 2, 'Worksheet': 3, 'Quiz': 4, 'PDF': 5 };
             const originalFoldersForUnit = lessonFolders.filter(f => f.unit === unit.title);
             const originalStandaloneItems = contentItems.filter(item => item.unit === unit.title && !item.lessonNumber);
             const isUnitCollapsed = collapsedUnits.has(unit.id);
@@ -385,7 +423,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolde
                                             <div className="px-6 pb-6">
                                                 <div className="space-y-3 pl-4 border-l-2 border-brand-blue/20 ml-4">
                                                     {itemsInFolder.length > 0 ? (
-                                                        itemsInFolder.sort((a, b) => contentSortOrder[a.type] - contentSortOrder[b.type]).map(item => <ContentItemDisplay key={item.id} contentItem={item} onEdit={setEditingContentItem} />)
+                                                        itemsInFolder.sort((a, b) => contentSortOrder[a.type] - contentSortOrder[b.type]).map(item => <ContentItemDisplay key={item.id} contentItem={item} onEdit={setEditingContentItem} onView={setViewingContentItem} />)
                                                     ) : (
                                                       <p className="text-sm text-gray-500 italic pl-2">No content in this lesson yet.</p>
                                                     )}
@@ -395,7 +433,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({ units, lessonFolde
                                     </div>
                                 )
                             })}
-                            {unit.standaloneItems.map(item => <ContentItemDisplay key={item.id} contentItem={item} onEdit={setEditingContentItem} />)}
+                            {unit.standaloneItems.map(item => <ContentItemDisplay key={item.id} contentItem={item} onEdit={setEditingContentItem} onView={setViewingContentItem} />)}
                         </div>
                     )}
                 </div>

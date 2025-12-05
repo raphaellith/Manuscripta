@@ -6,7 +6,7 @@ export interface Message {
   sender: 'user' | 'ai';
 }
 
-export type ContentType = 'Lesson' | 'Worksheet' | 'Quiz';
+export type ContentType = 'Lesson' | 'Worksheet' | 'Quiz' | 'PDF' | 'Reading';
 
 export interface Unit {
   id: string;
@@ -27,6 +27,8 @@ export interface ContentItem {
   lessonNumber?: number;
   lessonTitle?: string;
   content?: string;
+  pdfPath?: string;      // Path to PDF file for PDF type
+  imageUrl?: string;     // Embedded image URL for lessons with images
 }
 
 export interface LessonFolder {

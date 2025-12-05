@@ -19,6 +19,34 @@ const initialContentItems: ContentItem[] = [
   { id: '2', unit: 'The Roman Empire', lessonNumber: 1, lessonTitle: 'Rise of the Empire', title: 'Rise of the Empire', type: 'Lesson', subject: 'History - Year 7-9', created: 'Oct 15, 2025', status: 'Deployed', content: '<h1>The Rise of the Roman Empire</h1><p>The Roman Empire was one of the largest and most influential empires in world history. It began in the city of Rome in 753 BC and lasted for over 1000 years.</p><h3>Key Phases of Expansion:</h3><ul><li><b>The Roman Republic (509 BC - 27 BC):</b> Rome expanded from a small city-state to control the entire Italian peninsula and then much of the Mediterranean. Key conflicts included the Punic Wars against Carthage.</li><li><b>The Early Empire (27 BC - 180 AD):</b> Under emperors like Augustus, Trajan, and Hadrian, the empire reached its greatest territorial extent, a period known as the Pax Romana (Roman Peace).</li><li><b>The Late Empire (180 AD - 476 AD):</b> The empire faced internal strife, economic problems, and external pressures, eventually leading to its division and the fall of the Western Roman Empire.</li></ul>' },
   { id: '3', unit: 'The Roman Empire', lessonNumber: 2, lessonTitle: 'Daily Life in Rome', title: 'Daily Life in Rome', type: 'Lesson', subject: 'History - Year 7-9', created: 'Oct 16, 2025', status: 'Deployed', content: '<h1>Daily Life in Ancient Rome</h1><p>Life in Rome varied greatly between the rich and the poor, but some aspects were common to many citizens.</p><h3>Housing</h3><p>Wealthy Romans lived in large, comfortable houses called a <em>domus</em>, often built around a central courtyard (atrium). The majority of the population lived in crowded apartment blocks called <em>insulae</em>, which were often poorly built and dangerous.</p><h3>Food</h3><p>The Roman diet was based on the "Mediterranean Triad": grain, grapes, and olives. Bread was a staple food, supplemented with vegetables, cheese, and some meat. The poor often relied on a free grain handout from the state, known as the <em>dole</em>.</p><h3>Entertainment</h3><p>Public entertainment was a huge part of Roman life. The Colosseum hosted gladiatorial contests and public spectacles, while the Circus Maximus was famous for its chariot races. Romans also enjoyed public baths (<em>thermae</em>), which were centers for socializing, exercising, and relaxing.</p>' },
   { id: '5', unit: 'Medieval Life', title: 'Castles and Fortifications', type: 'Lesson', subject: 'History - Year 7-9', created: 'Oct 10, 2025', status: 'Draft', content: '<h1>Medieval Castles</h1><p>Castles were a defining feature of the Middle Ages, serving as fortified homes for lords and nobles, as well as centers of administration and power.</p><h3>Early Castles: Motte and Bailey</h3><p>The first castles built by the Normans in England were of a "motte-and-bailey" design. They were quick to build using earth and timber.</p><ul><li><b>Motte:</b> A large earthen mound with a wooden tower (keep) on top.</li><li><b>Bailey:</b> A larger, enclosed area at the foot of the motte, containing barracks, stables, and workshops, protected by a wooden fence (palisade) and a ditch.</li></ul><h3>Stone Castles</h3><p>Over time, timber was replaced with stone for greater strength and fire resistance. Stone castles incorporated features like:</p><ul><li><b>The Keep:</b> The main tower and strongest point of the castle.</li><li><b>Curtain Walls:</b> The outer walls of the castle.</li><li><b>Towers and Gatehouses:</b> Positioned along the walls for defense, with the gatehouse being the heavily fortified main entrance.</li><li><b>Moats:</b> A deep, wide ditch, often filled with water, surrounding the castle.</li></ul>' },
+  // Art - Textured Flat Illustration lesson with embedded image
+  { 
+    id: 'art-1', 
+    unit: 'Digital Art Techniques', 
+    lessonNumber: 1, 
+    lessonTitle: 'Textured Flat Illustration', 
+    title: 'Introduction to Textured Flat Illustration', 
+    type: 'Lesson', 
+    subject: 'Art & Design - Year 10-13', 
+    created: 'Dec 5, 2025', 
+    status: 'Deployed', 
+    imageUrl: '/resources/test-image.jpg',
+    content: '<h1>Textured Flat Illustration</h1><p>Textured flat illustration is a popular digital art style that combines the simplicity of flat design with added depth through texture overlays and grain effects.</p><h3>Key Characteristics</h3><ul><li><b>Flat Shapes:</b> Simple, geometric forms without complex gradients or 3D effects</li><li><b>Limited Color Palette:</b> Often uses a restrained set of harmonious colors</li><li><b>Texture Overlays:</b> Grain, noise, or paper textures add visual interest and depth</li><li><b>Bold Outlines:</b> Sometimes incorporates strong linework to define shapes</li></ul><h3>Techniques Used</h3><p>Artists typically create textured flat illustrations using digital tools like Adobe Illustrator for vector shapes, then add texture in Photoshop or Procreate. The texture can be applied through:</p><ul><li>Noise filters and grain effects</li><li>Paper or canvas texture overlays</li><li>Custom brushes with textured edges</li><li>Blend modes like Multiply or Overlay</li></ul><h3>Study the Example Above</h3><p>Notice how the illustration above uses flat color blocks with subtle texture to create depth. The limited palette keeps the design cohesive while the texture prevents it from looking too digital or sterile.</p>'
+  },
+  // Computer Science - Meta CWM Paper (PDF)
+  { 
+    id: 'cs-1', 
+    unit: 'AI Research Papers', 
+    lessonNumber: 1, 
+    lessonTitle: 'Code World Models', 
+    title: 'Learning Code World Models from Python Traces', 
+    type: 'PDF', 
+    subject: 'Computer Science - Advanced', 
+    created: 'Dec 5, 2025', 
+    status: 'Deployed', 
+    pdfPath: '/resources/CWM Paper.pdf',
+    content: '<h1>Code World Models</h1><p>This paper from Meta FAIR explores how language models can learn to simulate Python program execution by learning from execution traces.</p>'
+  },
 ];
 
 const initialUnitData: Omit<Unit, 'id'>[] = [
@@ -26,6 +54,8 @@ const initialUnitData: Omit<Unit, 'id'>[] = [
     { title: 'The Roman Empire', subject: 'History', ageRange: '10-13', description: 'Exploring the rise and fall of the Roman Empire, from its origins to its eventual decline.' },
     { title: 'Medieval Life', subject: 'History', ageRange: '7-9', description: 'An introduction to daily life, society, and key events during the Middle Ages.' },
     { title: 'Viking Age', subject: 'History', ageRange: '7-9', description: 'Discover the history, culture, and impact of the Vikings.' },
+    { title: 'Digital Art Techniques', subject: 'Art & Design', ageRange: '14+', description: 'Modern digital illustration techniques including flat design, texturing, and color theory.' },
+    { title: 'AI Research Papers', subject: 'Computer Science', ageRange: '14+', description: 'Academic papers on cutting-edge AI and machine learning research.' },
 ];
 
 const initialUnits: Unit[] = initialUnitData.map((u, i) => ({ ...u, id: `unit-${i}` }));
