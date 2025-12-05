@@ -244,38 +244,38 @@ export const ResponsesView: React.FC<ResponsesViewProps> = ({ contentItems }) =>
 
     return (
         <div>
-            {/* Header with material selector and export */}
-            <Card className="mb-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block font-sans font-medium text-text-heading text-sm mb-2">
-                            Select Quiz or Poll
-                        </label>
-                        <select
-                            value={selectedMaterialId}
-                            onChange={(e) => setSelectedMaterialId(e.target.value)}
-                            className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
-                        >
-                            <option value="">-- Select Material --</option>
-                            {quizzes.map(quiz => (
-                                <option key={quiz.id} value={quiz.id}>
-                                    {quiz.title} ({quiz.unit})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <button
-                        onClick={handleExport}
-                        disabled={!selectedMaterialId}
-                        className="px-6 py-3 bg-brand-green text-white font-sans font-medium rounded-md hover:bg-green-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            {/* Header with material selector and export - inline style like Library search */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4 sticky top-0 z-40 pb-4 bg-gradient-to-b from-brand-cream to-transparent">
+                <div className="relative flex-grow">
+                    <select
+                        value={selectedMaterialId}
+                        onChange={(e) => setSelectedMaterialId(e.target.value)}
+                        className="w-full p-4 bg-white text-text-body font-sans rounded-xl border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none transition-all shadow-soft appearance-none cursor-pointer"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        <option value="">Select a Quiz or Poll to view responses...</option>
+                        {quizzes.map(quiz => (
+                            <option key={quiz.id} value={quiz.id}>
+                                {quiz.title} ({quiz.unit})
+                            </option>
+                        ))}
+                    </select>
+                    <span className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
-                        Export
-                    </button>
+                    </span>
                 </div>
-            </Card>
+                <button
+                    onClick={handleExport}
+                    disabled={!selectedMaterialId}
+                    className="px-8 py-4 bg-brand-green text-white font-sans font-medium rounded-xl hover:bg-green-800 transition-colors shadow-soft hover:shadow-md whitespace-nowrap flex-shrink-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export
+                </button>
+            </div>
 
             {/* Summary statistics */}
             {stats && (
