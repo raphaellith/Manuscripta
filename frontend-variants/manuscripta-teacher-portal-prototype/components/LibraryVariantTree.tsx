@@ -209,9 +209,9 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                 <span className="text-xs text-gray-400">{getUnitsForCollection(collection).length}</span>
               </div>
               
-              {/* Units under Collection */}
+              {/* Units under Collection - Orange indent line */}
               {expandedCollections.has(collection.id) && (
-                <div className="ml-4 pl-2 space-y-1 mt-1">
+                <div className="ml-4 pl-2 space-y-1 mt-1" style={{ borderLeft: '2px solid var(--color-brand-orange)' }}>
                   {getUnitsForCollection(collection).map(unit => (
                     <div key={unit.id}>
                       {/* Unit Row - Green left border */}
@@ -241,9 +241,9 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                         </button>
                       </div>
                       
-                      {/* Folders and Items under Unit */}
+                      {/* Folders and Items under Unit - Green indent line */}
                       {expandedUnits.has(unit.id) && (
-                        <div className="ml-4 pl-2 space-y-0.5 mt-1">
+                        <div className="ml-4 pl-2 space-y-0.5 mt-1" style={{ borderLeft: '2px solid var(--color-brand-green)' }}>
                           {getFoldersForUnit(unit).map(folder => (
                             <div key={folder.id}>
                               {/* Lesson Folder Row - Blue left border */}
@@ -258,9 +258,9 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                                 <span className="text-xs text-gray-400">({getItemsForFolder(unit, folder).length})</span>
                               </div>
                               
-                              {/* Items in Folder - No left border (leaf level) */}
+                              {/* Items in Folder - Blue indent line */}
                               {expandedFolders.has(folder.id) && (
-                                <div className="ml-4 pl-2 space-y-0.5 mt-0.5">
+                                <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
                                   {getItemsForFolder(unit, folder).map(item => (
                                     <div
                                       key={item.id}
@@ -321,17 +321,30 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
               </p>
             </div>
             <div className="flex-1 p-6 overflow-y-auto">
-              {selectedItem.content && (
-                <div 
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: selectedItem.content }}
-                />
-              )}
-              {selectedItem.imageUrl && (
-                <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full rounded-lg shadow-md mt-4" />
-              )}
-              {!selectedItem.content && !selectedItem.imageUrl && (
-                <p className="text-gray-400 italic">No preview available for this content.</p>
+              {/* PDF Preview */}
+              {selectedItem.type === 'PDF' && selectedItem.pdfPath ? (
+                <div className="h-full min-h-[400px] bg-gray-100 rounded-lg overflow-hidden shadow-inner">
+                  <iframe
+                    src={selectedItem.pdfPath}
+                    className="w-full h-full min-h-[400px]"
+                    title={selectedItem.title}
+                  />
+                </div>
+              ) : (
+                <>
+                  {selectedItem.content && (
+                    <div 
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: selectedItem.content }}
+                    />
+                  )}
+                  {selectedItem.imageUrl && (
+                    <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full rounded-lg shadow-md mt-4" />
+                  )}
+                  {!selectedItem.content && !selectedItem.imageUrl && (
+                    <p className="text-gray-400 italic">No preview available for this content.</p>
+                  )}
+                </>
               )}
             </div>
             <div className="p-4 border-t border-gray-200 bg-white flex gap-3">

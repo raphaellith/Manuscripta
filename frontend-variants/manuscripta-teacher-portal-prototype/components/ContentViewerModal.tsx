@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import type { ContentItem } from '../types';
 
 interface ContentViewerModalProps {
@@ -8,50 +9,41 @@ interface ContentViewerModalProps {
 }
 
 export const ContentViewerModal: React.FC<ContentViewerModalProps> = ({ contentItem, onClose }) => {
-    // If it's a PDF type, show only the PDF viewer
+    // If it's a PDF type, show a minimal full-screen PDF viewer
     if (contentItem.type === 'PDF' && contentItem.pdfPath) {
-        return (
-            <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-[200] p-4 pt-24">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col animate-fade-in-up overflow-hidden">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white">
-                        <div>
-                            <h2 className="text-2xl font-serif text-text-heading">{contentItem.title}</h2>
-                            <p className="text-sm text-gray-500 mt-1">{contentItem.subject}</p>
-                        </div>
-                        <button 
-                            onClick={onClose}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                            aria-label="Close"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="flex-1 bg-gray-100">
-                        <iframe
-                            src={contentItem.pdfPath}
-                            className="w-full h-full"
-                            title={contentItem.title}
-                        />
-                    </div>
+        return createPortal(
+            <div className="fixed inset-0 bg-black z-[200] flex flex-col">
+                {/* Minimal top bar with just title and close */}
+                <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                    <span className="text-white/80 text-sm font-medium bg-black/50 px-3 py-1.5 rounded-md backdrop-blur-sm">
+                        {contentItem.title}
+                    </span>
+                    <button 
+                        onClick={onClose}
+                        className="p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors backdrop-blur-sm"
+                        aria-label="Close"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-                <style>{`
-                    @keyframes fade-in-up {
-                        from { opacity: 0; transform: translateY(20px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                    .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
-                `}</style>
-            </div>
+                {/* Full-screen PDF */}
+                <iframe
+                    src={contentItem.pdfPath}
+                    className="w-full h-full"
+                    title={contentItem.title}
+                />
+            </div>,
+            document.body
         );
     }
 
     // For lessons/readings with embedded images or regular content
-    return (
-        <div className="fixed inset-0 bg-text-heading/30 backdrop-blur-sm flex items-center justify-center z-[200] p-4 pt-24">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col animate-fade-in-up overflow-hidden">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white">
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col z-[200]">
+            <div className="bg-white w-full h-full flex flex-col animate-fade-in-up overflow-hidden">
+                <div className="flex justify-between items-center px-8 py-4 border-b border-gray-100 bg-white flex-shrink-0">
                     <div>
                         <div className="flex items-center gap-3">
                             <h2 className="text-2xl font-serif text-text-heading">{contentItem.title}</h2>
@@ -158,6 +150,7 @@ export const ContentViewerModal: React.FC<ContentViewerModalProps> = ({ contentI
                 .prose strong, .prose b { font-weight: 600; }
                 .prose em, .prose i { font-style: italic; }
             `}</style>
-        </div>
-    );
+            </div>,
+            document.body
+        );
 };

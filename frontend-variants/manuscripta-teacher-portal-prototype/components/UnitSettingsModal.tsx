@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Unit, SourceMaterial } from '../types';
 
 interface UnitSettingsModalProps {
@@ -80,8 +81,8 @@ export const UnitSettingsModal: React.FC<UnitSettingsModalProps> = ({ unit, onCl
     setSourceMaterials(prev => [...prev, mockMaterial]);
   };
 
-  return (
-    <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-brand-cream to-white">
@@ -217,6 +218,7 @@ export const UnitSettingsModal: React.FC<UnitSettingsModalProps> = ({ unit, onCl
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
