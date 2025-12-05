@@ -11,4 +11,10 @@ public interface IResponseRepository
     Task AddAsync(ResponseEntity entity);
     Task UpdateAsync(ResponseEntity entity);
     Task DeleteAsync(Guid id);
+    
+    /// <summary>
+    /// Deletes all responses associated with a specific question.
+    /// Implements orphan removal per PersistenceAndCascadingRules.md §2(2).
+    /// </summary>
+    Task DeleteByQuestionIdAsync(Guid questionId);
 }

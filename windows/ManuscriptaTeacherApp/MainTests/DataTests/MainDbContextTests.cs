@@ -8,6 +8,12 @@ using Main.Models.Enums;
 
 namespace MainTests;
 
+/// <summary>
+/// Tests for MainDbContext.
+/// Note: Per PersistenceAndCascadingRules.md §1(2), ResponseDataEntity and SessionDataEntity 
+/// are NOT persisted to the database (short-term persistence only).
+/// They are managed by InMemoryResponseRepository and InMemorySessionRepository.
+/// </summary>
 public class MainDbContextTests
 {
     private DbContextOptions<MainDbContext> CreateInMemoryOptions(string dbName)
@@ -18,7 +24,7 @@ public class MainDbContextTests
     }
 
     [Fact]
-    public void CanAddAndRetrieve_MaterialWithRelations()
+    public void CanAddAndRetrieve_MaterialWithQuestions()
     {
         var options = CreateInMemoryOptions("test_db_1");
 
@@ -26,7 +32,6 @@ public class MainDbContextTests
         {
             var materialId = Guid.NewGuid();
             var questionId = Guid.NewGuid();
-            var responseId = Guid.NewGuid();
 
             var material = new MaterialDataEntity
             {
@@ -54,10 +59,6 @@ public class MainDbContextTests
 
             ctx.Questions.Add(question);
             ctx.SaveChanges();
-
-            var response = new ResponseDataEntity(responseId, questionId, Guid.NewGuid(), "1", true);
-            ctx.Responses.Add(response);
-            ctx.SaveChanges();
         }
 
         using (var ctx = new MainDbContext(options))
@@ -66,15 +67,10 @@ public class MainDbContextTests
             Assert.NotNull(mat);
             Assert.Equal(MaterialType.WORKSHEET, mat!.MaterialType);
             Assert.Equal(1, ctx.Questions.Count());
-            Assert.Equal(1, ctx.Responses.Count());
             
             var question = ctx.Questions.FirstOrDefault();
             Assert.NotNull(question);
             Assert.Equal(QuestionType.MULTIPLE_CHOICE, question!.QuestionType);
-            
-            var response = ctx.Responses.FirstOrDefault();
-            Assert.NotNull(response);
-            Assert.True(response!.IsCorrect);
         }
     }
 

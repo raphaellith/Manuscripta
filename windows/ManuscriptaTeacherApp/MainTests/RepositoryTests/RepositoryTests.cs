@@ -36,6 +36,9 @@ public class RepositoryTests
         var questionId = Guid.NewGuid();
         var responseId = Guid.NewGuid();
 
+        // In-memory response repository (per PersistenceAndCascadingRules.md §1(2))
+        var rRepo = new InMemoryResponseRepository();
+
         // Create schema and use repositories to add data
         using (var ctx = new MainDbContext(options))
         {
@@ -43,7 +46,6 @@ public class RepositoryTests
 
             var mRepo = new EfMaterialRepository(ctx);
             var qRepo = new EfQuestionRepository(ctx);
-            var rRepo = new EfResponseRepository(ctx, qRepo);
 
             // Add material
             var material = new WorksheetMaterialEntity(
@@ -63,7 +65,7 @@ public class RepositoryTests
             );
             await qRepo.AddAsync(question);
 
-            // Add response using polymorphic entity
+            // Add response using polymorphic entity (in-memory, not persisted to DB)
             var response = new MultipleChoiceResponseEntity(responseId, questionId, Guid.NewGuid(), 1, null, true);
             await rRepo.AddAsync(response);
         }
@@ -73,7 +75,6 @@ public class RepositoryTests
         {
             var mRepo = new EfMaterialRepository(ctx);
             var qRepo = new EfQuestionRepository(ctx);
-            var rRepo = new EfResponseRepository(ctx, qRepo);
 
             // Test material retrieval
             var m = await mRepo.GetByIdAsync(materialId);
@@ -93,7 +94,7 @@ public class RepositoryTests
             Assert.Equal(3, mcQuestion.Options.Count);
             Assert.Equal(1, mcQuestion.CorrectAnswerIndex);
 
-            // Test response retrieval
+            // Test response retrieval (from in-memory repository)
             var rs = (await rRepo.GetByQuestionIdAsync(questionId)).ToList();
             Assert.Single(rs);
             Assert.IsType<MultipleChoiceResponseEntity>(rs[0]);
@@ -215,201 +216,104 @@ public class RepositoryTests
         }
     }
 
-    #region Session Repository Tests
+    #region Session Repository Tests (In-Memory per §1(2))
 
     [Fact]
     public async Task SessionRepository_CanAddAndRetrieveSession()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
+        // Per PersistenceAndCascadingRules.md §1(2), sessions use in-memory storage
+        var sRepo = new InMemorySessionRepository();
 
         var materialId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
 
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
+        // Add session
+        var session = new SessionEntity(
+            sessionId,
+            materialId,
+            DateTime.UtcNow,
+            SessionStatus.ACTIVE,
+            Guid.NewGuid()
+        );
+        await sRepo.AddAsync(session);
 
-            var mRepo = new EfMaterialRepository(ctx);
-            var sRepo = new EfSessionRepository(ctx);
-
-            // Add material first (session requires material)
-            var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
-            await mRepo.AddAsync(material);
-
-            // Add session
-            var session = new SessionEntity(
-                sessionId,
-                materialId,
-                DateTime.UtcNow,
-                SessionStatus.ACTIVE,
-                Guid.NewGuid()
-            );
-            await sRepo.AddAsync(session);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-
-            var session = await sRepo.GetByIdAsync(sessionId);
-            Assert.NotNull(session);
-            Assert.Equal(sessionId, session!.Id);
-            Assert.Equal(materialId, session.MaterialId);
-            Assert.Equal(SessionStatus.ACTIVE, session.SessionStatus);
-        }
+        var retrieved = await sRepo.GetByIdAsync(sessionId);
+        Assert.NotNull(retrieved);
+        Assert.Equal(sessionId, retrieved!.Id);
+        Assert.Equal(materialId, retrieved.MaterialId);
+        Assert.Equal(SessionStatus.ACTIVE, retrieved.SessionStatus);
     }
 
     [Fact]
     public async Task SessionRepository_CanRetrieveAllSessions()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
+        var sRepo = new InMemorySessionRepository();
 
         var materialId = Guid.NewGuid();
 
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
+        // Add multiple sessions
+        var session1 = new SessionEntity(Guid.NewGuid(), materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid());
+        var session2 = new SessionEntity(Guid.NewGuid(), materialId, DateTime.UtcNow.AddHours(-1), SessionStatus.COMPLETED, Guid.NewGuid(), DateTime.UtcNow);
+        
+        await sRepo.AddAsync(session1);
+        await sRepo.AddAsync(session2);
 
-            var mRepo = new EfMaterialRepository(ctx);
-            var sRepo = new EfSessionRepository(ctx);
-
-            var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
-            await mRepo.AddAsync(material);
-
-            // Add multiple sessions
-            var session1 = new SessionEntity(Guid.NewGuid(), materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid());
-            var session2 = new SessionEntity(Guid.NewGuid(), materialId, DateTime.UtcNow.AddHours(-1), SessionStatus.COMPLETED, Guid.NewGuid(), DateTime.UtcNow);
-            
-            await sRepo.AddAsync(session1);
-            await sRepo.AddAsync(session2);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-
-            var sessions = (await sRepo.GetAllAsync()).ToList();
-            Assert.Equal(2, sessions.Count);
-        }
+        var sessions = (await sRepo.GetAllAsync()).ToList();
+        Assert.Equal(2, sessions.Count);
     }
 
     [Fact]
     public async Task SessionRepository_CanUpdateSession()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
+        var sRepo = new InMemorySessionRepository();
 
         var materialId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
         var deviceId = Guid.NewGuid();
         var startTime = DateTime.UtcNow.AddHours(-1);
 
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
+        var session = new SessionEntity(sessionId, materialId, startTime, SessionStatus.ACTIVE, deviceId);
+        await sRepo.AddAsync(session);
 
-            var mRepo = new EfMaterialRepository(ctx);
-            var sRepo = new EfSessionRepository(ctx);
+        var endTime = DateTime.UtcNow;
+        var updatedSession = new SessionEntity(sessionId, materialId, startTime, SessionStatus.COMPLETED, deviceId, endTime);
+        await sRepo.UpdateAsync(updatedSession);
 
-            var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
-            await mRepo.AddAsync(material);
-
-            var session = new SessionEntity(sessionId, materialId, startTime, SessionStatus.ACTIVE, deviceId);
-            await sRepo.AddAsync(session);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-
-            var endTime = DateTime.UtcNow;
-            var updatedSession = new SessionEntity(sessionId, materialId, startTime, SessionStatus.COMPLETED, deviceId, endTime);
-            await sRepo.UpdateAsync(updatedSession);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-
-            var session = await sRepo.GetByIdAsync(sessionId);
-            Assert.NotNull(session);
-            Assert.Equal(SessionStatus.COMPLETED, session!.SessionStatus);
-            Assert.NotNull(session.EndTime);
-        }
+        var retrieved = await sRepo.GetByIdAsync(sessionId);
+        Assert.NotNull(retrieved);
+        Assert.Equal(SessionStatus.COMPLETED, retrieved!.SessionStatus);
+        Assert.NotNull(retrieved.EndTime);
     }
 
     [Fact]
     public async Task SessionRepository_CanDeleteSession()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
+        var sRepo = new InMemorySessionRepository();
 
         var materialId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
 
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
+        var session = new SessionEntity(sessionId, materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid());
+        await sRepo.AddAsync(session);
 
-            var mRepo = new EfMaterialRepository(ctx);
-            var sRepo = new EfSessionRepository(ctx);
+        await sRepo.DeleteAsync(sessionId);
 
-            var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
-            await mRepo.AddAsync(material);
-
-            var session = new SessionEntity(sessionId, materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid());
-            await sRepo.AddAsync(session);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-            await sRepo.DeleteAsync(sessionId);
-        }
-
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
-            var session = await sRepo.GetByIdAsync(sessionId);
-            Assert.Null(session);
-        }
+        var retrieved = await sRepo.GetByIdAsync(sessionId);
+        Assert.Null(retrieved);
     }
 
     [Fact]
     public async Task SessionRepository_GetByIdAsync_NonExistingSession_ReturnsNull()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
-
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
-
-            var sRepo = new EfSessionRepository(ctx);
-            var session = await sRepo.GetByIdAsync(Guid.NewGuid());
-            Assert.Null(session);
-        }
+        var sRepo = new InMemorySessionRepository();
+        var session = await sRepo.GetByIdAsync(Guid.NewGuid());
+        Assert.Null(session);
     }
 
     [Fact]
-    public async Task SessionRepository_AllSessionStatuses_PersistCorrectly()
+    public async Task SessionRepository_AllSessionStatuses_WorkCorrectly()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = CreateSqliteInMemoryOptions(connection);
+        var sRepo = new InMemorySessionRepository();
 
         var materialId = Guid.NewGuid();
         var activeId = Guid.NewGuid();
@@ -417,38 +321,52 @@ public class RepositoryTests
         var completedId = Guid.NewGuid();
         var cancelledId = Guid.NewGuid();
 
-        using (var ctx = new MainDbContext(options))
-        {
-            ctx.Database.EnsureCreated();
+        var endTime = DateTime.UtcNow;
 
-            var mRepo = new EfMaterialRepository(ctx);
-            var sRepo = new EfSessionRepository(ctx);
+        await sRepo.AddAsync(new SessionEntity(activeId, materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid()));
+        await sRepo.AddAsync(new SessionEntity(pausedId, materialId, DateTime.UtcNow.AddHours(-1), SessionStatus.PAUSED, Guid.NewGuid(), endTime));
+        await sRepo.AddAsync(new SessionEntity(completedId, materialId, DateTime.UtcNow.AddHours(-2), SessionStatus.COMPLETED, Guid.NewGuid(), endTime));
+        await sRepo.AddAsync(new SessionEntity(cancelledId, materialId, DateTime.UtcNow.AddHours(-3), SessionStatus.CANCELLED, Guid.NewGuid(), endTime));
 
-            var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
-            await mRepo.AddAsync(material);
+        var active = await sRepo.GetByIdAsync(activeId);
+        var paused = await sRepo.GetByIdAsync(pausedId);
+        var completed = await sRepo.GetByIdAsync(completedId);
+        var cancelled = await sRepo.GetByIdAsync(cancelledId);
 
-            var endTime = DateTime.UtcNow;
+        Assert.Equal(SessionStatus.ACTIVE, active!.SessionStatus);
+        Assert.Equal(SessionStatus.PAUSED, paused!.SessionStatus);
+        Assert.Equal(SessionStatus.COMPLETED, completed!.SessionStatus);
+        Assert.Equal(SessionStatus.CANCELLED, cancelled!.SessionStatus);
+    }
 
-            await sRepo.AddAsync(new SessionEntity(activeId, materialId, DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid()));
-            await sRepo.AddAsync(new SessionEntity(pausedId, materialId, DateTime.UtcNow.AddHours(-1), SessionStatus.PAUSED, Guid.NewGuid(), endTime));
-            await sRepo.AddAsync(new SessionEntity(completedId, materialId, DateTime.UtcNow.AddHours(-2), SessionStatus.COMPLETED, Guid.NewGuid(), endTime));
-            await sRepo.AddAsync(new SessionEntity(cancelledId, materialId, DateTime.UtcNow.AddHours(-3), SessionStatus.CANCELLED, Guid.NewGuid(), endTime));
-        }
+    #endregion
 
-        using (var ctx = new MainDbContext(options))
-        {
-            var sRepo = new EfSessionRepository(ctx);
+    #region Response Repository Tests (In-Memory per §1(2))
 
-            var active = await sRepo.GetByIdAsync(activeId);
-            var paused = await sRepo.GetByIdAsync(pausedId);
-            var completed = await sRepo.GetByIdAsync(completedId);
-            var cancelled = await sRepo.GetByIdAsync(cancelledId);
+    [Fact]
+    public async Task ResponseRepository_DeleteByQuestionId_RemovesAllRelatedResponses()
+    {
+        // Per PersistenceAndCascadingRules.md §2(2): Deletion of a question must delete any responses associated with it
+        var rRepo = new InMemoryResponseRepository();
 
-            Assert.Equal(SessionStatus.ACTIVE, active!.SessionStatus);
-            Assert.Equal(SessionStatus.PAUSED, paused!.SessionStatus);
-            Assert.Equal(SessionStatus.COMPLETED, completed!.SessionStatus);
-            Assert.Equal(SessionStatus.CANCELLED, cancelled!.SessionStatus);
-        }
+        var questionId = Guid.NewGuid();
+        var otherQuestionId = Guid.NewGuid();
+
+        // Add responses to the question
+        await rRepo.AddAsync(new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), 1, null, true));
+        await rRepo.AddAsync(new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), 2, null, false));
+        await rRepo.AddAsync(new TrueFalseResponseEntity(Guid.NewGuid(), otherQuestionId, Guid.NewGuid(), true, null, true));
+
+        // Delete responses by question ID
+        await rRepo.DeleteByQuestionIdAsync(questionId);
+
+        // Verify responses for deleted question are gone
+        var responsesForQuestion = (await rRepo.GetByQuestionIdAsync(questionId)).ToList();
+        Assert.Empty(responsesForQuestion);
+
+        // Verify responses for other question are still there
+        var responsesForOther = (await rRepo.GetByQuestionIdAsync(otherQuestionId)).ToList();
+        Assert.Single(responsesForOther);
     }
 
     #endregion

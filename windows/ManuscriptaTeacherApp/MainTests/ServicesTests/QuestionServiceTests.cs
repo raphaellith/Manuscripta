@@ -16,13 +16,15 @@ public class QuestionServiceTests
 {
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
+    private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly QuestionService _service;
 
     public QuestionServiceTests()
     {
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockMaterialRepo = new Mock<IMaterialRepository>();
-        _service = new QuestionService(_mockQuestionRepo.Object, _mockMaterialRepo.Object);
+        _mockResponseRepo = new Mock<IResponseRepository>();
+        _service = new QuestionService(_mockQuestionRepo.Object, _mockMaterialRepo.Object, _mockResponseRepo.Object);
     }
 
     [Fact]
@@ -503,17 +505,32 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task DeleteQuestionAsync_CallsRepository()
+    public async Task DeleteQuestionAsync_DeletesResponsesFirst_ThenDeletesQuestion()
     {
-        // Arrange
+        // Arrange - Per PersistenceAndCascadingRules.md §2(2): 
+        // Deletion of a question must delete any responses associated with it
         var questionId = Guid.NewGuid();
+        
+        // Use a sequence to verify the order of calls
+        var callOrder = new List<string>();
+        
+        _mockResponseRepo.Setup(r => r.DeleteByQuestionIdAsync(questionId))
+            .Callback(() => callOrder.Add("DeleteResponses"))
+            .Returns(Task.CompletedTask);
         _mockQuestionRepo.Setup(r => r.DeleteAsync(questionId))
+            .Callback(() => callOrder.Add("DeleteQuestion"))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.DeleteQuestionAsync(questionId);
 
-        // Assert
+        // Assert - verify both methods were called
+        _mockResponseRepo.Verify(r => r.DeleteByQuestionIdAsync(questionId), Times.Once);
         _mockQuestionRepo.Verify(r => r.DeleteAsync(questionId), Times.Once);
+        
+        // Assert - verify responses were deleted BEFORE the question (order matters for orphan removal)
+        Assert.Equal(2, callOrder.Count);
+        Assert.Equal("DeleteResponses", callOrder[0]);
+        Assert.Equal("DeleteQuestion", callOrder[1]);
     }
 }

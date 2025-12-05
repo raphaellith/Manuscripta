@@ -16,11 +16,16 @@ public class QuestionService : IQuestionService
 {
     private readonly IQuestionRepository _questionRepository;
     private readonly IMaterialRepository _materialRepository;
+    private readonly IResponseRepository _responseRepository;
 
-    public QuestionService(IQuestionRepository questionRepository, IMaterialRepository materialRepository)
+    public QuestionService(
+        IQuestionRepository questionRepository, 
+        IMaterialRepository materialRepository,
+        IResponseRepository responseRepository)
     {
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
+        _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
     }
 
     public async Task<QuestionEntity> CreateQuestionAsync(QuestionEntity question)
@@ -64,6 +69,8 @@ public class QuestionService : IQuestionService
 
     public async Task DeleteQuestionAsync(Guid id)
     {
+        // Per PersistenceAndCascadingRules.md §2(2): A deletion of a question Q must delete any responses associated with Q.
+        await _responseRepository.DeleteByQuestionIdAsync(id);
         await _questionRepository.DeleteAsync(id);
     }
 
