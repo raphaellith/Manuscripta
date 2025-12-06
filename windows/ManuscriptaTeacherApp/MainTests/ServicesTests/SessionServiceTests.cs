@@ -16,13 +16,22 @@ public class SessionServiceTests
 {
     private readonly Mock<ISessionRepository> _mockSessionRepo;
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
+    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
+    private readonly DeviceIdValidator _deviceIdValidator;
     private readonly SessionService _service;
 
     public SessionServiceTests()
     {
         _mockSessionRepo = new Mock<ISessionRepository>();
         _mockMaterialRepo = new Mock<IMaterialRepository>();
-        _service = new SessionService(_mockSessionRepo.Object, _mockMaterialRepo.Object);
+        _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
+        
+        // Default: all devices are considered paired/valid
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(true);
+        
+        _deviceIdValidator = new DeviceIdValidator(_mockDeviceRegistry.Object);
+        _service = new SessionService(_mockSessionRepo.Object, _mockMaterialRepo.Object, _deviceIdValidator);
     }
 
     #region CreateSessionAsync Tests
@@ -436,7 +445,7 @@ public class SessionServiceTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => 
-            new SessionService(null!, _mockMaterialRepo.Object));
+            new SessionService(null!, _mockMaterialRepo.Object, _deviceIdValidator));
     }
 
     [Fact]
@@ -444,7 +453,15 @@ public class SessionServiceTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => 
-            new SessionService(_mockSessionRepo.Object, null!));
+            new SessionService(_mockSessionRepo.Object, null!, _deviceIdValidator));
+    }
+
+    [Fact]
+    public void Constructor_NullDeviceIdValidator_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => 
+            new SessionService(_mockSessionRepo.Object, _mockMaterialRepo.Object, null!));
     }
 
     #endregion

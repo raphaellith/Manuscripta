@@ -14,6 +14,12 @@ public class MainDbContext : DbContext
     // Create a DbSet<TEntity> property for each entity set, corresponding to a database table
     public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
+    
+    /// <summary>
+    /// Paired Android devices. See Pairing Process.md §2(4).
+    /// </summary>
+    public DbSet<PairedDeviceEntity> PairedDevices { get; set; }
+    
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
     // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
@@ -49,6 +55,12 @@ public class MainDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(q => q.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure PairedDeviceEntity
+        modelBuilder.Entity<PairedDeviceEntity>(entity =>
+        {
+            entity.HasKey(e => e.DeviceId);
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
