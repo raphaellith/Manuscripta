@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -16,6 +17,7 @@ public class TcpPairingServiceTests : IDisposable
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
     private readonly Mock<ILogger<TcpPairingService>> _mockLogger;
     private readonly IOptions<NetworkSettings> _options;
+    private readonly IServiceProvider _serviceProvider;
     private readonly TcpPairingService _service;
 
     public TcpPairingServiceTests()
@@ -33,7 +35,21 @@ public class TcpPairingServiceTests : IDisposable
             BroadcastIntervalMs = 3000
         });
         
-        _service = new TcpPairingService(_options, _mockDeviceRegistry.Object, _mockLogger.Object);
+        // Set up a mock IServiceProvider that returns IDeviceRegistryService through a scope
+        var mockScope = new Mock<IServiceScope>();
+        mockScope.Setup(s => s.ServiceProvider.GetService(typeof(IDeviceRegistryService)))
+            .Returns(_mockDeviceRegistry.Object);
+        
+        var mockScopeFactory = new Mock<IServiceScopeFactory>();
+        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+        
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        mockServiceProvider.Setup(sp => sp.GetService(typeof(IServiceScopeFactory)))
+            .Returns(mockScopeFactory.Object);
+        
+        _serviceProvider = mockServiceProvider.Object;
+        
+        _service = new TcpPairingService(_options, _serviceProvider, _mockLogger.Object);
     }
 
     public void Dispose()
@@ -48,11 +64,11 @@ public class TcpPairingServiceTests : IDisposable
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TcpPairingService(null!, _mockDeviceRegistry.Object, _mockLogger.Object));
+            new TcpPairingService(null!, _serviceProvider, _mockLogger.Object));
     }
 
     [Fact]
-    public void Constructor_NullDeviceRegistry_ThrowsArgumentNullException()
+    public void Constructor_NullServiceProvider_ThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
@@ -64,7 +80,7 @@ public class TcpPairingServiceTests : IDisposable
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TcpPairingService(_options, _mockDeviceRegistry.Object, null!));
+            new TcpPairingService(_options, _serviceProvider, null!));
     }
 
     #endregion

@@ -52,18 +52,35 @@ public class DeviceIdValidator
 
     /// <summary>
     /// Synchronous validation for scenarios where async is not practical.
-    /// Note: This blocks the calling thread. Prefer async methods when possible.
+    /// <para>
+    /// <b>Warning:</b> This method blocks the calling thread and can cause deadlocks in environments
+    /// with a synchronization context (e.g., classic ASP.NET, WinForms, WPF). 
+    /// Prefer using <see cref="IsValidDeviceIdAsync"/> whenever possible.
+    /// </para>
+    /// <para>
+    /// If you must use this method, ensure it is not called from a context with a synchronization context,
+    /// or use Task.Run to offload to the thread pool.
+    /// </para>
     /// </summary>
     /// <param name="deviceId">The device ID to validate.</param>
     /// <returns>True if the device ID is valid and paired; otherwise, false.</returns>
     public bool IsValidDeviceId(Guid deviceId)
     {
-        return _deviceRegistry.IsDevicePairedAsync(deviceId).GetAwaiter().GetResult();
+        // Using ConfigureAwait(false) reduces (but does not eliminate) deadlock risk
+        return _deviceRegistry.IsDevicePairedAsync(deviceId).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     /// <summary>
     /// Synchronous validation that throws if invalid.
-    /// Note: This blocks the calling thread. Prefer async methods when possible.
+    /// <para>
+    /// <b>Warning:</b> This method blocks the calling thread and can cause deadlocks in environments
+    /// with a synchronization context (e.g., classic ASP.NET, WinForms, WPF). 
+    /// Prefer using <see cref="ValidateOrThrowAsync"/> whenever possible.
+    /// </para>
+    /// <para>
+    /// If you must use this method, ensure it is not called from a context with a synchronization context,
+    /// or use Task.Run to offload to the thread pool.
+    /// </para>
     /// </summary>
     /// <param name="deviceId">The device ID to validate.</param>
     /// <exception cref="ArgumentException">Thrown when the device ID is not valid.</exception>

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -12,10 +13,14 @@ namespace Main.Services.Network;
 /// Implementation of TCP pairing service.
 /// Handles PAIRING_REQUEST messages and responds with PAIRING_ACK per Pairing Process.md §2(3)(a).
 /// </summary>
+/// <remarks>
+/// This service is registered as a singleton but needs to access scoped services (IDeviceRegistryService).
+/// It uses IServiceProvider to create scopes when resolving scoped dependencies to avoid captive dependency issues.
+/// </remarks>
 public class TcpPairingService : ITcpPairingService, IDisposable
 {
     private readonly NetworkSettings _settings;
-    private readonly IDeviceRegistryService _deviceRegistry;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TcpPairingService> _logger;
     
     private TcpListener? _listener;
@@ -27,11 +32,11 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
     public TcpPairingService(
         IOptions<NetworkSettings> settings,
-        IDeviceRegistryService deviceRegistry,
+        IServiceProvider serviceProvider,
         ILogger<TcpPairingService> logger)
     {
         _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
-        _deviceRegistry = deviceRegistry ?? throw new ArgumentNullException(nameof(deviceRegistry));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -212,8 +217,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             var deviceId = PairingMessage.DecodePairingRequest(data);
             _logger.LogInformation("Received PAIRING_REQUEST from {ClientId}, DeviceId: {DeviceId}", clientId, deviceId);
 
+            // Create a scope to resolve the scoped IDeviceRegistryService
+            // This avoids the captive dependency issue (singleton depending on scoped service)
+            using var scope = _serviceProvider.CreateScope();
+            var deviceRegistry = scope.ServiceProvider.GetRequiredService<IDeviceRegistryService>();
+            
             // Register the device
-            var isNewDevice = await _deviceRegistry.RegisterDeviceAsync(deviceId);
+            var isNewDevice = await deviceRegistry.RegisterDeviceAsync(deviceId);
             
             if (isNewDevice)
             {

@@ -52,15 +52,17 @@ public class PairingController : ControllerBase
 
         try
         {
-            // Check if device is already paired - per API Contract §2.4, return 409 Conflict
-            if (await _deviceRegistry.IsDevicePairedAsync(deviceId))
+            // Register the device - per Pairing Process §2(4)
+            // RegisterDeviceAsync handles the check-and-register atomically at the database level
+            // using a try-catch for DbUpdateException to handle race conditions
+            var isNewDevice = await _deviceRegistry.RegisterDeviceAsync(deviceId);
+            
+            if (!isNewDevice)
             {
+                // Device already existed - per API Contract §2.4, return 409 Conflict
                 _logger.LogInformation("Device {DeviceId} is already paired", deviceId);
                 return Conflict(new { error = "Device is already paired" });
             }
-
-            // Register the device - per Pairing Process §2(4)
-            await _deviceRegistry.RegisterDeviceAsync(deviceId);
             
             _logger.LogInformation("Device {DeviceId} successfully paired via HTTP", deviceId);
 

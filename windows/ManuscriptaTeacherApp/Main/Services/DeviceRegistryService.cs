@@ -34,12 +34,23 @@ public class DeviceRegistryService : IDeviceRegistryService
         }
 
         // New device - create pairing record per Pairing Process §2(4)
+        // Wrap in try-catch to handle race conditions where another request
+        // registers the same device between our check and save
         var newDevice = new PairedDeviceEntity(deviceId);
-        _context.PairedDevices.Add(newDevice);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.PairedDevices.Add(newDevice);
+            await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Device {DeviceId} paired successfully", deviceId);
-        return true;
+            _logger.LogInformation("Device {DeviceId} paired successfully", deviceId);
+            return true;
+        }
+        catch (DbUpdateException ex)
+        {
+            // Likely a duplicate due to race condition - DeviceId is primary key
+            _logger.LogWarning(ex, "Device {DeviceId} registration failed due to duplicate (race condition)", deviceId);
+            return false;
+        }
     }
 
     /// <inheritdoc />
