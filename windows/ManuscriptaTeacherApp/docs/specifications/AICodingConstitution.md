@@ -36,14 +36,14 @@ This document is effective for Windows App development only.
 
     (a) Review document. An AI agent shall judge the reasonableness of a document, and make modification suggestions orally. However, it may not modify the document without a developer's consent.
     (b) Edit a document. A developer shall first explicitly describe clause(s) they wish to be edited or extended by the AI agent, and the AI agent shall construct those provisions with implementation details accordingly.
-    (c) Implement a specification. A developer shall specify the specification, and the corresponding clauses, that the AI agent is expected to implement. The AI agent shall therefore implement those provisions accordingly. The Windows application uses test-driven development, and the AI agent must also produce corresponding tests, as appropriate, for their implementation.
+    (c) Implement a specification. A developer shall specify the specification, and the corresponding clauses, that the AI agent is expected to implement. The AI agent shall implement those provisions accordingly. The Windows application uses test-driven development, and the AI agent must also produce corresponding tests, as appropriate, for their implementation.
     (d) Verify compliance. A developer shall specify a specification they wish to check compliance for, and the AI agent shall produce a report of compliance of the current implementation against that specification.
 
 (2) Nothing in this specification shall mandate a developer to use a category defined in (1).
 
 ## Section 3: Requirement to Follow Specification For Implementation
 
-(1) In this project, specifications shall be treated as authoratative against any implementation presented. The implementation of a corresponding application (such as the Android app) shall never be treated as a specification and influence the design of the Windows app accordingly.
+(1) In this project, specifications shall be treated as authoritative against any implementation presented. The implementation of a corresponding application (such as the Android app) shall never be treated as a specification and influence the design of the Windows app accordingly.
 
 (2) An AI agent shall not —
     (a) Implement a functionality, however sound it may deem it to be, without specification. 
