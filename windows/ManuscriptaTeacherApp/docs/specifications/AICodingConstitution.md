@@ -71,7 +71,7 @@ This document is effective for Windows App development only.
 
 (2) In addition to these documents, an AI agent shall comply with any requests to read a document from a developer.
 
-(3) Developers shall update Appendix 1 of this document to reflect the location of the documents, and the authoratative branch the are maintained on. 
+(3) Developers shall update Appendix 1 of this document to reflect the location of the documents, and the authoritative branch they are maintained on. 
 
 (4) The AI agent shall always retrieve the documents in the specified branch in Appendix 1.
 
