@@ -16,11 +16,16 @@ public class SessionService : ISessionService
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IMaterialRepository _materialRepository;
+    private readonly DeviceIdValidator _deviceIdValidator;
 
-    public SessionService(ISessionRepository sessionRepository, IMaterialRepository materialRepository)
+    public SessionService(
+        ISessionRepository sessionRepository, 
+        IMaterialRepository materialRepository,
+        DeviceIdValidator deviceIdValidator)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
+        _deviceIdValidator = deviceIdValidator ?? throw new ArgumentNullException(nameof(deviceIdValidator));
     }
 
     /// <inheritdoc/>
@@ -135,7 +140,7 @@ public class SessionService : ISessionService
         }
 
         // Validate §2D(3)(b): DeviceId must correspond to a valid device
-        DeviceIdValidator.ValidateOrThrow(session.DeviceId);
+        await _deviceIdValidator.ValidateOrThrowAsync(session.DeviceId);
 
         // Validate that the referenced material exists
         var material = await _materialRepository.GetByIdAsync(session.MaterialId);

@@ -3,11 +3,29 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 
 using Main.Data;
+using Main.Services;
+using Main.Services.Network;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure network settings from appsettings.json
+builder.Services.Configure<NetworkSettings>(
+    builder.Configuration.GetSection("NetworkSettings"));
+
 builder.Services.AddDbContext<MainDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
+
+// Register pairing and device services
+builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
+builder.Services.AddScoped<DeviceIdValidator>();
+
+// Register network services (singletons for background services)
+builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
+builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
+
+// Register background services for UDP broadcasting and TCP pairing
+builder.Services.AddHostedService<UdpBroadcastHostedService>();
+builder.Services.AddHostedService<TcpPairingHostedService>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
@@ -34,3 +52,6 @@ app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 app.MapControllers();
 
 app.Run();
+
+// Expose Program class for WebApplicationFactory integration testing
+public partial class Program { }
