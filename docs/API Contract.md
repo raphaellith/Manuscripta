@@ -2,12 +2,12 @@
 
 This document defines the communication protocols between the Teacher Application (Windows Server) and the Student Application (Android Client).
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Draft
 
 ## Overview
 
-This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers).
+This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers). This API contract conforms to Validation Rules.md for data model definitions and validation. See Validation Rules.md §1(5) for referencing requirements.
 
 ### Architecture of Communication Subsystem
 
@@ -96,35 +96,35 @@ Fetches a list of available materials for the current session.
     ```json
     [
       {
-        "materials": ["uuid-string1", "uuid-string2", "uuid-string3"] // List of ids, in order of presentation
+        "Materials": ["uuid-string1", "uuid-string2", "uuid-string3"] // List of ids, in order of presentation
       }
     ]
     ```
 
 #### Get Material Details
-Downloads the full content of a specific material.
+Downloads the full content of a specific material. The JSON object conforms to MaterialEntity as defined in Validation Rules.md §2A.
 
 -   **Endpoint:** `GET /materials/{id}`
 -   **Response:** `200 OK`
     ```json
     {
-      "id": "uuid-string",
+      "Id": "uuid-string",
       "MaterialType": "QUIZ",
-      "title": "Algebra Basics",
-      "content": "...", // HTML or Text content
-      "metadata": {// This is where we can put lesson - specific configurations (button toggles, characters, etc..)
+      "Title": "Algebra Basics",
+      "Content": "...", // HTML or Text content
+      "Metadata": {// This is where we can put lesson - specific configurations (button toggles, characters, etc..)
       },
-      "timestamp": "2023-10-27T10:00:00Z",
-      "vocabularyTerms": [
-        { "term": "Variable", "definition": "A symbol used to represent a number." }
+      "Timestamp": "2023-10-27T10:00:00Z",
+      "VocabularyTerms": [
+        { "Term": "Variable", "Definition": "A symbol used to represent a number." }
       ],
-      "questions": [
+      "Questions": [
         {
-          "id": "q-uuid-1",
-          "text": "What is x if x + 2 = 5?",
-          "type": "MULTIPLE_CHOICE",
-          "options": ["1", "2", "3", "4"],
-          "correctAnswer": "3"
+          "Id": "q-uuid-1",
+          "QuestionText": "What is x if x + 2 = 5?",
+          "QuestionType": "MULTIPLE_CHOICE",
+          "Options": ["1", "2", "3", "4"],
+          "CorrectAnswer": "3"
         }
       ]
     }
@@ -149,8 +149,8 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
-      "kioskMode": true, // Final configuration to be determined
-      "textSize": "medium"
+      "KioskMode": true, // Final configuration to be determined
+      "TextSize": "medium"
     }
     ```
 
@@ -167,28 +167,28 @@ Used during the pairing handshake to register a student device with the teacher 
 -   **Body:**
     ```json
     {
-      "deviceId": "device-uuid-generated-by-client"
+      "DeviceId": "device-uuid-generated-by-client"
     }
     ```
 -   **Response:** `201 Created`
     ```json
     {} // Empty 201 to confirm successful pairing
     ```
--   **Error Response:** `409 Conflict` (if deviceId is already paired)
+-   **Error Response:** `409 Conflict` (if DeviceId is already paired)
 
 #### Submit Response
-Submits a single answer to a question.
+Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
 -   **Body:**
     ```json
     {
-      "id": "resp-uuid-generated-by-client",
-      "questionId": "q-uuid-1",
-      "materialId": "mat-uuid-1",
-      "studentId": "device-id-or-student-uuid",
-      "answer": "3",
-      "timestamp": "2023-10-27T10:05:00Z"
+      "Id": "resp-uuid-generated-by-client",
+      "QuestionId": "q-uuid-1",
+      "MaterialId": "mat-uuid-1",
+      "StudentId": "device-id-or-student-uuid",
+      "Answer": "3",
+      "Timestamp": "2023-10-27T10:05:00Z"
     }
     ```
 -   **Response:** `201 Created`
@@ -203,7 +203,7 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
 -   **Body:**
     ```json
     {
-      "responses": [
+      "Responses": [
         // Array of response objects as above
       ]
     }
@@ -293,11 +293,11 @@ Bytes 1-N: JSON payload (see below)
 Status Update JSON payload:
 ```json
 {
-  "deviceId": "device-123",
-  "status": "ON_TASK",
-  "batteryLevel": 85,
-  "currentMaterialId": "mat-uuid-1",
-  "studentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
+  "DeviceId": "device-123",
+  "Status": "ON_TASK",
+  "BatteryLevel": 85,
+  "CurrentMaterialId": "mat-uuid-1",
+  "StudentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
 }
 ```
 
@@ -318,12 +318,15 @@ Additional opcodes can be defined as needed. Both applications should:
 
 ## 4. Data Models
 
+All data models in this contract must conform to Validation Rules.md. This document takes precedence in case of contradictions.
+
 ### 4.1. Entity Identification
 **CRITICAL:** Entity IDs (UUIDs) must be persistent and consistent across both Windows and Android applications.
 -   **Materials/Questions:** Created by Windows (Server), ID assigned by Server. Android (Client) **must preserve** this ID.
 -   **Responses/Sessions:** Created by Android (Client), ID assigned by Client. Windows (Server) **must preserve** this ID.
 
 ### 4.2. Material Types
+See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
 -   `QUIZ`: Interactive questions with immediate feedback.
 -   `WORKSHEET`: Content for reading and annotation.
@@ -335,5 +338,10 @@ Additional opcodes can be defined as needed. Both applications should:
 -   `HAND_RAISED`: Student explicitly requested help.
 -   `LOCKED`: Device is remotely locked.
 -   `DISCONNECTED`: (Server-side inferred status).
+
+### 4.4. Serialization Rules
+Timestamps are transmitted as ISO 8601 strings (e.g., '2023-10-27T10:00:00Z') but must deserialize to Unix longs per Validation Rules.md §2A(1)(d).
+IDs are transmitted as strings; validate as per Validation Rules.md §1(2).
+Enums (e.g., MaterialType) are transmitted as strings; must match Validation Rules.md values exactly.
 
 ---
