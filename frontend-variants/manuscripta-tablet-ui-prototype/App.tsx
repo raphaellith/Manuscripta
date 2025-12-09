@@ -94,18 +94,34 @@ const App: React.FC = () => {
                 {renderView()}
             </main>
             <footer className="flex-shrink-0 mt-auto pt-4">
-                <div className="flex justify-between items-end">
-                    <CharacterHelper 
-                      onAIAssist={handleAIAssist} 
-                      isVisible={currentView === View.Lesson && !showAIContent} 
-                    />
-                    {currentView === View.Lesson && !showAIContent && (
-                        <AudioButton 
-                          onClick={() => console.log('🔊 Reading lesson content aloud...')} 
-                          title="Read lesson aloud" 
-                        />
-                    )}
-                </div>
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <CharacterHelper 
+                              onAIAssist={handleAIAssist} 
+                              isVisible={currentView === View.Lesson && !showAIContent} 
+                            />
+                        </div>
+                        <div>
+                            {(() => {
+                              if (showAIContent) return null;
+                              
+                              let audioProps = null;
+                              switch (currentView) {
+                                case View.Lesson:
+                                  audioProps = { onClick: () => console.log('🔊 Reading lesson content aloud...'), title: "Read lesson aloud" };
+                                  break;
+                                case View.Quiz:
+                                  audioProps = { onClick: () => console.log('🔊 Reading question aloud...'), title: "Read question aloud" };
+                                  break;
+                                case View.Worksheet:
+                                  audioProps = { onClick: () => console.log('🔊 Reading worksheet aloud...'), title: "Read worksheet aloud" };
+                                  break;
+                              }
+                              
+                              return audioProps ? <AudioButton {...audioProps} /> : null;
+                            })()}
+                        </div>
+                    </div>
             </footer>
         </div>
       </Tablet>

@@ -11,6 +11,7 @@ export enum View {
 export enum AITask {
   Simplify = 'Simplify',
   Summarise = 'Summarise',
+  Expand = 'Expand',
 }
 
 export type QuizQuestion = {

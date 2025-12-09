@@ -1,7 +1,6 @@
 import React from 'react';
 import { QUIZ_QUESTIONS } from '../constants';
 import Button from './common/Button';
-import AudioButton from './common/AudioButton';
 
 interface QuizViewProps {
   onBackToLesson: () => void;
@@ -21,10 +20,6 @@ const QuizView: React.FC<QuizViewProps> = ({ onBackToLesson, onSubmit, selectedA
     onSubmit(selectedAnswer === question.correctAnswerIndex);
   };
   
-  const playAudio = () => {
-    console.log('🔊 Reading question aloud...');
-  };
-
   return (
     <div className="flex flex-col h-full">
       <Button variant="back" onClick={onBackToLesson}>
@@ -53,7 +48,6 @@ const QuizView: React.FC<QuizViewProps> = ({ onBackToLesson, onSubmit, selectedA
       <div className="mt-auto">
          <Button onClick={handleSubmit}>✓ Submit Answer</Button>
       </div>
-      <AudioButton onClick={playAudio} title="Read question aloud" />
     </div>
   );
 };

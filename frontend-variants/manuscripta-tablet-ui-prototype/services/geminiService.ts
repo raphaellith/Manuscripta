@@ -5,7 +5,7 @@ import { AITask } from '../types';
 // In a real application, you would import { GoogleGenAI } from "@google/genai"
 // and make actual API calls here.
 
-const MOCK_LATENCY = 1200; // in milliseconds
+const MOCK_LATENCY = 0; // in milliseconds
 
 const mockResponses: Record<AITask, string> = {
   [AITask.Simplify]: "Imagine two people wanting the same toy, which is the English crown. One person, Harold, got it first. But another person, William, said the toy was promised to him. So William came with his friends and they had a big fight. William won the fight, got the toy, and became the new king. That's the Battle of Hastings!",

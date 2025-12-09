@@ -1,11 +1,7 @@
 import React from 'react';
 import { WORKSHEET_ITEMS } from '../constants';
-import AudioButton from './common/AudioButton';
 
 const WorksheetView: React.FC = () => {
-  const playAudio = () => {
-    console.log('🔊 Reading worksheet aloud...');
-  };
   
   return (
     <div className="flex flex-col h-full">
@@ -32,7 +28,6 @@ const WorksheetView: React.FC = () => {
             Check Answers
         </button>
       </div>
-      <AudioButton onClick={playAudio} title="Read worksheet aloud" />
     </div>
   );
 };
