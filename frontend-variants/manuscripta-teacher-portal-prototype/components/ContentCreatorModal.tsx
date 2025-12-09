@@ -12,16 +12,22 @@ const ageGroupLevels = [
 interface ContentCreatorModalProps {
     unit: string;
     existingLessonFolders: LessonFolder[];
+    preSelectedLesson?: LessonFolder | null;
     onClose: () => void;
     onAddContent: (content: { title: string; type: ContentType, lessonNumber: number, lessonTitle: string }) => void;
 }
 
-export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, existingLessonFolders, onClose, onAddContent }) => {
+export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, existingLessonFolders, preSelectedLesson, onClose, onAddContent }) => {
     const [contentType, setContentType] = useState<ContentType>('Worksheet');
     const [prompt, setPrompt] = useState('');
     const [ageGroup, setAgeGroup] = useState(2);
     const [readingAge, setReadingAge] = useState(10);
-    const [selectedLessonKey, setSelectedLessonKey] = useState<string>(existingLessonFolders.length > 0 ? `${existingLessonFolders[0].number}-${existingLessonFolders[0].title}` : '');
+    
+    // Use pre-selected lesson if provided, otherwise use first from list
+    const initialLessonKey = preSelectedLesson 
+        ? `${preSelectedLesson.number}-${preSelectedLesson.title}`
+        : (existingLessonFolders.length > 0 ? `${existingLessonFolders[0].number}-${existingLessonFolders[0].title}` : '');
+    const [selectedLessonKey, setSelectedLessonKey] = useState<string>(initialLessonKey);
 
     const handleGenerate = () => {
         if (!prompt.trim()) {
@@ -44,34 +50,39 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
     return (
         <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-2xl space-y-6 animate-fade-in-up border border-gray-100">
-                <h2 className="text-2xl font-serif text-text-heading">Add Content to <span className="italic">"{unit}"</span></h2>
+                <h2 className="text-2xl font-serif text-text-heading">
+                    Add Content to <span className="italic">"{unit}"</span>
+                    {preSelectedLesson && <span className="text-brand-blue"> › L{preSelectedLesson.number} {preSelectedLesson.title}</span>}
+                </h2>
                 
-                {/* Lesson Folder Selector */}
-                <div>
-                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">1. Choose Lesson</label>
-                    <select
-                        value={selectedLessonKey}
-                        onChange={(e) => setSelectedLessonKey(e.target.value)}
-                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50"
-                        disabled={existingLessonFolders.length === 0}
-                    >
-                        {existingLessonFolders.length > 0 ? (
-                            existingLessonFolders.map(folder => (
-                                <option key={folder.id} value={`${folder.number}-${folder.title}`}>
-                                    {String(folder.number).padStart(2, '0')}. {folder.title}
-                                </option>
-                            ))
-                        ) : (
-                            <option value="">-- Create a lesson folder first --</option>
-                        )}
-                    </select>
-                </div>
+                {/* Lesson Folder Selector - only show if no pre-selected lesson */}
+                {!preSelectedLesson && (
+                    <div>
+                        <label className="font-sans font-medium text-text-heading text-sm mb-2 block">1. Choose Lesson</label>
+                        <select
+                            value={selectedLessonKey}
+                            onChange={(e) => setSelectedLessonKey(e.target.value)}
+                            className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50"
+                            disabled={existingLessonFolders.length === 0}
+                        >
+                            {existingLessonFolders.length > 0 ? (
+                                existingLessonFolders.map(folder => (
+                                    <option key={folder.id} value={`${folder.number}-${folder.title}`}>
+                                        {String(folder.number).padStart(2, '0')}. {folder.title}
+                                    </option>
+                                ))
+                            ) : (
+                                <option value="">-- Create a lesson folder first --</option>
+                            )}
+                        </select>
+                    </div>
+                )}
 
                 {/* Content Type Selector */}
                 <div>
-                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">2. Choose Content Type</label>
+                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">{preSelectedLesson ? '1' : '2'}. Choose Content Type</label>
                     <div className="flex gap-3">
-                        {(['Lesson', 'Worksheet', 'Quiz'] as ContentType[]).map(type => (
+                        {(['Reading', 'Worksheet', 'Quiz'] as ContentType[]).map(type => (
                             <button 
                                 key={type}
                                 onClick={() => setContentType(type)}
@@ -85,7 +96,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
 
                 {/* Prompt */}
                 <div>
-                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">3. What should this {contentType.toLowerCase()} be about?</label>
+                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">{preSelectedLesson ? '2' : '3'}. What should this {contentType.toLowerCase()} be about?</label>
                     <textarea 
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
@@ -97,7 +108,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
 
                 {/* Age Group */}
                 <div>
-                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">4. Age Group</label>
+                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">{preSelectedLesson ? '3' : '4'}. Age Group</label>
                     <div className="flex items-center gap-6 p-4 bg-brand-cream border border-gray-100 rounded-lg">
                         <input 
                             type="range" 
@@ -114,7 +125,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
                 {/* Reading Age Level - Separate from age group for precise targeting */}
                 <div>
                     <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
-                        5. Target Reading Age 
+                        {preSelectedLesson ? '4' : '5'}. Target Reading Age 
                         <span className="text-gray-400 font-normal ml-2">(Progressive Skills Level)</span>
                     </label>
                     <div className="flex items-center gap-6 p-4 bg-brand-cream border border-gray-100 rounded-lg">
@@ -141,7 +152,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
                     <button 
                         onClick={handleGenerate} 
                         className="px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={existingLessonFolders.length === 0}
+                        disabled={!preSelectedLesson && existingLessonFolders.length === 0}
                     >
                         Generate Content
                     </button>

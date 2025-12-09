@@ -95,6 +95,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
   onUpdateUnit,
 }) => {
   const [contentModalUnit, setContentModalUnit] = useState<string | null>(null);
+  const [contentModalLesson, setContentModalLesson] = useState<LessonFolder | null>(null);
   const [folderModalUnit, setFolderModalUnit] = useState<string | null>(null);
   const [editingContentItem, setEditingContentItem] = useState<ContentItem | null>(null);
   const [viewingContentItem, setViewingContentItem] = useState<ContentItem | null>(null);
@@ -103,11 +104,15 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
   const [activeVariant, setActiveVariant] = useState<ActiveVariant>('tree');
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
-  const handleOpenContentModal = (unitTitle: string) => setContentModalUnit(unitTitle);
+  const handleOpenContentModal = (unitTitle: string, lesson?: LessonFolder) => {
+    setContentModalUnit(unitTitle);
+    setContentModalLesson(lesson || null);
+  };
   const handleOpenFolderModal = (unitTitle: string) => setFolderModalUnit(unitTitle);
   const handleOpenUnitSettings = (unit: Unit) => setSelectedUnit(unit);
   const handleCloseModals = () => {
       setContentModalUnit(null);
+      setContentModalLesson(null);
       setFolderModalUnit(null);
       setEditingContentItem(null);
       setViewingContentItem(null);
@@ -124,7 +129,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
     handleCloseModals();
   };
 
-  const handleAddContent = (content: { title: string; type: 'Lesson' | 'Worksheet' | 'Quiz', lessonNumber: number, lessonTitle: string }) => {
+  const handleAddContent = (content: { title: string; type: 'Reading' | 'Worksheet' | 'Quiz', lessonNumber: number, lessonTitle: string }) => {
       if (!contentModalUnit) return;
       
       const newContentItem: ContentItem = {
@@ -176,6 +181,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
         <ContentCreatorModal 
           unit={contentModalUnit}
           existingLessonFolders={lessonFolders.filter(f => f.unit === contentModalUnit).sort((a,b) => a.number - b.number)}
+          preSelectedLesson={contentModalLesson}
           onClose={handleCloseModals}
           onAddContent={handleAddContent}
         />

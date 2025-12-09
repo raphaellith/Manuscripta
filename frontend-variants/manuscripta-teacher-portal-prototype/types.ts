@@ -6,7 +6,7 @@ export interface Message {
   sender: 'user' | 'ai';
 }
 
-export type ContentType = 'Lesson' | 'Worksheet' | 'Quiz' | 'PDF' | 'Reading';
+export type ContentType = 'Reading' | 'Worksheet' | 'Quiz' | 'PDF';
 
 export interface Unit {
   id: string;

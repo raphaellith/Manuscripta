@@ -284,7 +284,7 @@ export const ClassroomControl: React.FC<ClassroomControlProps> = ({ units, lesso
 
   const contentInSelectedFolder = useMemo(() => {
     if (!selectedFolder) return [];
-    const contentSortOrder: Record<string, number> = { 'Lesson': 1, 'Worksheet': 2, 'Quiz': 3, 'Reading': 4, 'PDF': 5 };
+    const contentSortOrder: Record<string, number> = { 'Reading': 1, 'Worksheet': 2, 'Quiz': 3, 'PDF': 4 };
     return contentItems
         .filter(item => item.unit === selectedFolder.unit && item.lessonNumber === selectedFolder.number && item.status === 'Deployed')
         .sort((a, b) => (contentSortOrder[a.type] || 99) - (contentSortOrder[b.type] || 99));

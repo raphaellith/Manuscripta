@@ -48,7 +48,6 @@ export const ContentViewerModal: React.FC<ContentViewerModalProps> = ({ contentI
                         <div className="flex items-center gap-3">
                             <h2 className="text-2xl font-serif text-text-heading">{contentItem.title}</h2>
                             <span className={`text-xs font-sans font-semibold px-2 py-1 rounded-md uppercase tracking-wide ${
-                                contentItem.type === 'Lesson' ? 'bg-brand-blue text-text-on-blue' :
                                 contentItem.type === 'Reading' ? 'bg-brand-green text-white' :
                                 contentItem.type === 'Worksheet' ? 'bg-brand-yellow text-text-on-yellow' :
                                 'bg-brand-orange text-white'

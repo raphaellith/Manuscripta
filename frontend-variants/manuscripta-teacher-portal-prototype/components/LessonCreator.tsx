@@ -18,7 +18,7 @@ const UploadIcon = () => (
 
 
 interface LessonCreatorProps {
-    onSave: (unitData: { title: string; subject: string; ageRange: string; description: string; }) => void;
+    onSave: (unitData: { title: string; subject: string; description: string; }) => void;
     onBack: () => void;
 }
 
@@ -26,7 +26,6 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
     const [title, setTitle] = useState('');
     const [subject, setSubject] = useState('');
     const [description, setDescription] = useState('');
-    const [ageGroup, setAgeGroup] = useState(2);
     const [files, setFiles] = useState<File[]>([]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +43,6 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
             title,
             subject,
             description,
-            ageRange: ageGroupLevels[ageGroup].label
         });
     }
     
@@ -85,24 +83,6 @@ export const LessonCreator: React.FC<LessonCreatorProps> = ({ onSave, onBack }) 
                     placeholder="e.g., Students will learn about the causes, events, and consequences of the Norman invasion of England."
                     rows={4}
                 />
-            </div>
-
-            {/* Age Group */}
-            <div>
-                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">Target Age Group</label>
-                <div className="flex items-center gap-6 p-6 border border-gray-200 rounded-lg bg-brand-cream/50">
-                    <input 
-                        type="range" 
-                        min="0" 
-                        max={ageGroupLevels.length - 1}
-                        value={ageGroup}
-                        onChange={(e) => setAgeGroup(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange"
-                    />
-                    <span className="font-sans font-semibold text-brand-orange text-center bg-brand-orange-light py-2 px-4 rounded-md min-w-[80px]">
-                        {ageGroupLevels[ageGroup].label}
-                    </span>
-                </div>
             </div>
 
             {/* File Upload */}

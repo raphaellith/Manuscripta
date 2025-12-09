@@ -8,7 +8,7 @@ interface LibraryVariantTreeProps {
   contentItems: ContentItem[];
   onEditItem: (item: ContentItem) => void;
   onViewItem: (item: ContentItem) => void;
-  onOpenContentModal: (unitTitle: string) => void;
+  onOpenContentModal: (unitTitle: string, lesson?: LessonFolder) => void;
   onOpenFolderModal: (unitTitle: string) => void;
   onOpenUnitSettings: (unit: Unit) => void;
   searchQuery: string;
@@ -55,11 +55,6 @@ const LessonFolderIcon = () => (
 
 const getContentIcon = (type: string) => {
   switch(type) {
-    case 'Lesson': return (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    );
     case 'Worksheet': return (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-yellow flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -90,7 +85,6 @@ const getContentIcon = (type: string) => {
 
 const getTypeStyles = (type: string) => {
   switch(type) {
-    case 'Lesson': return 'bg-brand-blue text-text-on-blue border-brand-blue';
     case 'Reading': return 'bg-brand-green text-white border-brand-green';
     case 'Worksheet': return 'bg-brand-yellow text-text-on-yellow border-brand-yellow';
     case 'Quiz': return 'bg-brand-orange text-white border-brand-orange';
@@ -232,18 +226,8 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenFolderModal(unit.title); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-blue/10 rounded transition-all flex items-center gap-1 text-brand-blue"
-                          title="Add lesson folder"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
-                            <path d="M12 11v6M9 14h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onOpenContentModal(unit.title); }}
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all flex items-center gap-1 text-brand-orange"
-                          title="Add content"
+                          title="Add lesson folder"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
@@ -258,11 +242,20 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                             <div key={folder.id}>
                               {/* Lesson Folder Row - Blue left border */}
                               <div
-                                className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02]"
+                                className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02] group"
                                 onClick={() => toggleFolder(folder.id)}
                               >
                                 <ChevronRightIcon isOpen={expandedFolders.has(folder.id)} />
                                 <span className="text-sm text-text-body truncate flex-1">L{folder.number} {folder.title}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onOpenContentModal(unit.title, folder); }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all flex items-center gap-1 text-brand-orange"
+                                  title="Add content to this lesson"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                                  </svg>
+                                </button>
                                 <span className="text-xs text-gray-400">({getItemsForFolder(unit, folder).length})</span>
                               </div>
                               
