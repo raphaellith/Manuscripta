@@ -581,6 +581,152 @@ public class FileStorageManagerTest {
         assertEquals("material-path-test", parent.getName());
     }
 
+    // ==================== Error Path Tests (using test subclass) ====================
+
+    @Test
+    public void testSaveAttachment_createDirectoryFails_returnsNull() {
+        FileStorageManager failingManager = new FileStorageManager(context) {
+            @Override
+            protected boolean createDirectory(File directory) {
+                return false;
+            }
+        };
+
+        File result = failingManager.saveAttachment("new-material", "attach", "txt", "content".getBytes());
+        assertNull(result);
+    }
+
+    @Test
+    public void testSaveAttachment_writeToFileFails_returnsNull() {
+        FileStorageManager failingManager = new FileStorageManager(context) {
+            @Override
+            protected boolean writeToFile(File file, byte[] bytes) {
+                return false;
+            }
+        };
+
+        File result = failingManager.saveAttachment("material-write-fail", "attach", "txt", "content".getBytes());
+        assertNull(result);
+
+        // Clean up
+        failingManager.clearAllAttachments();
+    }
+
+    @Test
+    public void testDeleteAttachmentsForMaterial_deleteFileFails_returnsFalse() {
+        // First save a file normally
+        storageManager.saveAttachment("material-del-fail", "attach", "txt", "content".getBytes());
+
+        // Create a manager that fails to delete files
+        FileStorageManager failingManager = new FileStorageManager(context) {
+            @Override
+            protected boolean deleteFile(File file) {
+                return false;
+            }
+        };
+
+        boolean result = failingManager.deleteAttachmentsForMaterial("material-del-fail");
+        assertFalse(result);
+
+        // Clean up with normal manager
+        storageManager.clearAllAttachments();
+    }
+
+    @Test
+    public void testClearAllAttachments_deleteFileFails_returnsFalse() {
+        // First save a file normally
+        storageManager.saveAttachment("material-clear-fail", "attach", "txt", "content".getBytes());
+
+        // Create a manager that fails to delete files
+        FileStorageManager failingManager = new FileStorageManager(context) {
+            @Override
+            protected boolean deleteFile(File file) {
+                return false;
+            }
+        };
+
+        boolean result = failingManager.clearAllAttachments();
+        assertFalse(result);
+
+        // Clean up with normal manager
+        storageManager.clearAllAttachments();
+    }
+
+    @Test
+    public void testDeleteAttachmentsForMaterial_nestedDirectoryDeleteFails_returnsFalse() {
+        // Create a nested structure: material/subdir/file
+        File materialDir = new File(storageManager.getAttachmentsRootDirectory(), "material-nested");
+        File subDir = new File(materialDir, "subdir");
+        subDir.mkdirs();
+        File subFile = new File(subDir, "nested-file.txt");
+        try {
+            subFile.createNewFile();
+        } catch (IOException e) {
+            // Ignore for test setup
+        }
+
+        // Create a manager that fails to delete only the subdir (after its files are "deleted")
+        FileStorageManager failingManager = new FileStorageManager(context) {
+            private int deleteCount = 0;
+
+            @Override
+            protected boolean deleteFile(File file) {
+                deleteCount++;
+                // Fail on the second delete (the subdirectory)
+                if (deleteCount == 2) {
+                    return false;
+                }
+                return file.delete();
+            }
+        };
+
+        boolean result = failingManager.deleteAttachmentsForMaterial("material-nested");
+        assertFalse(result);
+
+        // Clean up with normal manager
+        storageManager.clearAllAttachments();
+    }
+
+    @Test
+    public void testCreateDirectory_success_returnsTrue() {
+        File tempDir = new File(storageManager.getAttachmentsRootDirectory(), "test-create-dir");
+        boolean result = storageManager.createDirectory(tempDir);
+        assertTrue(result);
+        assertTrue(tempDir.exists());
+
+        // Clean up
+        tempDir.delete();
+    }
+
+    @Test
+    public void testWriteToFile_success_returnsTrue() throws IOException {
+        File tempFile = new File(storageManager.getAttachmentsRootDirectory(), "test-write.txt");
+        storageManager.getAttachmentsRootDirectory().mkdirs();
+
+        byte[] content = "test content".getBytes();
+        boolean result = storageManager.writeToFile(tempFile, content);
+
+        assertTrue(result);
+        assertTrue(tempFile.exists());
+        assertArrayEquals(content, readFileContent(tempFile));
+
+        // Clean up
+        tempFile.delete();
+    }
+
+    @Test
+    public void testDeleteFile_success_returnsTrue() throws IOException {
+        File tempFile = new File(storageManager.getAttachmentsRootDirectory(), "test-delete.txt");
+        storageManager.getAttachmentsRootDirectory().mkdirs();
+        tempFile.createNewFile();
+        assertTrue(tempFile.exists());
+
+        boolean result = storageManager.deleteFile(tempFile);
+
+        assertTrue(result);
+        assertFalse(tempFile.exists());
+    }
+
     // ==================== Helper Methods ====================
 
     private byte[] readFileContent(File file) throws IOException {

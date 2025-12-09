@@ -73,18 +73,15 @@ public class FileStorageManager {
         lock.writeLock().lock();
         try {
             File materialDir = getMaterialDirectory(materialId);
-            if (!materialDir.exists() && !materialDir.mkdirs()) {
+            if (!materialDir.exists() && !createDirectory(materialDir)) {
                 return null;
             }
 
             File attachmentFile = new File(materialDir, attachmentId + "." + extension);
-            try (FileOutputStream fos = new FileOutputStream(attachmentFile)) {
-                fos.write(bytes);
-                fos.flush();
-                return attachmentFile;
-            } catch (IOException e) {
+            if (!writeToFile(attachmentFile, bytes)) {
                 return null;
             }
+            return attachmentFile;
         } finally {
             lock.writeLock().unlock();
         }
@@ -207,13 +204,50 @@ public class FileStorageManager {
                         return false;
                     }
                 } else {
-                    if (!file.delete()) {
+                    if (!deleteFile(file)) {
                         return false;
                     }
                 }
             }
         }
-        return directory.delete();
+        return deleteFile(directory);
+    }
+
+    /**
+     * Creates a directory. This method is protected to allow testing of failure scenarios.
+     *
+     * @param directory The directory to create
+     * @return true if the directory was created successfully, false otherwise
+     */
+    protected boolean createDirectory(@NonNull File directory) {
+        return directory.mkdirs();
+    }
+
+    /**
+     * Writes bytes to a file. This method is protected to allow testing of failure scenarios.
+     *
+     * @param file  The file to write to
+     * @param bytes The bytes to write
+     * @return true if the write was successful, false otherwise
+     */
+    protected boolean writeToFile(@NonNull File file, @NonNull byte[] bytes) {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(bytes);
+            fos.flush();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Deletes a file or directory. This method is protected to allow testing of failure scenarios.
+     *
+     * @param file The file or directory to delete
+     * @return true if the deletion was successful, false otherwise
+     */
+    protected boolean deleteFile(@NonNull File file) {
+        return file.delete();
     }
 
     /**
