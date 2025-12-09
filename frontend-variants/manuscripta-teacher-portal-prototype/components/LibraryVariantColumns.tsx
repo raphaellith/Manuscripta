@@ -395,10 +395,25 @@ export const LibraryVariantColumns: React.FC<LibraryVariantColumnsProps> = ({
             </div>
           </div>
           {selectedItem.content && (
-            <div 
-              className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-100"
-              dangerouslySetInnerHTML={{ __html: selectedItem.content }}
-            />
+            <>
+              <div 
+                className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-100"
+                dangerouslySetInnerHTML={{ __html: selectedItem.content }}
+              />
+              <style>{`
+                .prose { color: #14201E; }
+                .prose h1 { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 500; margin-bottom: 0.75rem; color: #212631; }
+                .prose h2 { font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: #212631; margin-top: 1rem; }
+                .prose h3 { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 500; margin-bottom: 0.375rem; color: #212631; margin-top: 0.875rem; }
+                .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+                .prose ul, .prose ol { margin-left: 1.25rem; margin-bottom: 0.75rem; }
+                .prose ul { list-style-type: disc; }
+                .prose ol { list-style-type: decimal; }
+                .prose li { margin-bottom: 0.2rem; line-height: 1.5; }
+                .prose strong, .prose b { font-weight: 600; }
+                .prose em, .prose i { font-style: italic; }
+              `}</style>
+            </>
           )}
         </div>
       )}
