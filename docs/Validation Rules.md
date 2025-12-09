@@ -21,6 +21,15 @@ All rules in this document shall be enumerated for the convenience of referencin
 
 (4) The client which receives the data object should treat it as immutable.
 
+(5) The API contract shall cite objects in this document where appropriate, and the JSON objects shall conform to this document accordingly. The API Constract shall —
+
+    (a) Reference the data object, and the Section in this document where it is defined.
+    (b) Where required, define serialisation and deserialisation rules.
+
+If validation rules in API Contracts are in contradiction to this document, this document shall have presedence.
+
+(6) Names of classes and fields in this document, and any document subjecting to this document, shall use PascalCase. 
+
 ### Section 2A — Data Validation Rules For `MaterialEntity` Objects
 
 (1) A `MaterialEntity` object must have the following data fields to be considered valid:
