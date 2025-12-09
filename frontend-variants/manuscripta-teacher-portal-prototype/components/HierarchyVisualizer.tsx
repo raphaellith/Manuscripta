@@ -20,7 +20,7 @@ const layers: LayerInfo[] = [
   {
     title: 'Material',
     color: 'var(--color-brand-orange)',
-    description: 'Materials are the content pieces generated based on the unit context.',
+    description: 'Materials are the content pieces uploaded or generated based on the unit context.',
   },
 ];
 
@@ -38,14 +38,14 @@ export const HierarchyVisualizer: React.FC = () => {
       </div>
 
       {/* One-to-Many Diagram */}
-      <div className="relative mb-16" style={{ width: 700, height: 600 }}>
+      <div className="relative mb-16" style={{ width: 820, height: 500 }}>
         
-        {/* Unit - Large outer circle */}
+        {/* Unit - Large outer oval (wider and shorter) */}
         <div
           className="absolute rounded-full"
           style={{
-            width: 680,
-            height: 580,
+            width: 800,
+            height: 480,
             top: 10,
             left: 10,
             border: '3px solid var(--color-brand-green)',
@@ -67,16 +67,16 @@ export const HierarchyVisualizer: React.FC = () => {
         <div
           className="absolute rounded-full"
           style={{
-            width: 280,
-            height: 280,
-            top: 180,
-            left: 40,
+            width: 260,
+            height: 260,
+            top: 130,
+            left: 80,
             border: '3px solid var(--color-brand-blue)',
           }}
         />
         <div
           className="absolute text-center"
-          style={{ top: 200, left: 180, transform: 'translateX(-50%)' }}
+          style={{ top: 145, left: 210, transform: 'translateX(-50%)' }}
         >
           <div className="font-semibold text-lg" style={{ color: 'var(--color-brand-blue)' }}>
             LESSON 1
@@ -89,8 +89,8 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 250,
-            left: 60,
+            top: 200,
+            left: 100,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
@@ -101,8 +101,8 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 330,
-            left: 110,
+            top: 280,
+            left: 140,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
@@ -113,8 +113,8 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 270,
-            left: 190,
+            top: 220,
+            left: 220,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
@@ -125,16 +125,16 @@ export const HierarchyVisualizer: React.FC = () => {
         <div
           className="absolute rounded-full"
           style={{
-            width: 280,
-            height: 280,
-            top: 180,
-            left: 380,
+            width: 260,
+            height: 260,
+            top: 130,
+            left: 480,
             border: '3px solid var(--color-brand-blue)',
           }}
         />
         <div
           className="absolute text-center"
-          style={{ top: 200, left: 520, transform: 'translateX(-50%)' }}
+          style={{ top: 145, left: 610, transform: 'translateX(-50%)' }}
         >
           <div className="font-semibold text-lg" style={{ color: 'var(--color-brand-blue)' }}>
             LESSON 2
@@ -147,8 +147,8 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 250,
-            left: 420,
+            top: 200,
+            left: 500,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
@@ -159,8 +159,8 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 330,
-            left: 470,
+            top: 280,
+            left: 540,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
@@ -171,25 +171,14 @@ export const HierarchyVisualizer: React.FC = () => {
           style={{
             width: 70,
             height: 70,
-            top: 270,
-            left: 550,
+            top: 220,
+            left: 620,
             border: '2px solid var(--color-brand-orange)',
           }}
         >
           <span className="text-xs font-medium" style={{ color: 'var(--color-brand-orange)' }}>Quiz</span>
         </div>
-        <div
-          className="absolute rounded-full flex items-center justify-center"
-          style={{
-            width: 70,
-            height: 70,
-            top: 370,
-            left: 540,
-            border: '2px solid var(--color-brand-orange)',
-          }}
-        >
-          <span className="text-xs font-medium" style={{ color: 'var(--color-brand-orange)' }}>Worksheet</span>
-        </div>
+
 
       </div>
 

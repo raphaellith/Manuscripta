@@ -8,6 +8,7 @@ import { ClassroomControl } from './components/ClassroomControl';
 import { ResponsesView } from './components/ResponsesView';
 import { Settings } from './components/Settings';
 import { HierarchyVisualizer } from './components/HierarchyVisualizer';
+import { MaterialFlowVisualizer } from './components/MaterialFlowVisualizer';
 import type { View, ContentItem, LessonFolder, Unit, Collection } from './types';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 
@@ -160,11 +161,13 @@ const App: React.FC = () => {
   const [lessonFolders, setLessonFolders] = useState<LessonFolder[]>(initialLessonFolders);
   const [contentItems, setContentItems] = useState<ContentItem[]>(initialContentItems);
   const [showHierarchy, setShowHierarchy] = useState(false);
+  const [showMaterialFlow, setShowMaterialFlow] = useState(false);
 
   // Handle hash-based routing for hidden pages
   useEffect(() => {
     const handleHashChange = () => {
       setShowHierarchy(window.location.hash === '#/hierarchy');
+      setShowMaterialFlow(window.location.hash === '#/material-flow');
     };
     
     // Check initial hash
@@ -247,6 +250,11 @@ const App: React.FC = () => {
   // If showing hierarchy visualizer, render it full-page without the main app chrome
   if (showHierarchy) {
     return <HierarchyVisualizer />;
+  }
+
+  // If showing material flow visualizer, render it full-page without the main app chrome
+  if (showMaterialFlow) {
+    return <MaterialFlowVisualizer />;
   }
 
   return (
