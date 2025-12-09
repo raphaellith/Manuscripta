@@ -22,13 +22,13 @@ body {
 .dialogue-bubble::before {
   content: '';
   position: absolute;
-  bottom: -35px;
-  left: 30px;
+  bottom: -33px;
+  left: 18px;
   width: 0;
   height: 0;
-  border-left: 30px solid transparent;
-  border-right: 30px solid transparent;
-  border-top: 35px solid var(--color-eink-black);
+  border-left: 28px solid transparent;
+  border-right: 28px solid transparent;
+  border-top: 33px solid var(--color-eink-black);
   z-index: 100;
 }
 
@@ -36,7 +36,7 @@ body {
   content: '';
   position: absolute;
   bottom: -27px;
-  left: 34px;
+  left: 20px;
   width: 0;
   height: 0;
   border-left: 26px solid transparent;
