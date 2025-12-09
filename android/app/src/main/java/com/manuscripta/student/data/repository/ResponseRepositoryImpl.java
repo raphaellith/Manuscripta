@@ -50,10 +50,19 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     @VisibleForTesting
     static final double BACKOFF_MULTIPLIER = 2.0;
 
+    /** The DAO for response persistence. */
     private final ResponseDao responseDao;
+
+    /** Queue of response IDs pending synchronization. */
     private final BlockingQueue<String> syncQueue;
+
+    /** Executor for background sync operations. */
     private final ExecutorService syncExecutor;
+
+    /** Flag indicating whether a sync operation is in progress. */
     private final AtomicBoolean isSyncing;
+
+    /** The sync engine for network operations. */
     private final SyncEngine syncEngine;
 
     /**
