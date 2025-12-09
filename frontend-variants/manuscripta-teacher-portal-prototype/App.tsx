@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ClassDashboard } from './components/ClassDashboard';
 import { LessonCreator } from './components/LessonCreator';
@@ -7,6 +7,7 @@ import { AiAssistant } from './components/AiAssistant';
 import { ClassroomControl } from './components/ClassroomControl';
 import { ResponsesView } from './components/ResponsesView';
 import { Settings } from './components/Settings';
+import { HierarchyVisualizer } from './components/HierarchyVisualizer';
 import type { View, ContentItem, LessonFolder, Unit, Collection } from './types';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 
@@ -158,6 +159,21 @@ const App: React.FC = () => {
   const [units, setUnits] = useState<Unit[]>(initialUnits);
   const [lessonFolders, setLessonFolders] = useState<LessonFolder[]>(initialLessonFolders);
   const [contentItems, setContentItems] = useState<ContentItem[]>(initialContentItems);
+  const [showHierarchy, setShowHierarchy] = useState(false);
+
+  // Handle hash-based routing for hidden pages
+  useEffect(() => {
+    const handleHashChange = () => {
+      setShowHierarchy(window.location.hash === '#/hierarchy');
+    };
+    
+    // Check initial hash
+    handleHashChange();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const handleCreateUnit = (unitData: Omit<Unit, 'id'>) => {
     if (!units.find(u => u.title.toLowerCase() === unitData.title.toLowerCase())) {
@@ -227,6 +243,11 @@ const App: React.FC = () => {
         return <ClassDashboard />;
     }
   };
+
+  // If showing hierarchy visualizer, render it full-page without the main app chrome
+  if (showHierarchy) {
+    return <HierarchyVisualizer />;
+  }
 
   return (
     <div className="h-screen bg-brand-cream text-text-body font-sans selection:bg-brand-orange-light selection:text-brand-orange relative overflow-hidden">
