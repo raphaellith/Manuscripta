@@ -10,7 +10,6 @@ export enum View {
 
 export enum AITask {
   Simplify = 'Simplify',
-  Expand = 'Expand',
   Summarise = 'Summarise',
 }
 

@@ -5,16 +5,17 @@ import Tablet from './components/Tablet';
 import LessonView from './components/LessonView';
 import QuizView from './components/QuizView';
 import WorksheetView from './components/WorksheetView';
-import AIAssistView from './components/AIAssistView';
 import FeedbackView from './components/FeedbackView';
+import CharacterHelper from './components/CharacterHelper';
+import AudioButton from './components/common/AudioButton';
 import { generateContent } from './services/geminiService';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.Lesson);
-  const [previousView, setPreviousView] = useState<View>(View.Lesson);
   const [aiTask, setAiTask] = useState<AITask | null>(null);
   const [aiContent, setAiContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showAIContent, setShowAIContent] = useState<boolean>(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
 
   const handleReset = () => {
@@ -23,17 +24,16 @@ const App: React.FC = () => {
   };
 
   const handleAIAssist = useCallback(async (task: AITask) => {
-    setPreviousView(currentView);
     setAiTask(task);
     setIsLoading(true);
-    setCurrentView(View.AIAssist);
+    setShowAIContent(true);
     const content = await generateContent(task);
     setAiContent(content);
     setIsLoading(false);
-  }, [currentView]);
+  }, []);
 
-  const handleBackFromAIAssist = () => {
-    setCurrentView(previousView);
+  const handleBackFromAIContent = () => {
+    setShowAIContent(false);
     setAiTask(null);
     setAiContent('');
   };
@@ -50,7 +50,15 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case View.Lesson:
-        return <LessonView />;
+        return (
+          <LessonView
+            showAIContent={showAIContent}
+            aiContent={aiContent}
+            aiTask={aiTask}
+            isLoading={isLoading}
+            onBackFromAI={handleBackFromAIContent}
+          />
+        );
       case View.Quiz:
         return (
           <QuizView
@@ -62,15 +70,6 @@ const App: React.FC = () => {
         );
       case View.Worksheet:
         return <WorksheetView />;
-      case View.AIAssist:
-        return (
-          <AIAssistView
-            task={aiTask}
-            content={aiContent}
-            isLoading={isLoading}
-            onBack={handleBackFromAIAssist}
-          />
-        );
       case View.FeedbackCorrect:
         return <FeedbackView isCorrect={true} onNext={handleReset} />;
       case View.FeedbackIncorrect:
@@ -86,7 +85,7 @@ const App: React.FC = () => {
         <div className="flex flex-col h-full">
             <nav className="flex-shrink-0 mb-4">
                 <div className="flex border-b-4 border-eink-black">
-                    <TabButton title="Lesson" isActive={currentView === View.Lesson} onClick={() => setCurrentView(View.Lesson)} />
+                    <TabButton title="Reading" isActive={currentView === View.Lesson} onClick={() => setCurrentView(View.Lesson)} />
                     <TabButton title="Quiz" isActive={currentView === View.Quiz} onClick={() => setCurrentView(View.Quiz)} />
                     <TabButton title="Worksheet" isActive={currentView === View.Worksheet} onClick={() => setCurrentView(View.Worksheet)} />
                 </div>
@@ -94,8 +93,19 @@ const App: React.FC = () => {
             <main className="flex-grow flex flex-col min-h-0">
                 {renderView()}
             </main>
-            <footer className="flex-shrink-0 mt-auto pt-4 space-y-2">
-                 {currentView === View.Lesson && <AIAssistToolbar onAIAssist={handleAIAssist} />}
+            <footer className="flex-shrink-0 mt-auto pt-4">
+                <div className="flex justify-between items-end">
+                    <CharacterHelper 
+                      onAIAssist={handleAIAssist} 
+                      isVisible={currentView === View.Lesson && !showAIContent} 
+                    />
+                    {currentView === View.Lesson && !showAIContent && (
+                        <AudioButton 
+                          onClick={() => console.log('🔊 Reading lesson content aloud...')} 
+                          title="Read lesson aloud" 
+                        />
+                    )}
+                </div>
             </footer>
         </div>
       </Tablet>
@@ -119,39 +129,5 @@ const TabButton: React.FC<TabButtonProps> = ({ title, isActive, onClick }) => {
         </button>
     );
 };
-
-
-interface AIAssistToolbarProps {
-    onAIAssist: (task: AITask) => void;
-}
-const AIAssistToolbar: React.FC<AIAssistToolbarProps> = ({ onAIAssist }) => (
-    <div className="bg-eink-light border-4 border-eink-black p-3">
-        <div className="grid grid-cols-3 gap-3">
-            <AIAssistButton onClick={() => onAIAssist(AITask.Simplify)}>
-                {AITask.Simplify}
-            </AIAssistButton>
-            <AIAssistButton onClick={() => onAIAssist(AITask.Expand)}>
-                {AITask.Expand}
-            </AIAssistButton>
-            <AIAssistButton onClick={() => onAIAssist(AITask.Summarise)}>
-                {AITask.Summarise}
-            </AIAssistButton>
-        </div>
-    </div>
-);
-
-interface AIAssistButtonProps {
-    onClick: () => void;
-    children: React.ReactNode;
-}
-const AIAssistButton: React.FC<AIAssistButtonProps> = ({ onClick, children }) => (
-    <button 
-        onClick={onClick}
-        className="px-4 py-2 bg-eink-cream border-2 border-eink-black text-eink-black text-lg font-semibold w-full text-center"
-    >
-        {children}
-    </button>
-);
-
 
 export default App;
