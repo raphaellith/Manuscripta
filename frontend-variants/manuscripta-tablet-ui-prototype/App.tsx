@@ -95,7 +95,7 @@ const App: React.FC = () => {
             <main className="flex-grow flex flex-col min-h-0">
                 {renderView()}
             </main>
-            <footer className="flex-shrink-0 mt-auto pt-4 relative">
+            <footer className="flex-shrink-0 mt-auto pt-4 relative overflow-visible">
                     <div className="flex justify-between items-end">
                         <div>
                             <CharacterHelper 

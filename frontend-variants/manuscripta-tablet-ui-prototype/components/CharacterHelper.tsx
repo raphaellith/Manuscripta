@@ -49,7 +49,7 @@ const CharacterHelper: React.FC<CharacterHelperProps> = ({
     <>
       {/* Response Box - positioned relative to footer, not character */}
       {showResponse && (
-        <div className="absolute bottom-full left-0 right-0 mb-4 bg-eink-light border-4 border-eink-black p-8 max-h-[70vh] overflow-y-auto z-20 shadow-2xl flex flex-col">
+        <div className="absolute bottom-full left-0 right-0 mb-4 bg-eink-light border-4 border-eink-black p-8 max-h-[70vh] overflow-y-auto z-20 shadow-2xl flex flex-col dialogue-bubble">
             <div className="flex justify-between items-center mb-6 border-b-4 border-eink-black pb-3">
                 <h3 className={`${CONTENT_TEXT_SIZE} font-bold text-eink-black`}>{aiTask || 'Thinking...'}</h3>
                 <button 

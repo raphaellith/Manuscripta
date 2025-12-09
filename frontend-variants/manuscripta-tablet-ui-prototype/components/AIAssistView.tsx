@@ -21,7 +21,7 @@ const AIAssistView: React.FC<AIAssistViewProps> = ({ task, content, isLoading, o
       <h1 className="text-4xl font-serif font-medium text-eink-black mb-6 pb-4 border-b-4 border-eink-black">
         {task || 'AI Assistant'}
       </h1>
-      <div className="bg-eink-light border-4 border-eink-black p-6 overflow-y-auto flex-1">
+      <div className="bg-eink-light border-4 border-eink-black p-6 overflow-y-auto flex-1 dialogue-bubble">
         {isLoading ? (
           <LoadingIndicator />
         ) : (
