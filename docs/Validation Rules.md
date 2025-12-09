@@ -95,7 +95,7 @@ If validation rules in API Contract are in contradiction to this document, this 
     (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
     (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
 
-### Section 2D - Data Validation Rules of `SessionEntity`
+### Section 2D - Data Validation Rules for `SessionEntity`
 
 (1) A `SessionEntity` object must have the following data fields to be considered valid:
 
@@ -116,6 +116,28 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specified in 2(a).
     (b) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+
+### Section 2E - Data Validation Rules for `DeviceStatusEntity`
+
+(1) A `DeviceStatusEntity` object must have the following data fields to be considered valid:
+
+    (a) `DeviceId` (uuid). References the device the status is linked to.
+    (b) `Status` (enum DeviceStatus). Possible values are:
+        (i) `ON_TASK`: Student is active in the app.
+        (ii) `IDLE`: No activity for a threshold period.
+        (iii) `HAND_RAISED`: Student explicitly requested help.
+        (iv) `LOCKED`: Device is remotely locked.
+        (v)  `DISCONNECTED`: (Server-side inferred status).
+    (c) `BatteryLevel` (int). The battery level of the device.
+    (d) `CurrentMaterialId` (uuid). The material the device is currently viewing.
+    (e) `StudentView` (String). Describes the location which the student is viewing.
+    (f) `Timestamp` (long). The time at which the device status is correct to.
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `DeviceId` specified in (1)(a) must reference a valid Device, which is deemed paired as defined in Pairing Process Specification.
+    (b) The `BatteryLevel` specified in (1)(c) must be between 0 and 100.
+    (c) The `CurrentMaterialId` specified in (1)(d) must reference a valid material.
 
 ### Section 3 - ID Generation Policy
 

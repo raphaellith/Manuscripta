@@ -86,49 +86,7 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ### 2.1. Lesson Materials (Server -> Client)
 
-The student tablet pulls lesson materials from the teacher server.
-
-#### Get All Materials
-Fetches a list of available materials for the current session.
-
--   **Endpoint:** `GET /materials`
--   **Response:** `200 OK`
-    ```json
-    [
-      {
-        "Materials": ["uuid-string1", "uuid-string2", "uuid-string3"] // List of ids, in order of presentation
-      }
-    ]
-    ```
-
-#### Get Material Details
-Downloads the full content of a specific material. The JSON object conforms to MaterialEntity as defined in Validation Rules.md §2A.
-
--   **Endpoint:** `GET /materials/{id}`
--   **Response:** `200 OK`
-    ```json
-    {
-      "Id": "uuid-string",
-      "MaterialType": "QUIZ",
-      "Title": "Algebra Basics",
-      "Content": "...", // HTML or Text content
-      "Metadata": {// This is where we can put lesson - specific configurations (button toggles, characters, etc..)
-      },
-      "Timestamp": "2023-10-27T10:00:00Z",
-      "VocabularyTerms": [
-        { "Term": "Variable", "Definition": "A symbol used to represent a number." }
-      ],
-      "Questions": [
-        {
-          "Id": "q-uuid-1",
-          "QuestionText": "What is x if x + 2 = 5?",
-          "QuestionType": "MULTIPLE_CHOICE",
-          "Options": ["1", "2", "3", "4"],
-          "CorrectAnswer": "3"
-        }
-      ]
-    }
-    ```
+**DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /session/{deviceId}` as specified in `API Contract.md` §2.5 for session-specific material distribution.
 
 ### 2.1.3. Attachments (Server -> Client)
 Downloads specific attachment files referenced within material content.
@@ -208,6 +166,28 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
       ]
     }
     ```
+-   **Response:** `201 Created`
+
+### 2.5. Session Management (Server -> Client via TCP trigger)
+
+Used to distribute materials to devices during a session. See `Session Interaction.md` §3 for the full distribution process.
+
+#### Get Session Materials
+Retrieves materials and questions assigned to a specific device for the current session.
+
+-   **Endpoint:** `GET /session/{deviceId}`
+-   **Response:** `200 OK`
+    ```json
+    {
+      "materials": [
+        // Array of MaterialEntity objects as defined in Validation Rules.md §2A
+      ],
+      "questions": [
+        // Array of QuestionEntity objects as defined in Validation Rules.md §2B
+      ]
+    }
+    ```
+-   **Error Response:** `404 Not Found` (if no active session for deviceId)
 
 ---
 
@@ -249,6 +229,8 @@ See §1.1 for detailed format.
 | `0x01` | LOCK_SCREEN | None | Locks the student's screen |
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
+| `0x04` | UNPAIR | None | Unpairs the device |
+| `0x05` | DISTRIBUTE_MATERIAL | Material ID (UUID) | Instructs device to fetch materials for a session |
 
 ### 3.5. TCP Pairing Messages
 
@@ -290,14 +272,15 @@ Byte 0: 0x10 (STATUS_UPDATE opcode)
 Bytes 1-N: JSON payload (see below)
 ```
 
-Status Update JSON payload:
+Status Update JSON payload must conform to the `DeviceStatusEntity` as defined in `Validation Rules.md` §2E:
 ```json
 {
   "DeviceId": "device-123",
   "Status": "ON_TASK",
   "BatteryLevel": 85,
   "CurrentMaterialId": "mat-uuid-1",
-  "StudentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
+  "StudentView": "page-5",
+  "Timestamp": 1702147200
 }
 ```
 
