@@ -1,6 +1,7 @@
 import React from 'react';
 import { QUIZ_QUESTIONS } from '../constants';
 import Button from './common/Button';
+import SubmitButton from './common/SubmitButton';
 
 interface QuizViewProps {
   onBackToLesson: () => void;
@@ -46,7 +47,7 @@ const QuizView: React.FC<QuizViewProps> = ({ onBackToLesson, onSubmit, selectedA
         ))}
       </div>
       <div className="mt-auto">
-         <Button onClick={handleSubmit}>✓ Submit Answer</Button>
+         <SubmitButton onClick={handleSubmit}>Submit Answer</SubmitButton>
       </div>
     </div>
   );

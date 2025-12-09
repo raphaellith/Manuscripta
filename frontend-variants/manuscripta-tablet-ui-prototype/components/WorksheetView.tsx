@@ -1,5 +1,6 @@
 import React from 'react';
 import { WORKSHEET_ITEMS } from '../constants';
+import SubmitButton from './common/SubmitButton';
 
 const WorksheetView: React.FC = () => {
   
@@ -24,9 +25,9 @@ const WorksheetView: React.FC = () => {
         ))}
       </div>
       <div className="mt-auto">
-        <button className="flex items-center justify-center w-full min-h-[60px] text-3xl font-bold mt-12 p-4 border-4 border-eink-black cursor-pointer select-none text-eink-black bg-eink-light">
-            Check Answers
-        </button>
+        <SubmitButton>
+            Submit Answers
+        </SubmitButton>
       </div>
     </div>
   );
