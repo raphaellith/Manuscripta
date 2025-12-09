@@ -26,15 +26,15 @@ public class FileStorageManager {
     /** Name of the root directory for attachments within internal storage. */
     private static final String ATTACHMENTS_DIR = "attachments";
 
-    /** The application context used to access internal storage. */
+    /** The base directory for file storage. */
     @NonNull
-    private final Context context;
+    private final File baseDirectory;
 
     /** Lock for ensuring thread-safe access to file operations. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
-     * Creates a new FileStorageManager instance.
+     * Creates a new FileStorageManager instance using the app's internal storage.
      *
      * @param context The application context (must not be null)
      * @throws IllegalArgumentException if context is null
@@ -43,7 +43,21 @@ public class FileStorageManager {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }
-        this.context = context.getApplicationContext();
+        this.baseDirectory = context.getApplicationContext().getFilesDir();
+    }
+
+    /**
+     * Creates a new FileStorageManager instance with a custom base directory.
+     * This constructor is primarily for testing purposes.
+     *
+     * @param baseDirectory The base directory for file storage (must not be null)
+     * @throws IllegalArgumentException if baseDirectory is null
+     */
+    public FileStorageManager(@NonNull File baseDirectory) {
+        if (baseDirectory == null) {
+            throw new IllegalArgumentException("Base directory cannot be null");
+        }
+        this.baseDirectory = baseDirectory;
     }
 
     /**
@@ -175,7 +189,7 @@ public class FileStorageManager {
      */
     @NonNull
     File getAttachmentsRootDirectory() {
-        return new File(context.getFilesDir(), ATTACHMENTS_DIR);
+        return new File(baseDirectory, ATTACHMENTS_DIR);
     }
 
     /**

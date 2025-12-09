@@ -8,16 +8,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import android.content.Context;
-
-import androidx.test.core.app.ApplicationProvider;
-
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,17 +28,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Unit tests for {@link FileStorageManager}.
  */
-@RunWith(RobolectricTestRunner.class)
-@Config(sdk = 28, manifest = Config.NONE)
 public class FileStorageManagerTest {
 
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
     private FileStorageManager storageManager;
-    private Context context;
+    private File baseDirectory;
 
     @Before
-    public void setUp() {
-        context = ApplicationProvider.getApplicationContext();
-        storageManager = new FileStorageManager(context);
+    public void setUp() throws IOException {
+        baseDirectory = tempFolder.newFolder("test-storage");
+        storageManager = new FileStorageManager(baseDirectory);
     }
 
     @After
@@ -55,18 +51,18 @@ public class FileStorageManagerTest {
     // ==================== Constructor Tests ====================
 
     @Test
-    public void testConstructor_validContext_createsInstance() {
-        FileStorageManager manager = new FileStorageManager(context);
+    public void testConstructor_validBaseDirectory_createsInstance() {
+        FileStorageManager manager = new FileStorageManager(baseDirectory);
         assertNotNull(manager);
     }
 
     @Test
-    public void testConstructor_nullContext_throwsException() {
+    public void testConstructor_nullBaseDirectory_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> new FileStorageManager(null)
+                () -> new FileStorageManager((File) null)
         );
-        assertEquals("Context cannot be null", exception.getMessage());
+        assertEquals("Base directory cannot be null", exception.getMessage());
     }
 
     // ==================== saveAttachment Tests ====================
@@ -585,7 +581,7 @@ public class FileStorageManagerTest {
 
     @Test
     public void testSaveAttachment_createDirectoryFails_returnsNull() {
-        FileStorageManager failingManager = new FileStorageManager(context) {
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
             @Override
             protected boolean createDirectory(File directory) {
                 return false;
@@ -598,7 +594,7 @@ public class FileStorageManagerTest {
 
     @Test
     public void testSaveAttachment_writeToFileFails_returnsNull() {
-        FileStorageManager failingManager = new FileStorageManager(context) {
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
             @Override
             protected boolean writeToFile(File file, byte[] bytes) {
                 return false;
@@ -618,7 +614,7 @@ public class FileStorageManagerTest {
         storageManager.saveAttachment("material-del-fail", "attach", "txt", "content".getBytes());
 
         // Create a manager that fails to delete files
-        FileStorageManager failingManager = new FileStorageManager(context) {
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
             @Override
             protected boolean deleteFile(File file) {
                 return false;
@@ -638,7 +634,7 @@ public class FileStorageManagerTest {
         storageManager.saveAttachment("material-clear-fail", "attach", "txt", "content".getBytes());
 
         // Create a manager that fails to delete files
-        FileStorageManager failingManager = new FileStorageManager(context) {
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
             @Override
             protected boolean deleteFile(File file) {
                 return false;
@@ -666,7 +662,7 @@ public class FileStorageManagerTest {
         }
 
         // Create a manager that fails to delete only the subdir (after its files are "deleted")
-        FileStorageManager failingManager = new FileStorageManager(context) {
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
             private int deleteCount = 0;
 
             @Override
