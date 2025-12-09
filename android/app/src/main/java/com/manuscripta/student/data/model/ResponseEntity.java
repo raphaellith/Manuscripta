@@ -3,11 +3,8 @@ package com.manuscripta.student.data.model;
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
-import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
-
-import java.util.UUID;
 
 /**
  * Room entity representing a student's response to a question.
@@ -28,67 +25,61 @@ import java.util.UUID;
 )
 public class ResponseEntity {
 
+    /** The unique identifier for the response. */
     @PrimaryKey
     @NonNull
     private final String id;
 
+    /** The ID of the question this response is for. */
     @NonNull
-    private String questionId;
+    private final String questionId;
 
+    /** The answer provided by the student. */
     @NonNull
-    private String selectedAnswer;
+    private final String answer;
 
-    private boolean isCorrect;
+    /** Whether the response is correct. */
+    private final boolean isCorrect;
 
-    private long timestamp;
+    /** The timestamp when the response was recorded (Unix epoch milliseconds). */
+    private final long timestamp;
 
-    /**
-     * Indicates whether this response has been synced to the teacher's Windows app.
-     */
-    private boolean synced;
+    /** Indicates whether this response has been synced to the teacher's Windows app. */
+    private final boolean synced;
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 1: For Room (Rehydration)
-    // -------------------------------------------------------------------------
+    /** The device identifier for the tablet that submitted this response. */
+    @NonNull
+    private final String deviceId;
+
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
+     *
+     * @param id         The unique identifier for the response
+     * @param questionId The ID of the question this response is for
+     * @param answer     The answer provided by the student
+     * @param isCorrect  Whether the response is correct
+     * @param timestamp  The timestamp when the response was recorded
+     * @param synced     Whether the response has been synced
+     * @param deviceId   The device identifier for the tablet that submitted this response
      */
     public ResponseEntity(@NonNull String id,
                           @NonNull String questionId,
-                          @NonNull String selectedAnswer,
+                          @NonNull String answer,
                           boolean isCorrect,
                           long timestamp,
-                          boolean synced) {
+                          boolean synced,
+                          @NonNull String deviceId) {
         this.id = id;
         this.questionId = questionId;
-        this.selectedAnswer = selectedAnswer;
+        this.answer = answer;
         this.isCorrect = isCorrect;
         this.timestamp = timestamp;
         this.synced = synced;
+        this.deviceId = deviceId;
     }
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 2: For the App (Creation)
-    // -------------------------------------------------------------------------
-    /**
-     * Convenience constructor for creating NEW responses.
-     * Automatically generates a random UUID and sets default values.
-     * Annotated with @Ignore so Room doesn't try to use it.
-     */
-    @Ignore
-    public ResponseEntity(@NonNull String questionId, @NonNull String selectedAnswer) {
-        this(
-            UUID.randomUUID().toString(),
-            questionId,
-            selectedAnswer,
-            false,
-            System.currentTimeMillis(),
-            false
-        );
-    }
-
-    // Getters and Setters
+    // Getters
 
     @NonNull
     public String getId() {
@@ -100,40 +91,25 @@ public class ResponseEntity {
         return questionId;
     }
 
-    public void setQuestionId(@NonNull String questionId) {
-        this.questionId = questionId;
-    }
-
     @NonNull
-    public String getSelectedAnswer() {
-        return selectedAnswer;
-    }
-
-    public void setSelectedAnswer(@NonNull String selectedAnswer) {
-        this.selectedAnswer = selectedAnswer;
+    public String getAnswer() {
+        return answer;
     }
 
     public boolean isCorrect() {
         return isCorrect;
     }
 
-    public void setCorrect(boolean correct) {
-        isCorrect = correct;
-    }
-
     public long getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
     }
 
     public boolean isSynced() {
         return synced;
     }
 
-    public void setSynced(boolean synced) {
-        this.synced = synced;
+    @NonNull
+    public String getDeviceId() {
+        return deviceId;
     }
 }

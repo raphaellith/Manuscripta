@@ -99,7 +99,7 @@ public class QuestionDaoTest {
     @Test
     public void testGetByMaterialId() {
         // Add another material
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.READING, "Reading", "C", "{}", "[]", 0));
 
         questionDao.insert(defaultQuestion);
         questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
@@ -177,7 +177,7 @@ public class QuestionDaoTest {
 
     @Test
     public void testGetCountByMaterialId() {
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.READING, "Reading", "C", "{}", "[]", 0));
 
         questionDao.insert(defaultQuestion);
         questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));

@@ -16,7 +16,7 @@ public class MaterialEntityTest {
     public void setUp() {
         this.materialEntity = new MaterialEntity(
                 "id",
-                MaterialType.LESSON,
+                MaterialType.READING,
                 "Title",
                 "Content",
                 "Metadata",
@@ -28,7 +28,7 @@ public class MaterialEntityTest {
     @Test
     public void testConstructorAndGetters() {
         assertEquals("id", materialEntity.getId());
-        assertEquals(MaterialType.LESSON, materialEntity.getType());
+        assertEquals(MaterialType.READING, materialEntity.getType());
         assertEquals("Title", materialEntity.getTitle());
         assertEquals("Content", materialEntity.getContent());
         assertEquals("Metadata", materialEntity.getMetadata());

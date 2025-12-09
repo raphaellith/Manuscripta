@@ -5,9 +5,6 @@ import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
-import androidx.room.Ignore;
-
-import java.util.UUID;
 
 /**
  * Room entity representing a learning session.
@@ -28,29 +25,39 @@ import java.util.UUID;
 )
 public class SessionEntity {
 
+    /** The unique identifier for the session. */
     @PrimaryKey
     @NonNull
     private final String id;
 
+    /** The ID of the material this session is associated with. */
     @NonNull
-    private String materialId;
+    private final String materialId;
 
-    private long startTime;
+    /** The timestamp when the session started (Unix epoch milliseconds). */
+    private final long startTime;
 
-    private long endTime;
+    /** The timestamp when the session ended (Unix epoch milliseconds), or 0 if still active. */
+    private final long endTime;
 
+    /** The current status of the session. */
     @NonNull
-    private SessionStatus status;
+    private final SessionStatus status;
 
+    /** The identifier of the device running the session. */
     @NonNull
-    private String deviceId;
+    private final String deviceId;
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 1: For Room (Rehydration)
-    // -------------------------------------------------------------------------
     /**
      * Standard constructor used by Room to recreate objects from the database.
      * Pass the existing ID explicitly.
+     *
+     * @param id         The unique identifier for the session
+     * @param materialId The ID of the material this session is associated with
+     * @param startTime  The timestamp when the session started (Unix epoch milliseconds)
+     * @param endTime    The timestamp when the session ended (0 if still active)
+     * @param status     The current status of the session
+     * @param deviceId   The identifier of the device running the session
      */
     public SessionEntity(@NonNull String id,
                          @NonNull String materialId,
@@ -66,25 +73,7 @@ public class SessionEntity {
         this.deviceId = deviceId;
     }
 
-    // -------------------------------------------------------------------------
-    // CONSTRUCTOR 2: For the App (Creation)
-    // -------------------------------------------------------------------------
-    /**
-     * Convenience constructor for creating NEW sessions.
-     * Automatically generates a random UUID and sets default values.
-     * Annotated with @Ignore so Room doesn't try to use it.
-     */
-    @Ignore
-    public SessionEntity(@NonNull String materialId, @NonNull String deviceId) {
-        this.id = UUID.randomUUID().toString();
-        this.materialId = materialId;
-        this.startTime = System.currentTimeMillis();
-        this.endTime = 0;
-        this.status = SessionStatus.ACTIVE;
-        this.deviceId = deviceId;
-    }
-
-    // Getters and Setters
+    // Getters
 
     @NonNull
     public String getId() {
@@ -96,24 +85,12 @@ public class SessionEntity {
         return materialId;
     }
 
-    public void setMaterialId(@NonNull String materialId) {
-        this.materialId = materialId;
-    }
-
     public long getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(long startTime) {
-        this.startTime = startTime;
-    }
-
     public long getEndTime() {
         return endTime;
-    }
-
-    public void setEndTime(long endTime) {
-        this.endTime = endTime;
     }
 
     @NonNull
@@ -121,16 +98,8 @@ public class SessionEntity {
         return status;
     }
 
-    public void setStatus(@NonNull SessionStatus status) {
-        this.status = status;
-    }
-
     @NonNull
     public String getDeviceId() {
         return deviceId;
-    }
-
-    public void setDeviceId(@NonNull String deviceId) {
-        this.deviceId = deviceId;
     }
 }
