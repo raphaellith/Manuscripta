@@ -26,7 +26,8 @@ const App: React.FC = () => {
   const handleAIAssist = useCallback(async (task: AITask) => {
     setAiTask(task);
     setIsLoading(true);
-    setShowAIContent(true);
+    // Don't show full screen overlay anymore
+    // setShowAIContent(true); 
     const content = await generateContent(task);
     setAiContent(content);
     setIsLoading(false);
@@ -36,6 +37,7 @@ const App: React.FC = () => {
     setShowAIContent(false);
     setAiTask(null);
     setAiContent('');
+    setIsLoading(false); 
   };
 
   const handleQuizSubmit = (isCorrect: boolean) => {
@@ -93,12 +95,16 @@ const App: React.FC = () => {
             <main className="flex-grow flex flex-col min-h-0">
                 {renderView()}
             </main>
-            <footer className="flex-shrink-0 mt-auto pt-4">
+            <footer className="flex-shrink-0 mt-auto pt-4 relative">
                     <div className="flex justify-between items-end">
                         <div>
                             <CharacterHelper 
                               onAIAssist={handleAIAssist} 
-                              isVisible={currentView === View.Lesson && !showAIContent} 
+                              isVisible={currentView === View.Lesson}
+                              aiContent={aiContent}
+                              aiTask={aiTask}
+                              isLoading={isLoading}
+                              onClose={handleBackFromAIContent}
                             />
                         </div>
                         <div>

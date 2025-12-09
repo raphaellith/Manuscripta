@@ -1,5 +1,8 @@
 import { QuizQuestion, WorksheetItem } from './types';
 
+// Global text size for content
+export const CONTENT_TEXT_SIZE = "text-3xl"; // consistent across all content views
+
 export const LESSON_TITLE = "The Battle of Hastings";
 
 export const LESSON_CONTENT = [
@@ -22,12 +25,12 @@ export const WORKSHEET_ITEMS: WorksheetItem[] = [
     },
     {
         type: 'fill-in-the-blank',
-        sentence: "King Harold was the leader of the ________ army.",
+        sentence: "King Harold was the leader of the ______ army.",
         blankWord: "English"
     },
     {
         type: 'fill-in-the-blank',
-        sentence: "The Norman army was led by ________ of Normandy.",
+        sentence: "The Norman army was led by ______ of Normandy.",
         blankWord: "William"
     }
 ];
