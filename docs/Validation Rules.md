@@ -26,7 +26,7 @@ All rules in this document shall be enumerated for the convenience of referencin
     (a) Reference the data object, and the Section in this document where it is defined.
     (b) Where required, define serialisation and deserialisation rules.
 
-If validation rules in API Contracts are in contradiction to this document, this document shall have presedence.
+If validation rules in API Contract are in contradiction to this document, this document shall have precedence.
 
 (6) Names of classes and fields in this document, and any document subjecting to this document, shall use PascalCase. 
 
