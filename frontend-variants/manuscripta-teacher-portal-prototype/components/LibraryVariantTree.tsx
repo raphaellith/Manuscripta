@@ -211,7 +211,7 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
               {/* Units under Collection - Orange indent line */}
               {expandedCollections.has(collection.id) && (
                 <div className="ml-4 pl-2 space-y-1 mt-1" style={{ borderLeft: '2px solid var(--color-brand-orange)' }}>
-                  {getUnitsForCollection(collection).map(unit => (
+                  {getUnitsForCollection(collection).map((unit, unitIndex) => (
                     <div key={unit.id}>
                       {/* Unit Row - Green left border */}
                       <div
@@ -219,7 +219,7 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                         onClick={() => toggleUnit(unit.id)}
                       >
                         <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
-                        <span className="text-sm text-text-heading truncate flex-1">{unit.title}</span>
+                        <span className="text-sm text-text-heading truncate flex-1">U{unitIndex + 1} {unit.title}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenUnitSettings(unit); }}
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-all"
@@ -231,11 +231,23 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                           </svg>
                         </button>
                         <button
+                          onClick={(e) => { e.stopPropagation(); onOpenFolderModal(unit.title); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-blue/10 rounded transition-all flex items-center gap-1 text-brand-blue"
+                          title="Add lesson folder"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                            <path d="M12 11v6M9 14h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                        <button
                           onClick={(e) => { e.stopPropagation(); onOpenContentModal(unit.title); }}
-                          className="opacity-0 group-hover:opacity-100 text-xs text-brand-orange hover:text-brand-orange-dark transition-opacity"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all flex items-center gap-1 text-brand-orange"
                           title="Add content"
                         >
-                          +
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                          </svg>
                         </button>
                       </div>
                       
