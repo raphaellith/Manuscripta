@@ -248,25 +248,7 @@ export const MaterialFlowVisualizer: React.FC = () => {
       </div>
 
       {/* Legend Cards */}
-      <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
-        {flowSteps.map((step) => (
-          <div 
-            key={step.title}
-            className="bg-white rounded-xl p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div 
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: step.color }}
-              />
-              <h3 className="font-semibold text-text-heading">{step.title}</h3>
-            </div>
-            <p className="text-sm text-text-body opacity-80">
-              {step.description}
-            </p>
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 };
