@@ -7,6 +7,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import android.content.Context;
 
 import org.junit.After;
 import org.junit.Before;
@@ -63,6 +67,26 @@ public class FileStorageManagerTest {
                 () -> new FileStorageManager((File) null)
         );
         assertEquals("Base directory cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_validContext_createsInstance() {
+        Context mockContext = mock(Context.class);
+        Context mockAppContext = mock(Context.class);
+        when(mockContext.getApplicationContext()).thenReturn(mockAppContext);
+        when(mockAppContext.getFilesDir()).thenReturn(baseDirectory);
+
+        FileStorageManager manager = new FileStorageManager(mockContext);
+        assertNotNull(manager);
+    }
+
+    @Test
+    public void testConstructor_nullContext_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FileStorageManager((Context) null)
+        );
+        assertEquals("Context cannot be null", exception.getMessage());
     }
 
     // ==================== saveAttachment Tests ====================
@@ -708,6 +732,23 @@ public class FileStorageManagerTest {
 
         // Clean up
         tempFile.delete();
+    }
+
+    @Test
+    public void testWriteToFile_ioException_returnsFalse() throws IOException {
+        // Create a directory with the same name as the "file" we're trying to write to
+        // This will cause FileOutputStream to throw an IOException
+        File directoryAsFile = new File(storageManager.getAttachmentsRootDirectory(), "fake-file");
+        storageManager.getAttachmentsRootDirectory().mkdirs();
+        directoryAsFile.mkdirs(); // Create as directory, not file
+
+        byte[] content = "test content".getBytes();
+        boolean result = storageManager.writeToFile(directoryAsFile, content);
+
+        assertFalse(result);
+
+        // Clean up
+        directoryAsFile.delete();
     }
 
     @Test
