@@ -26,7 +26,7 @@ This document specifies the process through which the two clients communicate du
 
 ## Section 3: Distributing a Material
 
-(1) The Windows client should initiate a session by sending a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`), as specified in `API Contract.md` §3.4, with the Material ID as operand, to the android device(s) which are the intended receipients of a certain material, to indicate that they should make a GET request to the appropriate endpoint(s) to obtain their associated materials. 
+(1) The Windows client should initiate a session by sending a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`), as specified in `API Contract.md` §3.4, to the android device(s) which are the intended receipients of a certain material, to indicate that they should make a GET request to the appropriate endpoint(s) to obtain their associated materials. 
 
 (2) The Android client must, on receipt of the message specified in (1), call the appropriate REST API end point as specified in `API Contract.md` §2.5, in order to retrieve the lesson materials that it should display.
 
