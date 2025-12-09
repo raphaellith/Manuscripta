@@ -8,19 +8,19 @@ interface FlowInfo {
 
 const flowSteps: FlowInfo[] = [
   {
-    title: 'Teacher Portal',
+    title: 'Teacher App',
     color: 'var(--color-brand-green)',
-    description: 'Teachers create, manage, and organise educational materials using the web-based portal.',
+    description: 'Teachers use the Manuscripta app to create, organise, and deploy educational materials with AI assistance.',
   },
   {
     title: 'Material Types',
     color: 'var(--color-brand-orange)',
-    description: 'Content is prepared in various formats: readings, quizzes, worksheets, and PDFs to suit different learning needs.',
+    description: 'Content is generated in various formats: readings, quizzes, worksheets, and PDFs tailored to different learning needs.',
   },
   {
     title: 'Student Tablet',
     color: 'var(--color-brand-blue)',
-    description: 'Materials are rendered on e-ink tablets with accessibility features for an optimal reading experience.',
+    description: 'Interactive materials are rendered on e-ink tablets with AI-powered accessibility features for personalised learning.',
   },
 ];
 
@@ -146,11 +146,18 @@ export const MaterialFlowVisualizer: React.FC = () => {
 
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="font-serif text-4xl font-medium text-text-heading mb-4">
-          Material Distribution Flow
-        </h1>
-        <p className="text-lg text-text-body opacity-80">
-          How content flows from teacher creation to student devices
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <img 
+            src="/resources/Quill Logo.png" 
+            alt="Manuscripta Logo" 
+            className="w-16 h-16 object-contain"
+          />
+          <h1 className="font-serif text-5xl font-medium text-text-heading">
+            Manuscripta
+          </h1>
+        </div>
+        <p className="text-lg text-text-body opacity-80 max-w-2xl mx-auto">
+          Generate and deploy learning materials directly to student tablets
         </p>
       </div>
 
@@ -164,10 +171,10 @@ export const MaterialFlowVisualizer: React.FC = () => {
           </div>
           <div className="mt-4 text-center">
             <div className="font-semibold text-lg" style={{ color: 'var(--color-brand-green)' }}>
-              Teacher Portal
+              Teacher App
             </div>
             <div className="text-sm text-text-body opacity-70 mt-1 max-w-[150px]">
-              Create & manage materials
+              Generate & deploy materials
             </div>
           </div>
         </div>
@@ -234,7 +241,7 @@ export const MaterialFlowVisualizer: React.FC = () => {
               Student Tablet
             </div>
             <div className="text-sm text-text-body opacity-70 mt-1 max-w-[150px]">
-              E-ink display with AI assistance
+              Interactive e-ink learning
             </div>
           </div>
         </div>
