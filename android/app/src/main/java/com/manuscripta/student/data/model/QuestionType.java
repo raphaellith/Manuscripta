@@ -6,22 +6,24 @@ package com.manuscripta.student.data.model;
  */
 public enum QuestionType {
     /**
-     * Multiple choice question with several options (A, B, C, D)
+     * Multiple choice question with several options (A, B, C, D).
      */
     MULTIPLE_CHOICE,
 
     /**
-     * True or False question
+     * True or False question.
      */
     TRUE_FALSE,
 
     /**
-     * Short answer - student types their response
+     * Written answer.
+     * Student types their response.
      */
-    SHORT_ANSWER;
+    WRITTEN_ANSWER;
 
     /**
      * Check if this question type requires predefined options.
+     * Written answer does not require options as student types their response.
      *
      * @return true if options are needed (multiple choice, true/false)
      */
@@ -38,7 +40,7 @@ public enum QuestionType {
         return switch (this) {
             case MULTIPLE_CHOICE -> "Multiple Choice";
             case TRUE_FALSE      -> "True/False";
-            case SHORT_ANSWER    -> "Short Answer";
+            case WRITTEN_ANSWER  -> "Written Answer";
         };
     }
 }

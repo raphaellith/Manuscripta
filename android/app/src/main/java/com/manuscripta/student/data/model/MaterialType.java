@@ -6,22 +6,26 @@ package com.manuscripta.student.data.model;
  */
 public enum MaterialType {
     /**
-     * Reading lesson content - informational text for students to read and learn from
+     * Reading material content.
+     * Informational text for students to read and learn from.
      */
-    LESSON,
+    READING,
 
     /**
-     * Assessment with questions - tests student understanding
+     * Assessment with questions.
+     * Tests student understanding.
      */
     QUIZ,
 
     /**
-     * Practice exercises - activities for students to complete
+     * Practice exercises.
+     * Activities for students to complete.
      */
     WORKSHEET,
 
     /**
-     * Quick survey or poll - gather student opinions or check understanding
+     * Quick survey or poll.
+     * Gathers student opinions or checks understanding.
      */
     POLL;
 
@@ -32,7 +36,7 @@ public enum MaterialType {
      */
     public String getDisplayName() {
         return switch (this) {
-            case LESSON    -> "Reading Material";
+            case READING   -> "Reading";
             case QUIZ      -> "Quiz";
             case WORKSHEET -> "Worksheet";
             case POLL      -> "Poll";

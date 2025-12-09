@@ -13,11 +13,23 @@ This API contract conforms to requirements **NET1** (distributing material conte
 
 The system uses a **hybrid multi-channel networking approach** with separate protocols for different types of communication:
 
--   **HTTP (REST)**: For transmission of large chunks of data, such as lesson materials (Server→Client) and student responses (Client→Server). Messages are primarily transmitted in JSON format.
--   **TCP (Socket)**: For low-latency control signals that require real-time transmission, such as lock screen commands (Server→Client) and student tablet status changes (Client→Server).
+-   **HTTP (REST)**: For transmission of large chunks of data, such as lesson materials (Server→Client) and student responses (Client→Server). Messages are primarily transmitted in JSON format. **Note:** The Windows server cannot initiate HTTP requests to clients, so material distribution is triggered via TCP signals (see below).
+-   **TCP (Socket)**: For low-latency control signals that require real-time transmission, such as lock screen commands (Server→Client) and student tablet status changes (Client→Server). Also used to notify clients when new materials are available.
 -   **UDP Broadcasting**: For device discovery and pairing, allowing student tablets to discover the teacher laptop on the local network.
 
 If a performance bottleneck is observed during implementation, UDP may be introduced for additional message types.
+
+### Material Distribution Pattern (Heartbeat-Triggered Fetch)
+
+Since the Windows server cannot push HTTP requests to Android clients, material distribution uses a **heartbeat-triggered fetch** pattern:
+
+1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
+2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
+3. **If materials are available**, the server responds with a `FETCH_MATERIALS` (0x04) TCP message
+4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
+5. **Android Client** downloads individual materials via `GET /materials/{id}`
+
+This pattern ensures material distribution works within the constraint that the server cannot initiate connections to clients.
 
 **Connection Establishment:**
 Each protocol operates on its own channel. A connection is deemed established only after pairing procedures on **all channels** (HTTP and TCP) have been completed successfully.

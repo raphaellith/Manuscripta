@@ -7,6 +7,9 @@
 /local/
 /android/local/
 
+# AI coding agent instructions (personal configuration)
+.github/copilot-instructions.md
+
 #########################
 # Android
 #########################
