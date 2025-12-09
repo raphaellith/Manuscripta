@@ -230,7 +230,7 @@ See §1.1 for detailed format.
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
 | `0x04` | UNPAIR | None | Unpairs the device |
-| `0x05` | DISTRIBUTE_MATERIAL | Material ID (UUID) | Instructs device to fetch materials for a session |
+| `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
 
 ### 3.5. TCP Pairing Messages
 
