@@ -204,7 +204,6 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                 onClick={() => toggleCollection(collection.id)}
               >
                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
-                <CollectionIcon />
                 <span className="text-sm font-medium text-text-heading truncate flex-1">{collection.name}</span>
                 <span className="text-xs text-gray-400">{getUnitsForCollection(collection).length}</span>
               </div>
@@ -220,7 +219,6 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                         onClick={() => toggleUnit(unit.id)}
                       >
                         <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
-                        <UnitIcon />
                         <span className="text-sm text-text-heading truncate flex-1">{unit.title}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenUnitSettings(unit); }}
@@ -252,9 +250,7 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
                                 onClick={() => toggleFolder(folder.id)}
                               >
                                 <ChevronRightIcon isOpen={expandedFolders.has(folder.id)} />
-                                <LessonFolderIcon />
-                                <span className="text-xs font-medium text-brand-blue">L{folder.number}</span>
-                                <span className="text-sm text-text-body truncate flex-1">{folder.title}</span>
+                                <span className="text-sm text-text-body truncate flex-1">L{folder.number} {folder.title}</span>
                                 <span className="text-xs text-gray-400">({getItemsForFolder(unit, folder).length})</span>
                               </div>
                               
