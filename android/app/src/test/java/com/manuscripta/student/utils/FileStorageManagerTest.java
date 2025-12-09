@@ -7,6 +7,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import android.content.Context;
 
 import org.junit.After;
 import org.junit.Before;
@@ -63,6 +67,26 @@ public class FileStorageManagerTest {
                 () -> new FileStorageManager((File) null)
         );
         assertEquals("Base directory cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_validContext_createsInstance() {
+        Context mockContext = mock(Context.class);
+        Context mockAppContext = mock(Context.class);
+        when(mockContext.getApplicationContext()).thenReturn(mockAppContext);
+        when(mockAppContext.getFilesDir()).thenReturn(baseDirectory);
+
+        FileStorageManager manager = new FileStorageManager(mockContext);
+        assertNotNull(manager);
+    }
+
+    @Test
+    public void testConstructor_nullContext_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FileStorageManager((Context) null)
+        );
+        assertEquals("Context cannot be null", exception.getMessage());
     }
 
     // ==================== saveAttachment Tests ====================
@@ -340,6 +364,65 @@ public class FileStorageManagerTest {
                 () -> storageManager.getAttachmentFile("material", "   ")
         );
         assertEquals("Attachment ID cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testGetAttachmentFile_materialDirIsFile_returnsNull() throws IOException {
+        // Create a file where the material directory should be
+        File attachmentsRoot = storageManager.getAttachmentsRootDirectory();
+        attachmentsRoot.mkdirs();
+        File fakeMaterialDir = new File(attachmentsRoot, "fake-material");
+        fakeMaterialDir.createNewFile(); // Create as file, not directory
+
+        File result = storageManager.getAttachmentFile("fake-material", "attach-1");
+        assertNull(result);
+
+        // Cleanup
+        fakeMaterialDir.delete();
+    }
+
+    @Test
+    public void testGetAttachmentFile_listFilesReturnsNull_returnsNull() {
+        // First create the material directory so it exists
+        storageManager.saveAttachment("list-null-material", "setup", "txt", "content".getBytes());
+
+        // Create a manager that returns null from listFilesWithFilter
+        FileStorageManager nullListManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFilesWithFilter(File directory, java.io.FilenameFilter filter) {
+                return null; // Simulate I/O error
+            }
+        };
+
+        File result = nullListManager.getAttachmentFile("list-null-material", "attach");
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAttachmentFile_listFilesReturnsEmptyArray_returnsNull() {
+        // First create the material directory so it exists
+        storageManager.saveAttachment("empty-list-material", "other-attach", "txt", "content".getBytes());
+
+        // Create a manager that returns empty array from listFilesWithFilter
+        FileStorageManager emptyListManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFilesWithFilter(File directory, java.io.FilenameFilter filter) {
+                return new File[0]; // No matching files
+            }
+        };
+
+        File result = emptyListManager.getAttachmentFile("empty-list-material", "nonexistent");
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAttachmentFile_noMatchingFiles_returnsNull() {
+        // Save an attachment with a different name
+        storageManager.saveAttachment("material-nomatch", "other-attach", "txt", "content".getBytes());
+
+        // Try to get a different attachment
+        File result = storageManager.getAttachmentFile("material-nomatch", "nonexistent-attach");
+        assertNull(result);
     }
 
     // ==================== deleteAttachmentsForMaterial Tests ====================
@@ -721,6 +804,158 @@ public class FileStorageManagerTest {
 
         assertTrue(result);
         assertFalse(tempFile.exists());
+    }
+
+    // ==================== Additional Edge Case Tests ====================
+
+    @Test
+    public void testSaveAttachment_directoryAlreadyExists_savesSuccessfully() {
+        // First save creates the directory
+        File file1 = storageManager.saveAttachment("existing-dir-material", "attach-1", "txt", "content1".getBytes());
+        assertNotNull(file1);
+
+        // Second save should succeed with existing directory
+        File file2 = storageManager.saveAttachment("existing-dir-material", "attach-2", "txt", "content2".getBytes());
+        assertNotNull(file2);
+        assertTrue(file2.exists());
+    }
+
+    @Test
+    public void testDeleteDirectoryRecursively_withNestedSubdirectories_deletesAll() throws IOException {
+        // Create nested structure: material/subdir1/subdir2/file.txt
+        File materialDir = new File(storageManager.getAttachmentsRootDirectory(), "nested-material");
+        File subDir1 = new File(materialDir, "subdir1");
+        File subDir2 = new File(subDir1, "subdir2");
+        subDir2.mkdirs();
+
+        File deepFile = new File(subDir2, "deep-file.txt");
+        deepFile.createNewFile();
+        File subFile = new File(subDir1, "sub-file.txt");
+        subFile.createNewFile();
+
+        assertTrue(deepFile.exists());
+        assertTrue(subFile.exists());
+
+        boolean result = storageManager.deleteAttachmentsForMaterial("nested-material");
+        assertTrue(result);
+        assertFalse(materialDir.exists());
+    }
+
+    @Test
+    public void testWriteToFile_ioException_returnsFalse() {
+        // Create a manager that throws IOException on write
+        FileStorageManager ioFailManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected boolean writeToFile(File file, byte[] bytes) {
+                // Simulate IOException by returning false
+                return false;
+            }
+        };
+
+        File result = ioFailManager.saveAttachment("io-fail-material", "attach", "txt", "content".getBytes());
+        assertNull(result);
+    }
+
+    @Test
+    public void testDeleteAttachmentsForMaterial_listFilesReturnsNull_returnsFalse() {
+        // First create the material directory with a file
+        storageManager.saveAttachment("list-null-del-material", "attach", "txt", "content".getBytes());
+
+        // Create a manager that returns null from listFiles (simulating I/O error)
+        FileStorageManager nullListManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFiles(File directory) {
+                return null; // Simulate I/O error when listing
+            }
+        };
+
+        // Should return false because directory can't be deleted (still has contents)
+        boolean result = nullListManager.deleteAttachmentsForMaterial("list-null-del-material");
+        assertFalse(result);
+
+        // Clean up with normal manager
+        storageManager.deleteAttachmentsForMaterial("list-null-del-material");
+    }
+
+    @Test
+    public void testClearAllAttachments_listFilesReturnsNull_returnsFalse() {
+        // First create some attachments
+        storageManager.saveAttachment("clear-null-material", "attach", "txt", "content".getBytes());
+
+        // Create a manager that returns null from listFiles
+        FileStorageManager nullListManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFiles(File directory) {
+                return null; // Simulate I/O error when listing
+            }
+        };
+
+        // Should return false because directory can't be deleted (still has contents)
+        boolean result = nullListManager.clearAllAttachments();
+        assertFalse(result);
+
+        // Clean up with normal manager
+        storageManager.clearAllAttachments();
+    }
+
+    @Test
+    public void testDeleteAttachmentsForMaterial_listFilesReturnsNull_emptyDir_succeeds() {
+        // Create an empty material directory
+        File attachmentsRoot = storageManager.getAttachmentsRootDirectory();
+        attachmentsRoot.mkdirs();
+        File emptyMaterialDir = new File(attachmentsRoot, "empty-list-null-material");
+        emptyMaterialDir.mkdirs();
+
+        // Create a manager that returns null from listFiles
+        FileStorageManager nullListManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFiles(File directory) {
+                return null; // Simulate I/O error when listing
+            }
+        };
+
+        // Should succeed because directory is empty
+        boolean result = nullListManager.deleteAttachmentsForMaterial("empty-list-null-material");
+        assertTrue(result);
+    }
+
+    @Test
+    public void testListFiles_normalOperation_returnsFiles() throws IOException {
+        File testDir = new File(baseDirectory, "test-list-dir");
+        testDir.mkdirs();
+        File testFile = new File(testDir, "test.txt");
+        testFile.createNewFile();
+
+        File[] files = storageManager.listFiles(testDir);
+
+        assertNotNull(files);
+        assertEquals(1, files.length);
+        assertEquals("test.txt", files[0].getName());
+
+        // Cleanup
+        testFile.delete();
+        testDir.delete();
+    }
+
+    @Test
+    public void testListFilesWithFilter_normalOperation_returnsFilteredFiles() throws IOException {
+        File testDir = new File(baseDirectory, "test-filter-dir");
+        testDir.mkdirs();
+        File txtFile = new File(testDir, "test.txt");
+        txtFile.createNewFile();
+        File pdfFile = new File(testDir, "test.pdf");
+        pdfFile.createNewFile();
+
+        File[] files = storageManager.listFilesWithFilter(testDir, (dir, name) -> name.endsWith(".txt"));
+
+        assertNotNull(files);
+        assertEquals(1, files.length);
+        assertEquals("test.txt", files[0].getName());
+
+        // Cleanup
+        txtFile.delete();
+        pdfFile.delete();
+        testDir.delete();
     }
 
     // ==================== Helper Methods ====================

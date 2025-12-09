@@ -125,8 +125,8 @@ public class FileStorageManager {
                 return null;
             }
 
-            File[] files = materialDir.listFiles((dir, name) ->
-                    name.startsWith(attachmentId + "."));
+            final String prefix = attachmentId + ".";
+            File[] files = listFilesWithFilter(materialDir, (dir, name) -> name.startsWith(prefix));
 
             if (files != null && files.length > 0) {
                 return files[0];
@@ -210,7 +210,7 @@ public class FileStorageManager {
      * @return true if deletion was successful, false otherwise
      */
     private boolean deleteDirectoryRecursively(@NonNull File directory) {
-        File[] files = directory.listFiles();
+        File[] files = listFiles(directory);
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
@@ -262,6 +262,28 @@ public class FileStorageManager {
      */
     protected boolean deleteFile(@NonNull File file) {
         return file.delete();
+    }
+
+    /**
+     * Lists files in a directory. This method is protected to allow testing of I/O error scenarios.
+     *
+     * @param directory The directory to list files from
+     * @return Array of files, or null if an I/O error occurs
+     */
+    protected File[] listFiles(@NonNull File directory) {
+        return directory.listFiles();
+    }
+
+    /**
+     * Lists files in a directory matching a filter. This method is protected to allow testing
+     * of I/O error scenarios.
+     *
+     * @param directory The directory to list files from
+     * @param filter    The filename filter to apply
+     * @return Array of matching files, or null if an I/O error occurs
+     */
+    protected File[] listFilesWithFilter(@NonNull File directory, @NonNull java.io.FilenameFilter filter) {
+        return directory.listFiles(filter);
     }
 
     /**
