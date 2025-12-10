@@ -12,6 +12,13 @@ interface LibraryVariantTreeProps {
   onOpenFolderModal: (unitTitle: string) => void;
   onOpenUnitSettings: (unit: Unit) => void;
   searchQuery: string;
+  // Optional controlled state for persistence
+  expandedCollections?: Set<string>;
+  expandedUnits?: Set<string>;
+  expandedFolders?: Set<string>;
+  onExpandedCollectionsChange?: (expanded: Set<string>) => void;
+  onExpandedUnitsChange?: (expanded: Set<string>) => void;
+  onExpandedFoldersChange?: (expanded: Set<string>) => void;
 }
 
 // Icons
@@ -104,37 +111,56 @@ export const LibraryVariantTree: React.FC<LibraryVariantTreeProps> = ({
   onOpenFolderModal,
   onOpenUnitSettings,
   searchQuery,
+  // Controlled state props (optional)
+  expandedCollections: controlledExpandedCollections,
+  expandedUnits: controlledExpandedUnits,
+  expandedFolders: controlledExpandedFolders,
+  onExpandedCollectionsChange,
+  onExpandedUnitsChange,
+  onExpandedFoldersChange,
 }) => {
-  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set(collections.map(c => c.id)));
-  const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set(units.map(u => u.id)));
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Internal state (used when not controlled)
+  const [internalExpandedCollections, setInternalExpandedCollections] = useState<Set<string>>(new Set());
+  const [internalExpandedUnits, setInternalExpandedUnits] = useState<Set<string>>(new Set());
+  const [internalExpandedFolders, setInternalExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
 
+  // Use controlled state if provided, otherwise use internal state
+  const expandedCollections = controlledExpandedCollections ?? internalExpandedCollections;
+  const expandedUnits = controlledExpandedUnits ?? internalExpandedUnits;
+  const expandedFolders = controlledExpandedFolders ?? internalExpandedFolders;
+
   const toggleCollection = (id: string) => {
-    setExpandedCollections(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(expandedCollections);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    if (onExpandedCollectionsChange) {
+      onExpandedCollectionsChange(next);
+    } else {
+      setInternalExpandedCollections(next);
+    }
   };
 
   const toggleUnit = (id: string) => {
-    setExpandedUnits(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(expandedUnits);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    if (onExpandedUnitsChange) {
+      onExpandedUnitsChange(next);
+    } else {
+      setInternalExpandedUnits(next);
+    }
   };
 
   const toggleFolder = (id: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(expandedFolders);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    if (onExpandedFoldersChange) {
+      onExpandedFoldersChange(next);
+    } else {
+      setInternalExpandedFolders(next);
+    }
   };
 
   // Filter data based on search

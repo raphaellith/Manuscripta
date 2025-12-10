@@ -162,6 +162,11 @@ const App: React.FC = () => {
   const [contentItems, setContentItems] = useState<ContentItem[]>(initialContentItems);
   const [showHierarchy, setShowHierarchy] = useState(false);
   const [showMaterialFlow, setShowMaterialFlow] = useState(false);
+  
+  // Tree expanded state (persisted at app level so it survives view changes)
+  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
+  const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Handle hash-based routing for hidden pages
   useEffect(() => {
@@ -227,6 +232,12 @@ const App: React.FC = () => {
                     onAddLessonFolder={handleAddLessonFolder}
                     onUpdateContentItem={handleUpdateContentItem}
                     onUpdateUnit={handleUpdateUnit}
+                    expandedCollections={expandedCollections}
+                    expandedUnits={expandedUnits}
+                    expandedFolders={expandedFolders}
+                    onExpandedCollectionsChange={setExpandedCollections}
+                    onExpandedUnitsChange={setExpandedUnits}
+                    onExpandedFoldersChange={setExpandedFolders}
                 />;
       case 'lesson-creator':
         return <LessonCreator onBack={() => setActiveView('lesson-library')} onSave={handleCreateUnit} />;

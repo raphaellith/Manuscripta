@@ -5,7 +5,6 @@ import { ContentCreatorModal } from './ContentCreatorModal';
 import { ContentEditorModal } from './ContentEditorModal';
 import { ContentViewerModal } from './ContentViewerModal';
 import { LibraryVariantTree } from './LibraryVariantTree';
-import { LibraryVariantColumns } from './LibraryVariantColumns';
 import { UnitSettingsModal } from './UnitSettingsModal';
 
 interface LessonFolderCreatorModalProps {
@@ -65,23 +64,14 @@ interface LessonLibraryProps {
   onAddLessonFolder: (unit: string, title: string) => void;
   onUpdateContentItem: (item: ContentItem) => void;
   onUpdateUnit: (unit: Unit) => void;
+  // Tree state (controlled from App.tsx for persistence)
+  expandedCollections: Set<string>;
+  expandedUnits: Set<string>;
+  expandedFolders: Set<string>;
+  onExpandedCollectionsChange: (expanded: Set<string>) => void;
+  onExpandedUnitsChange: (expanded: Set<string>) => void;
+  onExpandedFoldersChange: (expanded: Set<string>) => void;
 }
-
-// Only Tree and Columns variants
-type ActiveVariant = 'tree' | 'columns';
-
-// Variant Switcher Icons
-const TreeViewIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-  </svg>
-);
-
-const ColumnsViewIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-  </svg>
-);
 
 export const LessonLibrary: React.FC<LessonLibraryProps> = ({ 
   collections,
@@ -93,6 +83,12 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
   onAddLessonFolder, 
   onUpdateContentItem,
   onUpdateUnit,
+  expandedCollections,
+  expandedUnits,
+  expandedFolders,
+  onExpandedCollectionsChange,
+  onExpandedUnitsChange,
+  onExpandedFoldersChange,
 }) => {
   const [contentModalUnit, setContentModalUnit] = useState<string | null>(null);
   const [contentModalLesson, setContentModalLesson] = useState<LessonFolder | null>(null);
@@ -101,8 +97,6 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
   const [viewingContentItem, setViewingContentItem] = useState<ContentItem | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeVariant, setActiveVariant] = useState<ActiveVariant>('tree');
-  const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
   const handleOpenContentModal = (unitTitle: string, lesson?: LessonFolder) => {
     setContentModalUnit(unitTitle);
@@ -150,31 +144,6 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
       handleCloseModals();
   }
 
-  // Shared props for all variants
-  const variantProps = {
-    collections,
-    units,
-    lessonFolders,
-    contentItems,
-    onEditItem: setEditingContentItem,
-    onViewItem: setViewingContentItem,
-    onOpenContentModal: handleOpenContentModal,
-    onOpenFolderModal: handleOpenFolderModal,
-    onOpenUnitSettings: handleOpenUnitSettings,
-    searchQuery,
-  };
-
-  const renderVariant = () => {
-    switch (activeVariant) {
-      case 'tree':
-        return <LibraryVariantTree {...variantProps} />;
-      case 'columns':
-        return <LibraryVariantColumns {...variantProps} />;
-      default:
-        return <LibraryVariantTree {...variantProps} />;
-    }
-  };
-
   return (
     <div>
       {contentModalUnit && (
@@ -214,62 +183,6 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
         />
       )}
       
-      {/* Floating View Switcher - positioned like ThemeSwitcher but on the left */}
-      <div className="fixed bottom-4 left-4 z-50">
-        {!isViewSwitcherOpen && (
-          <button
-            onClick={() => setIsViewSwitcherOpen(true)}
-            className="bg-white p-3 rounded-full shadow-lg border border-gray-200 hover:shadow-xl transition-all flex items-center gap-2"
-            title="Switch View"
-          >
-            {activeVariant === 'tree' ? <TreeViewIcon /> : <ColumnsViewIcon />}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-            </svg>
-          </button>
-        )}
-
-        {isViewSwitcherOpen && (
-          <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-48 overflow-hidden">
-            <div className="flex items-center justify-between p-3 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-700">View Layout</span>
-              <button
-                onClick={() => setIsViewSwitcherOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-2 space-y-1">
-              <button
-                onClick={() => { setActiveVariant('tree'); setIsViewSwitcherOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all ${
-                  activeVariant === 'tree'
-                    ? 'bg-brand-orange/10 text-brand-orange'
-                    : 'hover:bg-gray-50 text-gray-600'
-                }`}
-              >
-                <TreeViewIcon />
-                <span className="text-sm font-medium">Tree View</span>
-              </button>
-              <button
-                onClick={() => { setActiveVariant('columns'); setIsViewSwitcherOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all ${
-                  activeVariant === 'columns'
-                    ? 'bg-brand-orange/10 text-brand-orange'
-                    : 'hover:bg-gray-50 text-gray-600'
-                }`}
-              >
-                <ColumnsViewIcon />
-                <span className="text-sm font-medium">Column View</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-      
       <div className="mb-6 flex flex-col md:flex-row gap-4 sticky top-0 z-40 pb-4 bg-gradient-to-b from-brand-cream to-transparent">
         {/* Search Input */}
         <div className="relative flex-grow">
@@ -296,8 +209,25 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
         </button>
       </div>
 
-      {/* Active Variant Display */}
-      {renderVariant()}
+      {/* Tree View */}
+      <LibraryVariantTree
+        collections={collections}
+        units={units}
+        lessonFolders={lessonFolders}
+        contentItems={contentItems}
+        onEditItem={setEditingContentItem}
+        onViewItem={setViewingContentItem}
+        onOpenContentModal={handleOpenContentModal}
+        onOpenFolderModal={handleOpenFolderModal}
+        onOpenUnitSettings={handleOpenUnitSettings}
+        searchQuery={searchQuery}
+        expandedCollections={expandedCollections}
+        expandedUnits={expandedUnits}
+        expandedFolders={expandedFolders}
+        onExpandedCollectionsChange={onExpandedCollectionsChange}
+        onExpandedUnitsChange={onExpandedUnitsChange}
+        onExpandedFoldersChange={onExpandedFoldersChange}
+      />
     </div>
   );
 };
