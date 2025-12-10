@@ -26,25 +26,68 @@ const flowSteps: FlowInfo[] = [
 
 const materialTypes = ['Reading', 'Quiz', 'Worksheet', 'PDF'];
 
-// Computer icon component
-const ComputerIcon: React.FC = () => (
-  <svg viewBox="0 0 100 80" className="w-full h-full">
-    {/* Monitor */}
-    <rect x="10" y="5" width="80" height="50" rx="4" fill="var(--color-brand-green)" opacity="0.15" stroke="var(--color-brand-green)" strokeWidth="3"/>
-    {/* Screen content - simple UI mockup */}
-    <rect x="18" y="12" width="64" height="36" fill="white" opacity="0.5"/>
-    <rect x="22" y="16" width="20" height="4" fill="var(--color-brand-green)" opacity="0.6"/>
-    <rect x="22" y="24" width="56" height="2" fill="var(--color-text-body)" opacity="0.3"/>
-    <rect x="22" y="30" width="56" height="2" fill="var(--color-text-body)" opacity="0.3"/>
-    <rect x="22" y="36" width="40" height="2" fill="var(--color-text-body)" opacity="0.3"/>
-    {/* Stand */}
-    <path d="M40 55 L60 55 L55 65 L45 65 Z" fill="var(--color-brand-green)" opacity="0.8"/>
-    {/* Base */}
-    <rect x="30" y="65" width="40" height="6" rx="2" fill="var(--color-brand-green)" opacity="0.8"/>
-  </svg>
+// Teacher Portal Preview - miniature classroom control interface
+const TeacherPortalPreview: React.FC = () => (
+  <div 
+    className="rounded-lg shadow-lg overflow-hidden"
+    style={{ 
+      width: 220,
+      height: 160,
+      backgroundColor: 'var(--color-brand-cream)',
+      border: '2px solid var(--color-brand-green)',
+    }}
+  >
+    {/* Header bar */}
+    <div 
+      className="flex items-center px-2 py-1 gap-1"
+      style={{ backgroundColor: 'var(--color-brand-green)' }}
+    >
+      <div className="w-2 h-2 rounded-full bg-white opacity-80" />
+      <span className="text-white font-semibold" style={{ fontSize: '7px' }}>Classroom Control</span>
+    </div>
+    
+    {/* Content area */}
+    <div className="p-2">
+      {/* Launch lesson card preview */}
+      <div className="bg-white rounded p-1.5 mb-2 border-t-2" style={{ borderTopColor: 'var(--color-brand-orange)' }}>
+        <div className="font-semibold text-gray-700 mb-1" style={{ fontSize: '6px' }}>Launch a Lesson</div>
+        <div className="flex gap-1">
+          <div className="bg-gray-100 rounded px-1 py-0.5 flex-1" style={{ fontSize: '5px' }}>Unit 1</div>
+          <div className="bg-brand-orange text-white rounded px-1 py-0.5" style={{ fontSize: '5px' }}>Launch</div>
+        </div>
+      </div>
+      
+      {/* Device grid preview */}
+      <div className="grid grid-cols-4 gap-1">
+        {[
+          { status: 'ON_TASK', color: '#3b82f6' },
+          { status: 'HAND_RAISED', color: 'var(--color-brand-orange)' },
+          { status: 'ON_TASK', color: '#3b82f6' },
+          { status: 'IDLE', color: 'var(--color-brand-green)' },
+          { status: 'ON_TASK', color: '#3b82f6' },
+          { status: 'ON_TASK', color: '#3b82f6' },
+          { status: 'LOCKED', color: '#ca8a04' },
+          { status: 'ON_TASK', color: '#3b82f6' },
+        ].map((tablet, i) => (
+          <div 
+            key={i}
+            className="rounded flex items-center justify-center"
+            style={{ 
+              backgroundColor: `${tablet.color}20`,
+              height: 18,
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: 8, height: 8, color: tablet.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 );
 
-// Simplified tablet rendering showing a lesson
+// Tablet preview matching the current tablet UI with character helper
 const TabletPreview: React.FC = () => (
   <div className="relative">
     {/* Tablet outer frame */}
@@ -58,30 +101,57 @@ const TabletPreview: React.FC = () => (
     >
       {/* Tablet screen */}
       <div 
-        className="rounded-sm p-2 h-full flex flex-col"
+        className="rounded-sm p-2 h-full flex flex-col relative"
         style={{ backgroundColor: '#f0ede6' }}
       >
         {/* Tab bar */}
-        <div className="flex border-b border-gray-800 mb-1">
-          <div className="flex-1 py-0.5 font-semibold text-center bg-gray-200 border border-b-0 border-gray-800 underline" style={{ fontSize: '8px' }}>Lesson</div>
-          <div className="flex-1 py-0.5 font-semibold text-center border border-b-0 border-gray-800" style={{ fontSize: '8px' }}>Quiz</div>
-          <div className="flex-1 py-0.5 font-semibold text-center border border-b-0 border-gray-800" style={{ fontSize: '8px' }}>Worksheet</div>
+        <div className="flex border-b-2 border-gray-800 mb-1">
+          <div className="flex-1 py-0.5 font-bold text-center bg-gray-200 border-2 border-b-0 border-gray-800 underline" style={{ fontSize: '8px' }}>Reading</div>
+          <div className="flex-1 py-0.5 font-bold text-center border-2 border-b-0 border-gray-800" style={{ fontSize: '8px' }}>Quiz</div>
+          <div className="flex-1 py-0.5 font-bold text-center border-2 border-b-0 border-gray-800" style={{ fontSize: '8px' }}>Worksheet</div>
         </div>
         {/* Lesson content */}
         <div className="flex-1 overflow-hidden">
-          <h3 className="font-serif font-medium border-b border-gray-800 pb-1 mb-1" style={{ fontSize: '10px' }}>
+          <h3 className="font-serif font-medium border-b-2 border-gray-800 pb-1 mb-1" style={{ fontSize: '10px' }}>
             The Battle of Hastings
           </h3>
-          <p className="leading-snug text-gray-800" style={{ fontSize: '8px' }}>
+          <p className="leading-snug text-gray-800" style={{ fontSize: '7px' }}>
             In 1066, a power struggle for the English throne culminated in the Battle of Hastings...
           </p>
         </div>
-        {/* AI toolbar hint */}
-        <div className="mt-auto pt-1">
-          <div className="grid grid-cols-3 gap-0.5">
-            <div className="text-center py-0.5 px-0.5 border border-gray-700 bg-gray-100" style={{ fontSize: '7px' }}>Simplify</div>
-            <div className="text-center py-0.5 px-0.5 border border-gray-700 bg-gray-100" style={{ fontSize: '7px' }}>Expand</div>
-            <div className="text-center py-0.5 px-0.5 border border-gray-700 bg-gray-100" style={{ fontSize: '7px' }}>Summarise</div>
+        {/* Footer with character and audio button */}
+        <div className="mt-auto pt-1 flex items-end justify-between">
+          {/* Character helper */}
+          <div className="relative">
+            <img 
+              src="/resources/char_swirlok.png" 
+              alt="AI Helper" 
+              className="object-contain"
+              style={{ width: 32, height: 32 }}
+            />
+            {/* Speech bubble hint */}
+            <div 
+              className="absolute -top-4 left-8 bg-gray-100 border border-gray-800 rounded px-1"
+              style={{ fontSize: '5px' }}
+            >
+              Need help?
+            </div>
+          </div>
+          {/* Audio button */}
+          <div 
+            className="flex items-center justify-center border-2 border-gray-800 rounded bg-gray-100"
+            style={{ width: 24, height: 24 }}
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={2} 
+              stroke="currentColor"
+              style={{ width: 14, height: 14 }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+            </svg>
           </div>
         </div>
       </div>
@@ -164,16 +234,14 @@ export const MaterialFlowVisualizer: React.FC = () => {
       {/* Main Flow Diagram */}
       <div className="relative flex items-center justify-center gap-8 mb-16" style={{ width: 900, height: 350 }}>
         
-        {/* Computer - Left Side */}
+        {/* Teacher Portal - Left Side */}
         <div className="flex flex-col items-center">
-          <div style={{ width: 180, height: 150 }}>
-            <ComputerIcon />
-          </div>
+          <TeacherPortalPreview />
           <div className="mt-4 text-center">
             <div className="font-semibold text-lg" style={{ color: 'var(--color-brand-green)' }}>
-              Teacher App
+              Teacher Portal
             </div>
-            <div className="text-sm text-text-body opacity-70 mt-1 max-w-[150px]">
+            <div className="text-sm text-text-body opacity-70 mt-1 max-w-[180px]">
               Generate & deploy materials
             </div>
           </div>
