@@ -28,4 +28,14 @@ export const rules: Required<ModuleOptions>['rules'] = [
       },
     },
   },
+  // Handle image assets
+  {
+    test: /\.(png|jpe?g|gif|svg|webp)$/i,
+    type: 'asset/resource',
+  },
+  // Handle PDF files
+  {
+    test: /\.pdf$/i,
+    type: 'asset/resource',
+  },
 ];
