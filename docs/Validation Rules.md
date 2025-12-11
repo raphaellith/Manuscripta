@@ -100,22 +100,25 @@ If validation rules in API Contract are in contradiction to this document, this 
 (1) A `SessionEntity` object must have the following data fields to be considered valid:
 
     (a) `MaterialId` (UUID): References the material the student should work on during the lesson.
-    (b) `StartTime` (long): Start unix timestamp of the last interaction.
-    (c) `SessionStatus`(enum SessionStatus). Possible values are:
-        (i) `ACTIVE`: Session is currently active/ongoing.
-        (ii) `PAUSED`: Session has been paused.
-        (iii) `COMPLETED`: Session completed normally.
-        (iv) `CANCELLED`: Session was cancelled before completion.
-    (d) `DeviceId` (UUID): The device ID the session is related to.
+    (b) `SessionStatus`(enum SessionStatus). Possible values are:
+        (i) `RECEIVED`: Material has been received; student has not yet interacted.
+        (ii) `ACTIVE`: Session is currently active/ongoing.
+        (iii) `PAUSED`: Session has been paused.
+        (iv) `COMPLETED`: Session completed normally.
+        (v) `CANCELLED`: Session was cancelled before completion.
+    (c) `DeviceId` (UUID): The device ID the session is related to.
 
 (2) In addition to the mandatory fields in (1), a `SessionEntity` object may have the following fields:
 
-    (a) `EndTime` (long): End unix timestamp, for non-active sessions
+    (a) `StartTime` (long): Start unix timestamp, set when student first interacts with material.
+    (b) `EndTime` (long): End unix timestamp, for non-active sessions.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
-    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specified in 2(a).
-    (b) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+    (a) A `SessionEntity` whose `SessionStatus` is `RECEIVED` must not have `StartTime` or `EndTime`.
+    (b) A `SessionEntity` whose `SessionStatus` is `ACTIVE` must have `StartTime` but must not have `EndTime`.
+    (c) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have both `StartTime` and `EndTime`.
+    (d) A `DeviceId`, as specified in (1)(c), must correspond to a valid device.
 
 ### Section 2E - Data Validation Rules for `DeviceStatusEntity`
 
