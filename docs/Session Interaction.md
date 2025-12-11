@@ -24,16 +24,18 @@ This document specifies the process through which the two clients communicate du
 
 (4) If a heart beat has not been acknowledged by the Windows device, the Android device should still send heart beats at the heart rate, and should notify the user that they have been disconnected if 3 consecutive messages are left unacknowledged when the next message is scheduled to be sent. If no acknowledgement has been received within 60 seconds, the Android client should deem itself as unpaired, and use the process in Pairing Process Specification s3.
 
-## Section 3: Distributing a Material
+## Section 3: Distributing Materials
 
-(1) The Windows client should initiate a session by sending a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`), as specified in `API Contract.md` §3.4, to the android device(s) which are the intended receipients of a certain material, to indicate that they should make a GET request to the appropriate endpoint(s) to obtain their associated materials. 
+(1) The Windows client distributes materials by sending a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`), as specified in `API Contract.md` §3.4, to the Android device(s) which are the intended recipients.
 
-(2) The Android client must, on receipt of the message specified in (1), call the appropriate REST API end point as specified in `API Contract.md` §2.5, in order to retrieve the lesson materials that it should display.
+(2) The Android client must, on receipt of the message specified in (1), call `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5, to retrieve the distribution bundle (materials and questions).
 
-(3) The Windows client must provide an REST API end point which:
+(3) For each material received in the distribution bundle, the Android client creates a separate `SessionEntity` in the `RECEIVED` state, associating that device with that material.
+
+(4) The Windows client must provide a REST API endpoint which:
 
     (i) Takes a DeviceId as an input.
-    (ii) Return, if any, material entities and their related questions.
+    (ii) Returns, if any, material entities and their related questions.
 
 As specified in `API Contract.md` §2.5.
 
@@ -45,4 +47,45 @@ As specified in `API Contract.md` §2.5.
 
 ## Section 5: Lifetime of a Session
 
-(?) This Section is to be drafted after the exact concept, use and state transitions of a session have been ascertained in a group meeting.
+(1) **Session States**
+
+A session entity has one of the following `SessionStatus` values:
+
+    (a) `RECEIVED`: Material has been received; student has not yet interacted.
+    (b) `ACTIVE`: Student is actively engaged with the material.
+    (c) `PAUSED`: Student has taken a break or switched to a different material.
+    (d) `COMPLETED`: Session completed normally (student submitted work).
+    (e) `CANCELLED`: Session terminated due to unpair or explicit cancellation.
+
+(2) **Session Creation**
+
+When the Android client receives materials via `GET /distribution/{deviceId}`, it creates a session entity in the `RECEIVED` state for each material. The `StartTime` field is not set at creation.
+
+(3) **Session Activation**
+
+A session transitions from `RECEIVED` to `ACTIVE` when the student first interacts with the material. At this point, `StartTime` is set to the current timestamp.
+
+(4) **Valid State Transitions**
+
+The following state transitions are permitted:
+
+    (a) `RECEIVED` → `ACTIVE`: First student interaction (Android, automatic).
+    (b) `RECEIVED` → `CANCELLED`: Device unpairs or teacher cancels.
+    (c) `ACTIVE` → `PAUSED`: Student requests break or switches to another material (Android).
+    (d) `ACTIVE` → `COMPLETED`: Student submits work (Android, automatic).
+    (e) `ACTIVE` → `CANCELLED`: Device unpairs or teacher cancels.
+    (f) `PAUSED` → `ACTIVE`: Student resumes (Android, student-initiated).
+    (g) `PAUSED` → `COMPLETED`: Student submits work (Android, automatic).
+    (h) `PAUSED` → `CANCELLED`: Device unpairs or teacher cancels.
+
+(5) **Terminal States**
+
+`COMPLETED` and `CANCELLED` are terminal states. A session in either state cannot transition to any other state.
+
+(6) **EndTime Requirement**
+
+Per `Validation Rules.md` §2D(3)(a), any transition to `PAUSED`, `COMPLETED`, or `CANCELLED` must set the `EndTime` field to the current timestamp.
+
+(7) **Automatic Cancellation**
+
+A session shall be automatically transitioned to `CANCELLED` if the device is deemed unpaired as defined in Section 2(4) of this document.
