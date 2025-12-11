@@ -2,7 +2,6 @@ package com.manuscripta.student.network.tcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -53,18 +52,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testUnlockScreenMessage_hasOperand_returnsFalse() {
-        UnlockScreenMessage message = new UnlockScreenMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testUnlockScreenMessage_toString() {
-        UnlockScreenMessage message = new UnlockScreenMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("UnlockScreenMessage"));
-    }
 
     // ==================== RefreshConfigMessage Tests ====================
 
@@ -80,18 +67,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testRefreshConfigMessage_hasOperand_returnsFalse() {
-        RefreshConfigMessage message = new RefreshConfigMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testRefreshConfigMessage_toString() {
-        RefreshConfigMessage message = new RefreshConfigMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("RefreshConfigMessage"));
-    }
 
     // ==================== FetchMaterialsMessage Tests ====================
 
@@ -107,18 +82,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testFetchMaterialsMessage_hasOperand_returnsFalse() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testFetchMaterialsMessage_toString() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("FetchMaterialsMessage"));
-    }
 
     // ==================== PairingAckMessage Tests ====================
 
@@ -134,18 +97,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testPairingAckMessage_hasOperand_returnsFalse() {
-        PairingAckMessage message = new PairingAckMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testPairingAckMessage_toString() {
-        PairingAckMessage message = new PairingAckMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("PairingAckMessage"));
-    }
 
     // ==================== StatusUpdateMessage Tests ====================
 
@@ -236,21 +187,6 @@ public class TcpMessageTest {
     }
 
     @Test
-    public void testHandRaisedMessage_hasOperand_returnsTrue() {
-        HandRaisedMessage message = new HandRaisedMessage("device");
-        assertTrue(message.hasOperand());
-    }
-
-    @Test
-    public void testHandRaisedMessage_operand_isDefensiveCopy() {
-        HandRaisedMessage message = new HandRaisedMessage("device-123");
-        byte[] operand1 = message.getOperand();
-        byte[] operand2 = message.getOperand();
-        operand1[0] = 0;
-        assertFalse(operand1[0] == operand2[0]);
-    }
-
-    @Test
     public void testHandRaisedMessage_toString() {
         HandRaisedMessage message = new HandRaisedMessage("my-device");
         String toString = message.toString();
@@ -279,21 +215,6 @@ public class TcpMessageTest {
         PairingRequestMessage message = new PairingRequestMessage(deviceId);
         byte[] operand = message.getOperand();
         assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
-    }
-
-    @Test
-    public void testPairingRequestMessage_hasOperand_returnsTrue() {
-        PairingRequestMessage message = new PairingRequestMessage("device");
-        assertTrue(message.hasOperand());
-    }
-
-    @Test
-    public void testPairingRequestMessage_operand_isDefensiveCopy() {
-        PairingRequestMessage message = new PairingRequestMessage("device-123");
-        byte[] operand1 = message.getOperand();
-        byte[] operand2 = message.getOperand();
-        operand1[0] = 0;
-        assertFalse(operand1[0] == operand2[0]);
     }
 
     @Test

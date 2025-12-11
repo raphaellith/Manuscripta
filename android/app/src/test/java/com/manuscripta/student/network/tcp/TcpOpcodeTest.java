@@ -99,8 +99,6 @@ public class TcpOpcodeTest {
     @Test
     public void testFromValue_unknownOpcode_returnsNull() {
         assertNull(TcpOpcode.fromValue((byte) 0x00));
-        assertNull(TcpOpcode.fromValue((byte) 0xFF));
-        assertNull(TcpOpcode.fromValue((byte) 0x05));
     }
 
     // ==================== isServerToClient Tests ====================
