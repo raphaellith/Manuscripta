@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&amp;display=swap');
+    </style>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="#F8F7F5"/>
+  <text x="32" y="44" font-family="Fraunces, serif" font-size="38" font-weight="500" fill="#1A1A1A" text-anchor="middle">M</text>
+</svg>

@@ -1,0 +1,22 @@
+:root {
+  --color-brand-cream: #F8F7F5;
+  --color-brand-orange: #FF6106;
+  --color-brand-orange-light: #FEE3DA;
+  --color-brand-orange-dark: #E55605;
+  --color-brand-yellow: #FFE782;
+  --color-brand-blue: #ABD8F9;
+  --color-brand-green: #15502E;
+  --color-brand-gray: #F3F3F3;
+  --color-text-heading: #212631;
+  --color-text-body: #14201E;
+  --color-text-on-yellow: #5C4A00;
+  --color-text-on-blue: #1A3A5C;
+}
+
+body {
+  background-color: var(--color-brand-cream);
+  color: var(--color-text-body);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
