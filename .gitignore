@@ -261,6 +261,9 @@ Temporary Items
 # General Development
 #########################
 
+# Node.js dependencies
+node_modules/
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
