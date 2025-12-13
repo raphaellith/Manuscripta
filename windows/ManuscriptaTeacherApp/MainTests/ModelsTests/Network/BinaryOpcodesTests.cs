@@ -38,6 +38,20 @@ public class BinaryOpcodesTests
     }
 
     [Fact]
+    public void Unpair_HasCorrectValue()
+    {
+        // Per API Contract §3.4: UNPAIR = 0x04
+        Assert.Equal(0x04, BinaryOpcodes.Unpair);
+    }
+
+    [Fact]
+    public void DistributeMaterial_HasCorrectValue()
+    {
+        // Per API Contract §3.4: DISTRIBUTE_MATERIAL = 0x05
+        Assert.Equal(0x05, BinaryOpcodes.DistributeMaterial);
+    }
+
+    [Fact]
     public void StatusUpdate_HasCorrectValue()
     {
         // Per API Contract §3.6: STATUS_UPDATE = 0x10
@@ -76,6 +90,8 @@ public class BinaryOpcodesTests
         Assert.InRange(BinaryOpcodes.LockScreen, 0x01, 0x0F);
         Assert.InRange(BinaryOpcodes.UnlockScreen, 0x01, 0x0F);
         Assert.InRange(BinaryOpcodes.RefreshConfig, 0x01, 0x0F);
+        Assert.InRange(BinaryOpcodes.Unpair, 0x01, 0x0F);
+        Assert.InRange(BinaryOpcodes.DistributeMaterial, 0x01, 0x0F);
 
         // 0x10-0x1F: Client → Server Status (TCP)
         Assert.InRange(BinaryOpcodes.StatusUpdate, 0x10, 0x1F);

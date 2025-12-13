@@ -81,9 +81,10 @@ Project-wide specifications, located in `main` branch, `/docs`:
 
 - `Project Specification.md`, provides a high level overview of the project.
 - `GitHub Conventions.md`, defines branching conventions.
-- `API Contract.md`, defines communication between devices.
+- `API Contract.md`, defines communication between devices. Subject to `Validation Rules.md` per §1(5) thereof.
 - `Pairing Process.md`, defines the pairing process between devices.
-- `Validation Rules.md`, defines the validation rules of data entities.
+- `Validation Rules.md`, defines the validation rules of data entities. Takes precedence over `API Contract.md` per §1(5).
+- `Session Interaction.md`, defines session lifecycle, heartbeat mechanism, material distribution, and session state transitions.
 
 Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specifications`, `windows-app` branch:
 
