@@ -26,8 +26,8 @@ Since the Windows server cannot push HTTP requests to Android clients, material 
 1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
 2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
 3. **If materials are available**, the server responds with a `DISTRIBUTE_MATERIAL` (0x05) TCP message
-4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
-5. **Android Client** downloads individual materials via `GET /materials/{id}`
+4. **Android Client** receives the signal and initiates an HTTP `GET /distribution/{deviceId}` request to fetch the distribution bundle
+5. **Android Client** processes the returned materials and questions
 
 This pattern ensures material distribution works within the constraint that the server cannot initiate connections to clients.
 
@@ -108,7 +108,7 @@ Downloads specific attachment files referenced within material content.
     The response body will contain the raw binary data of the requested file (e.g., image, PDF).
     -   **Content-Type:** `image/png`, `application/pdf`, etc. (determined by the server based on file type).
 
-**Note:** The `content` field within material details (`GET /materials/{id}`) may contain references to these attachments using URLs like `/attachments/{id}`. The Android client is expected to fetch these referenced attachments separately.
+**Note:** The `content` field within materials (returned by `GET /distribution/{deviceId}`) may contain references to these attachments using URLs like `/attachments/{id}`. The Android client is expected to fetch these referenced attachments separately.
 
 ### 2.2. Tablet Configuration (Server -> Client)
 
