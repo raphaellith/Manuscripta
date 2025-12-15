@@ -809,7 +809,8 @@ graph LR
         LOCK[0x01 LOCK_SCREEN<br/>No operand]
         UNLOCK[0x02 UNLOCK_SCREEN<br/>No operand]
         REFRESH[0x03 REFRESH_CONFIG<br/>No operand]
-        FETCH[0x04 FETCH_MATERIALS<br/>No operand]
+        UNPAIR[0x04 UNPAIR<br/>No operand]
+        DISTMAT[0x05 DISTRIBUTE_MATERIAL<br/>No operand]
         HANDACK[0x06 HAND_ACK<br/>Device ID UTF-8]
     end
     
