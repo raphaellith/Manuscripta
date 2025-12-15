@@ -347,8 +347,10 @@ sequenceDiagram
         TCP->>W: TCP Message
         
         alt New materials available
-            W->>TCP: FETCH_MATERIALS (0x04)
+            W->>TCP: DISTRIBUTE_MATERIAL (0x05)
             TCP->>MR: onFetchMaterialsSignal()
+            MR->>TCP: Send DISTRIBUTE_ACK (0x12)
+            TCP->>W: DISTRIBUTE_ACK
             MR->>HTTP: GET /materials
             HTTP->>W: HTTP Request
             W->>HTTP: 200 OK [material IDs]
@@ -458,6 +460,8 @@ sequenceDiagram
     
     Note over W: Teacher sees alert<br/>on dashboard (CON12)
     
+    W->>TCP: HAND_ACK (0x06)<br/>[Device ID UTF-8]
+    TCP->>RHM: onHandAcknowledged(deviceId)
     RHM->>UI: Show confirmation
     UI->>UI: Display "Help requested"
 ```
@@ -806,11 +810,13 @@ graph LR
         UNLOCK[0x02 UNLOCK_SCREEN<br/>No operand]
         REFRESH[0x03 REFRESH_CONFIG<br/>No operand]
         FETCH[0x04 FETCH_MATERIALS<br/>No operand]
+        HANDACK[0x06 HAND_ACK<br/>Device ID UTF-8]
     end
     
     subgraph "Client → Server (TCP)"
         STATUS[0x10 STATUS_UPDATE<br/>JSON payload]
         HAND[0x11 HAND_RAISED<br/>Device ID UTF-8]
+        DISTACK[0x12 DISTRIBUTE_ACK<br/>Device ID UTF-8]
     end
     
     subgraph "Pairing (TCP)"

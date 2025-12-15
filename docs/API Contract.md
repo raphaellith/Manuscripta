@@ -245,6 +245,7 @@ See §1.1 for detailed format.
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
 | `0x04` | UNPAIR | None | Unpairs the device |
 | `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
+| `0x06` | HAND_ACK | Device ID (UTF-8 string) | Acknowledges receipt of HAND_RAISED message |
 
 ### 3.5. TCP Pairing Messages
 
@@ -279,6 +280,7 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
+| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges receipt of DISTRIBUTE_MATERIAL signal |
 
 **Example: Status Update Message**
 ```
@@ -303,6 +305,30 @@ Status Update JSON payload must conform to the `DeviceStatusEntity` as defined i
 Byte 0: 0x11 (HAND_RAISED opcode)
 Bytes 1-N: "device-123" (UTF-8 encoded device ID)
 ```
+
+### 3.6.1. Acknowledgement Patterns
+
+This section documents explicit and implicit acknowledgement mechanisms for TCP messages.
+
+#### Explicit ACKs (Application-Level)
+
+| Request | ACK | Direction |
+|---------|-----|----------|
+| `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
+| `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
+| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
+
+#### Implicit ACKs
+
+The following messages rely on implicit acknowledgement through subsequent observable behaviour:
+
+| Message | Implicit ACK Mechanism |
+|---------|------------------------|
+| `STATUS_UPDATE (0x10)` | TCP-level acknowledgement; server detects disconnect after 10s silence (see `Session Interaction.md` §2) |
+| `LOCK_SCREEN (0x01)` | Next `STATUS_UPDATE` shows `Status: LOCKED` |
+| `UNLOCK_SCREEN (0x02)` | Next `STATUS_UPDATE` shows `Status: ON_TASK` or `IDLE` |
+| `REFRESH_CONFIG (0x03)` | Server observes subsequent `GET /config` HTTP request |
+| `UNPAIR (0x04)` | TCP connection terminates; no ACK possible |
 
 ### 3.7. Extensibility
 
