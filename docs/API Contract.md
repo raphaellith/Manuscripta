@@ -98,7 +98,7 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ### 2.1. Lesson Materials (Server -> Client)
 
-**DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /session/{deviceId}` as specified in `API Contract.md` §2.5 for session-specific material distribution.
+**DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
 
 ### 2.1.3. Attachments (Server -> Client)
 Downloads specific attachment files referenced within material content.
@@ -180,14 +180,16 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
     ```
 -   **Response:** `201 Created`
 
-### 2.5. Session Management (Server -> Client via TCP trigger)
+### 2.5. Material Distribution (Server -> Client via TCP trigger)
 
-Used to distribute materials to devices during a session. See `Session Interaction.md` §3 for the full distribution process.
+Used to distribute materials to devices. See `Session Interaction.md` §3 for the full distribution process.
 
-#### Get Session Materials
-Retrieves materials and questions assigned to a specific device for the current session.
+**Note:** This endpoint returns a "distribution bundle" of materials and questions. The Android client creates a separate `SessionEntity` for each material received (see `Session Interaction.md` §5).
 
--   **Endpoint:** `GET /session/{deviceId}`
+#### Get Distribution Bundle
+Retrieves materials and questions assigned to a specific device.
+
+-   **Endpoint:** `GET /distribution/{deviceId}`
 -   **Response:** `200 OK`
     ```json
     {
@@ -199,7 +201,7 @@ Retrieves materials and questions assigned to a specific device for the current 
       ]
     }
     ```
--   **Error Response:** `404 Not Found` (if no active session for deviceId)
+-   **Error Response:** `404 Not Found` (if no materials available for deviceId)
 
 ---
 
