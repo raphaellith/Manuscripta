@@ -140,16 +140,13 @@ sequenceDiagram
             TCP->>MR: onFetchMaterialsSignal()
             MR->>TCP: Send DISTRIBUTE_ACK (0x12)
             TCP->>W: DISTRIBUTE_ACK
-            MR->>HTTP: GET /materials
+            MR->>HTTP: GET /distribution/{deviceId}
             HTTP->>W: HTTP Request
-            W->>HTTP: 200 OK [material IDs]
-            HTTP->>MR: Return material IDs
+            W->>HTTP: 200 OK [Distribution Bundle]
+            HTTP->>MR: Return materials & questions
             
-            loop For each material ID
-                MR->>HTTP: GET /materials/{id}
-                HTTP->>W: HTTP Request
-                W->>HTTP: 200 OK [Material JSON]
-                HTTP->>MR: Return Material JSON
+            loop For each material in bundle
+                MR->>MR: Process Material JSON
                 
                 alt Content has attachments
                     loop For each attachment reference
@@ -638,7 +635,7 @@ The Windows server cannot initiate HTTP requests to Android clients. Material di
 
 1. **Android** sends periodic `STATUS_UPDATE` (0x10) via TCP
 2. **Windows** responds with `DISTRIBUTE_MATERIAL` (0x05) if content pending
-3. **Android** initiates HTTP `GET /materials` to download
+3. **Android** initiates HTTP `GET /distribution/{deviceId}` to download
 
 ### 7.3 Clean Architecture Entity Separation
 
