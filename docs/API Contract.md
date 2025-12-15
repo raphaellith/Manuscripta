@@ -25,7 +25,7 @@ Since the Windows server cannot push HTTP requests to Android clients, material 
 
 1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
 2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
-3. **If materials are available**, the server responds with a `FETCH_MATERIALS` (0x04) TCP message
+3. **If materials are available**, the server responds with a `DISTRIBUTE_MATERIAL` (0x05) TCP message
 4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
 5. **Android Client** downloads individual materials via `GET /materials/{id}`
 

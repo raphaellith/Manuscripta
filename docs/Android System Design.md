@@ -854,7 +854,7 @@ graph LR
 The Windows server cannot initiate HTTP requests to Android clients. Material distribution uses:
 
 1. **Android** sends periodic `STATUS_UPDATE` (0x10) via TCP
-2. **Windows** responds with `FETCH_MATERIALS` (0x04) if content pending
+2. **Windows** responds with `DISTRIBUTE_MATERIAL` (0x05) if content pending
 3. **Android** initiates HTTP `GET /materials` to download
 
 ### 9.3 Clean Architecture Entity Separation
