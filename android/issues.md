@@ -449,7 +449,7 @@ The MaterialRepository must integrate with the TCP socket layer to receive notif
 - Create `MaterialRepositoryImpl.java` implementation
 - Implement caching strategy (network-first with fallback)
 - **Register as listener for DISTRIBUTE_MATERIAL signal from TcpSocketManager (issue 6.8)**
-- **Implement `onFetchMaterialsSignal()` callback to trigger HTTP material sync**
+- **Implement `onDistributeMaterialSignal()` callback to trigger HTTP material sync**
 - Orchestrate attachment downloads:
   1. Fetch MaterialDto from network via HTTP GET /materials
   2. Parse content for `/attachments/{id}` references using ContentParser
