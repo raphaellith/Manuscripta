@@ -55,6 +55,8 @@ graph TB
             BATT[Battery Monitor]
             TTS[Text-to-Speech]
             PAIR[Pairing Manager]
+            RHM[RaiseHandManager]
+            CM[ConnectionManager]
         end
     end
     
@@ -71,7 +73,11 @@ graph TB
     PAIR --> TCP
     PAIR --> HTTP
     
+    CM --> TCP
+    CM --> HTTP
+    
     TCP -.->|Control Signals| KIOSK
+    TCP -.->|Hand Raise Flow| RHM
     
     subgraph "Windows Teacher App (Server)"
         WIN[Teacher Application]
@@ -79,7 +85,7 @@ graph TB
     
     HTTP <-->|REST API| WIN
     TCP <-->|Binary Protocol| WIN
-    UDP <-.->|Broadcast Discovery| WIN
+    WIN -.->|Broadcast Discovery| UDP
 ```
 
 ---
