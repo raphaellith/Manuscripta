@@ -352,17 +352,20 @@ sequenceDiagram
             MR->>HTTP: GET /materials
             HTTP->>W: HTTP Request
             W->>HTTP: 200 OK [material IDs]
+            HTTP->>MR: Return material IDs
             
             loop For each material ID
                 MR->>HTTP: GET /materials/{id}
                 HTTP->>W: HTTP Request
                 W->>HTTP: 200 OK [Material JSON]
+                HTTP->>MR: Return Material JSON
                 
                 alt Content has attachments
                     loop For each attachment reference
                         MR->>HTTP: GET /attachments/{id}
                         HTTP->>W: HTTP Request
                         W->>HTTP: 200 OK [Binary data]
+                        HTTP->>MR: Return Binary data
                         MR->>MR: Save to FileStorage
                     end
                 end

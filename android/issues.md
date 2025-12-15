@@ -1711,6 +1711,34 @@ Optimise app performance for e-ink display characteristics.
 
 ---
 
+### [Android/Windows] Align Clients with Session Lifecycle Specification
+
+- Labels: `android`, `windows`, `enhancement`
+
+**Background:**
+Session state transitions have been formally defined with 5 states: `RECEIVED`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`.
+
+**Android Client Tasks:**
+- [ ] Add `RECEIVED` value to `SessionStatus.java` enum
+- [ ] Update `SessionEntity` to make `StartTime` optional (null for RECEIVED)
+- [ ] Update session creation logic to use `RECEIVED` as initial state
+- [ ] Implement `RECEIVED` → `ACTIVE` transition on first interaction
+- [ ] Implement `PAUSED` state toggle (student-initiated)
+- [ ] Implement `ACTIVE/PAUSED` → `COMPLETED` on work submission
+- [ ] Make `StartTime` nullable in entity/domain models
+- [ ] Update mappers to handle new state
+
+**Windows Client Tasks:**
+- [ ] Update endpoint from `/session/{deviceId}` to `/distribution/{deviceId}`
+- [ ] Handle new `RECEIVED` state in device status display
+
+**Reference:**
+- `docs/Session Interaction.md` §5
+- `docs/Validation Rules.md` §2D
+- `docs/API Contract.md` §2.5
+
+---
+
 ## Next steps
 
 - Review this file and tell me if you want changes to granularity, wording, or labels.
