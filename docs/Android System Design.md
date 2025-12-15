@@ -398,6 +398,7 @@ sequenceDiagram
         RR->>HTTP: POST /responses<br/>{id, questionId, answer, ...}
         HTTP->>W: HTTP Request
         W->>HTTP: 201 Created
+        HTTP->>RR: Return success
         RR->>RR: Update synced = true
         RR->>VM: Result.Success
     else Offline
@@ -408,6 +409,7 @@ sequenceDiagram
         RR->>HTTP: POST /responses/batch
         HTTP->>W: HTTP Request
         W->>HTTP: 201 Created
+        HTTP->>RR: Return success
         RR->>RR: Update all synced = true
     end
     
