@@ -108,8 +108,6 @@ public final class TcpMessageDecoder {
             case DISTRIBUTE_ACK:
                 return createDistributeAckMessage(operand);
             case PAIRING_REQUEST:
-            default:
-                // PAIRING_REQUEST is the only remaining case or fallback
                 return createPairingRequestMessage(operand);
         }
     }
