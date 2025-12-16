@@ -341,7 +341,7 @@ public abstract class UiState<T> {
         }
 
         @Override
-        @NonNull
+        @Nullable
         public String getErrorMessage() {
             return message;
         }
