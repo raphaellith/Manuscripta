@@ -6,11 +6,17 @@ import androidx.annotation.VisibleForTesting;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,6 +34,9 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class TcpSocketManager {
+
+    /** Tag for logging. */
+    private static final String TAG = "TcpSocketManager";
 
     /**
      * Initial delay for reconnection attempts in milliseconds.
@@ -59,6 +68,10 @@ public class TcpSocketManager {
     private final Object socketLock = new Object();
     /** Flag indicating whether automatic reconnection should be attempted. */
     private final AtomicBoolean shouldReconnect = new AtomicBoolean(false);
+    /** Thread-safe list of message listeners. */
+    private final List<TcpMessageListener> listeners = new CopyOnWriteArrayList<>();
+    /** Handler for dispatching callbacks on the main thread. */
+    private final Handler mainHandler;
 
     /** The TCP socket connection. */
     @Nullable
@@ -80,29 +93,6 @@ public class TcpSocketManager {
     /** The current delay for reconnection attempts. */
     private final AtomicLong currentReconnectDelay = new AtomicLong(INITIAL_RECONNECT_DELAY_MS);
 
-    /** The listener for receiving messages and errors. */
-    @Nullable
-    private MessageListener messageListener;
-
-    /**
-     * Listener interface for receiving TCP messages.
-     */
-    public interface MessageListener {
-        /**
-         * Called when a message is received from the server.
-         *
-         * @param message The received message.
-         */
-        void onMessageReceived(@NonNull TcpMessage message);
-
-        /**
-         * Called when an error occurs during message processing.
-         *
-         * @param error The error that occurred.
-         */
-        void onError(@NonNull Exception error);
-    }
-
     /**
      * Creates a new TcpSocketManager with the specified encoder and decoder.
      *
@@ -112,9 +102,25 @@ public class TcpSocketManager {
     @Inject
     public TcpSocketManager(@NonNull TcpMessageEncoder encoder,
                             @NonNull TcpMessageDecoder decoder) {
+        this(encoder, decoder, new Handler(Looper.getMainLooper()));
+    }
+
+    /**
+     * Creates a new TcpSocketManager with the specified encoder, decoder, and handler.
+     * This constructor is primarily for testing purposes.
+     *
+     * @param encoder The message encoder for serialising outgoing messages.
+     * @param decoder The message decoder for deserialising incoming messages.
+     * @param mainHandler The handler for dispatching callbacks on the main thread.
+     */
+    @VisibleForTesting
+    TcpSocketManager(@NonNull TcpMessageEncoder encoder,
+                     @NonNull TcpMessageDecoder decoder,
+                     @NonNull Handler mainHandler) {
         this.encoder = encoder;
         this.decoder = decoder;
         this.connectionState = new MutableLiveData<>(ConnectionState.DISCONNECTED);
+        this.mainHandler = mainHandler;
     }
 
     /**
@@ -128,12 +134,28 @@ public class TcpSocketManager {
     }
 
     /**
-     * Sets the message listener for receiving incoming messages.
+     * Adds a listener to receive TCP message events.
      *
-     * @param listener The listener to receive messages, or null to remove.
+     * <p>Listeners are notified on the main (UI) thread for safe UI updates.
+     * The same listener instance can only be added once.
+     *
+     * @param listener The listener to add. Must not be null.
+     * @see #removeMessageListener(TcpMessageListener)
      */
-    public void setMessageListener(@Nullable MessageListener listener) {
-        this.messageListener = listener;
+    public void addMessageListener(@NonNull TcpMessageListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * Removes a previously registered listener.
+     *
+     * @param listener The listener to remove. Must not be null.
+     * @see #addMessageListener(TcpMessageListener)
+     */
+    public void removeMessageListener(@NonNull TcpMessageListener listener) {
+        listeners.remove(listener);
     }
 
     /**
@@ -155,7 +177,7 @@ public class TcpSocketManager {
             this.currentReconnectDelay.set(INITIAL_RECONNECT_DELAY_MS);
         }
 
-        connectionState.postValue(ConnectionState.CONNECTING);
+        updateConnectionState(ConnectionState.CONNECTING);
         doConnect(host, port);
     }
 
@@ -176,7 +198,7 @@ public class TcpSocketManager {
                 }
 
                 currentReconnectDelay.set(INITIAL_RECONNECT_DELAY_MS);
-                connectionState.postValue(ConnectionState.CONNECTED);
+                updateConnectionState(ConnectionState.CONNECTED);
                 startReaderThread();
 
             } catch (IOException e) {
@@ -206,14 +228,15 @@ public class TcpSocketManager {
      * @param error The error that caused the failure.
      */
     private void handleConnectionFailure(@NonNull Exception error) {
-        if (messageListener != null) {
-            messageListener.onError(error);
-        }
+        TcpProtocolException protocolError = (error instanceof TcpProtocolException)
+                ? (TcpProtocolException) error
+                : new TcpProtocolException("Connection failed: " + error.getMessage(), error);
+        notifyError(protocolError);
 
         if (shouldReconnect.get() && currentHost != null) {
             scheduleReconnect();
         } else {
-            connectionState.postValue(ConnectionState.DISCONNECTED);
+            updateConnectionState(ConnectionState.DISCONNECTED);
         }
     }
 
@@ -221,7 +244,7 @@ public class TcpSocketManager {
      * Schedules a reconnection attempt with exponential backoff.
      */
     private void scheduleReconnect() {
-        connectionState.postValue(ConnectionState.RECONNECTING);
+        updateConnectionState(ConnectionState.RECONNECTING);
 
         ExecutorService reconnectExecutor = Executors.newSingleThreadExecutor();
         reconnectExecutor.execute(() -> {
@@ -236,7 +259,7 @@ public class TcpSocketManager {
                 currentReconnectDelay.updateAndGet(delay ->
                         Math.min(delay * BACKOFF_MULTIPLIER, MAX_RECONNECT_DELAY_MS)
                 );
-                connectionState.postValue(ConnectionState.CONNECTING);
+                updateConnectionState(ConnectionState.CONNECTING);
                 doConnect(currentHost, currentPort);
             }
         });
@@ -299,13 +322,9 @@ public class TcpSocketManager {
 
         try {
             TcpMessage message = decoder.decode(data);
-            if (messageListener != null) {
-                messageListener.onMessageReceived(message);
-            }
+            notifyMessageReceived(message);
         } catch (TcpProtocolException e) {
-            if (messageListener != null) {
-                messageListener.onError(e);
-            }
+            notifyError(e);
         }
     }
 
@@ -318,7 +337,7 @@ public class TcpSocketManager {
         if (shouldReconnect.get() && currentHost != null) {
             scheduleReconnect();
         } else {
-            connectionState.postValue(ConnectionState.DISCONNECTED);
+            updateConnectionState(ConnectionState.DISCONNECTED);
         }
     }
 
@@ -349,7 +368,7 @@ public class TcpSocketManager {
     public void disconnect() {
         shouldReconnect.set(false);
         cleanupSocket();
-        connectionState.postValue(ConnectionState.DISCONNECTED);
+        updateConnectionState(ConnectionState.DISCONNECTED);
     }
 
     /**
@@ -403,6 +422,73 @@ public class TcpSocketManager {
     }
 
     /**
+     * Notifies all registered listeners of a received message.
+     * Dispatches on the main thread and catches exceptions to prevent one bad listener
+     * from affecting others.
+     *
+     * @param message The received message.
+     */
+    private void notifyMessageReceived(@NonNull TcpMessage message) {
+        mainHandler.post(() -> {
+            for (TcpMessageListener listener : listeners) {
+                try {
+                    listener.onMessageReceived(message);
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception in listener onMessageReceived", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Notifies all registered listeners of a connection state change.
+     * Dispatches on the main thread and catches exceptions to prevent one bad listener
+     * from affecting others.
+     *
+     * @param state The new connection state.
+     */
+    private void notifyConnectionStateChanged(@NonNull ConnectionState state) {
+        mainHandler.post(() -> {
+            for (TcpMessageListener listener : listeners) {
+                try {
+                    listener.onConnectionStateChanged(state);
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception in listener onConnectionStateChanged", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Notifies all registered listeners of an error.
+     * Dispatches on the main thread and catches exceptions to prevent one bad listener
+     * from affecting others.
+     *
+     * @param error The error that occurred.
+     */
+    private void notifyError(@NonNull TcpProtocolException error) {
+        mainHandler.post(() -> {
+            for (TcpMessageListener listener : listeners) {
+                try {
+                    listener.onError(error);
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception in listener onError", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Updates the connection state and notifies all registered listeners.
+     *
+     * @param state The new connection state.
+     */
+    private void updateConnectionState(@NonNull ConnectionState state) {
+        connectionState.postValue(state);
+        notifyConnectionStateChanged(state);
+    }
+
+    /**
      * Returns the current reconnect delay for testing purposes.
      *
      * @return The current reconnect delay in milliseconds.
@@ -430,5 +516,15 @@ public class TcpSocketManager {
     @VisibleForTesting
     boolean getShouldReconnect() {
         return shouldReconnect.get();
+    }
+
+    /**
+     * Returns the number of registered listeners for testing purposes.
+     *
+     * @return The number of registered listeners.
+     */
+    @VisibleForTesting
+    int getListenerCount() {
+        return listeners.size();
     }
 }
