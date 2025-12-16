@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Unit tests for {@link HeartbeatManager}.
  */
 @RunWith(RobolectricTestRunner.class)
+@Config(sdk = {28})
 public class HeartbeatManagerTest {
 
     @Mock
@@ -52,8 +54,8 @@ public class HeartbeatManagerTest {
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Use short interval for faster tests
-        HeartbeatConfig testConfig = new HeartbeatConfig(100L, true);
+        // Use minimum interval (1000ms) for tests - values below MIN_INTERVAL_MS are clamped
+        HeartbeatConfig testConfig = new HeartbeatConfig(HeartbeatConfig.MIN_INTERVAL_MS, true);
         heartbeatManager = new HeartbeatManager(mockSocketManager, testConfig);
     }
 
@@ -340,8 +342,13 @@ public class HeartbeatManagerTest {
 
         heartbeatManager.start();
 
-        // Wait for at least 2 heartbeats (100ms interval)
-        verify(mockSocketManager, timeout(500).atLeast(2)).send(any());
+        // HeartbeatConfig clamps interval to MIN_INTERVAL_MS (1000ms), so wait for 2+ heartbeats
+        // First heartbeat at t=0, second at t=1000ms
+        Thread.sleep(1500);
+
+        // Verify at least 2 heartbeats were sent
+        verify(mockSocketManager, atLeastOnce()).send(any());
+        assertTrue("Expected at least 2 heartbeats", heartbeatManager.getHeartbeatCount() >= 2);
     }
 
     // ========== Initial state tests ==========

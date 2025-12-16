@@ -32,7 +32,9 @@ public final class HeartbeatConfig {
      */
     public static final long MAX_INTERVAL_MS = 60000L;
 
+    /** The heartbeat interval in milliseconds. */
     private final long intervalMs;
+    /** Whether heartbeat is enabled. */
     private final boolean enabled;
 
     /**

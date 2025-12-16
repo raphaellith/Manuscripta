@@ -49,6 +49,7 @@ import javax.inject.Singleton;
 @Singleton
 public class HeartbeatManager implements TcpMessageListener {
 
+    /** Tag for logging. */
     private static final String TAG = "HeartbeatManager";
 
     /**
@@ -75,21 +76,31 @@ public class HeartbeatManager implements TcpMessageListener {
         void onMaterialsAvailable();
     }
 
+    /** The TCP socket manager for sending messages. */
     private final TcpSocketManager socketManager;
+    /** Lock object for synchronising heartbeat operations. */
     private final Object lock = new Object();
 
+    /** The executor service for scheduling heartbeats. */
     @Nullable
     private ScheduledExecutorService scheduler;
+    /** The future representing the scheduled heartbeat task. */
     @Nullable
     private ScheduledFuture<?> heartbeatFuture;
+    /** Provider for current device status. */
     @Nullable
     private DeviceStatusProvider statusProvider;
+    /** Callback for when materials are available. */
     @Nullable
     private MaterialAvailableCallback materialCallback;
 
+    /** The heartbeat configuration. */
     private HeartbeatConfig config;
+    /** Whether the heartbeat is currently running. */
     private final AtomicBoolean running = new AtomicBoolean(false);
+    /** Counter for heartbeats sent. */
     private final AtomicLong heartbeatCount = new AtomicLong(0);
+    /** Timestamp of the last heartbeat sent. */
     private final AtomicLong lastHeartbeatTimestamp = new AtomicLong(0);
 
     /**
