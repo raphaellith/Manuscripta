@@ -265,10 +265,10 @@ public class TcpMessageTest {
     }
 
     @Test
-    public void testDistributeAckMessage_toString() {
-        DistributeAckMessage message = new DistributeAckMessage("my-device");
+    public void testHandRaisedMessage_toString() {
+        HandRaisedMessage message = new HandRaisedMessage("my-device");
         String toString = message.toString();
-        assertTrue(toString.contains("DistributeAckMessage"));
+        assertTrue(toString.contains("HandRaisedMessage"));
         assertTrue(toString.contains("my-device"));
     }
 

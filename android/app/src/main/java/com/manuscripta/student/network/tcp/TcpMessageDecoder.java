@@ -2,6 +2,18 @@ package com.manuscripta.student.network.tcp;
 
 import androidx.annotation.NonNull;
 
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.HandAckMessage;
+import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
+import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
+import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -80,14 +92,20 @@ public final class TcpMessageDecoder {
             return new UnlockScreenMessage();
         } else if (opcode == TcpOpcode.REFRESH_CONFIG) {
             return new RefreshConfigMessage();
-        } else if (opcode == TcpOpcode.FETCH_MATERIALS) {
-            return new FetchMaterialsMessage();
+        } else if (opcode == TcpOpcode.UNPAIR) {
+            return new UnpairMessage();
+        } else if (opcode == TcpOpcode.DISTRIBUTE_MATERIAL) {
+            return new DistributeMaterialMessage();
+        } else if (opcode == TcpOpcode.HAND_ACK) {
+            return createHandAckMessage(operand);
         } else if (opcode == TcpOpcode.PAIRING_ACK) {
             return new PairingAckMessage();
         } else if (opcode == TcpOpcode.STATUS_UPDATE) {
             return createStatusUpdateMessage(operand);
         } else if (opcode == TcpOpcode.HAND_RAISED) {
             return createHandRaisedMessage(operand);
+        } else if (opcode == TcpOpcode.DISTRIBUTE_ACK) {
+            return createDistributeAckMessage(operand);
         } else {
             // PAIRING_REQUEST is the only remaining case
             return createPairingRequestMessage(operand);
@@ -130,6 +148,44 @@ public final class TcpMessageDecoder {
         }
         String deviceId = new String(operand, StandardCharsets.UTF_8);
         return new HandRaisedMessage(deviceId);
+    }
+
+    /**
+     * Creates a HandAckMessage from the operand.
+     *
+     * @param operand The UTF-8 encoded device ID.
+     * @return The HandAckMessage.
+     * @throws TcpProtocolException If the operand is empty.
+     */
+    @NonNull
+    private HandAckMessage createHandAckMessage(@NonNull byte[] operand)
+            throws TcpProtocolException {
+        if (operand.length == 0) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "HAND_ACK message requires device ID");
+        }
+        String deviceId = new String(operand, StandardCharsets.UTF_8);
+        return new HandAckMessage(deviceId);
+    }
+
+    /**
+     * Creates a DistributeAckMessage from the operand.
+     *
+     * @param operand The UTF-8 encoded device ID.
+     * @return The DistributeAckMessage.
+     * @throws TcpProtocolException If the operand is empty.
+     */
+    @NonNull
+    private DistributeAckMessage createDistributeAckMessage(@NonNull byte[] operand)
+            throws TcpProtocolException {
+        if (operand.length == 0) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "DISTRIBUTE_ACK message requires device ID");
+        }
+        String deviceId = new String(operand, StandardCharsets.UTF_8);
+        return new DistributeAckMessage(deviceId);
     }
 
     /**

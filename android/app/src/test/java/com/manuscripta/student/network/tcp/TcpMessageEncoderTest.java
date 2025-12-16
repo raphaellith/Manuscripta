@@ -5,6 +5,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
+import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
+import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,13 +64,13 @@ public class TcpMessageEncoderTest {
     }
 
     @Test
-    public void encode_fetchMaterialsMessage_returnsOpcodeOnly() throws TcpProtocolException {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
+    public void encode_distributeMaterialMessage_returnsOpcodeOnly() throws TcpProtocolException {
+        DistributeMaterialMessage message = new DistributeMaterialMessage();
 
         byte[] result = encoder.encode(message);
 
         assertEquals(1, result.length);
-        assertEquals((byte) 0x04, result[0]);
+        assertEquals((byte) 0x05, result[0]);
     }
 
     @Test
@@ -213,7 +222,7 @@ public class TcpMessageEncoderTest {
                 new LockScreenMessage(),
                 new UnlockScreenMessage(),
                 new RefreshConfigMessage(),
-                new FetchMaterialsMessage(),
+                new DistributeMaterialMessage(),
                 new PairingAckMessage(),
                 new StatusUpdateMessage("{\"test\":true}"),
                 new HandRaisedMessage("device-id"),
