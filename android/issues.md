@@ -814,6 +814,34 @@ Create retry logic for failed network requests with exponential backoff.
 
 ---
 
+### 3.9 [Android] Implement Response Network Sync
+
+- Labels: `android`, `network-layer`, `repository-layer`
+
+**Description:**
+Implement actual network synchronization for `ResponseRepositoryImpl`. Currently, `DefaultSyncEngine.syncResponse()` throws `UnsupportedOperationException` as a placeholder. This issue tracks implementing the real HTTP sync via `POST /responses`.
+
+**Related Requirements:** NET2
+
+**Tasks:**
+- Replace `DefaultSyncEngine` with `NetworkSyncEngine` that uses `ApiService`
+- Update `RepositoryModule` to inject `ApiService` into `ResponseRepositoryImpl`
+- Handle network errors (IOException → return false to trigger retry)
+- Write unit tests with MockWebServer
+
+**Code Reference:**
+See `ResponseRepositoryImpl.DefaultSyncEngine` for the current placeholder that throws `UnsupportedOperationException`.
+
+**Acceptance Criteria:**
+- [ ] NetworkSyncEngine implementation calls HTTP API
+- [ ] DI module updated to inject ApiService
+- [ ] 201 response → success, others → failure with retry
+- [ ] 100% test coverage
+
+**Dependencies:** Issue 3.3 (Response DTOs), Issue 3.5 (API Endpoints)
+
+---
+
 ## Sub-tasks: UI & ViewModel Layer
 
 ### 4.1 [Android] Create Material List Screen
