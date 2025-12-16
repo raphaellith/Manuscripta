@@ -56,7 +56,7 @@ erDiagram
         string materialId FK
         long startTime
         long endTime "optional"
-        enum sessionStatus "ACTIVE|PAUSED|COMPLETED|CANCELLED"
+        enum sessionStatus "RECEIVED|ACTIVE|PAUSED|COMPLETED|CANCELLED"
         string deviceId
     }
     
@@ -292,20 +292,28 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> ACTIVE: Session.create()
+    [*] --> RECEIVED: Session.create()
     
-    ACTIVE --> PAUSED: pause()
+    RECEIVED --> ACTIVE: activate()
+    RECEIVED --> CANCELLED: cancel() / teacher_end
+    
+    ACTIVE --> PAUSED: pause() / switch_material
     ACTIVE --> COMPLETED: complete()
     ACTIVE --> CANCELLED: cancel() / teacher_end
     
     PAUSED --> ACTIVE: resume()
+    PAUSED --> COMPLETED: complete()
     PAUSED --> CANCELLED: cancel()
     
     COMPLETED --> [*]
     CANCELLED --> [*]
     
+    note right of RECEIVED
+        startTime = 0 (not set)
+    end note
+    
     note right of ACTIVE
-        startTime set on creation
+        startTime set on activation
     end note
     
     note right of PAUSED

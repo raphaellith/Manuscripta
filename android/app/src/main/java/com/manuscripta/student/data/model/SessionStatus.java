@@ -5,6 +5,11 @@ package com.manuscripta.student.data.model;
  */
 public enum SessionStatus {
     /**
+     * Material has been received; student has not yet interacted.
+     */
+    RECEIVED,
+
+    /**
      * Session is currently active/ongoing.
      */
     ACTIVE,
