@@ -4,6 +4,9 @@ import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.data.local.ResponseDao;
+import com.manuscripta.student.data.repository.ResponseRepository;
+import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 
 import javax.inject.Singleton;
 
@@ -41,5 +44,26 @@ public class RepositoryModule {
     @Singleton
     public SessionRepository provideSessionRepository(SessionDao sessionDao) {
         return new SessionRepositoryImpl(sessionDao);
+     * Provides the ResponseDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return ResponseDao instance
+     */
+    @Provides
+    @Singleton
+    public ResponseDao provideResponseDao(ManuscriptaDatabase database) {
+        return database.responseDao();
+    }
+
+    /**
+     * Provides the ResponseRepository implementation.
+     *
+     * @param responseDao The ResponseDao instance
+     * @return ResponseRepository instance
+     */
+    @Provides
+    @Singleton
+    public ResponseRepository provideResponseRepository(ResponseDao responseDao) {
+        return new ResponseRepositoryImpl(responseDao);
     }
 }

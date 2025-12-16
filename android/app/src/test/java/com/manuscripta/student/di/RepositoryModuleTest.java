@@ -10,6 +10,9 @@ import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.data.local.ResponseDao;
+import com.manuscripta.student.data.repository.ResponseRepository;
+import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +25,7 @@ public class RepositoryModuleTest {
     private RepositoryModule repositoryModule;
     private ManuscriptaDatabase mockDatabase;
     private SessionDao mockSessionDao;
+    private ResponseDao mockResponseDao;
 
     @Before
     public void setUp() {
@@ -46,5 +50,24 @@ public class RepositoryModuleTest {
 
         assertNotNull(result);
         assertTrue(result instanceof SessionRepositoryImpl);
+        mockResponseDao = mock(ResponseDao.class);
+    }
+
+    @Test
+    public void testProvideResponseDao_returnsDao() {
+        when(mockDatabase.responseDao()).thenReturn(mockResponseDao);
+
+        ResponseDao result = repositoryModule.provideResponseDao(mockDatabase);
+
+        assertNotNull(result);
+        verify(mockDatabase).responseDao();
+    }
+
+    @Test
+    public void testProvideResponseRepository_returnsRepository() {
+        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao);
+
+        assertNotNull(result);
+        assertTrue(result instanceof ResponseRepositoryImpl);
     }
 }
