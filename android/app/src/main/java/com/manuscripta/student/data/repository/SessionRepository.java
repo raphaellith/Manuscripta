@@ -15,12 +15,15 @@ import java.util.List;
 public interface SessionRepository {
 
     /**
-     * Starts a new session for the given material.
+     * Creates a new session for the given material in the RECEIVED state.
      * If there's already an active session, it will be completed first.
+     * <p>
+     * Note: The session is initially created in the {@link SessionStatus#RECEIVED} state and is not
+     * considered "started" (i.e., not {@link SessionStatus#ACTIVE}) until the first interaction occurs.
      *
      * @param materialId The ID of the material to start a session for
      * @param deviceId   The ID of the device starting the session
-     * @return The newly created session
+     * @return The newly created session in RECEIVED state
      */
     @NonNull
     Session startSession(@NonNull String materialId, @NonNull String deviceId);
