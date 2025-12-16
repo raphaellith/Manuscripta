@@ -30,8 +30,6 @@ public class DatabaseModule {
     @Provides
     @Singleton
     public ManuscriptaDatabase provideDatabase(@ApplicationContext Context context) {
-        // TODO: Replace fallbackToDestructiveMigration with proper migrations before production
-        // This will wipe the database when version changes - acceptable for development only
         return Room.databaseBuilder(
                 context,
                 ManuscriptaDatabase.class,
