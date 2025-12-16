@@ -16,7 +16,7 @@ public interface SessionRepository {
 
     /**
      * Creates a new session for the given material in the RECEIVED state.
-     * If there's already an active session, it will be completed first.
+     * If there's already an active session, it will be paused first.
      * <p>
      * Note: The session is initially created in the {@link SessionStatus#RECEIVED} state and is not
      * considered "started" (i.e., not {@link SessionStatus#ACTIVE}) until the first interaction occurs.
@@ -58,6 +58,17 @@ public interface SessionRepository {
      * @throws IllegalStateException if the session is not in PAUSED status
      */
     void resumeSession(@NonNull String sessionId);
+
+    /**
+     * Activates a session that is in RECEIVED state, transitioning it to ACTIVE.
+     * Sets the start time to the current timestamp when the student first interacts.
+     *
+     * @param sessionId The ID of the session to activate
+     * @throws IllegalArgumentException if sessionId is null or empty
+     * @throws IllegalArgumentException if session is not found
+     * @throws IllegalStateException if the session is not in RECEIVED status
+     */
+    void activateSession(@NonNull String sessionId);
 
     /**
      * Completes the currently active session.

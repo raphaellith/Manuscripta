@@ -60,11 +60,11 @@ public class SessionRepositoryImpl implements SessionRepository {
         validateNotEmpty(materialId, "Material ID");
         validateNotEmpty(deviceId, "Device ID");
 
-        // Complete any existing active session first
+        // Pause any existing active session first (per Session Interaction §5(4)(c))
         SessionEntity activeSession = sessionDao.getActiveSession();
         if (activeSession != null) {
             sessionDao.endSession(activeSession.getId(), System.currentTimeMillis(),
-                    SessionStatus.COMPLETED);
+                    SessionStatus.PAUSED);
         }
 
         // Create and save new session
@@ -112,14 +112,30 @@ public class SessionRepositoryImpl implements SessionRepository {
                     + "Current status: " + session.getStatus());
         }
 
-        // Complete any other active session first
+        // Pause any other active session first (per Session Interaction §5(4)(c))
         SessionEntity currentActive = sessionDao.getActiveSession();
         if (currentActive != null) {
             sessionDao.endSession(currentActive.getId(), System.currentTimeMillis(),
-                    SessionStatus.COMPLETED);
+                    SessionStatus.PAUSED);
         }
 
         sessionDao.updateStatus(sessionId, SessionStatus.ACTIVE);
+    }
+
+    @Override
+    public void activateSession(@NonNull String sessionId) {
+        validateNotEmpty(sessionId, "Session ID");
+
+        SessionEntity session = sessionDao.getById(sessionId);
+        if (session == null) {
+            throw new IllegalArgumentException("Session not found: " + sessionId);
+        }
+        if (session.getStatus() != SessionStatus.RECEIVED) {
+            throw new IllegalStateException("Cannot activate session that is not in RECEIVED state. "
+                    + "Current status: " + session.getStatus());
+        }
+
+        sessionDao.activateSession(sessionId, System.currentTimeMillis());
     }
 
     @Override

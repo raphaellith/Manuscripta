@@ -32,6 +32,7 @@ public class RepositoryModuleTest {
         repositoryModule = new RepositoryModule();
         mockDatabase = mock(ManuscriptaDatabase.class);
         mockSessionDao = mock(SessionDao.class);
+        mockResponseDao = mock(ResponseDao.class);
     }
 
     @Test
@@ -50,7 +51,6 @@ public class RepositoryModuleTest {
 
         assertNotNull(result);
         assertTrue(result instanceof SessionRepositoryImpl);
-        mockResponseDao = mock(ResponseDao.class);
     }
 
     @Test

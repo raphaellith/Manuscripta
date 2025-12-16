@@ -79,14 +79,14 @@ public class SessionRepositoryImplTest {
     }
 
     @Test
-    public void testStartSession_hasActiveSession_completesExistingAndCreatesNew() {
+    public void testStartSession_hasActiveSession_pausesExistingAndCreatesNew() {
         SessionEntity activeEntity = createTestEntity(TEST_ID, SessionStatus.ACTIVE);
         when(mockDao.getActiveSession()).thenReturn(activeEntity);
 
         Session session = repository.startSession(TEST_MATERIAL_ID, TEST_DEVICE_ID);
 
         assertNotNull(session);
-        verify(mockDao).endSession(eq(TEST_ID), anyLong(), eq(SessionStatus.COMPLETED));
+        verify(mockDao).endSession(eq(TEST_ID), anyLong(), eq(SessionStatus.PAUSED));
         verify(mockDao).insert(any(SessionEntity.class));
     }
 
@@ -211,7 +211,7 @@ public class SessionRepositoryImplTest {
     }
 
     @Test
-    public void testResumeSession_pausedSessionWithActiveSession_completesActiveFirst() {
+    public void testResumeSession_pausedSessionWithActiveSession_pausesActiveFirst() {
         SessionEntity pausedEntity = createTestEntity(TEST_ID, SessionStatus.PAUSED);
         SessionEntity activeEntity = createTestEntity("active-id", SessionStatus.ACTIVE);
         when(mockDao.getById(TEST_ID)).thenReturn(pausedEntity);
@@ -219,7 +219,7 @@ public class SessionRepositoryImplTest {
 
         repository.resumeSession(TEST_ID);
 
-        verify(mockDao).endSession(eq("active-id"), anyLong(), eq(SessionStatus.COMPLETED));
+        verify(mockDao).endSession(eq("active-id"), anyLong(), eq(SessionStatus.PAUSED));
         verify(mockDao).updateStatus(TEST_ID, SessionStatus.ACTIVE);
     }
 
@@ -369,6 +369,68 @@ public class SessionRepositoryImplTest {
                 () -> repository.endSession(TEST_ID, SessionStatus.PAUSED)
         );
         assertTrue(exception.getMessage().contains("must be COMPLETED or CANCELLED"));
+    }
+
+    @Test
+    public void testEndSession_receivedStatus_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> repository.endSession(TEST_ID, SessionStatus.RECEIVED)
+        );
+        assertTrue(exception.getMessage().contains("must be COMPLETED or CANCELLED"));
+    }
+
+    // ==================== activateSession Tests ====================
+
+    @Test
+    public void testActivateSession_receivedSession_activatesSession() {
+        SessionEntity receivedEntity = createTestEntity(TEST_ID, SessionStatus.RECEIVED);
+        when(mockDao.getById(TEST_ID)).thenReturn(receivedEntity);
+
+        repository.activateSession(TEST_ID);
+
+        verify(mockDao).activateSession(eq(TEST_ID), anyLong());
+    }
+
+    @Test
+    public void testActivateSession_nullId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> repository.activateSession(null)
+        );
+        assertEquals("Session ID cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testActivateSession_emptyId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> repository.activateSession("")
+        );
+        assertEquals("Session ID cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
+    public void testActivateSession_sessionNotFound_throwsException() {
+        when(mockDao.getById(anyString())).thenReturn(null);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> repository.activateSession("non-existent")
+        );
+        assertTrue(exception.getMessage().contains("Session not found"));
+    }
+
+    @Test
+    public void testActivateSession_notReceived_throwsException() {
+        SessionEntity activeEntity = createTestEntity(TEST_ID, SessionStatus.ACTIVE);
+        when(mockDao.getById(TEST_ID)).thenReturn(activeEntity);
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> repository.activateSession(TEST_ID)
+        );
+        assertTrue(exception.getMessage().contains("Cannot activate session that is not in RECEIVED state"));
     }
 
     // ==================== getSessionById Tests ====================

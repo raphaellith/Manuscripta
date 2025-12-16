@@ -44,6 +44,9 @@ public class RepositoryModule {
     @Singleton
     public SessionRepository provideSessionRepository(SessionDao sessionDao) {
         return new SessionRepositoryImpl(sessionDao);
+    }
+
+    /**
      * Provides the ResponseDao from the database.
      *
      * @param database The ManuscriptaDatabase instance
