@@ -10,10 +10,9 @@ import com.manuscripta.student.domain.model.Response;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
@@ -53,9 +52,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     /** The DAO for response persistence. */
     private final ResponseDao responseDao;
 
-    /** Queue of response IDs pending synchronization. */
-    private final BlockingQueue<String> syncQueue;
-
     /** Executor for background sync operations. */
     private final ExecutorService syncExecutor;
 
@@ -92,7 +88,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         }
         this.responseDao = responseDao;
         this.syncEngine = syncEngine;
-        this.syncQueue = new LinkedBlockingQueue<>();
         this.syncExecutor = Executors.newSingleThreadExecutor();
         this.isSyncing = new AtomicBoolean(false);
     }
@@ -104,11 +99,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         }
         ResponseEntity entity = ResponseMapper.toEntity(response);
         responseDao.insert(entity);
-
-        // Add to sync queue if not already synced
-        if (!response.isSynced()) {
-            syncQueue.offer(response.getId());
-        }
     }
 
     @Override
@@ -158,7 +148,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             throw new IllegalArgumentException("Response ID cannot be null or empty");
         }
         responseDao.deleteById(id);
-        syncQueue.remove(id);
     }
 
     @Override
@@ -166,17 +155,11 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         if (questionId == null || questionId.trim().isEmpty()) {
             throw new IllegalArgumentException("Question ID cannot be null or empty");
         }
-        // Get all responses for this question to remove from sync queue
-        List<ResponseEntity> entities = responseDao.getByQuestionId(questionId);
-        for (ResponseEntity entity : entities) {
-            syncQueue.remove(entity.getId());
-        }
         responseDao.deleteByQuestionId(questionId);
     }
 
     @Override
     public void deleteAllResponses() {
-        syncQueue.clear();
         responseDao.deleteAll();
     }
 
@@ -224,7 +207,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
 
             if (synced) {
                 responseDao.markSynced(entity.getId());
-                syncQueue.remove(entity.getId());
                 successCount++;
                 if (callback != null) {
                     callback.onSyncSuccess(entity.getId());
@@ -253,8 +235,12 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         long backoffMs = INITIAL_BACKOFF_MS;
 
         for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
-            if (syncEngine.syncResponse(entity)) {
-                return true;
+            try {
+                if (syncEngine.syncResponse(entity)) {
+                    return true;
+                }
+            } catch (Exception e) {
+                // Treat any exception as a sync failure
             }
 
             // Don't sleep after the last failed attempt
@@ -310,23 +296,40 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     }
 
     /**
-     * Returns the current size of the sync queue.
-     * This method is primarily for testing purposes.
-     *
-     * @return The number of items in the sync queue
-     */
-    @VisibleForTesting
-    int getSyncQueueSize() {
-        return syncQueue.size();
-    }
-
-    /**
      * Checks if a sync operation is currently in progress.
      *
      * @return true if syncing, false otherwise
      */
     public boolean isSyncing() {
         return isSyncing.get();
+    }
+
+    /**
+     * Shuts down the sync executor service.
+     * This should be called when the repository is no longer needed.
+     * Waits up to the configured timeout for pending tasks to complete.
+     */
+    public void shutdown() {
+        syncExecutor.shutdown();
+        try {
+            if (!syncExecutor.awaitTermination(getShutdownTimeoutSeconds(), TimeUnit.SECONDS)) {
+                syncExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            syncExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Returns the timeout in seconds to wait for clean shutdown.
+     * This method is protected to allow overriding in tests.
+     *
+     * @return The shutdown timeout in seconds
+     */
+    @VisibleForTesting
+    protected long getShutdownTimeoutSeconds() {
+        return 5L;
     }
 
     /**
@@ -346,14 +349,18 @@ public class ResponseRepositoryImpl implements ResponseRepository {
 
     /**
      * Default implementation of SyncEngine.
-     * In a real implementation, this would make network calls.
+     * Throws UnsupportedOperationException until network sync is implemented.
+     * 
+     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/TBD">Issue: Implement Response Network Sync</a>
      */
     private static class DefaultSyncEngine implements SyncEngine {
         @Override
         public boolean syncResponse(@NonNull ResponseEntity entity) {
-            // TODO: Implement actual network sync when API is available
-            // For now, always return true to simulate successful sync
-            return true;
+            // Network sync not yet implemented - see android/issues.md
+            throw new UnsupportedOperationException(
+                "Network sync not yet implemented. Responses are stored locally only. "
+                + "See issue: Implement Response Network Sync"
+            );
         }
     }
 }
