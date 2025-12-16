@@ -54,6 +54,15 @@ public class SessionRepositoryImpl implements SessionRepository {
         this.sessionDao = sessionDao;
     }
 
+    /**
+     * Starts a new session for the given material and device.
+     * If an active session exists, it will be paused automatically.
+     *
+     * @param materialId The ID of the material for the session
+     * @param deviceId   The ID of the device starting the session
+     * @return The newly created session
+     * @throws IllegalArgumentException if materialId or deviceId is null or empty
+     */
     @Override
     @NonNull
     public Session startSession(@NonNull String materialId, @NonNull String deviceId) {
@@ -75,6 +84,11 @@ public class SessionRepositoryImpl implements SessionRepository {
         return newSession;
     }
 
+    /**
+     * Retrieves the currently active session.
+     *
+     * @return The active session or null if no active session exists
+     */
     @Override
     @Nullable
     public Session getActiveSession() {
@@ -85,11 +99,21 @@ public class SessionRepositoryImpl implements SessionRepository {
         return SessionMapper.toDomain(entity);
     }
 
+    /**
+     * Checks whether an active session exists.
+     *
+     * @return true if an active session exists, false otherwise
+     */
     @Override
     public boolean hasActiveSession() {
         return sessionDao.getActiveSession() != null;
     }
 
+    /**
+     * Pauses the currently active session.
+     *
+     * @throws IllegalStateException if no active session exists
+     */
     @Override
     public void pauseSession() {
         SessionEntity activeSession = sessionDao.getActiveSession();
@@ -99,6 +123,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         sessionDao.updateStatus(activeSession.getId(), SessionStatus.PAUSED);
     }
 
+    /**
+     * Resumes a paused session. If another session is active, it will be paused first.
+     *
+     * @param sessionId The ID of the session to resume
+     * @throws IllegalArgumentException if sessionId is null, empty, or does not exist
+     * @throws IllegalStateException    if the session is not in PAUSED state
+     */
     @Override
     public void resumeSession(@NonNull String sessionId) {
         validateNotEmpty(sessionId, "Session ID");
@@ -122,6 +153,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         sessionDao.updateStatus(sessionId, SessionStatus.ACTIVE);
     }
 
+    /**
+     * Activates a session that is in RECEIVED state.
+     *
+     * @param sessionId The ID of the session to activate
+     * @throws IllegalArgumentException if sessionId is null, empty, or does not exist
+     * @throws IllegalStateException    if the session is not in RECEIVED state
+     */
     @Override
     public void activateSession(@NonNull String sessionId) {
         validateNotEmpty(sessionId, "Session ID");
@@ -138,6 +176,11 @@ public class SessionRepositoryImpl implements SessionRepository {
         sessionDao.activateSession(sessionId, System.currentTimeMillis());
     }
 
+    /**
+     * Marks the currently active session as completed.
+     *
+     * @throws IllegalStateException if no active session exists
+     */
     @Override
     public void completeSession() {
         SessionEntity activeSession = sessionDao.getActiveSession();
@@ -148,6 +191,11 @@ public class SessionRepositoryImpl implements SessionRepository {
                 SessionStatus.COMPLETED);
     }
 
+    /**
+     * Marks the currently active session as cancelled.
+     *
+     * @throws IllegalStateException if no active session exists
+     */
     @Override
     public void cancelSession() {
         SessionEntity activeSession = sessionDao.getActiveSession();
@@ -158,6 +206,13 @@ public class SessionRepositoryImpl implements SessionRepository {
                 SessionStatus.CANCELLED);
     }
 
+    /**
+     * Ends a session with the specified status.
+     *
+     * @param sessionId The ID of the session to end
+     * @param status    The final status (must be COMPLETED or CANCELLED)
+     * @throws IllegalArgumentException if sessionId is null, empty, or status is invalid
+     */
     @Override
     public void endSession(@NonNull String sessionId, @NonNull SessionStatus status) {
         validateNotEmpty(sessionId, "Session ID");
@@ -172,6 +227,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         sessionDao.endSession(sessionId, System.currentTimeMillis(), status);
     }
 
+    /**
+     * Retrieves a session by its ID.
+     *
+     * @param id The session ID
+     * @return The session or null if not found
+     * @throws IllegalArgumentException if id is null or empty
+     */
     @Override
     @Nullable
     public Session getSessionById(@NonNull String id) {
@@ -184,6 +246,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         return SessionMapper.toDomain(entity);
     }
 
+    /**
+     * Retrieves all sessions associated with the given material.
+     *
+     * @param materialId The material ID
+     * @return List of sessions for the material (empty if none found)
+     * @throws IllegalArgumentException if materialId is null or empty
+     */
     @Override
     @NonNull
     public List<Session> getSessionsByMaterialId(@NonNull String materialId) {
@@ -193,6 +262,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         return mapEntitiesToDomain(entities);
     }
 
+    /**
+     * Retrieves all sessions with the specified status.
+     *
+     * @param status The session status to filter by
+     * @return List of sessions with the given status (empty if none found)
+     * @throws IllegalArgumentException if status is null
+     */
     @Override
     @NonNull
     public List<Session> getSessionsByStatus(@NonNull SessionStatus status) {
@@ -204,6 +280,11 @@ public class SessionRepositoryImpl implements SessionRepository {
         return mapEntitiesToDomain(entities);
     }
 
+    /**
+     * Retrieves all sessions.
+     *
+     * @return List of all sessions (empty if none found)
+     */
     @Override
     @NonNull
     public List<Session> getAllSessions() {
@@ -211,6 +292,13 @@ public class SessionRepositoryImpl implements SessionRepository {
         return mapEntitiesToDomain(entities);
     }
 
+    /**
+     * Retrieves all sessions associated with the given device.
+     *
+     * @param deviceId The device ID
+     * @return List of sessions for the device (empty if none found)
+     * @throws IllegalArgumentException if deviceId is null or empty
+     */
     @Override
     @NonNull
     public List<Session> getSessionsByDeviceId(@NonNull String deviceId) {
@@ -220,28 +308,55 @@ public class SessionRepositoryImpl implements SessionRepository {
         return mapEntitiesToDomain(entities);
     }
 
+    /**
+     * Deletes a session by its ID.
+     *
+     * @param id The session ID
+     * @throws IllegalArgumentException if id is null or empty
+     */
     @Override
     public void deleteSession(@NonNull String id) {
         validateNotEmpty(id, "Session ID");
         sessionDao.deleteById(id);
     }
 
+    /**
+     * Deletes all sessions associated with the given material.
+     *
+     * @param materialId The material ID
+     * @throws IllegalArgumentException if materialId is null or empty
+     */
     @Override
     public void deleteSessionsByMaterialId(@NonNull String materialId) {
         validateNotEmpty(materialId, "Material ID");
         sessionDao.deleteByMaterialId(materialId);
     }
 
+    /**
+     * Deletes all sessions.
+     */
     @Override
     public void deleteAllSessions() {
         sessionDao.deleteAll();
     }
 
+    /**
+     * Gets the total number of sessions.
+     *
+     * @return The count of all sessions
+     */
     @Override
     public int getSessionCount() {
         return sessionDao.getCount();
     }
 
+    /**
+     * Gets the count of sessions with the specified status.
+     *
+     * @param status The session status to filter by
+     * @return The count of sessions with the given status
+     * @throws IllegalArgumentException if status is null
+     */
     @Override
     public int getSessionCountByStatus(@NonNull SessionStatus status) {
         if (status == null) {
