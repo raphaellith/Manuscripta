@@ -73,7 +73,8 @@ public class SessionRepositoryImplTest {
         assertNotNull(session);
         assertEquals(TEST_MATERIAL_ID, session.getMaterialId());
         assertEquals(TEST_DEVICE_ID, session.getDeviceId());
-        assertEquals(SessionStatus.ACTIVE, session.getStatus());
+        assertEquals(SessionStatus.RECEIVED, session.getStatus());
+        assertEquals(0, session.getStartTime()); // Not set until first interaction
         verify(mockDao).insert(any(SessionEntity.class));
     }
 
