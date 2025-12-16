@@ -86,29 +86,31 @@ public final class TcpMessageDecoder {
     @NonNull
     private TcpMessage createMessage(@NonNull TcpOpcode opcode, @NonNull byte[] operand)
             throws TcpProtocolException {
-        if (opcode == TcpOpcode.LOCK_SCREEN) {
-            return new LockScreenMessage();
-        } else if (opcode == TcpOpcode.UNLOCK_SCREEN) {
-            return new UnlockScreenMessage();
-        } else if (opcode == TcpOpcode.REFRESH_CONFIG) {
-            return new RefreshConfigMessage();
-        } else if (opcode == TcpOpcode.UNPAIR) {
-            return new UnpairMessage();
-        } else if (opcode == TcpOpcode.DISTRIBUTE_MATERIAL) {
-            return new DistributeMaterialMessage();
-        } else if (opcode == TcpOpcode.HAND_ACK) {
-            return createHandAckMessage(operand);
-        } else if (opcode == TcpOpcode.PAIRING_ACK) {
-            return new PairingAckMessage();
-        } else if (opcode == TcpOpcode.STATUS_UPDATE) {
-            return createStatusUpdateMessage(operand);
-        } else if (opcode == TcpOpcode.HAND_RAISED) {
-            return createHandRaisedMessage(operand);
-        } else if (opcode == TcpOpcode.DISTRIBUTE_ACK) {
-            return createDistributeAckMessage(operand);
-        } else {
-            // PAIRING_REQUEST is the only remaining case
-            return createPairingRequestMessage(operand);
+        switch (opcode) {
+            case LOCK_SCREEN:
+                return new LockScreenMessage();
+            case UNLOCK_SCREEN:
+                return new UnlockScreenMessage();
+            case REFRESH_CONFIG:
+                return new RefreshConfigMessage();
+            case UNPAIR:
+                return new UnpairMessage();
+            case DISTRIBUTE_MATERIAL:
+                return new DistributeMaterialMessage();
+            case HAND_ACK:
+                return createHandAckMessage(operand);
+            case PAIRING_ACK:
+                return new PairingAckMessage();
+            case STATUS_UPDATE:
+                return createStatusUpdateMessage(operand);
+            case HAND_RAISED:
+                return createHandRaisedMessage(operand);
+            case DISTRIBUTE_ACK:
+                return createDistributeAckMessage(operand);
+            case PAIRING_REQUEST:
+            default:
+                // PAIRING_REQUEST is the only remaining case or fallback
+                return createPairingRequestMessage(operand);
         }
     }
 
