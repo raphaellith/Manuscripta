@@ -55,6 +55,7 @@ public enum TcpOpcode {
     /**
      * Hand raised notification from client to server.
      * Indicates the student has raised their hand.
+     * Operand: Device ID (UTF-8).
      */
     HAND_RAISED((byte) 0x11),
 
