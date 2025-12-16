@@ -21,9 +21,11 @@ import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.robolectric.RobolectricTestRunner;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Unit tests for {@link HeartbeatManager}.
  */
+@RunWith(RobolectricTestRunner.class)
 public class HeartbeatManagerTest {
 
     @Mock
