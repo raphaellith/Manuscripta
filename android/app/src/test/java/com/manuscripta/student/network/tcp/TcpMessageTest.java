@@ -2,8 +2,19 @@ package com.manuscripta.student.network.tcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.HandAckMessage;
+import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
+import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
+import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
 
 import org.junit.Test;
 
@@ -93,31 +104,58 @@ public class TcpMessageTest {
         assertTrue(toString.contains("RefreshConfigMessage"));
     }
 
-    // ==================== FetchMaterialsMessage Tests ====================
+    // ==================== UnpairMessage Tests ====================
 
     @Test
-    public void testFetchMaterialsMessage_opcode() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
-        assertEquals(TcpOpcode.FETCH_MATERIALS, message.getOpcode());
+    public void testUnpairMessage_opcode() {
+        UnpairMessage message = new UnpairMessage();
+        assertEquals(TcpOpcode.UNPAIR, message.getOpcode());
     }
 
     @Test
-    public void testFetchMaterialsMessage_operand_isEmpty() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
+    public void testUnpairMessage_operand_isEmpty() {
+        UnpairMessage message = new UnpairMessage();
         assertEquals(0, message.getOperand().length);
     }
 
     @Test
-    public void testFetchMaterialsMessage_hasOperand_returnsFalse() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
+    public void testUnpairMessage_hasOperand_returnsFalse() {
+        UnpairMessage message = new UnpairMessage();
         assertFalse(message.hasOperand());
     }
 
     @Test
-    public void testFetchMaterialsMessage_toString() {
-        FetchMaterialsMessage message = new FetchMaterialsMessage();
+    public void testUnpairMessage_toString() {
+        UnpairMessage message = new UnpairMessage();
         String toString = message.toString();
-        assertTrue(toString.contains("FetchMaterialsMessage"));
+        assertTrue(toString.contains("UnpairMessage"));
+    }
+
+    // ==================== DistributeMaterialMessage Tests ====================
+
+    @Test
+    public void testDistributeMaterialMessage_opcode() {
+        DistributeMaterialMessage message = new DistributeMaterialMessage();
+        assertEquals(TcpOpcode.DISTRIBUTE_MATERIAL, message.getOpcode());
+    }
+
+    @Test
+    public void testDistributeMaterialMessage_operand_isEmpty() {
+        DistributeMaterialMessage message = new DistributeMaterialMessage();
+        assertEquals(0, message.getOperand().length);
+    }
+
+    @Test
+    public void testDistributeMaterialMessage_hasOperand_returnsFalse() {
+        DistributeMaterialMessage message = new DistributeMaterialMessage();
+        assertFalse(message.hasOperand());
+    }
+
+    @Test
+    public void testDistributeMaterialMessage_toString() {
+        DistributeMaterialMessage message = new DistributeMaterialMessage();
+        String toString = message.toString();
+        assertTrue(toString.contains("DistributeMaterialMessage"));
     }
 
     // ==================== PairingAckMessage Tests ====================
@@ -258,6 +296,98 @@ public class TcpMessageTest {
         assertTrue(toString.contains("my-device"));
     }
 
+    // ==================== HandAckMessage Tests ====================
+
+    @Test
+    public void testHandAckMessage_opcode() {
+        HandAckMessage message = new HandAckMessage("device-123");
+        assertEquals(TcpOpcode.HAND_ACK, message.getOpcode());
+    }
+
+    @Test
+    public void testHandAckMessage_deviceId() {
+        String deviceId = "tablet-abc-456";
+        HandAckMessage message = new HandAckMessage(deviceId);
+        assertEquals(deviceId, message.getDeviceId());
+    }
+
+    @Test
+    public void testHandAckMessage_operand_containsUtf8DeviceId() {
+        String deviceId = "device-xyz";
+        HandAckMessage message = new HandAckMessage(deviceId);
+        byte[] operand = message.getOperand();
+        assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testHandAckMessage_hasOperand_returnsTrue() {
+        HandAckMessage message = new HandAckMessage("device");
+        assertTrue(message.hasOperand());
+    }
+
+    @Test
+    public void testHandAckMessage_operand_isDefensiveCopy() {
+        HandAckMessage message = new HandAckMessage("device-123");
+        byte[] operand1 = message.getOperand();
+        byte[] operand2 = message.getOperand();
+        operand1[0] = 0;
+        assertFalse(operand1[0] == operand2[0]);
+    }
+
+    @Test
+    public void testHandAckMessage_toString() {
+        HandAckMessage message = new HandAckMessage("my-device");
+        String toString = message.toString();
+        assertTrue(toString.contains("HandAckMessage"));
+        assertTrue(toString.contains("my-device"));
+    }
+
+    // ==================== DistributeAckMessage Tests ====================
+
+    @Test
+    public void testDistributeAckMessage_opcode() {
+        DistributeAckMessage message = new DistributeAckMessage("device-123");
+        assertEquals(TcpOpcode.DISTRIBUTE_ACK, message.getOpcode());
+    }
+
+    @Test
+    public void testDistributeAckMessage_deviceId() {
+        String deviceId = "tablet-abc-456";
+        DistributeAckMessage message = new DistributeAckMessage(deviceId);
+        assertEquals(deviceId, message.getDeviceId());
+    }
+
+    @Test
+    public void testDistributeAckMessage_operand_containsUtf8DeviceId() {
+        String deviceId = "device-xyz";
+        DistributeAckMessage message = new DistributeAckMessage(deviceId);
+        byte[] operand = message.getOperand();
+        assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testDistributeAckMessage_hasOperand_returnsTrue() {
+        DistributeAckMessage message = new DistributeAckMessage("device");
+        assertTrue(message.hasOperand());
+    }
+
+    @Test
+    public void testDistributeAckMessage_operand_isDefensiveCopy() {
+        DistributeAckMessage message = new DistributeAckMessage("device-123");
+        byte[] operand1 = message.getOperand();
+        byte[] operand2 = message.getOperand();
+        operand1[0] = 0;
+        assertFalse(operand1[0] == operand2[0]);
+    }
+
+    @Test
+    public void testDistributeAckMessage_toString() {
+        DistributeAckMessage message = new DistributeAckMessage("my-device");
+        String toString = message.toString();
+        assertTrue(toString.contains("DistributeAckMessage"));
+        assertTrue(toString.contains("my-device"));
+    }
+
     // ==================== PairingRequestMessage Tests ====================
 
     @Test
@@ -317,6 +447,22 @@ public class TcpMessageTest {
     @Test
     public void testHandRaisedMessage_emptyDeviceId() {
         HandRaisedMessage message = new HandRaisedMessage("");
+        assertEquals("", message.getDeviceId());
+        assertEquals(0, message.getOperand().length);
+        assertFalse(message.hasOperand());
+    }
+
+    @Test
+    public void testHandAckMessage_emptyDeviceId() {
+        HandAckMessage message = new HandAckMessage("");
+        assertEquals("", message.getDeviceId());
+        assertEquals(0, message.getOperand().length);
+        assertFalse(message.hasOperand());
+    }
+
+    @Test
+    public void testDistributeAckMessage_emptyDeviceId() {
+        DistributeAckMessage message = new DistributeAckMessage("");
         assertEquals("", message.getDeviceId());
         assertEquals(0, message.getOperand().length);
         assertFalse(message.hasOperand());
