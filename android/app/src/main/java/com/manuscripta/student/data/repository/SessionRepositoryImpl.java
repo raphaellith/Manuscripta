@@ -25,6 +25,14 @@ import javax.inject.Singleton;
  *   <li>Active session tracking (only one active at a time)</li>
  *   <li>Session lifecycle management (start, pause, resume, complete, cancel)</li>
  * </ul>
+ *
+ * <p>
+ * <b>Session Lifecycle:</b><br>
+ * Sessions begin in the <code>RECEIVED</code> state when created, transition to <code>ACTIVE</code> when started,
+ * and may then move to <code>PAUSED</code>, <code>COMPLETED</code>, or <code>CANCELLED</code> as appropriate.<br>
+ * <br>
+ * <code>RECEIVED → ACTIVE → PAUSED/COMPLETED/CANCELLED</code>
+ * </p>
  */
 @Singleton
 public class SessionRepositoryImpl implements SessionRepository {
