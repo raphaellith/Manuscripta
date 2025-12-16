@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
@@ -32,6 +31,9 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class ResponseRepositoryImpl implements ResponseRepository {
+
+    /** Tag for logging. */
+    private static final String TAG = "ResponseRepositoryImpl";
 
     /** Initial delay for exponential backoff in milliseconds. */
     @VisibleForTesting
@@ -240,7 +242,10 @@ public class ResponseRepositoryImpl implements ResponseRepository {
                     return true;
                 }
             } catch (Exception e) {
-                // Treat any exception as a sync failure
+                // Log the exception to aid debugging - differentiates between expected
+                // network failures and unexpected bugs in sync code
+                android.util.Log.w(TAG, "Sync attempt " + (attempt + 1) + " failed for response "
+                        + entity.getId() + ": " + e.getMessage());
             }
 
             // Don't sleep after the last failed attempt
@@ -297,40 +302,16 @@ public class ResponseRepositoryImpl implements ResponseRepository {
 
     /**
      * Checks if a sync operation is currently in progress.
+     * This method is package-private as it is not part of the {@link ResponseRepository}
+     * interface and is primarily intended for testing purposes.
      *
      * @return true if syncing, false otherwise
      */
-    public boolean isSyncing() {
+    @VisibleForTesting
+    boolean isSyncing() {
         return isSyncing.get();
     }
 
-    /**
-     * Shuts down the sync executor service.
-     * This should be called when the repository is no longer needed.
-     * Waits up to the configured timeout for pending tasks to complete.
-     */
-    public void shutdown() {
-        syncExecutor.shutdown();
-        try {
-            if (!syncExecutor.awaitTermination(getShutdownTimeoutSeconds(), TimeUnit.SECONDS)) {
-                syncExecutor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            syncExecutor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Returns the timeout in seconds to wait for clean shutdown.
-     * This method is protected to allow overriding in tests.
-     *
-     * @return The shutdown timeout in seconds
-     */
-    @VisibleForTesting
-    protected long getShutdownTimeoutSeconds() {
-        return 5L;
-    }
 
     /**
      * Interface for sync engine operations.

@@ -457,20 +457,29 @@ public class ResponseRepositoryImplTest {
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
         when(mockSyncEngine.syncResponse(any())).thenReturn(true);
 
+        CountDownLatch latch = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            latch.countDown();
+            return null;
+        }).when(mockDao).markSynced(TEST_ID);
+
         repository.syncPendingResponses();
 
-        // Wait for async execution
-        Thread.sleep(100);
-
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
         verify(mockDao).markSynced(TEST_ID);
     }
 
     @Test
     public void testSyncPendingResponses_alreadySyncing_skipsExecution() throws InterruptedException {
-        // Use a real ResponseRepositoryImpl (not testable) with a slow sync engine
+        // Use a slow sync engine with CountDownLatch for synchronisation
+        CountDownLatch syncStarted = new CountDownLatch(1);
+        CountDownLatch syncComplete = new CountDownLatch(1);
+
         ResponseRepositoryImpl.SyncEngine slowEngine = entity -> {
+            syncStarted.countDown();
             try {
-                Thread.sleep(500);
+                // Wait for test to signal completion
+                syncComplete.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -483,13 +492,16 @@ public class ResponseRepositoryImplTest {
 
         // Start first sync
         realRepo.syncPendingResponses();
-        Thread.sleep(50); // Let it start
+        assertTrue(syncStarted.await(5, TimeUnit.SECONDS)); // Wait for sync to start
 
-        // Try to start second sync
+        // Try to start second sync (should be skipped)
         realRepo.syncPendingResponses();
 
-        // Wait for completion
-        Thread.sleep(600);
+        // Allow sync to complete
+        syncComplete.countDown();
+
+        // Give executor time to finish
+        Thread.sleep(50);
 
         // Should only have called getUnsynced once (not twice)
         verify(mockDao, times(1)).getUnsynced();
@@ -653,12 +665,16 @@ public class ResponseRepositoryImplTest {
         // This test covers the null callback branch at line 196
         when(mockDao.getUnsynced()).thenReturn(Collections.emptyList());
 
+        CountDownLatch latch = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            latch.countDown();
+            return Collections.emptyList();
+        }).when(mockDao).getUnsynced();
+
         // Call without callback (null)
         repository.syncPendingResponses(null);
 
-        // Wait for async execution
-        Thread.sleep(100);
-
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
         // Verify getUnsynced was called (sync was attempted)
         verify(mockDao).getUnsynced();
     }
@@ -670,12 +686,20 @@ public class ResponseRepositoryImplTest {
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
         when(mockSyncEngine.syncResponse(any())).thenReturn(false);
 
+        // Use AtomicBoolean to track when sync completes (after all retry attempts)
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicInteger syncAttempts = new AtomicInteger(0);
+        doAnswer(invocation -> {
+            if (syncAttempts.incrementAndGet() >= ResponseRepositoryImpl.MAX_RETRY_ATTEMPTS) {
+                latch.countDown();
+            }
+            return false;
+        }).when(mockSyncEngine).syncResponse(any());
+
         // Call without callback (null)
         repository.syncPendingResponses(null);
 
-        // Wait for async execution
-        Thread.sleep(100);
-
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
         // Verify sync was attempted but not marked as synced (failure path)
         verify(mockDao, never()).markSynced(anyString());
     }
@@ -730,77 +754,6 @@ public class ResponseRepositoryImplTest {
         assertFalse(result);
     }
 
-    // ==================== Shutdown Tests ====================
-
-    @Test
-    public void testShutdown_normalTermination_completesSuccessfully() {
-        // Test normal shutdown
-        ResponseRepositoryImpl repo = new TestableResponseRepository(mockDao);
-        repo.shutdown();
-        // If we get here without exception, the test passes
-    }
-
-    @Test
-    public void testShutdown_timeout_forcesShutdownNow() throws InterruptedException {
-        // Create a repository with a very long-running task and zero timeout
-        ResponseRepositoryImpl.SyncEngine slowEngine = e -> {
-            try {
-                Thread.sleep(10000); // 10 second task
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-            return true;
-        };
-
-        // Use a testable repository that returns 0 for shutdown timeout
-        ResponseRepositoryImpl repo = new ZeroTimeoutResponseRepository(mockDao, slowEngine);
-        ResponseEntity entity = createTestEntity();
-        when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
-
-        // Start sync (will be long-running)
-        repo.syncPendingResponses();
-        Thread.sleep(50); // Let the sync task start
-
-        // Shutdown with 0 timeout should force shutdownNow
-        repo.shutdown();
-    }
-
-    @Test
-    public void testShutdown_interruptedDuringAwait_forcesShutdown() throws InterruptedException {
-        // Create repository with a sync engine that keeps running
-        ResponseRepositoryImpl.SyncEngine slowEngine = e -> {
-            try {
-                Thread.sleep(10000); // 10 second task
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-            return true;
-        };
-
-        ResponseRepositoryImpl repo = new ResponseRepositoryImpl(mockDao, slowEngine);
-        ResponseEntity entity = createTestEntity();
-        when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
-
-        // Start long-running sync
-        repo.syncPendingResponses();
-        Thread.sleep(50); // Let it start
-
-        // Shutdown on a thread that gets interrupted
-        Thread testThread = new Thread(() -> {
-            Thread.currentThread().interrupt();
-            repo.shutdown();
-            assertTrue(Thread.currentThread().isInterrupted());
-        });
-
-        testThread.start();
-        testThread.join(2000);
-    }
-
-    @Test
-    public void testGetShutdownTimeoutSeconds_returnsDefaultValue() {
-        ResponseRepositoryImpl repo = new TestableResponseRepository(mockDao);
-        assertEquals(5L, repo.getShutdownTimeoutSeconds());
-    }
 
     // ==================== Constants Tests ====================
 
@@ -884,18 +837,4 @@ public class ResponseRepositoryImplTest {
         }
     }
 
-    /**
-     * Testable subclass that returns 0 for shutdown timeout
-     * to trigger the shutdownNow branch.
-     */
-    private static class ZeroTimeoutResponseRepository extends TestableResponseRepository {
-        ZeroTimeoutResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {
-            super(responseDao, syncEngine);
-        }
-
-        @Override
-        protected long getShutdownTimeoutSeconds() {
-            return 0L;
-        }
-    }
 }
