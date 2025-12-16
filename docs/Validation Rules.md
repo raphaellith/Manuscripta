@@ -21,6 +21,15 @@ All rules in this document shall be enumerated for the convenience of referencin
 
 (4) The client which receives the data object should treat it as immutable.
 
+(5) The API contract shall cite objects in this document where appropriate, and the JSON objects shall conform to this document accordingly. The API Constract shall —
+
+    (a) Reference the data object, and the Section in this document where it is defined.
+    (b) Where required, define serialisation and deserialisation rules.
+
+If validation rules in API Contract are in contradiction to this document, this document shall have precedence.
+
+(6) Names of classes and fields in this document, and any document subjecting to this document, shall use PascalCase. 
+
 ### Section 2A — Data Validation Rules For `MaterialEntity` Objects
 
 (1) A `MaterialEntity` object must have the following data fields to be considered valid:
@@ -86,27 +95,52 @@ All rules in this document shall be enumerated for the convenience of referencin
     (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
     (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
 
-### Section 2D - Data Validation Rules of `SessionEntity`
+### Section 2D - Data Validation Rules for `SessionEntity`
 
 (1) A `SessionEntity` object must have the following data fields to be considered valid:
 
     (a) `MaterialId` (UUID): References the material the student should work on during the lesson.
-    (b) `StartTime` (long): Start unix timestamp of the last interaction.
-    (c) `SessionStatus`(enum SessionStatus). Possible values are:
-        (i) `ACTIVE`: Session is currently active/ongoing.
-        (ii) `PAUSED`: Session has been paused.
-        (iii) `COMPLETED`: Session completed normally.
-        (iv) `CANCELLED`: Session was cancelled before completion.
-    (d) `DeviceId` (UUID): The device ID the session is related to.
+    (b) `SessionStatus`(enum SessionStatus). Possible values are:
+        (i) `RECEIVED`: Material has been received; student has not yet interacted.
+        (ii) `ACTIVE`: Session is currently active/ongoing.
+        (iii) `PAUSED`: Session has been paused.
+        (iv) `COMPLETED`: Session completed normally.
+        (v) `CANCELLED`: Session was cancelled before completion.
+    (c) `DeviceId` (UUID): The device ID the session is related to.
 
 (2) In addition to the mandatory fields in (1), a `SessionEntity` object may have the following fields:
 
-    (a) `EndTime` (long): End unix timestamp, for non-active sessions
+    (a) `StartTime` (long): Start unix timestamp, set when student first interacts with material.
+    (b) `EndTime` (long): End unix timestamp, for non-active sessions.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
-    (a) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have a `EndTime` field as specified in 2(a).
-    (b) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+    (a) A `SessionEntity` whose `SessionStatus` is `RECEIVED` must not have `StartTime` or `EndTime`.
+    (b) A `SessionEntity` whose `SessionStatus` is `ACTIVE` must have `StartTime` but must not have `EndTime`.
+    (c) A `SessionEntity` whose `SessionStatus` is `PAUSED`, `COMPLETED` or `CANCELLED` must have both `StartTime` and `EndTime`.
+    (d) A `DeviceId`, as specified in (1)(c), must correspond to a valid device.
+
+### Section 2E - Data Validation Rules for `DeviceStatusEntity`
+
+(1) A `DeviceStatusEntity` object must have the following data fields to be considered valid:
+
+    (a) `DeviceId` (uuid). References the device the status is linked to.
+    (b) `Status` (enum DeviceStatus). Possible values are:
+        (i) `ON_TASK`: Student is active in the app.
+        (ii) `IDLE`: No activity for a threshold period.
+        (iii) `HAND_RAISED`: Student explicitly requested help.
+        (iv) `LOCKED`: Device is remotely locked.
+        (v)  `DISCONNECTED`: (Server-side inferred status).
+    (c) `BatteryLevel` (int). The battery level of the device.
+    (d) `CurrentMaterialId` (uuid). The material the device is currently viewing.
+    (e) `StudentView` (String). Describes the location which the student is viewing.
+    (f) `Timestamp` (long). The time at which the device status is correct to.
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `DeviceId` specified in (1)(a) must reference a valid Device, which is deemed paired as defined in Pairing Process Specification.
+    (b) The `BatteryLevel` specified in (1)(c) must be between 0 and 100.
+    (c) The `CurrentMaterialId` specified in (1)(d) must reference a valid material.
 
 ### Section 3 - ID Generation Policy
 

@@ -160,7 +160,7 @@ Implement accessibility features to support diverse learning needs, particularly
 - Labels: `android`, `enhancement`, `device-management`
 
 **Description:**
-Implement device management features including kiosk mode, battery monitoring, connection status, and remote control capabilities.
+Implement device management features including kiosk mode, battery monitoring, connection status, and remote control capabilities. Also includes the pairing process as specified in `Pairing Process.md`.
 
 **Requirements:**
 - Kiosk mode to prevent access to other apps
@@ -171,6 +171,7 @@ Implement device management features including kiosk mode, battery monitoring, c
 - Session end handling
 - TCP socket layer for real-time control messages
 - UDP broadcast listener for automatic server discovery
+- Pairing process orchestration (UDP discovery + TCP pairing + HTTP registration)
 
 **Related Requirements:** SYS1, CON2, CON5, NET1, NET2
 
@@ -182,6 +183,7 @@ Implement device management features including kiosk mode, battery monitoring, c
 - [ ] Remote control handlers implemented
 - [ ] TCP socket layer functional
 - [ ] UDP discovery layer functional
+- [ ] Pairing manager functional
 - [ ] 100% unit test coverage
 - [ ] Integration tests passed
 - [ ] Checkstyle compliant
@@ -438,7 +440,7 @@ public static Session create(String materialId, String deviceId) {
 Implement repository for managing material data with network and local database synchronisation. Orchestrates attachment file downloads when materials contain file references, delegating file storage to `FileStorageManager`.
 
 **Integration with TCP Layer (Heartbeat-Triggered Fetch):**
-The MaterialRepository must integrate with the TCP socket layer to receive notifications when new materials are available. When TcpSocketManager receives a `FETCH_MATERIALS` (0x04) signal from the server (in response to a heartbeat), it notifies the MaterialRepository to initiate an HTTP material fetch. This is the primary mechanism for material distribution since the server cannot push HTTP requests.
+The MaterialRepository must integrate with the TCP socket layer to receive notifications when new materials are available. When TcpSocketManager receives a `DISTRIBUTE_MATERIAL` (0x05) signal from the server (in response to a heartbeat), it notifies the MaterialRepository to initiate an HTTP material fetch. This is the primary mechanism for material distribution since the server cannot push HTTP requests.
 
 **Related Requirements:** MAT1, MAT8 (Teacher), MAT15, NET1
 
@@ -446,8 +448,8 @@ The MaterialRepository must integrate with the TCP socket layer to receive notif
 - Create `MaterialRepository.java` interface
 - Create `MaterialRepositoryImpl.java` implementation
 - Implement caching strategy (network-first with fallback)
-- **Register as listener for FETCH_MATERIALS signal from TcpSocketManager (issue 6.8)**
-- **Implement `onFetchMaterialsSignal()` callback to trigger HTTP material sync**
+- **Register as listener for DISTRIBUTE_MATERIAL signal from TcpSocketManager (issue 6.8)**
+- **Implement `onDistributeMaterialSignal()` callback to trigger HTTP material sync**
 - Orchestrate attachment downloads:
   1. Fetch MaterialDto from network via HTTP GET /materials
   2. Parse content for `/attachments/{id}` references using ContentParser
@@ -460,13 +462,13 @@ The MaterialRepository must integrate with the TCP socket layer to receive notif
 
 **Acceptance Criteria:**
 - [ ] Interface and implementation created
-- [ ] FETCH_MATERIALS signal listener registered with TcpSocketManager
+- [ ] DISTRIBUTE_MATERIAL signal listener registered with TcpSocketManager
 - [ ] Attachment download orchestration implemented
 - [ ] Caching logic implemented
 - [ ] Error handling with Result pattern (fails gracefully on attachment errors)
 - [ ] 100% test coverage
 
-**Dependencies:** Issue 2.1a (FileStorageManager), Issue 6.8 (TCP Socket Layer - for FETCH_MATERIALS signal) from the issues.md document.
+**Dependencies:** Issue 2.1a (FileStorageManager), Issue 6.8 (TCP Socket Layer - for DISTRIBUTE_MATERIAL signal) from the issues.md document.
 
 ---
 
@@ -809,6 +811,34 @@ Create retry logic for failed network requests with exponential backoff.
 - [ ] Exponential backoff implemented
 - [ ] Configurable retry policy
 - [ ] 100% test coverage
+
+---
+
+### 3.9 [Android] Implement Response Network Sync
+
+- Labels: `android`, `network-layer`, `repository-layer`
+
+**Description:**
+Implement actual network synchronization for `ResponseRepositoryImpl`. Currently, `DefaultSyncEngine.syncResponse()` throws `UnsupportedOperationException` as a placeholder. This issue tracks implementing the real HTTP sync via `POST /responses`.
+
+**Related Requirements:** NET2
+
+**Tasks:**
+- Replace `DefaultSyncEngine` with `NetworkSyncEngine` that uses `ApiService`
+- Update `RepositoryModule` to inject `ApiService` into `ResponseRepositoryImpl`
+- Handle network errors (IOException → return false to trigger retry)
+- Write unit tests with MockWebServer
+
+**Code Reference:**
+See `ResponseRepositoryImpl.DefaultSyncEngine` for the current placeholder that throws `UnsupportedOperationException`.
+
+**Acceptance Criteria:**
+- [ ] NetworkSyncEngine implementation calls HTTP API
+- [ ] DI module updated to inject ApiService
+- [ ] 201 response → success, others → failure with retry
+- [ ] 100% test coverage
+
+**Dependencies:** Issue 3.3 (Response DTOs), Issue 3.5 (API Endpoints)
 
 ---
 
@@ -1265,7 +1295,7 @@ Track connection status to teacher server and report disconnections. Uses TCP so
 - Labels: `android`, `device-management`  
 
 **Description:**
-Create "Raise Hand" button and signal functionality to request teacher assistance. The hand raised signal is sent via TCP socket (opcode 0x11) for immediate delivery.
+Create "Raise Hand" button and signal functionality to request teacher assistance. The hand raised signal is sent via TCP socket (opcode 0x11) for immediate delivery, and the server responds with HAND_ACK (opcode 0x06) to confirm receipt.
 
 **Related Requirements:** MAT7, CON12
 
@@ -1273,15 +1303,17 @@ Create "Raise Hand" button and signal functionality to request teacher assistanc
 - Add Raise Hand button to status bar (issue 4.5 in issues.md document.)
 - Create `RaiseHandManager.java`
 - Send HAND_RAISED message (opcode 0x11) via TCP socket (TcpSocketManager, issue 6.8 in the issues.md document.)
-- Show confirmation to student (visual feedback that request was sent)
-- Handle teacher acknowledgment (optional - via TCP response)
+- Listen for HAND_ACK (opcode 0x06) response from server via TcpSocketManager listener
+- Show confirmation to student only after receiving HAND_ACK ("Help requested")
+- Handle timeout if HAND_ACK not received (show error/retry option)
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Raise Hand button functional
-- [ ] Request sent via TCP socket
-- [ ] Confirmation shown to student
-- [ ] Teacher acknowledgment handled (if implemented)
+- [ ] HAND_RAISED (0x11) sent via TCP socket
+- [ ] HAND_ACK (0x06) received and handled
+- [ ] Confirmation shown only after ACK received
+- [ ] Timeout handling implemented
 - [ ] 100% test coverage
 
 **Dependencies:** Issue 6.8 (TCP Socket Layer ), Issue 4.5 (Session Status Bar) from the issues.md document.
@@ -1349,39 +1381,51 @@ Handle teacher-initiated session end command.
 - Labels: `android`, `device-management`
 
 **Description:**
-Implement device registration/identification with teacher server on first launch.
+Implement device registration/identification with teacher server on first launch. This issue covers the UI flow for device registration; the actual pairing logic is orchestrated by PairingManager (issue 6.10) following the process defined in `Pairing Process.md` §2.
+
+**Note:** Device registration is part of the broader pairing process which requires:
+1. UDP discovery of teacher device (issue 6.9)
+2. TCP pairing handshake (issue 6.8)
+3. HTTP registration POST /pair (this issue's UI flow, orchestrated by issue 6.10)
 
 **Tasks:**
-- Create device ID generation (UUID)
-- Create registration UI
-- Use server discovery from UDP layer (issue 6.9 from the issues.md document).
-- Send device info to server via HTTP registration endpoint
+- Create device ID generation (UUID) - stored persistently
+- Create registration UI showing pairing progress:
+  - Discovering teacher... (UDP phase)
+  - Connecting... (TCP + HTTP phase)
+  - Paired successfully / Pairing failed
+- Integrate with PairingManager (issue 6.10) for orchestration
+- Display pairing state from PairingManager's observable state
+- Handle user-initiated retry on failure
 - Store registration status
 - Write tests
 
 **Acceptance Criteria:**
-- [ ] Device ID generated
-- [ ] Registration UI created
-- [ ] Server discovery integration (UDP)
+- [ ] Device ID generated and persisted
+- [ ] Registration UI created with progress indicators
+- [ ] Pairing state displayed from PairingManager
+- [ ] Retry functionality on failure
 - [ ] Registration persisted
 - [ ] 100% test coverage
 
-**Dependencies:** Issue 6.9 (UDP Discovery Layer) from the issues.md document. 
+**Dependencies:** Issue 6.9 (UDP Discovery Layer), Issue 6.10 (Pairing Manager) from the issues.md document. 
 
 ---
 
 ### 6.8 [Android] Implement TCP Socket Layer
 
+> **GitHub Parent Issue:** [#60](https://github.com/raphaellith/Manuscripta/issues/60)
+
 - Labels: `android`, `device-management`, `network-layer`
 
 **Description:**
-Implement TCP socket communication for low-latency, real-time control signals between the Android client and teacher server. This handles bidirectional messaging using a binary protocol with opcodes as defined in the API Contract.
+Implement TCP socket communication for low-latency, real-time control signals between the Android client and teacher server. This handles bidirectional messaging using a binary protocol with opcodes as defined in the API Contract. This layer also handles the TCP portion of the pairing handshake as specified in `Pairing Process.md` §2.
 
 **Critical Design Pattern - Heartbeat-Triggered Material Fetch:**
 Since the Windows server cannot initiate HTTP requests to Android clients, material distribution uses a heartbeat-triggered pattern:
 1. Android sends periodic `STATUS_UPDATE` (0x10) heartbeat via TCP
 2. Server checks if new materials are available for this device
-3. If materials pending, server responds with `FETCH_MATERIALS` (0x04)
+3. If materials pending, server responds with `DISTRIBUTE_MATERIAL` (0x05)
 4. Android receives signal and initiates HTTP `GET /materials` to download content
 
 This pattern applies to all server-initiated content delivery (materials, config changes, etc.).
@@ -1391,37 +1435,17 @@ This pattern applies to all server-initiated content delivery (materials, config
 **Protocol Reference (API Contract Section 3):**
 - **Port:** 5912 (TCP_PORT)
 - **Message Structure:** 1-byte opcode + variable-length operand
-- **Server → Client:** LOCK_SCREEN (0x01), UNLOCK_SCREEN (0x02), REFRESH_CONFIG (0x03), FETCH_MATERIALS (0x04)
-- **Client → Server:** STATUS_UPDATE (0x10), HAND_RAISED (0x11)
-
-**Tasks:**
-- Create `TcpSocketManager.java` singleton/service class
-- Implement TCP socket connection to teacher server (using discovered IP from UDP layer)
-- Create `TcpMessage.java` base class with opcode and operand
-- Create message encoder/decoder for binary protocol:
-  - `TcpMessageEncoder.java` - serialize messages to bytes
-  - `TcpMessageDecoder.java` - deserialize bytes to messages
-- Implement specific message types:
-  - `LockScreenMessage.java` (opcode 0x01, no operand)
-  - `UnlockScreenMessage.java` (opcode 0x02, no operand)
-  - `RefreshConfigMessage.java` (opcode 0x03, no operand)
-  - `FetchMaterialsMessage.java` (opcode 0x04, no operand) - triggers HTTP material fetch
-  - `StatusUpdateMessage.java` (opcode 0x10, JSON operand)
-  - `HandRaisedMessage.java` (opcode 0x11, device ID operand)
-- Implement message listener interface for incoming commands
-- **Implement heartbeat-response handling:**
-  - Send periodic STATUS_UPDATE as heartbeat
-  - Listen for FETCH_MATERIALS response after each heartbeat
-  - Notify MaterialRepository when FETCH_MATERIALS received to trigger HTTP download
-- Handle connection lifecycle (connect, reconnect with backoff, disconnect)
-- Ensure thread-safe message sending
-- Handle unknown opcodes gracefully (log and ignore)
-- Write unit tests with mock sockets
+- **Pairing Messages (Section 3.5):**
+  - **Client → Server:** PAIRING_REQUEST (0x20, Device ID as UTF-8 string operand)
+  - **Server → Client:** PAIRING_ACK (0x21, no operand)
+- **Control Messages (Server → Client):** LOCK_SCREEN (0x01), UNLOCK_SCREEN (0x02), REFRESH_CONFIG (0x03), UNPAIR (0x04), DISTRIBUTE_MATERIAL (0x05), HAND_ACK (0x06)
+- **Status Messages (Client → Server):** STATUS_UPDATE (0x10), HAND_RAISED (0x11), DISTRIBUTE_ACK (0x12)
 
 **Acceptance Criteria:**
 - [ ] TcpSocketManager created and manages connection lifecycle
 - [ ] Binary message encoding/decoding functional
-- [ ] All message types implemented per API Contract (including FETCH_MATERIALS 0x04)
+- [ ] TCP pairing handshake implemented (PAIRING_REQUEST/PAIRING_ACK)
+- [ ] All message types implemented per API Contract (including DISTRIBUTE_MATERIAL 0x05)
 - [ ] Heartbeat-triggered material fetch pattern implemented
 - [ ] Listener interface for incoming server commands
 - [ ] Reconnection with exponential backoff
@@ -1432,52 +1456,60 @@ This pattern applies to all server-initiated content delivery (materials, config
 - [ ] Checkstyle compliant
 - [ ] Javadoc for all public methods
 
-**Dependencies:** Issue 6.9 (UDP Discovery Layer - for server IP) from the issues.md document.
+**Dependencies:** Issue 6.9 (UDP Discovery Layer - for server IP), Issue 6.10 (Pairing Manager)
+
+---
+
+#### Sub-Issues Overview
+| # | Title | Status | Issue |
+|---|-------|--------|-------|
+| 60.1 | Message Protocol Classes and Opcode Enum | Starter / Parallel | [#91](https://github.com/raphaellith/Manuscripta/issues/91) |
+| 60.2 | Message Encoder and Decoder | Depends on: #91 | [#92](https://github.com/raphaellith/Manuscripta/issues/92) |
+| 60.3 | TcpSocketManager Skeleton and Connection Lifecycle | Depends on: #92 | [#93](https://github.com/raphaellith/Manuscripta/issues/93) |
+| 60.4 | Message Listener System | Depends on: #93 | [#94](https://github.com/raphaellith/Manuscripta/issues/94) |
+| 60.5 | Heartbeat Mechanism | Depends on: #93, #94 | [#95](https://github.com/raphaellith/Manuscripta/issues/95) |
+| 60.6 | Pairing Handshake Integration | Depends on: #91, #93, #94, #59 | [#96](https://github.com/raphaellith/Manuscripta/issues/96) |
 
 ---
 
 ### 6.9 [Android] Implement UDP Discovery Layer
 
+> **GitHub Parent Issue:** [#59](https://github.com/raphaellith/Manuscripta/issues/59)
+
 - Labels: `android`, `device-management`, `network-layer`
 
 **Description:**
-Implement UDP broadcast listener for automatic teacher server discovery on the local network. This allows student tablets to discover the teacher laptop without manual IP configuration.
+Implement UDP broadcast listener for automatic teacher server discovery on the local network. This allows student tablets to discover the teacher laptop without manual IP configuration. This is Phase 1 of the pairing process as specified in `Pairing Process.md` §2(1).
 
 **Related Requirements:** NET1 (LAN communication)
 
-**Protocol Reference (API Contract Section 1.1):**
+**Protocol Reference (API Contract Section 1.1 and Section 3.3):**
 - **Port:** 5913 (UDP_PORT)
-- **Discovery Message Format:**
-  ```json
-  {
-    "type": "DISCOVERY",
-    "teacherIp": "192.168.1.100",
-    "httpPort": 5911,
-    "tcpPort": 5912,
-    "sessionId": "session-uuid",
-    "timestamp": "2023-10-27T10:00:00Z"
-  }
+- **Opcode:** 0x00 (DISCOVERY)
+- **Binary Message Format (9 bytes total):**
+
+  | Field | Offset | Size | Description |
+  |-------|--------|------|-------------|
+  | Opcode | 0 | 1 byte | `0x00` = DISCOVERY |
+  | IP Address | 1 | 4 bytes | IPv4 address (network byte order, big-endian) |
+  | HTTP Port | 5 | 2 bytes | Unsigned, little-endian |
+  | TCP Port | 7 | 2 bytes | Unsigned, little-endian |
+
+- **Example:** For 192.168.1.100, HTTP 5911, TCP 5912:
+  ```
+  Byte 0:      0x00                         (DISCOVERY opcode)
+  Bytes 1-4:   0xC0 0xA8 0x01 0x64          (192.168.1.100)
+  Bytes 5-6:   0x17 0x17                    (5911 little-endian)
+  Bytes 7-8:   0x18 0x17                    (5912 little-endian)
   ```
 - Teacher broadcasts every 3 seconds
 
-**Tasks:**
-- Create `UdpDiscoveryManager.java` singleton/service class
-- Implement UDP broadcast listener on port 5913
-- Create `DiscoveryMessage.java` data class matching the JSON structure
-- Parse incoming discovery messages (JSON deserialization with Gson)
-- Validate discovery messages (check type, required fields)
-- Verify session identifier to connect to correct teacher session
-- Store discovered server info (teacherIp, httpPort, tcpPort, sessionId)
-- Provide observable discovery state for UI (LiveData: Searching/Found/Error)
-- Handle multiple discovery sources (if multiple teachers on network)
-- Implement timeout handling (no discovery after X seconds)
-- Handle network permission requirements
-- Write unit tests with mock UDP sockets
-
 **Acceptance Criteria:**
 - [ ] UdpDiscoveryManager created and listens on UDP port
-- [ ] Discovery message parsing functional
-- [ ] Session ID validation implemented
+- [ ] Binary message parsing functional (9-byte format)
+- [ ] Opcode validation (0x00)
+- [ ] IPv4 address parsing (big-endian)
+- [ ] Port parsing (little-endian, unsigned)
 - [ ] Server info stored and accessible
 - [ ] Observable discovery state for UI
 - [ ] Multiple teacher handling (show selection or use most recent)
@@ -1490,8 +1522,72 @@ Implement UDP broadcast listener for automatic teacher server discovery on the l
 **Technical Notes:**
 - Use `DatagramSocket` for UDP listening
 - Run listener on background thread (ExecutorService or Coroutine)
+- Use `ByteBuffer` with appropriate byte order for parsing
 - Consider Android 12+ restrictions on broadcasts
 - May need to request CHANGE_WIFI_MULTICAST_STATE permission for some devices
+
+**Dependencies:** None (this is the first step in pairing)
+
+---
+
+#### Sub-Issues Overview
+| # | Title | Status | Issue |
+|---|-------|--------|-------|
+| 59.1 | DiscoveryMessage Data Class and Binary Parser | Starter / Parallel | [#88](https://github.com/raphaellith/Manuscripta/issues/88) |
+| 59.2 | UdpDiscoveryManager Implementation | Depends on: #88 | [#89](https://github.com/raphaellith/Manuscripta/issues/89) |
+| 59.3 | Discovery State and Error Handling | Depends on: #89 | [#90](https://github.com/raphaellith/Manuscripta/issues/90) |
+
+---
+
+### 6.10 [Android] Implement Pairing Manager
+
+- Labels: `android`, `device-management`, `network-layer`
+
+**Description:**
+Implement a coordinator class that orchestrates the full pairing process as specified in `Pairing Process.md` §2. This manager coordinates UDP discovery, TCP pairing handshake, and HTTP device registration to establish a complete connection with the teacher's Windows application.
+
+**Related Requirements:** NET1 (LAN communication)
+
+**Pairing Process Reference (`Pairing Process.md` §2):**
+1. **Phase 1 - Discovery:** Listen for UDP broadcast from Windows device (issue 6.9)
+2. **Phase 2a - TCP Pairing:** Send PAIRING_REQUEST (0x20) via TCP, await PAIRING_ACK (0x21) (issue 6.8)
+3. **Phase 2b - HTTP Registration:** POST to `/pair` endpoint with deviceId, await 201 Created
+4. **Completion:** Both TCP and HTTP handshakes must succeed for pairing to be complete
+
+**Tasks:**
+- Create `PairingManager.java` singleton/service class
+- Generate and persist device ID (UUID) on first launch
+- Create `PairingState.java` enum: IDLE, DISCOVERING, TCP_PAIRING, HTTP_PAIRING, PAIRED, FAILED
+- Implement state machine for pairing process
+- **Orchestrate pairing phases:**
+  1. Receive discovery info from UdpDiscoveryManager (issue 6.9)
+  2. Initiate TCP connection and pairing handshake via TcpSocketManager (issue 6.8)
+  3. Initiate HTTP registration via ApiService POST /pair
+  4. Track completion of both channels
+- Provide observable pairing state for UI (LiveData/StateFlow)
+- Handle partial failures (one channel succeeds, other fails):
+  - Per `Pairing Process.md` §1(4): If any phase fails, restart entire process
+- Implement retry logic with user feedback
+- Store pairing status persistently (SharedPreferences)
+- Handle re-pairing scenarios (reconnection after disconnect)
+- Write comprehensive unit tests
+
+**Acceptance Criteria:**
+- [ ] PairingManager created with state machine
+- [ ] Device ID generated and persisted
+- [ ] UDP discovery integrated
+- [ ] TCP pairing handshake triggered and tracked
+- [ ] HTTP registration triggered and tracked
+- [ ] Both channels must succeed for PAIRED state
+- [ ] Partial failure handling (restart process)
+- [ ] Observable pairing state for UI
+- [ ] Pairing status persisted
+- [ ] Reconnection handling
+- [ ] 100% test coverage
+- [ ] Checkstyle compliant
+- [ ] Javadoc for all public methods
+
+**Dependencies:** Issue 6.8 (TCP Socket Layer), Issue 6.9 (UDP Discovery Layer), Issue 3.5 (ApiService - POST /pair endpoint)
 
 ---
 
@@ -1642,6 +1738,34 @@ Optimise app performance for e-ink display characteristics.
 - Implement partial screen updates where possible
 - Test on actual e-ink devices
 - Profile performance
+
+---
+
+### [Android/Windows] Align Clients with Session Lifecycle Specification
+
+- Labels: `android`, `windows`, `enhancement`
+
+**Background:**
+Session state transitions have been formally defined with 5 states: `RECEIVED`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`.
+
+**Android Client Tasks:**
+- [ ] Add `RECEIVED` value to `SessionStatus.java` enum
+- [ ] Update `SessionEntity` to make `StartTime` optional (null for RECEIVED)
+- [ ] Update session creation logic to use `RECEIVED` as initial state
+- [ ] Implement `RECEIVED` → `ACTIVE` transition on first interaction
+- [ ] Implement `PAUSED` state toggle (student-initiated)
+- [ ] Implement `ACTIVE/PAUSED` → `COMPLETED` on work submission
+- [ ] Make `StartTime` nullable in entity/domain models
+- [ ] Update mappers to handle new state
+
+**Windows Client Tasks:**
+- [ ] Update endpoint from `/session/{deviceId}` to `/distribution/{deviceId}`
+- [ ] Handle new `RECEIVED` state in device status display
+
+**Reference:**
+- `docs/Session Interaction.md` §5
+- `docs/Validation Rules.md` §2D
+- `docs/API Contract.md` §2.5
 
 ---
 

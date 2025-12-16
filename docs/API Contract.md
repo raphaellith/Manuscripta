@@ -2,12 +2,12 @@
 
 This document defines the communication protocols between the Teacher Application (Windows Server) and the Student Application (Android Client).
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Draft
 
 ## Overview
 
-This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers).
+This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers). This API contract conforms to Validation Rules.md for data model definitions and validation. See Validation Rules.md §1(5) for referencing requirements.
 
 ### Architecture of Communication Subsystem
 
@@ -25,7 +25,7 @@ Since the Windows server cannot push HTTP requests to Android clients, material 
 
 1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
 2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
-3. **If materials are available**, the server responds with a `FETCH_MATERIALS` (0x04) TCP message
+3. **If materials are available**, the server responds with a `DISTRIBUTE_MATERIAL` (0x05) TCP message
 4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
 5. **Android Client** downloads individual materials via `GET /materials/{id}`
 
@@ -60,28 +60,37 @@ The teacher laptop broadcasts its presence on the local network using UDP, allow
    - Teacher IP address
    - HTTP port
    - TCP port
-   - Session identifier
 
 2. **Student Discovery:** Student tablets listen for UDP broadcast messages on the same port. Upon receiving a broadcast, they:
    - Extract the teacher's IP address and port information
    - Initiate HTTP and TCP connections using the discovered information
-   - Complete the pairing handshake on both channels
+   - Complete the pairing handshake on both channels, as specified in `Pairing Process.md` §2
 
-**Broadcast Message Format:**
-```json
-{
-  "type": "DISCOVERY",
-  "teacherIp": "192.168.1.100",
-  "httpPort": 5911,
-  "tcpPort": 5912,
-  "sessionId": "session-uuid",
-  "timestamp": "2023-10-27T10:00:00Z"
-}
+**Broadcast Message Format (Binary):**
+
+UDP discovery messages use the same opcode-operand binary format as TCP messages for consistency and efficiency.
+
+| Field | Offset | Size | Description |
+|-------|--------|------|-------------|
+| Opcode | 0 | 1 byte | `0x00` = DISCOVERY |
+| IP Address | 1 | 4 bytes | IPv4 address (network byte order, big-endian) |
+| HTTP Port | 5 | 2 bytes | Unsigned, little-endian |
+| TCP Port | 7 | 2 bytes | Unsigned, little-endian |
+
+**Total message size:** 9 bytes
+
+**Example: Discovery Message for 192.168.1.100, HTTP 5911, TCP 5912**
+```
+Byte 0:      0x00                         (DISCOVERY opcode)
+Bytes 1-4:   0xC0 0xA8 0x01 0x64          (192.168.1.100)
+Bytes 5-6:   0x17 0x17                    (5911 little-endian)
+Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 ```
 
 **Notes:**
 - The teacher application should broadcast discovery messages at regular intervals (3 seconds).
-- Student tablets should verify the session identifier to ensure they're connecting to the correct teacher session.
+- IP address uses network byte order (big-endian) as per standard networking conventions.
+- Ports use little-endian to maintain consistency with TCP message operands.
 
 ---
 
@@ -89,49 +98,7 @@ The teacher laptop broadcasts its presence on the local network using UDP, allow
 
 ### 2.1. Lesson Materials (Server -> Client)
 
-The student tablet pulls lesson materials from the teacher server.
-
-#### Get All Materials
-Fetches a list of available materials for the current session.
-
--   **Endpoint:** `GET /materials`
--   **Response:** `200 OK`
-    ```json
-    [
-      {
-        "materials": ["uuid-string1", "uuid-string2", "uuid-string3"] // List of ids, in order of presentation
-      }
-    ]
-    ```
-
-#### Get Material Details
-Downloads the full content of a specific material.
-
--   **Endpoint:** `GET /materials/{id}`
--   **Response:** `200 OK`
-    ```json
-    {
-      "id": "uuid-string",
-      "MaterialType": "QUIZ",
-      "title": "Algebra Basics",
-      "content": "...", // HTML or Text content
-      "metadata": {// This is where we can put lesson - specific configurations (button toggles, characters, etc..)
-      },
-      "timestamp": "2023-10-27T10:00:00Z",
-      "vocabularyTerms": [
-        { "term": "Variable", "definition": "A symbol used to represent a number." }
-      ],
-      "questions": [
-        {
-          "id": "q-uuid-1",
-          "text": "What is x if x + 2 = 5?",
-          "type": "MULTIPLE_CHOICE",
-          "options": ["1", "2", "3", "4"],
-          "correctAnswer": "3"
-        }
-      ]
-    }
-    ```
+**DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
 
 ### 2.1.3. Attachments (Server -> Client)
 Downloads specific attachment files referenced within material content.
@@ -152,8 +119,8 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
-      "kioskMode": true, // Final configuration to be determined
-      "textSize": "medium"
+      "KioskMode": true, // Final configuration to be determined
+      "TextSize": "medium"
     }
     ```
 
@@ -161,19 +128,37 @@ Tablet configuration is an object associated with lesson materials but handled s
 
 Students submit their work to the teacher.
 
+### 2.4. Device Pairing (Client -> Server)
+
+Used during the pairing handshake to register a student device with the teacher server. See `Pairing Process.md` §2 for the full pairing sequence.
+
+#### Register Device
+-   **Endpoint:** `POST /pair`
+-   **Body:**
+    ```json
+    {
+      "DeviceId": "device-uuid-generated-by-client"
+    }
+    ```
+-   **Response:** `201 Created`
+    ```json
+    {} // Empty 201 to confirm successful pairing
+    ```
+-   **Error Response:** `409 Conflict` (if DeviceId is already paired)
+
 #### Submit Response
-Submits a single answer to a question.
+Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
 -   **Body:**
     ```json
     {
-      "id": "resp-uuid-generated-by-client",
-      "questionId": "q-uuid-1",
-      "materialId": "mat-uuid-1",
-      "deviceId": "device-uuid",
-      "answer": "3",
-      "timestamp": "2023-10-27T10:05:00Z"
+      "Id": "resp-uuid-generated-by-client",
+      "QuestionId": "q-uuid-1",
+      "MaterialId": "mat-uuid-1",
+      "StudentId": "device-id-or-student-uuid",
+      "Answer": "3",
+      "Timestamp": "2023-10-27T10:05:00Z"
     }
     ```
 -   **Response:** `201 Created`
@@ -188,57 +173,114 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
 -   **Body:**
     ```json
     {
-      "responses": [
+      "Responses": [
         // Array of response objects as above
       ]
     }
     ```
+-   **Response:** `201 Created`
+
+### 2.5. Material Distribution (Server -> Client via TCP trigger)
+
+Used to distribute materials to devices. See `Session Interaction.md` §3 for the full distribution process.
+
+**Note:** This endpoint returns a "distribution bundle" of materials and questions. The Android client creates a separate `SessionEntity` for each material received (see `Session Interaction.md` §5).
+
+#### Get Distribution Bundle
+Retrieves materials and questions assigned to a specific device.
+
+-   **Endpoint:** `GET /distribution/{deviceId}`
+-   **Response:** `200 OK`
+    ```json
+    {
+      "materials": [
+        // Array of MaterialEntity objects as defined in Validation Rules.md §2A
+      ],
+      "questions": [
+        // Array of QuestionEntity objects as defined in Validation Rules.md §2B
+      ]
+    }
+    ```
+-   **Error Response:** `404 Not Found` (if no materials available for deviceId)
 
 ---
 
-## 3. TCP Protocol (Real-time Control)
+## 3. Binary Protocol (TCP & UDP)
 
-Used for low-latency control signals that require immediate transmission. TCP messages use a **binary protocol** with opcode-based message structure.
+Both TCP and UDP use a unified **binary protocol** with opcode-based message structure for consistency and efficiency.
 
-### 3.1. TCP Message Structure
+### 3.1. Message Structure
 
-Each TCP message consists of:
-1. **Opcode** (1 byte, unsigned, little-endian): Identifies the message type
+Each binary message consists of:
+1. **Opcode** (1 byte, unsigned): Identifies the message type
 2. **Operand** (variable length, optional): Custom data associated with the message type
 
 The length and encoding/decoding of the operand depends on the specific opcode.
+
+### 3.2. Opcode Registry
+
+| Range | Purpose |
+|-------|---------|
+| `0x00` | UDP Discovery |
+| `0x01` - `0x0F` | Server → Client Control (TCP) |
+| `0x10` - `0x1F` | Client → Server Status (TCP) |
+| `0x20` - `0x2F` | Pairing (TCP) |
+
+### 3.3. UDP Messages
+
+#### Server Broadcast
+
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x00` | DISCOVERY | IP (4 bytes) + HTTP port (2 bytes) + TCP port (2 bytes) | Broadcasts server presence |
+
+See §1.1 for detailed format.
+
+### 3.4. TCP Control Messages (Server → Client)
 
 | Opcode | Name | Operand | Description |
 |--------|------|---------|-------------|
 | `0x01` | LOCK_SCREEN | None | Locks the student's screen |
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
-| `0x04` | FETCH_MATERIALS | None | Signals client to fetch materials via HTTP GET /materials |
+| `0x04` | UNPAIR | None | Unpairs the device |
+| `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
+| `0x06` | HAND_ACK | Device ID (UTF-8 string) | Acknowledges receipt of HAND_RAISED message |
 
-**Heartbeat Response Pattern:**
-When the server receives a `STATUS_UPDATE` (0x10) from a client, it checks if there are pending materials for that device. If so, it responds with `FETCH_MATERIALS` (0x04). The client then initiates an HTTP request to download materials. This pattern is necessary because the Windows server cannot initiate HTTP connections to clients.
+### 3.5. TCP Pairing Messages
 
-**Example: Fetch Materials Message**
-```
-Byte 0: 0x04 (FETCH_MATERIALS opcode)
-```
+Used during the pairing handshake to establish TCP connectivity. See `Pairing Process.md` §2 for the full pairing sequence.
 
-**Example: Lock Screen Message**
-```
-Byte 0: 0x01 (LOCK_SCREEN opcode)
-```
+#### Client → Server Pairing Request
 
-**Example: Unlock Screen Message**
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x20` | PAIRING_REQUEST | Device ID (UTF-8 string) | Client requests pairing with server |
+
+**Example: Pairing Request Message**
 ```
-Byte 0: 0x02 (UNLOCK_SCREEN opcode)
+Byte 0: 0x20 (PAIRING_REQUEST opcode)
+Bytes 1-N: "device-uuid" (UTF-8 encoded device ID)
 ```
 
-#### Client → Server Status Updates
+#### Server → Client Pairing Acknowledgement
+
+| Opcode | Name | Operand | Description |
+|--------|------|---------|-------------|
+| `0x21` | PAIRING_ACK | None | Server acknowledges successful TCP pairing |
+
+**Example: Pairing Acknowledgement Message**
+```
+Byte 0: 0x21 (PAIRING_ACK opcode)
+```
+
+### 3.6. TCP Status Messages (Client → Server)
 
 | Opcode | Name | Operand | Description |
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
+| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges receipt of DISTRIBUTE_MATERIAL signal |
 
 **Example: Status Update Message**
 ```
@@ -246,14 +288,15 @@ Byte 0: 0x10 (STATUS_UPDATE opcode)
 Bytes 1-N: JSON payload (see below)
 ```
 
-Status Update JSON payload:
+Status Update JSON payload must conform to the `DeviceStatusEntity` as defined in `Validation Rules.md` §2E:
 ```json
 {
-  "deviceId": "device-123",
-  "status": "ON_TASK",
-  "batteryLevel": 85,
-  "currentMaterialId": "mat-uuid-1",
-  "studentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
+  "DeviceId": "device-123",
+  "Status": "ON_TASK",
+  "BatteryLevel": 85,
+  "CurrentMaterialId": "mat-uuid-1",
+  "StudentView": "page-5",
+  "Timestamp": 1702147200
 }
 ```
 
@@ -263,7 +306,31 @@ Byte 0: 0x11 (HAND_RAISED opcode)
 Bytes 1-N: "device-123" (UTF-8 encoded device ID)
 ```
 
-### 3.3. Extensibility
+### 3.6.1. Acknowledgement Patterns
+
+This section documents explicit and implicit acknowledgement mechanisms for TCP messages.
+
+#### Explicit ACKs (Application-Level)
+
+| Request | ACK | Direction |
+|---------|-----|----------|
+| `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
+| `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
+| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
+
+#### Implicit ACKs
+
+The following messages rely on implicit acknowledgement through subsequent observable behaviour:
+
+| Message | Implicit ACK Mechanism |
+|---------|------------------------|
+| `STATUS_UPDATE (0x10)` | TCP-level acknowledgement; server detects disconnect after 10s silence (see `Session Interaction.md` §2) |
+| `LOCK_SCREEN (0x01)` | Next `STATUS_UPDATE` shows `Status: LOCKED` |
+| `UNLOCK_SCREEN (0x02)` | Next `STATUS_UPDATE` shows `Status: ON_TASK` or `IDLE` |
+| `REFRESH_CONFIG (0x03)` | Server observes subsequent `GET /config` HTTP request |
+| `UNPAIR (0x04)` | TCP connection terminates; no ACK possible |
+
+### 3.7. Extensibility
 
 Additional opcodes can be defined as needed. Both applications should:
 - Maintain a registry of opcode definitions
@@ -274,12 +341,15 @@ Additional opcodes can be defined as needed. Both applications should:
 
 ## 4. Data Models
 
+All data models in this contract must conform to Validation Rules.md. This document takes precedence in case of contradictions.
+
 ### 4.1. Entity Identification
 **CRITICAL:** Entity IDs (UUIDs) must be persistent and consistent across both Windows and Android applications.
 -   **Materials/Questions:** Created by Windows (Server), ID assigned by Server. Android (Client) **must preserve** this ID.
 -   **Responses/Sessions:** Created by Android (Client), ID assigned by Client. Windows (Server) **must preserve** this ID.
 
 ### 4.2. Material Types
+See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
 -   `QUIZ`: Interactive questions with immediate feedback.
 -   `WORKSHEET`: Content for reading and annotation.
@@ -291,5 +361,10 @@ Additional opcodes can be defined as needed. Both applications should:
 -   `HAND_RAISED`: Student explicitly requested help.
 -   `LOCKED`: Device is remotely locked.
 -   `DISCONNECTED`: (Server-side inferred status).
+
+### 4.4. Serialization Rules
+Timestamps are transmitted as ISO 8601 strings (e.g., '2023-10-27T10:00:00Z') but must deserialize to Unix longs per Validation Rules.md §2A(1)(d).
+IDs are transmitted as strings; validate as per Validation Rules.md §1(2).
+Enums (e.g., MaterialType) are transmitted as strings; must match Validation Rules.md values exactly.
 
 ---
