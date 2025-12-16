@@ -2,12 +2,12 @@
 
 This document defines the communication protocols between the Teacher Application (Windows Server) and the Student Application (Android Client).
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Draft
 
 ## Overview
 
-This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers).
+This API contract conforms to requirements **NET1** (distributing material content to 30+ student tablets through LAN) and **NET2** (receiving student responses such as poll and quiz answers). This API contract conforms to Validation Rules.md for data model definitions and validation. See Validation Rules.md §1(5) for referencing requirements.
 
 ### Architecture of Communication Subsystem
 
@@ -98,49 +98,7 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ### 2.1. Lesson Materials (Server -> Client)
 
-The student tablet pulls lesson materials from the teacher server.
-
-#### Get All Materials
-Fetches a list of available materials for the current session.
-
--   **Endpoint:** `GET /materials`
--   **Response:** `200 OK`
-    ```json
-    [
-      {
-        "materials": ["uuid-string1", "uuid-string2", "uuid-string3"] // List of ids, in order of presentation
-      }
-    ]
-    ```
-
-#### Get Material Details
-Downloads the full content of a specific material.
-
--   **Endpoint:** `GET /materials/{id}`
--   **Response:** `200 OK`
-    ```json
-    {
-      "id": "uuid-string",
-      "MaterialType": "QUIZ",
-      "title": "Algebra Basics",
-      "content": "...", // HTML or Text content
-      "metadata": {// This is where we can put lesson - specific configurations (button toggles, characters, etc..)
-      },
-      "timestamp": "2023-10-27T10:00:00Z",
-      "vocabularyTerms": [
-        { "term": "Variable", "definition": "A symbol used to represent a number." }
-      ],
-      "questions": [
-        {
-          "id": "q-uuid-1",
-          "text": "What is x if x + 2 = 5?",
-          "type": "MULTIPLE_CHOICE",
-          "options": ["1", "2", "3", "4"],
-          "correctAnswer": "3"
-        }
-      ]
-    }
-    ```
+**DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
 
 ### 2.1.3. Attachments (Server -> Client)
 Downloads specific attachment files referenced within material content.
@@ -161,8 +119,8 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
-      "kioskMode": true, // Final configuration to be determined
-      "textSize": "medium"
+      "KioskMode": true, // Final configuration to be determined
+      "TextSize": "medium"
     }
     ```
 
@@ -179,28 +137,28 @@ Used during the pairing handshake to register a student device with the teacher 
 -   **Body:**
     ```json
     {
-      "deviceId": "device-uuid-generated-by-client"
+      "DeviceId": "device-uuid-generated-by-client"
     }
     ```
 -   **Response:** `201 Created`
     ```json
     {} // Empty 201 to confirm successful pairing
     ```
--   **Error Response:** `409 Conflict` (if deviceId is already paired)
+-   **Error Response:** `409 Conflict` (if DeviceId is already paired)
 
 #### Submit Response
-Submits a single answer to a question.
+Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
 -   **Body:**
     ```json
     {
-      "id": "resp-uuid-generated-by-client",
-      "questionId": "q-uuid-1",
-      "materialId": "mat-uuid-1",
-      "deviceId": "device-uuid",
-      "answer": "3",
-      "timestamp": "2023-10-27T10:05:00Z"
+      "Id": "resp-uuid-generated-by-client",
+      "QuestionId": "q-uuid-1",
+      "MaterialId": "mat-uuid-1",
+      "StudentId": "device-id-or-student-uuid",
+      "Answer": "3",
+      "Timestamp": "2023-10-27T10:05:00Z"
     }
     ```
 -   **Response:** `201 Created`
@@ -215,11 +173,35 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
 -   **Body:**
     ```json
     {
-      "responses": [
+      "Responses": [
         // Array of response objects as above
       ]
     }
     ```
+-   **Response:** `201 Created`
+
+### 2.5. Material Distribution (Server -> Client via TCP trigger)
+
+Used to distribute materials to devices. See `Session Interaction.md` §3 for the full distribution process.
+
+**Note:** This endpoint returns a "distribution bundle" of materials and questions. The Android client creates a separate `SessionEntity` for each material received (see `Session Interaction.md` §5).
+
+#### Get Distribution Bundle
+Retrieves materials and questions assigned to a specific device.
+
+-   **Endpoint:** `GET /distribution/{deviceId}`
+-   **Response:** `200 OK`
+    ```json
+    {
+      "materials": [
+        // Array of MaterialEntity objects as defined in Validation Rules.md §2A
+      ],
+      "questions": [
+        // Array of QuestionEntity objects as defined in Validation Rules.md §2B
+      ]
+    }
+    ```
+-   **Error Response:** `404 Not Found` (if no materials available for deviceId)
 
 ---
 
@@ -261,15 +243,8 @@ See §1.1 for detailed format.
 | `0x01` | LOCK_SCREEN | None | Locks the student's screen |
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
-| `0x04` | FETCH_MATERIALS | None | Signals client to fetch materials via HTTP GET /materials |
-
-**Heartbeat Response Pattern:**
-When the server receives a `STATUS_UPDATE` (0x10) from a client, it checks if there are pending materials for that device. If so, it responds with `FETCH_MATERIALS` (0x04). The client then initiates an HTTP request to download materials. This pattern is necessary because the Windows server cannot initiate HTTP connections to clients.
-
-**Example: Fetch Materials Message**
-```
-Byte 0: 0x04 (FETCH_MATERIALS opcode)
-```
+| `0x04` | UNPAIR | None | Unpairs the device |
+| `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
 
 ### 3.5. TCP Pairing Messages
 
@@ -311,14 +286,15 @@ Byte 0: 0x10 (STATUS_UPDATE opcode)
 Bytes 1-N: JSON payload (see below)
 ```
 
-Status Update JSON payload:
+Status Update JSON payload must conform to the `DeviceStatusEntity` as defined in `Validation Rules.md` §2E:
 ```json
 {
-  "deviceId": "device-123",
-  "status": "ON_TASK",
-  "batteryLevel": 85,
-  "currentMaterialId": "mat-uuid-1",
-  "studentView": "StudentView" // Placeholder for a system that allows the teacher to pull up a student's view
+  "DeviceId": "device-123",
+  "Status": "ON_TASK",
+  "BatteryLevel": 85,
+  "CurrentMaterialId": "mat-uuid-1",
+  "StudentView": "page-5",
+  "Timestamp": 1702147200
 }
 ```
 
@@ -339,12 +315,15 @@ Additional opcodes can be defined as needed. Both applications should:
 
 ## 4. Data Models
 
+All data models in this contract must conform to Validation Rules.md. This document takes precedence in case of contradictions.
+
 ### 4.1. Entity Identification
 **CRITICAL:** Entity IDs (UUIDs) must be persistent and consistent across both Windows and Android applications.
 -   **Materials/Questions:** Created by Windows (Server), ID assigned by Server. Android (Client) **must preserve** this ID.
 -   **Responses/Sessions:** Created by Android (Client), ID assigned by Client. Windows (Server) **must preserve** this ID.
 
 ### 4.2. Material Types
+See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
 -   `QUIZ`: Interactive questions with immediate feedback.
 -   `WORKSHEET`: Content for reading and annotation.
@@ -356,5 +335,10 @@ Additional opcodes can be defined as needed. Both applications should:
 -   `HAND_RAISED`: Student explicitly requested help.
 -   `LOCKED`: Device is remotely locked.
 -   `DISCONNECTED`: (Server-side inferred status).
+
+### 4.4. Serialization Rules
+Timestamps are transmitted as ISO 8601 strings (e.g., '2023-10-27T10:00:00Z') but must deserialize to Unix longs per Validation Rules.md §2A(1)(d).
+IDs are transmitted as strings; validate as per Validation Rules.md §1(2).
+Enums (e.g., MaterialType) are transmitted as strings; must match Validation Rules.md values exactly.
 
 ---
