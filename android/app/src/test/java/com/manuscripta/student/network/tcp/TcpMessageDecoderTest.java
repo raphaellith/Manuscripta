@@ -5,6 +5,18 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.HandAckMessage;
+import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
+import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
+import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,13 +67,23 @@ public class TcpMessageDecoderTest {
     }
 
     @Test
-    public void decode_fetchMaterialsOpcode_returnsFetchMaterialsMessage() throws TcpProtocolException {
+    public void decode_distributeMaterialOpcode_returnsDistributeMaterialMessage() throws TcpProtocolException {
+        byte[] data = {(byte) 0x05};
+
+        TcpMessage result = decoder.decode(data);
+
+        assertTrue(result instanceof DistributeMaterialMessage);
+        assertEquals(TcpOpcode.DISTRIBUTE_MATERIAL, result.getOpcode());
+    }
+
+    @Test
+    public void decode_unpairOpcode_returnsUnpairMessage() throws TcpProtocolException {
         byte[] data = {(byte) 0x04};
 
         TcpMessage result = decoder.decode(data);
 
-        assertTrue(result instanceof FetchMaterialsMessage);
-        assertEquals(TcpOpcode.FETCH_MATERIALS, result.getOpcode());
+        assertTrue(result instanceof UnpairMessage);
+        assertEquals(TcpOpcode.UNPAIR, result.getOpcode());
     }
 
     @Test
@@ -119,6 +141,36 @@ public class TcpMessageDecoderTest {
         assertTrue(result instanceof PairingRequestMessage);
         assertEquals(TcpOpcode.PAIRING_REQUEST, result.getOpcode());
         assertEquals(deviceId, ((PairingRequestMessage) result).getDeviceId());
+    }
+
+    @Test
+    public void decode_handAckOpcode_returnsHandAckMessage() throws TcpProtocolException {
+        String deviceId = "device-ack-456";
+        byte[] idBytes = deviceId.getBytes(StandardCharsets.UTF_8);
+        byte[] data = new byte[1 + idBytes.length];
+        data[0] = (byte) 0x06;
+        System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+
+        TcpMessage result = decoder.decode(data);
+
+        assertTrue(result instanceof HandAckMessage);
+        assertEquals(TcpOpcode.HAND_ACK, result.getOpcode());
+        assertEquals(deviceId, ((HandAckMessage) result).getDeviceId());
+    }
+
+    @Test
+    public void decode_distributeAckOpcode_returnsDistributeAckMessage() throws TcpProtocolException {
+        String deviceId = "device-dist-789";
+        byte[] idBytes = deviceId.getBytes(StandardCharsets.UTF_8);
+        byte[] data = new byte[1 + idBytes.length];
+        data[0] = (byte) 0x12;
+        System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+
+        TcpMessage result = decoder.decode(data);
+
+        assertTrue(result instanceof DistributeAckMessage);
+        assertEquals(TcpOpcode.DISTRIBUTE_ACK, result.getOpcode());
+        assertEquals(deviceId, ((DistributeAckMessage) result).getDeviceId());
     }
 
     // ========== Unicode and special character tests ==========
@@ -236,6 +288,26 @@ public class TcpMessageDecoderTest {
         }
     }
 
+    @Test
+    public void decode_handAckWithoutPayload_throwsTcpProtocolException() {
+        try {
+            decoder.decode(new byte[]{(byte) 0x06});
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_distributeAckWithoutPayload_throwsTcpProtocolException() {
+        try {
+            decoder.decode(new byte[]{(byte) 0x12});
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
     // ========== Constructor test ==========
 
     @Test
@@ -252,7 +324,8 @@ public class TcpMessageDecoderTest {
         assertTrue(decoder.decode(new byte[]{0x01}) instanceof LockScreenMessage);
         assertTrue(decoder.decode(new byte[]{0x02}) instanceof UnlockScreenMessage);
         assertTrue(decoder.decode(new byte[]{0x03}) instanceof RefreshConfigMessage);
-        assertTrue(decoder.decode(new byte[]{0x04}) instanceof FetchMaterialsMessage);
+        assertTrue(decoder.decode(new byte[]{0x04}) instanceof UnpairMessage);
+        assertTrue(decoder.decode(new byte[]{0x05}) instanceof DistributeMaterialMessage);
         assertTrue(decoder.decode(new byte[]{0x21}) instanceof PairingAckMessage);
 
         // Messages with operand
@@ -261,6 +334,12 @@ public class TcpMessageDecoderTest {
 
         byte[] handBytes = new byte[]{0x11, 'i', 'd'};
         assertTrue(decoder.decode(handBytes) instanceof HandRaisedMessage);
+
+        byte[] handAckBytes = new byte[]{0x06, 'i', 'd'};
+        assertTrue(decoder.decode(handAckBytes) instanceof HandAckMessage);
+
+        byte[] distAckBytes = new byte[]{0x12, 'i', 'd'};
+        assertTrue(decoder.decode(distAckBytes) instanceof DistributeAckMessage);
 
         byte[] pairBytes = new byte[]{0x20, 'i', 'd'};
         assertTrue(decoder.decode(pairBytes) instanceof PairingRequestMessage);

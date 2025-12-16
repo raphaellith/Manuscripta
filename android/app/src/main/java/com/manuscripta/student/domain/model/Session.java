@@ -38,11 +38,12 @@ public class Session {
 
     /**
      * Factory method for creating a NEW session.
-     * Generates a random UUID, captures the current timestamp, and sets default values.
+     * Generates a random UUID and sets the session to RECEIVED state.
+     * StartTime is set to 0 (not yet started) until first interaction.
      *
      * @param materialId UUID of the parent material
      * @param deviceId   Identifier of the device running the session
-     * @return A new Session instance with generated ID and default values
+     * @return A new Session instance with generated ID in RECEIVED state
      * @throws IllegalArgumentException if materialId is null or empty
      * @throws IllegalArgumentException if deviceId is null or empty
      */
@@ -57,9 +58,9 @@ public class Session {
         return new Session(
                 UUID.randomUUID().toString(),
                 materialId,
-                System.currentTimeMillis(),
                 0,
-                SessionStatus.ACTIVE,
+                0,
+                SessionStatus.RECEIVED,
                 deviceId
         );
     }

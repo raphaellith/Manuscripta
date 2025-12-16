@@ -1,20 +1,23 @@
-package com.manuscripta.student.network.tcp;
+package com.manuscripta.student.network.tcp.message;
 
 import androidx.annotation.NonNull;
+
+import com.manuscripta.student.network.tcp.TcpMessage;
+import com.manuscripta.student.network.tcp.TcpOpcode;
 
 import java.nio.charset.StandardCharsets;
 
 /**
- * TCP message indicating the student has raised their hand.
- * Sent from client to server with opcode 0x11.
+ * TCP message acknowledging the server received a hand raised notification.
+ * Sent from server to client with opcode 0x06.
  *
  * <p>The operand is the device ID as a UTF-8 encoded string,
- * allowing the server to identify which student raised their hand.
+ * confirming which device's hand raise was acknowledged.
  */
-public final class HandRaisedMessage extends TcpMessage {
+public final class HandAckMessage extends TcpMessage {
 
     /**
-     * The device ID of the student raising their hand.
+     * The device ID of the student whose hand raise was acknowledged.
      */
     private final String deviceId;
 
@@ -24,12 +27,12 @@ public final class HandRaisedMessage extends TcpMessage {
     private final byte[] operand;
 
     /**
-     * Creates a new HandRaisedMessage with the specified device ID.
+     * Creates a new HandAckMessage with the specified device ID.
      *
      * @param deviceId The device ID of the student.
      */
-    public HandRaisedMessage(@NonNull String deviceId) {
-        super(TcpOpcode.HAND_RAISED);
+    public HandAckMessage(@NonNull String deviceId) {
+        super(TcpOpcode.HAND_ACK);
         this.deviceId = deviceId;
         this.operand = deviceId.getBytes(StandardCharsets.UTF_8);
     }
@@ -63,6 +66,6 @@ public final class HandRaisedMessage extends TcpMessage {
     @NonNull
     @Override
     public String toString() {
-        return "HandRaisedMessage{deviceId=" + deviceId + "}";
+        return "HandAckMessage{deviceId=" + deviceId + "}";
     }
 }
