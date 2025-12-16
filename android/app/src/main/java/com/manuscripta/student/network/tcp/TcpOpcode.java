@@ -28,10 +28,23 @@ public enum TcpOpcode {
     REFRESH_CONFIG((byte) 0x03),
 
     /**
-     * Fetch materials command from server to client.
+     * Unpair command from server to client.
+     * Instructs the student device to disconnect and clear pairing state.
+     */
+    UNPAIR((byte) 0x04),
+
+    /**
+     * Distribute material command from server to client.
      * Instructs the student device to fetch new materials via HTTP.
      */
-    FETCH_MATERIALS((byte) 0x04),
+    DISTRIBUTE_MATERIAL((byte) 0x05),
+
+    /**
+     * Hand acknowledgement from server to client.
+     * Confirms the server received the hand raised notification.
+     * Operand: Device ID (UTF-8).
+     */
+    HAND_ACK((byte) 0x06),
 
     /**
      * Status update message from client to server.
@@ -44,6 +57,13 @@ public enum TcpOpcode {
      * Indicates the student has raised their hand.
      */
     HAND_RAISED((byte) 0x11),
+
+    /**
+     * Distribute acknowledgement from client to server.
+     * Confirms the client received the distributed materials.
+     * Operand: Device ID (UTF-8).
+     */
+    DISTRIBUTE_ACK((byte) 0x12),
 
     /**
      * Pairing request from client to server.
@@ -105,7 +125,9 @@ public enum TcpOpcode {
         return this == LOCK_SCREEN
                 || this == UNLOCK_SCREEN
                 || this == REFRESH_CONFIG
-                || this == FETCH_MATERIALS
+                || this == UNPAIR
+                || this == DISTRIBUTE_MATERIAL
+                || this == HAND_ACK
                 || this == PAIRING_ACK;
     }
 
@@ -117,6 +139,7 @@ public enum TcpOpcode {
     public boolean isClientToServer() {
         return this == STATUS_UPDATE
                 || this == HAND_RAISED
+                || this == DISTRIBUTE_ACK
                 || this == PAIRING_REQUEST;
     }
 
