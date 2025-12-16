@@ -86,30 +86,19 @@ public final class TcpMessageDecoder {
     @NonNull
     private TcpMessage createMessage(@NonNull TcpOpcode opcode, @NonNull byte[] operand)
             throws TcpProtocolException {
-        switch (opcode) {
-            case LOCK_SCREEN:
-                return new LockScreenMessage();
-            case UNLOCK_SCREEN:
-                return new UnlockScreenMessage();
-            case REFRESH_CONFIG:
-                return new RefreshConfigMessage();
-            case UNPAIR:
-                return new UnpairMessage();
-            case DISTRIBUTE_MATERIAL:
-                return new DistributeMaterialMessage();
-            case HAND_ACK:
-                return createHandAckMessage(operand);
-            case PAIRING_ACK:
-                return new PairingAckMessage();
-            case STATUS_UPDATE:
-                return createStatusUpdateMessage(operand);
-            case HAND_RAISED:
-                return createHandRaisedMessage(operand);
-            case DISTRIBUTE_ACK:
-                return createDistributeAckMessage(operand);
-            case PAIRING_REQUEST:
-                return createPairingRequestMessage(operand);
-        }
+        return switch (opcode) {
+            case LOCK_SCREEN -> new LockScreenMessage();
+            case UNLOCK_SCREEN -> new UnlockScreenMessage();
+            case REFRESH_CONFIG -> new RefreshConfigMessage();
+            case UNPAIR -> new UnpairMessage();
+            case DISTRIBUTE_MATERIAL -> new DistributeMaterialMessage();
+            case HAND_ACK -> createHandAckMessage(operand);
+            case PAIRING_ACK -> new PairingAckMessage();
+            case STATUS_UPDATE -> createStatusUpdateMessage(operand);
+            case HAND_RAISED -> createHandRaisedMessage(operand);
+            case DISTRIBUTE_ACK -> createDistributeAckMessage(operand);
+            case PAIRING_REQUEST -> createPairingRequestMessage(operand);
+        };
     }
 
     /**
