@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -77,7 +78,7 @@ public class TcpSocketManager {
     /** The port number for the current connection. */
     private int currentPort;
     /** The current delay for reconnection attempts. */
-    private long currentReconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+    private final AtomicLong currentReconnectDelay = new AtomicLong(INITIAL_RECONNECT_DELAY_MS);
 
     /** The listener for receiving messages and errors. */
     @Nullable
@@ -151,7 +152,7 @@ public class TcpSocketManager {
             this.currentHost = host;
             this.currentPort = port;
             this.shouldReconnect.set(true);
-            this.currentReconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+            this.currentReconnectDelay.set(INITIAL_RECONNECT_DELAY_MS);
         }
 
         connectionState.postValue(ConnectionState.CONNECTING);
@@ -174,7 +175,7 @@ public class TcpSocketManager {
                     inputStream = new BufferedInputStream(socket.getInputStream());
                 }
 
-                currentReconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+                currentReconnectDelay.set(INITIAL_RECONNECT_DELAY_MS);
                 connectionState.postValue(ConnectionState.CONNECTED);
                 startReaderThread();
 
@@ -225,16 +226,15 @@ public class TcpSocketManager {
         ExecutorService reconnectExecutor = Executors.newSingleThreadExecutor();
         reconnectExecutor.execute(() -> {
             try {
-                Thread.sleep(currentReconnectDelay);
+                Thread.sleep(currentReconnectDelay.get());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
             }
 
             if (shouldReconnect.get() && currentHost != null) {
-                currentReconnectDelay = Math.min(
-                        currentReconnectDelay * BACKOFF_MULTIPLIER,
-                        MAX_RECONNECT_DELAY_MS
+                currentReconnectDelay.updateAndGet(delay ->
+                        Math.min(delay * BACKOFF_MULTIPLIER, MAX_RECONNECT_DELAY_MS)
                 );
                 connectionState.postValue(ConnectionState.CONNECTING);
                 doConnect(currentHost, currentPort);
@@ -409,7 +409,7 @@ public class TcpSocketManager {
      */
     @VisibleForTesting
     long getCurrentReconnectDelay() {
-        return currentReconnectDelay;
+        return currentReconnectDelay.get();
     }
 
     /**
@@ -419,7 +419,7 @@ public class TcpSocketManager {
      */
     @VisibleForTesting
     void setCurrentReconnectDelay(long delay) {
-        this.currentReconnectDelay = delay;
+        this.currentReconnectDelay.set(delay);
     }
 
     /**
