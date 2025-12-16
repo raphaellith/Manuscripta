@@ -125,8 +125,7 @@ public class FileStorageManager {
                 return null;
             }
 
-            File[] files = materialDir.listFiles((dir, name) ->
-                    name.startsWith(attachmentId + "."));
+            File[] files = listFilesWithFilter(materialDir, attachmentId);
 
             if (files != null && files.length > 0) {
                 return files[0];
@@ -135,6 +134,19 @@ public class FileStorageManager {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    /**
+     * Lists files in a directory that match the attachment ID prefix.
+     * This method is protected to allow testing of failure scenarios.
+     *
+     * @param directory    The directory to list files from
+     * @param attachmentId The attachment ID to filter by
+     * @return The array of matching files, or null if an I/O error occurs
+     */
+    @Nullable
+    protected File[] listFilesWithFilter(@NonNull File directory, @NonNull String attachmentId) {
+        return directory.listFiles((dir, name) -> name.startsWith(attachmentId + "."));
     }
 
     /**
@@ -247,7 +259,6 @@ public class FileStorageManager {
     protected boolean writeToFile(@NonNull File file, @NonNull byte[] bytes) {
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(bytes);
-            fos.flush();
             return true;
         } catch (IOException e) {
             return false;
@@ -265,38 +276,57 @@ public class FileStorageManager {
     }
 
     /**
-     * Validates that the material ID is not null or empty.
+     * Validates that the material ID is not null or empty and does not contain path traversal.
      *
      * @param materialId The material ID to validate
-     * @throws IllegalArgumentException if materialId is null or empty
+     * @throws IllegalArgumentException if materialId is null, empty, or contains path traversal
      */
-    private void validateMaterialId(@Nullable String materialId) {
+    private void validateMaterialId(@NonNull String materialId) {
         if (materialId == null || materialId.trim().isEmpty()) {
             throw new IllegalArgumentException("Material ID cannot be null or empty");
         }
+        if (containsPathTraversalCharacters(materialId)) {
+            throw new IllegalArgumentException("Material ID contains invalid path characters");
+        }
     }
 
     /**
-     * Validates that the attachment ID is not null or empty.
+     * Validates that the attachment ID is not null or empty and does not contain path traversal.
      *
      * @param attachmentId The attachment ID to validate
-     * @throws IllegalArgumentException if attachmentId is null or empty
+     * @throws IllegalArgumentException if attachmentId is null, empty, or contains path traversal
      */
-    private void validateAttachmentId(@Nullable String attachmentId) {
+    private void validateAttachmentId(@NonNull String attachmentId) {
         if (attachmentId == null || attachmentId.trim().isEmpty()) {
             throw new IllegalArgumentException("Attachment ID cannot be null or empty");
         }
+        if (containsPathTraversalCharacters(attachmentId)) {
+            throw new IllegalArgumentException("Attachment ID contains invalid path characters");
+        }
     }
 
     /**
-     * Validates that the extension is not null or empty.
+     * Validates that the extension is not null or empty and does not contain path traversal.
      *
      * @param extension The extension to validate
-     * @throws IllegalArgumentException if extension is null or empty
+     * @throws IllegalArgumentException if extension is null, empty, or contains path traversal
      */
-    private void validateExtension(@Nullable String extension) {
+    private void validateExtension(@NonNull String extension) {
         if (extension == null || extension.trim().isEmpty()) {
             throw new IllegalArgumentException("Extension cannot be null or empty");
         }
+        if (containsPathTraversalCharacters(extension)) {
+            throw new IllegalArgumentException("Extension contains invalid path characters");
+        }
+    }
+
+    /**
+     * Checks if the input string contains path traversal characters.
+     *
+     * @param input The string to check
+     * @return true if the string contains path traversal characters, false otherwise
+     */
+    private boolean containsPathTraversalCharacters(@NonNull String input) {
+        return input.contains("..") || input.contains("/") || input.contains("\\");
     }
 }

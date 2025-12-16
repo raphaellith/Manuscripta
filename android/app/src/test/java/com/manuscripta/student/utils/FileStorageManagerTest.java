@@ -366,6 +366,186 @@ public class FileStorageManagerTest {
         assertEquals("Attachment ID cannot be null or empty", exception.getMessage());
     }
 
+    @Test
+    public void testGetAttachmentFile_prefixCollision_returnsExactMatch() {
+        storageManager.saveAttachment("material-prefix", "attach-1", "pdf", "content1".getBytes());
+        storageManager.saveAttachment("material-prefix", "attach-10", "pdf", "content10".getBytes());
+
+        File file1 = storageManager.getAttachmentFile("material-prefix", "attach-1");
+        File file10 = storageManager.getAttachmentFile("material-prefix", "attach-10");
+
+        assertNotNull(file1);
+        assertNotNull(file10);
+        assertEquals("attach-1.pdf", file1.getName());
+        assertEquals("attach-10.pdf", file10.getName());
+    }
+
+    @Test
+    public void testGetAttachmentFile_materialPathIsFile_returnsNull() throws IOException {
+        // Create a file (not a directory) where the material directory would be
+        File attachmentsDir = storageManager.getAttachmentsRootDirectory();
+        attachmentsDir.mkdirs();
+        File materialAsFile = new File(attachmentsDir, "material-as-file");
+        assertTrue("Failed to create test file", materialAsFile.createNewFile());
+
+        // Try to get an attachment from this "material" - should return null
+        // because it's a file, not a directory
+        File retrieved = storageManager.getAttachmentFile("material-as-file", "attach");
+        assertNull(retrieved);
+
+        // Clean up
+        materialAsFile.delete();
+    }
+
+    @Test
+    public void testGetAttachmentFile_emptyDirectory_returnsNull() throws IOException {
+        // Create a material directory with no files
+        File attachmentsDir = storageManager.getAttachmentsRootDirectory();
+        File materialDir = new File(attachmentsDir, "empty-material");
+        assertTrue("Failed to create empty material directory", materialDir.mkdirs());
+
+        // Try to get an attachment that doesn't exist (directory exists but is empty)
+        File retrieved = storageManager.getAttachmentFile("empty-material", "non-existent-attach");
+        assertNull(retrieved);
+
+        // Clean up
+        materialDir.delete();
+    }
+
+    @Test
+    public void testDeleteDirectoryRecursively_listFilesReturnsNull() {
+        // Create a manager that simulates listFiles() returning null
+        // by using a mock file that returns null from listFiles
+        FileStorageManager mockManager = new FileStorageManager(baseDirectory) {
+            @Override
+            public boolean clearAllAttachments() {
+                // Directly call the parent's deleteDirectoryRecursively via deleteAttachmentsForMaterial
+                // with a mocked scenario where listFiles returns null
+                return true;
+            }
+        };
+
+        // We need to test the actual deleteDirectoryRecursively with listFiles returning null
+        // This happens when the File object cannot be listed (e.g., not a directory or I/O error)
+        // We can simulate this by passing a file path that doesn't exist but trying to delete it
+        
+        // Create a scenario where we call deleteAttachmentsForMaterial on a path
+        // where the "directory" is actually a file
+        File attachmentsDir = storageManager.getAttachmentsRootDirectory();
+        attachmentsDir.mkdirs();
+        File materialAsFile = new File(attachmentsDir, "file-not-dir");
+        try {
+            materialAsFile.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // This will call deleteDirectoryRecursively on a file, where listFiles() returns null
+        boolean result = storageManager.deleteAttachmentsForMaterial("file-not-dir");
+        
+        // The method should still return true because it handles null files array
+        // and proceeds to delete the "directory" (which is actually a file)
+        assertTrue(result);
+        assertFalse(materialAsFile.exists());
+    }
+
+    @Test
+    public void testGetAttachmentFile_listFilesReturnsNull_returnsNull() throws IOException {
+        // Create a manager that simulates listFilesWithFilter() returning null
+        FileStorageManager failingManager = new FileStorageManager(baseDirectory) {
+            @Override
+            protected File[] listFilesWithFilter(File directory, String attachmentId) {
+                return null;
+            }
+        };
+
+        // First create a valid directory structure
+        File savedFile = failingManager.saveAttachment("material-null-list", "attach", "txt", "content".getBytes());
+        assertNotNull(savedFile);
+        assertTrue(savedFile.exists());
+
+        // Now try to get the file - should return null because listFilesWithFilter returns null
+        File retrieved = failingManager.getAttachmentFile("material-null-list", "attach");
+        assertNull(retrieved);
+
+        // Clean up
+        failingManager.clearAllAttachments();
+    }
+
+    // ==================== Path Traversal Validation Tests ====================
+
+    @Test
+    public void testSaveAttachment_pathTraversalInMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.saveAttachment("../../../etc", "attach", "txt", "content".getBytes())
+        );
+        assertEquals("Material ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveAttachment_forwardSlashInMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.saveAttachment("path/to/file", "attach", "txt", "content".getBytes())
+        );
+        assertEquals("Material ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveAttachment_backslashInMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.saveAttachment("path\\to\\file", "attach", "txt", "content".getBytes())
+        );
+        assertEquals("Material ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveAttachment_pathTraversalInAttachmentId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.saveAttachment("material", "../secret", "txt", "content".getBytes())
+        );
+        assertEquals("Attachment ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveAttachment_pathTraversalInExtension_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.saveAttachment("material", "attach", "../txt", "content".getBytes())
+        );
+        assertEquals("Extension contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testGetAttachmentFile_pathTraversalInMaterialId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.getAttachmentFile("../../../etc", "attach")
+        );
+        assertEquals("Material ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testGetAttachmentFile_pathTraversalInAttachmentId_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.getAttachmentFile("material", "../secret")
+        );
+        assertEquals("Attachment ID contains invalid path characters", exception.getMessage());
+    }
+
+    @Test
+    public void testDeleteAttachmentsForMaterial_pathTraversal_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> storageManager.deleteAttachmentsForMaterial("../../../etc")
+        );
+        assertEquals("Material ID contains invalid path characters", exception.getMessage());
+    }
+
     // ==================== deleteAttachmentsForMaterial Tests ====================
 
     @Test
@@ -680,9 +860,9 @@ public class FileStorageManagerTest {
         subDir.mkdirs();
         File subFile = new File(subDir, "nested-file.txt");
         try {
-            subFile.createNewFile();
+            assertTrue("Failed to create nested file for test setup", subFile.createNewFile());
         } catch (IOException e) {
-            // Ignore for test setup
+            throw new RuntimeException("Failed to create nested file for test setup", e);
         }
 
         // Create a manager that fails to delete only the subdir (after its files are "deleted")
@@ -755,7 +935,7 @@ public class FileStorageManagerTest {
     public void testDeleteFile_success_returnsTrue() throws IOException {
         File tempFile = new File(storageManager.getAttachmentsRootDirectory(), "test-delete.txt");
         storageManager.getAttachmentsRootDirectory().mkdirs();
-        tempFile.createNewFile();
+        assertTrue("Failed to create temp file for deletion test", tempFile.createNewFile());
         assertTrue(tempFile.exists());
 
         boolean result = storageManager.deleteFile(tempFile);
@@ -769,7 +949,15 @@ public class FileStorageManagerTest {
     private byte[] readFileContent(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] content = new byte[(int) file.length()];
-            fis.read(content);
+            int offset = 0;
+            int bytesRead;
+            while (offset < content.length
+                    && (bytesRead = fis.read(content, offset, content.length - offset)) != -1) {
+                offset += bytesRead;
+            }
+            if (offset < content.length) {
+                throw new IOException("Could not completely read file " + file.getName());
+            }
             return content;
         }
     }
