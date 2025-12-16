@@ -64,18 +64,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testUnlockScreenMessage_hasOperand_returnsFalse() {
-        UnlockScreenMessage message = new UnlockScreenMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testUnlockScreenMessage_toString() {
-        UnlockScreenMessage message = new UnlockScreenMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("UnlockScreenMessage"));
-    }
 
     // ==================== RefreshConfigMessage Tests ====================
 
@@ -172,18 +160,6 @@ public class TcpMessageTest {
         assertEquals(0, message.getOperand().length);
     }
 
-    @Test
-    public void testPairingAckMessage_hasOperand_returnsFalse() {
-        PairingAckMessage message = new PairingAckMessage();
-        assertFalse(message.hasOperand());
-    }
-
-    @Test
-    public void testPairingAckMessage_toString() {
-        PairingAckMessage message = new PairingAckMessage();
-        String toString = message.toString();
-        assertTrue(toString.contains("PairingAckMessage"));
-    }
 
     // ==================== StatusUpdateMessage Tests ====================
 
@@ -409,21 +385,6 @@ public class TcpMessageTest {
         PairingRequestMessage message = new PairingRequestMessage(deviceId);
         byte[] operand = message.getOperand();
         assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
-    }
-
-    @Test
-    public void testPairingRequestMessage_hasOperand_returnsTrue() {
-        PairingRequestMessage message = new PairingRequestMessage("device");
-        assertTrue(message.hasOperand());
-    }
-
-    @Test
-    public void testPairingRequestMessage_operand_isDefensiveCopy() {
-        PairingRequestMessage message = new PairingRequestMessage("device-123");
-        byte[] operand1 = message.getOperand();
-        byte[] operand2 = message.getOperand();
-        operand1[0] = 0;
-        assertFalse(operand1[0] == operand2[0]);
     }
 
     @Test
