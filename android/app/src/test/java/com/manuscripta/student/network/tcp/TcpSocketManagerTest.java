@@ -16,6 +16,8 @@ import static org.mockito.Mockito.when;
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
