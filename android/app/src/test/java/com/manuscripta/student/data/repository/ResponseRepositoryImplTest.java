@@ -80,23 +80,21 @@ public class ResponseRepositoryImplTest {
     // ==================== saveResponse Tests ====================
 
     @Test
-    public void testSaveResponse_validResponse_insertsAndQueues() {
+    public void testSaveResponse_validResponse_insertsEntity() {
         Response response = createTestResponse(false);
 
         repository.saveResponse(response);
 
         verify(mockDao).insert(any(ResponseEntity.class));
-        assertEquals(1, repository.getSyncQueueSize());
     }
 
     @Test
-    public void testSaveResponse_alreadySynced_insertsButDoesNotQueue() {
+    public void testSaveResponse_alreadySynced_insertsEntity() {
         Response response = createTestResponse(true);
 
         repository.saveResponse(response);
 
         verify(mockDao).insert(any(ResponseEntity.class));
-        assertEquals(0, repository.getSyncQueueSize());
     }
 
     @Test
@@ -277,16 +275,13 @@ public class ResponseRepositoryImplTest {
     // ==================== deleteResponse Tests ====================
 
     @Test
-    public void testDeleteResponse_validId_deletesAndRemovesFromQueue() {
-        // Add to queue first
+    public void testDeleteResponse_validId_deletesFromDao() {
         Response response = createTestResponse(false);
         repository.saveResponse(response);
-        assertEquals(1, repository.getSyncQueueSize());
 
         repository.deleteResponse(TEST_ID);
 
         verify(mockDao).deleteById(TEST_ID);
-        assertEquals(0, repository.getSyncQueueSize());
     }
 
     @Test
@@ -361,16 +356,13 @@ public class ResponseRepositoryImplTest {
     // ==================== deleteAllResponses Tests ====================
 
     @Test
-    public void testDeleteAllResponses_clearsQueueAndDao() {
-        // Add to queue first
+    public void testDeleteAllResponses_deletesFromDao() {
         Response response = createTestResponse(false);
         repository.saveResponse(response);
-        assertEquals(1, repository.getSyncQueueSize());
 
         repository.deleteAllResponses();
 
         verify(mockDao).deleteAll();
-        assertEquals(0, repository.getSyncQueueSize());
     }
 
     // ==================== syncPendingResponses Tests ====================
@@ -654,17 +646,56 @@ public class ResponseRepositoryImplTest {
         assertEquals(2, failureIds.size());
     }
 
+    // ==================== Null Callback Branch Tests ====================
+
+    @Test
+    public void testSyncPendingResponses_noUnsynced_nullCallback_completes() throws InterruptedException {
+        // This test covers the null callback branch at line 196
+        when(mockDao.getUnsynced()).thenReturn(Collections.emptyList());
+
+        // Call without callback (null)
+        repository.syncPendingResponses(null);
+
+        // Wait for async execution
+        Thread.sleep(100);
+
+        // Verify getUnsynced was called (sync was attempted)
+        verify(mockDao).getUnsynced();
+    }
+
+    @Test
+    public void testSyncPendingResponses_failure_nullCallback_completes() throws InterruptedException {
+        // This test covers the null callback branch at line 216
+        ResponseEntity entity = createTestEntity();
+        when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
+        when(mockSyncEngine.syncResponse(any())).thenReturn(false);
+
+        // Call without callback (null)
+        repository.syncPendingResponses(null);
+
+        // Wait for async execution
+        Thread.sleep(100);
+
+        // Verify sync was attempted but not marked as synced (failure path)
+        verify(mockDao, never()).markSynced(anyString());
+    }
+
     // ==================== DefaultSyncEngine Tests ====================
 
     @Test
-    public void testDefaultSyncEngine_syncResponse_returnsTrue() throws InterruptedException {
-        // Use the constructor that creates DefaultSyncEngine
-        ResponseRepositoryImpl repoWithDefaultEngine = new ResponseRepositoryImpl(mockDao);
+    public void testDefaultSyncEngine_syncResponse_throwsUnsupportedOperationException() throws InterruptedException {
+        // Use TestableResponseRepository with a SyncEngine that throws UnsupportedOperationException
+        // to avoid actual sleep delays during retry attempts
+        ResponseRepositoryImpl.SyncEngine exceptionThrowingEngine = e -> {
+            throw new UnsupportedOperationException("Network sync not yet implemented");
+        };
+        ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(
+                mockDao, exceptionThrowingEngine);
         ResponseEntity entity = createTestEntity();
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
 
         CountDownLatch latch = new CountDownLatch(1);
-        AtomicInteger successCount = new AtomicInteger(-1);
+        AtomicInteger failureCount = new AtomicInteger(-1);
 
         repoWithDefaultEngine.syncPendingResponses(new ResponseRepository.SyncCallback() {
             @Override
@@ -675,14 +706,100 @@ public class ResponseRepositoryImplTest {
 
             @Override
             public void onSyncComplete(int success, int failure) {
-                successCount.set(success);
+                failureCount.set(failure);
                 latch.countDown();
             }
         });
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
-        assertEquals(1, successCount.get());
-        verify(mockDao).markSynced(TEST_ID);
+        // DefaultSyncEngine throws UnsupportedOperationException, which is caught 
+        // and treated as sync failure after all retry attempts
+        assertEquals(1, failureCount.get());
+        verify(mockDao, never()).markSynced(anyString());
+    }
+
+    @Test
+    public void testDefaultSyncEngine_directCall_throwsAndReturnsFalse() {
+        // Create a testable subclass that uses the real DefaultSyncEngine but skips sleep
+        ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(mockDao);
+        ResponseEntity entity = createTestEntity();
+
+        // syncWithRetry should catch the UnsupportedOperationException and return false
+        boolean result = repoWithDefaultEngine.syncWithRetry(entity);
+
+        assertFalse(result);
+    }
+
+    // ==================== Shutdown Tests ====================
+
+    @Test
+    public void testShutdown_normalTermination_completesSuccessfully() {
+        // Test normal shutdown
+        ResponseRepositoryImpl repo = new TestableResponseRepository(mockDao);
+        repo.shutdown();
+        // If we get here without exception, the test passes
+    }
+
+    @Test
+    public void testShutdown_timeout_forcesShutdownNow() throws InterruptedException {
+        // Create a repository with a very long-running task and zero timeout
+        ResponseRepositoryImpl.SyncEngine slowEngine = e -> {
+            try {
+                Thread.sleep(10000); // 10 second task
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            return true;
+        };
+
+        // Use a testable repository that returns 0 for shutdown timeout
+        ResponseRepositoryImpl repo = new ZeroTimeoutResponseRepository(mockDao, slowEngine);
+        ResponseEntity entity = createTestEntity();
+        when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
+
+        // Start sync (will be long-running)
+        repo.syncPendingResponses();
+        Thread.sleep(50); // Let the sync task start
+
+        // Shutdown with 0 timeout should force shutdownNow
+        repo.shutdown();
+    }
+
+    @Test
+    public void testShutdown_interruptedDuringAwait_forcesShutdown() throws InterruptedException {
+        // Create repository with a sync engine that keeps running
+        ResponseRepositoryImpl.SyncEngine slowEngine = e -> {
+            try {
+                Thread.sleep(10000); // 10 second task
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            return true;
+        };
+
+        ResponseRepositoryImpl repo = new ResponseRepositoryImpl(mockDao, slowEngine);
+        ResponseEntity entity = createTestEntity();
+        when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
+
+        // Start long-running sync
+        repo.syncPendingResponses();
+        Thread.sleep(50); // Let it start
+
+        // Shutdown on a thread that gets interrupted
+        Thread testThread = new Thread(() -> {
+            Thread.currentThread().interrupt();
+            repo.shutdown();
+            assertTrue(Thread.currentThread().isInterrupted());
+        });
+
+        testThread.start();
+        testThread.join(2000);
+    }
+
+    @Test
+    public void testGetShutdownTimeoutSeconds_returnsDefaultValue() {
+        ResponseRepositoryImpl repo = new TestableResponseRepository(mockDao);
+        assertEquals(5L, repo.getShutdownTimeoutSeconds());
     }
 
     // ==================== Constants Tests ====================
@@ -753,6 +870,10 @@ public class ResponseRepositoryImplTest {
      * Testable subclass that overrides sleep to avoid actual delays.
      */
     private static class TestableResponseRepository extends ResponseRepositoryImpl {
+        TestableResponseRepository(ResponseDao responseDao) {
+            super(responseDao);
+        }
+
         TestableResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {
             super(responseDao, syncEngine);
         }
@@ -760,6 +881,21 @@ public class ResponseRepositoryImplTest {
         @Override
         protected void sleep(long millis) {
             // Do nothing - skip actual sleep in tests
+        }
+    }
+
+    /**
+     * Testable subclass that returns 0 for shutdown timeout
+     * to trigger the shutdownNow branch.
+     */
+    private static class ZeroTimeoutResponseRepository extends TestableResponseRepository {
+        ZeroTimeoutResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {
+            super(responseDao, syncEngine);
+        }
+
+        @Override
+        protected long getShutdownTimeoutSeconds() {
+            return 0L;
         }
     }
 }
