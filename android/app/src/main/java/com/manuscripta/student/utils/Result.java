@@ -222,7 +222,7 @@ public abstract class Result<T> {
         }
 
         @Override
-        @NonNull
+        @Nullable
         public String getErrorMessage() {
             return message;
         }
