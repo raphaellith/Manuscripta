@@ -440,7 +440,7 @@ public static Session create(String materialId, String deviceId) {
 Implement repository for managing material data with network and local database synchronisation. Orchestrates attachment file downloads when materials contain file references, delegating file storage to `FileStorageManager`.
 
 **Integration with TCP Layer (Heartbeat-Triggered Fetch):**
-The MaterialRepository must integrate with the TCP socket layer to receive notifications when new materials are available. When TcpSocketManager receives a `FETCH_MATERIALS` (0x04) signal from the server (in response to a heartbeat), it notifies the MaterialRepository to initiate an HTTP material fetch. This is the primary mechanism for material distribution since the server cannot push HTTP requests.
+The MaterialRepository must integrate with the TCP socket layer to receive notifications when new materials are available. When TcpSocketManager receives a `DISTRIBUTE_MATERIAL` (0x05) signal from the server (in response to a heartbeat), it notifies the MaterialRepository to initiate an HTTP material fetch. This is the primary mechanism for material distribution since the server cannot push HTTP requests.
 
 **Related Requirements:** MAT1, MAT8 (Teacher), MAT15, NET1
 
@@ -448,8 +448,8 @@ The MaterialRepository must integrate with the TCP socket layer to receive notif
 - Create `MaterialRepository.java` interface
 - Create `MaterialRepositoryImpl.java` implementation
 - Implement caching strategy (network-first with fallback)
-- **Register as listener for FETCH_MATERIALS signal from TcpSocketManager (issue 6.8)**
-- **Implement `onFetchMaterialsSignal()` callback to trigger HTTP material sync**
+- **Register as listener for DISTRIBUTE_MATERIAL signal from TcpSocketManager (issue 6.8)**
+- **Implement `onDistributeMaterialSignal()` callback to trigger HTTP material sync**
 - Orchestrate attachment downloads:
   1. Fetch MaterialDto from network via HTTP GET /materials
   2. Parse content for `/attachments/{id}` references using ContentParser
@@ -462,13 +462,13 @@ The MaterialRepository must integrate with the TCP socket layer to receive notif
 
 **Acceptance Criteria:**
 - [ ] Interface and implementation created
-- [ ] FETCH_MATERIALS signal listener registered with TcpSocketManager
+- [ ] DISTRIBUTE_MATERIAL signal listener registered with TcpSocketManager
 - [ ] Attachment download orchestration implemented
 - [ ] Caching logic implemented
 - [ ] Error handling with Result pattern (fails gracefully on attachment errors)
 - [ ] 100% test coverage
 
-**Dependencies:** Issue 2.1a (FileStorageManager), Issue 6.8 (TCP Socket Layer - for FETCH_MATERIALS signal) from the issues.md document.
+**Dependencies:** Issue 2.1a (FileStorageManager), Issue 6.8 (TCP Socket Layer - for DISTRIBUTE_MATERIAL signal) from the issues.md document.
 
 ---
 
@@ -1267,7 +1267,7 @@ Track connection status to teacher server and report disconnections. Uses TCP so
 - Labels: `android`, `device-management`  
 
 **Description:**
-Create "Raise Hand" button and signal functionality to request teacher assistance. The hand raised signal is sent via TCP socket (opcode 0x11) for immediate delivery.
+Create "Raise Hand" button and signal functionality to request teacher assistance. The hand raised signal is sent via TCP socket (opcode 0x11) for immediate delivery, and the server responds with HAND_ACK (opcode 0x06) to confirm receipt.
 
 **Related Requirements:** MAT7, CON12
 
@@ -1275,15 +1275,17 @@ Create "Raise Hand" button and signal functionality to request teacher assistanc
 - Add Raise Hand button to status bar (issue 4.5 in issues.md document.)
 - Create `RaiseHandManager.java`
 - Send HAND_RAISED message (opcode 0x11) via TCP socket (TcpSocketManager, issue 6.8 in the issues.md document.)
-- Show confirmation to student (visual feedback that request was sent)
-- Handle teacher acknowledgment (optional - via TCP response)
+- Listen for HAND_ACK (opcode 0x06) response from server via TcpSocketManager listener
+- Show confirmation to student only after receiving HAND_ACK ("Help requested")
+- Handle timeout if HAND_ACK not received (show error/retry option)
 - Write tests
 
 **Acceptance Criteria:**
 - [ ] Raise Hand button functional
-- [ ] Request sent via TCP socket
-- [ ] Confirmation shown to student
-- [ ] Teacher acknowledgment handled (if implemented)
+- [ ] HAND_RAISED (0x11) sent via TCP socket
+- [ ] HAND_ACK (0x06) received and handled
+- [ ] Confirmation shown only after ACK received
+- [ ] Timeout handling implemented
 - [ ] 100% test coverage
 
 **Dependencies:** Issue 6.8 (TCP Socket Layer ), Issue 4.5 (Session Status Bar) from the issues.md document.
@@ -1395,7 +1397,7 @@ Implement TCP socket communication for low-latency, real-time control signals be
 Since the Windows server cannot initiate HTTP requests to Android clients, material distribution uses a heartbeat-triggered pattern:
 1. Android sends periodic `STATUS_UPDATE` (0x10) heartbeat via TCP
 2. Server checks if new materials are available for this device
-3. If materials pending, server responds with `FETCH_MATERIALS` (0x04)
+3. If materials pending, server responds with `DISTRIBUTE_MATERIAL` (0x05)
 4. Android receives signal and initiates HTTP `GET /materials` to download content
 
 This pattern applies to all server-initiated content delivery (materials, config changes, etc.).
@@ -1408,14 +1410,14 @@ This pattern applies to all server-initiated content delivery (materials, config
 - **Pairing Messages (Section 3.5):**
   - **Client → Server:** PAIRING_REQUEST (0x20, Device ID as UTF-8 string operand)
   - **Server → Client:** PAIRING_ACK (0x21, no operand)
-- **Control Messages (Server → Client):** LOCK_SCREEN (0x01), UNLOCK_SCREEN (0x02), REFRESH_CONFIG (0x03), FETCH_MATERIALS (0x04)
-- **Status Messages (Client → Server):** STATUS_UPDATE (0x10), HAND_RAISED (0x11)
+- **Control Messages (Server → Client):** LOCK_SCREEN (0x01), UNLOCK_SCREEN (0x02), REFRESH_CONFIG (0x03), UNPAIR (0x04), DISTRIBUTE_MATERIAL (0x05), HAND_ACK (0x06)
+- **Status Messages (Client → Server):** STATUS_UPDATE (0x10), HAND_RAISED (0x11), DISTRIBUTE_ACK (0x12)
 
 **Acceptance Criteria:**
 - [ ] TcpSocketManager created and manages connection lifecycle
 - [ ] Binary message encoding/decoding functional
 - [ ] TCP pairing handshake implemented (PAIRING_REQUEST/PAIRING_ACK)
-- [ ] All message types implemented per API Contract (including FETCH_MATERIALS 0x04)
+- [ ] All message types implemented per API Contract (including DISTRIBUTE_MATERIAL 0x05)
 - [ ] Heartbeat-triggered material fetch pattern implemented
 - [ ] Listener interface for incoming server commands
 - [ ] Reconnection with exponential backoff
@@ -1708,6 +1710,34 @@ Optimise app performance for e-ink display characteristics.
 - Implement partial screen updates where possible
 - Test on actual e-ink devices
 - Profile performance
+
+---
+
+### [Android/Windows] Align Clients with Session Lifecycle Specification
+
+- Labels: `android`, `windows`, `enhancement`
+
+**Background:**
+Session state transitions have been formally defined with 5 states: `RECEIVED`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`.
+
+**Android Client Tasks:**
+- [ ] Add `RECEIVED` value to `SessionStatus.java` enum
+- [ ] Update `SessionEntity` to make `StartTime` optional (null for RECEIVED)
+- [ ] Update session creation logic to use `RECEIVED` as initial state
+- [ ] Implement `RECEIVED` → `ACTIVE` transition on first interaction
+- [ ] Implement `PAUSED` state toggle (student-initiated)
+- [ ] Implement `ACTIVE/PAUSED` → `COMPLETED` on work submission
+- [ ] Make `StartTime` nullable in entity/domain models
+- [ ] Update mappers to handle new state
+
+**Windows Client Tasks:**
+- [ ] Update endpoint from `/session/{deviceId}` to `/distribution/{deviceId}`
+- [ ] Handle new `RECEIVED` state in device status display
+
+**Reference:**
+- `docs/Session Interaction.md` §5
+- `docs/Validation Rules.md` §2D
+- `docs/API Contract.md` §2.5
 
 ---
 

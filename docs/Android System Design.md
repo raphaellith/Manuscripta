@@ -16,75 +16,9 @@ The Manuscripta Android client is a student-facing application designed for e-in
 
 ---
 
-## 1. High-Level Architecture
 
-```mermaid
-graph TB
-    subgraph "Android Client Architecture"
-        direction TB
-        
-        subgraph "Presentation Layer"
-            VM[ViewModels]
-            UI[Activities & Fragments]
-            CV[Custom Views]
-        end
-        
-        subgraph "Domain Layer"
-            DM[Domain Models]
-            UC[Use Cases / Interactors]
-        end
-        
-        subgraph "Data Layer"
-            REPO[Repositories]
-            
-            subgraph "Local Data Sources"
-                ROOM[(Room Database)]
-                PREFS[SharedPreferences]
-                FILES[File Storage]
-            end
-            
-            subgraph "Remote Data Sources"
-                HTTP[Retrofit HTTP Client]
-                TCP[TCP Socket Manager]
-                UDP[UDP Discovery Manager]
-            end
-        end
-        
-        subgraph "Services"
-            KIOSK[Kiosk Manager]
-            BATT[Battery Monitor]
-            TTS[Text-to-Speech]
-            PAIR[Pairing Manager]
-        end
-    end
-    
-    UI --> VM
-    VM --> UC
-    UC --> REPO
-    REPO --> ROOM
-    REPO --> HTTP
-    REPO --> TCP
-    REPO --> PREFS
-    REPO --> FILES
-    
-    PAIR --> UDP
-    PAIR --> TCP
-    PAIR --> HTTP
-    
-    TCP -.->|Control Signals| KIOSK
-    
-    subgraph "Windows Teacher App (Server)"
-        WIN[Teacher Application]
-    end
-    
-    HTTP <-->|REST API| WIN
-    TCP <-->|Binary Protocol| WIN
-    UDP <-.->|Broadcast Discovery| WIN
-```
 
----
-
-## 2. Data Model Layer (Entity-Relationship Diagram)
+## 1. Data Model Layer (Entity-Relationship Diagram)
 
 ```mermaid
 erDiagram
@@ -153,156 +87,11 @@ erDiagram
 
 ---
 
-## 3. Component Diagram
 
-```mermaid
-graph TB
-    subgraph "Presentation Layer Components"
-        direction LR
-        
-        subgraph "Activities"
-            MLA[MaterialListActivity]
-            QA[QuizActivity]
-            WA[WorksheetActivity]
-            PA[PollActivity]
-        end
-        
-        subgraph "ViewModels"
-            MLVM[MaterialListViewModel]
-            QVM[QuizViewModel]
-            WVM[WorksheetViewModel]
-            PVM[PollViewModel]
-        end
-        
-        subgraph "Custom Views"
-            SSV[SessionStatusView]
-            ALV[AnnotationLayerView]
-            LDV[LoadingView]
-            ESV[EmptyStateView]
-            VDV[VocabularyDisplayView]
-        end
-        
-        subgraph "Dialogs"
-            FD[FeedbackDialog]
-        end
-    end
-    
-    subgraph "Domain Layer Components"
-        direction LR
-        
-        subgraph "Domain Models"
-            M[Material]
-            Q[Question]
-            R[Response]
-            S[Session]
-            DS[DeviceStatus]
-        end
-        
-        subgraph "Mappers"
-            MM[MaterialMapper]
-            QM[QuestionMapper]
-            RM[ResponseMapper]
-            SM[SessionMapper]
-        end
-    end
-    
-    subgraph "Repository Layer Components"
-        direction LR
-        
-        MR[MaterialRepository]
-        RR[ResponseRepository]
-        SR[SessionRepository]
-        DSR[DeviceStatusRepository]
-        FSM[FileStorageManager]
-        
-        subgraph "State Management"
-            RES[Result Wrapper]
-            UIS[UiState Wrapper]
-        end
-    end
-    
-    subgraph "Network Layer Components"
-        direction LR
-        
-        subgraph "HTTP (Retrofit)"
-            API[ApiService]
-            subgraph "DTOs"
-                MD[MaterialDto]
-                QD[QuestionDto]
-                RD[ResponseDto]
-                DSD[DeviceStatusDto]
-            end
-            subgraph "Interceptors"
-                LOG[LoggingInterceptor]
-                ERR[ErrorInterceptor]
-                AUTH[AuthInterceptor]
-                RETRY[RetryInterceptor]
-            end
-        end
-        
-        subgraph "TCP Socket"
-            TSM[TcpSocketManager]
-            ENC[MessageEncoder]
-            DEC[MessageDecoder]
-            OPC[OpcodeEnum]
-        end
-        
-        subgraph "UDP Discovery"
-            UDM[UdpDiscoveryManager]
-            DMP[DiscoveryMessageParser]
-        end
-        
-        CM[ConnectionManager]
-    end
-    
-    subgraph "Device Management Components"
-        direction LR
-        
-        PM[PairingManager]
-        KM[KioskManager]
-        BMS[BatteryMonitorService]
-        CMS[ConnectionMonitorService]
-        RCS[RemoteControlService]
-        RHM[RaiseHandManager]
-    end
-    
-    subgraph "Accessibility Components"
-        direction LR
-        
-        TTSM[TextToSpeechManager]
-        CTS[ContentTransformationService]
-        AS[AccessibilitySettings]
-    end
-    
-    MLA --> MLVM
-    QA --> QVM
-    WA --> WVM
-    PA --> PVM
-    
-    MLVM --> MR
-    QVM --> RR
-    WVM --> RR
-    PVM --> RR
-    
-    MR --> API
-    MR --> TSM
-    MR --> FSM
-    RR --> API
-    DSR --> TSM
-    
-    PM --> UDM
-    PM --> TSM
-    PM --> API
-    
-    RCS --> TSM
-    BMS --> DSR
-```
 
----
+## 2. Network Communication Sequence Diagrams
 
-## 4. Network Communication Sequence Diagrams
-
-### 4.1 Pairing Process
+### 2.1 Pairing Process
 
 ```mermaid
 sequenceDiagram
@@ -331,7 +120,7 @@ sequenceDiagram
     A->>A: Store pairing status<br/>PAIRED state
 ```
 
-### 4.2 Material Distribution (Heartbeat-Triggered Fetch)
+### 2.2 Material Distribution (Heartbeat-Triggered Fetch)
 
 ```mermaid
 sequenceDiagram
@@ -347,22 +136,27 @@ sequenceDiagram
         TCP->>W: TCP Message
         
         alt New materials available
-            W->>TCP: FETCH_MATERIALS (0x04)
+            W->>TCP: DISTRIBUTE_MATERIAL (0x05)
             TCP->>MR: onFetchMaterialsSignal()
+            MR->>TCP: Send DISTRIBUTE_ACK (0x12)
+            TCP->>W: DISTRIBUTE_ACK
             MR->>HTTP: GET /materials
             HTTP->>W: HTTP Request
             W->>HTTP: 200 OK [material IDs]
+            HTTP->>MR: Return material IDs
             
             loop For each material ID
                 MR->>HTTP: GET /materials/{id}
                 HTTP->>W: HTTP Request
                 W->>HTTP: 200 OK [Material JSON]
+                HTTP->>MR: Return Material JSON
                 
                 alt Content has attachments
                     loop For each attachment reference
                         MR->>HTTP: GET /attachments/{id}
                         HTTP->>W: HTTP Request
                         W->>HTTP: 200 OK [Binary data]
+                        HTTP->>MR: Return Binary data
                         MR->>MR: Save to FileStorage
                     end
                 end
@@ -375,7 +169,7 @@ sequenceDiagram
     end
 ```
 
-### 4.3 Student Response Submission
+### 2.3 Student Response Submission
 
 ```mermaid
 sequenceDiagram
@@ -395,6 +189,7 @@ sequenceDiagram
         RR->>HTTP: POST /responses<br/>{id, questionId, answer, ...}
         HTTP->>W: HTTP Request
         W->>HTTP: 201 Created
+        HTTP->>RR: Return success
         RR->>RR: Update synced = true
         RR->>VM: Result.Success
     else Offline
@@ -405,13 +200,14 @@ sequenceDiagram
         RR->>HTTP: POST /responses/batch
         HTTP->>W: HTTP Request
         W->>HTTP: 201 Created
+        HTTP->>RR: Return success
         RR->>RR: Update all synced = true
     end
     
     VM->>UI: Update UI State
 ```
 
-### 4.4 Teacher Control Commands
+### 2.4 Teacher Control Commands
 
 ```mermaid
 sequenceDiagram
@@ -438,7 +234,7 @@ sequenceDiagram
     end
 ```
 
-### 4.5 Raise Hand Flow
+### 2.5 Raise Hand Flow
 
 ```mermaid
 sequenceDiagram
@@ -453,15 +249,17 @@ sequenceDiagram
     
     Note over W: Teacher sees alert<br/>on dashboard (CON12)
     
+    W->>TCP: HAND_ACK (0x06)<br/>[Device ID UTF-8]
+    TCP->>RHM: onHandAcknowledged(deviceId)
     RHM->>UI: Show confirmation
     UI->>UI: Display "Help requested"
 ```
 
 ---
 
-## 5. State Machine Diagrams
+## 3. State Machine Diagrams
 
-### 5.1 Pairing State Machine
+### 3.1 Pairing State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -490,7 +288,7 @@ stateDiagram-v2
     end note
 ```
 
-### 5.2 Session State Machine
+### 3.2 Session State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -515,7 +313,7 @@ stateDiagram-v2
     end note
 ```
 
-### 5.3 Device Status State Machine
+### 3.3 Device Status State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -545,7 +343,7 @@ stateDiagram-v2
 
 ---
 
-## 6. Class Diagram (Core Components)
+## 4. Class Diagram (Core Components)
 
 ```mermaid
 classDiagram
@@ -703,7 +501,7 @@ classDiagram
 
 ---
 
-## 7. Dependency Injection Structure
+## 5. Dependency Injection Structure
 
 ```mermaid
 graph TB
@@ -777,9 +575,9 @@ graph TB
 
 ---
 
-## 8. Binary Protocol Reference
+## 6. Binary Protocol Reference
 
-### 8.1 Opcode Registry
+### 6.1 Opcode Registry
 
 | Range | Purpose | Direction |
 |-------|---------|-----------|
@@ -788,7 +586,7 @@ graph TB
 | `0x10` - `0x1F` | Status Updates | Client → Server (TCP) |
 | `0x20` - `0x2F` | Pairing | Bidirectional (TCP) |
 
-### 8.2 Message Definitions
+### 6.2 Message Definitions
 
 ```mermaid
 graph LR
@@ -800,12 +598,15 @@ graph LR
         LOCK[0x01 LOCK_SCREEN<br/>No operand]
         UNLOCK[0x02 UNLOCK_SCREEN<br/>No operand]
         REFRESH[0x03 REFRESH_CONFIG<br/>No operand]
-        FETCH[0x04 FETCH_MATERIALS<br/>No operand]
+        UNPAIR[0x04 UNPAIR<br/>No operand]
+        DISTMAT[0x05 DISTRIBUTE_MATERIAL<br/>No operand]
+        HANDACK[0x06 HAND_ACK<br/>Device ID UTF-8]
     end
     
     subgraph "Client → Server (TCP)"
         STATUS[0x10 STATUS_UPDATE<br/>JSON payload]
         HAND[0x11 HAND_RAISED<br/>Device ID UTF-8]
+        DISTACK[0x12 DISTRIBUTE_ACK<br/>Device ID UTF-8]
     end
     
     subgraph "Pairing (TCP)"
@@ -816,9 +617,9 @@ graph LR
 
 ---
 
-## 9. Key Design Decisions
+## 7. Key Design Decisions
 
-### 9.1 Entity ID Generation Policy
+### 7.1 Entity ID Generation Policy
 
 | Entity | ID Generator | Rationale |
 |--------|--------------|-----------|
@@ -831,15 +632,15 @@ graph LR
 > [!IMPORTANT]
 > Per Validation Rules §3: IDs must be UUIDs generated by the creating client and treated as immutable by the receiving client.
 
-### 9.2 Heartbeat-Triggered Fetch Pattern
+### 7.2 Heartbeat-Triggered Fetch Pattern
 
 The Windows server cannot initiate HTTP requests to Android clients. Material distribution uses:
 
 1. **Android** sends periodic `STATUS_UPDATE` (0x10) via TCP
-2. **Windows** responds with `FETCH_MATERIALS` (0x04) if content pending
+2. **Windows** responds with `DISTRIBUTE_MATERIAL` (0x05) if content pending
 3. **Android** initiates HTTP `GET /materials` to download
 
-### 9.3 Clean Architecture Entity Separation
+### 7.3 Clean Architecture Entity Separation
 
 - **Entities** (`*Entity.java`): Room annotations, persistence only
 - **Domain Models** (`*.java`): Business logic, factory methods for ID/timestamp generation
@@ -847,7 +648,7 @@ The Windows server cannot initiate HTTP requests to Android clients. Material di
 
 ---
 
-## 10. Screen Flow Diagram
+## 8. Screen Flow Diagram
 
 ```mermaid
 flowchart TD
@@ -898,7 +699,7 @@ flowchart TD
 
 ---
 
-## 11. Requirements Traceability Matrix
+## 9. Requirements Traceability Matrix
 
 | Requirement | Component | Issue(s) |
 |-------------|-----------|----------|
@@ -922,7 +723,7 @@ flowchart TD
 
 ---
 
-## 12. Technology Stack Summary
+## 10. Technology Stack Summary
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
