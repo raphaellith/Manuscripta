@@ -160,6 +160,13 @@ public class SessionMapperTest {
 
     @Test
     public void testToDomain_AllSessionStatuses() {
+        // Test RECEIVED
+        SessionEntity receivedEntity = new SessionEntity("id0", "mat0", 0L, 0L,
+                SessionStatus.RECEIVED, "device0");
+        Session receivedDomain = SessionMapper.toDomain(receivedEntity);
+        assertEquals(SessionStatus.RECEIVED, receivedDomain.getStatus());
+        assertEquals(0L, receivedDomain.getStartTime());
+
         // Test ACTIVE
         SessionEntity activeEntity = new SessionEntity("id1", "mat1", 1000L, 0L,
                 SessionStatus.ACTIVE, "device1");

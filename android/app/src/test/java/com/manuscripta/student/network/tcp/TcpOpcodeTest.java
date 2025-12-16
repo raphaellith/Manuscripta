@@ -30,8 +30,18 @@ public class TcpOpcodeTest {
     }
 
     @Test
-    public void testFetchMaterials_getValue() {
-        assertEquals((byte) 0x04, TcpOpcode.FETCH_MATERIALS.getValue());
+    public void testUnpair_getValue() {
+        assertEquals((byte) 0x04, TcpOpcode.UNPAIR.getValue());
+    }
+
+    @Test
+    public void testDistributeMaterial_getValue() {
+        assertEquals((byte) 0x05, TcpOpcode.DISTRIBUTE_MATERIAL.getValue());
+    }
+
+    @Test
+    public void testHandAck_getValue() {
+        assertEquals((byte) 0x06, TcpOpcode.HAND_ACK.getValue());
     }
 
     @Test
@@ -42,6 +52,11 @@ public class TcpOpcodeTest {
     @Test
     public void testHandRaised_getValue() {
         assertEquals((byte) 0x11, TcpOpcode.HAND_RAISED.getValue());
+    }
+
+    @Test
+    public void testDistributeAck_getValue() {
+        assertEquals((byte) 0x12, TcpOpcode.DISTRIBUTE_ACK.getValue());
     }
 
     @Test
@@ -72,8 +87,18 @@ public class TcpOpcodeTest {
     }
 
     @Test
-    public void testFromValue_fetchMaterials() {
-        assertEquals(TcpOpcode.FETCH_MATERIALS, TcpOpcode.fromValue((byte) 0x04));
+    public void testFromValue_unpair() {
+        assertEquals(TcpOpcode.UNPAIR, TcpOpcode.fromValue((byte) 0x04));
+    }
+
+    @Test
+    public void testFromValue_distributeMaterial() {
+        assertEquals(TcpOpcode.DISTRIBUTE_MATERIAL, TcpOpcode.fromValue((byte) 0x05));
+    }
+
+    @Test
+    public void testFromValue_handAck() {
+        assertEquals(TcpOpcode.HAND_ACK, TcpOpcode.fromValue((byte) 0x06));
     }
 
     @Test
@@ -84,6 +109,11 @@ public class TcpOpcodeTest {
     @Test
     public void testFromValue_handRaised() {
         assertEquals(TcpOpcode.HAND_RAISED, TcpOpcode.fromValue((byte) 0x11));
+    }
+
+    @Test
+    public void testFromValue_distributeAck() {
+        assertEquals(TcpOpcode.DISTRIBUTE_ACK, TcpOpcode.fromValue((byte) 0x12));
     }
 
     @Test
@@ -99,6 +129,8 @@ public class TcpOpcodeTest {
     @Test
     public void testFromValue_unknownOpcode_returnsNull() {
         assertNull(TcpOpcode.fromValue((byte) 0x00));
+        assertNull(TcpOpcode.fromValue((byte) 0xFF));
+        assertNull(TcpOpcode.fromValue((byte) 0x07));
     }
 
     // ==================== isServerToClient Tests ====================
@@ -119,8 +151,18 @@ public class TcpOpcodeTest {
     }
 
     @Test
-    public void testIsServerToClient_fetchMaterials() {
-        assertTrue(TcpOpcode.FETCH_MATERIALS.isServerToClient());
+    public void testIsServerToClient_unpair() {
+        assertTrue(TcpOpcode.UNPAIR.isServerToClient());
+    }
+
+    @Test
+    public void testIsServerToClient_distributeMaterial() {
+        assertTrue(TcpOpcode.DISTRIBUTE_MATERIAL.isServerToClient());
+    }
+
+    @Test
+    public void testIsServerToClient_handAck() {
+        assertTrue(TcpOpcode.HAND_ACK.isServerToClient());
     }
 
     @Test
@@ -139,6 +181,11 @@ public class TcpOpcodeTest {
     }
 
     @Test
+    public void testIsServerToClient_distributeAck_returnsFalse() {
+        assertFalse(TcpOpcode.DISTRIBUTE_ACK.isServerToClient());
+    }
+
+    @Test
     public void testIsServerToClient_pairingRequest_returnsFalse() {
         assertFalse(TcpOpcode.PAIRING_REQUEST.isServerToClient());
     }
@@ -153,6 +200,11 @@ public class TcpOpcodeTest {
     @Test
     public void testIsClientToServer_handRaised() {
         assertTrue(TcpOpcode.HAND_RAISED.isClientToServer());
+    }
+
+    @Test
+    public void testIsClientToServer_distributeAck() {
+        assertTrue(TcpOpcode.DISTRIBUTE_ACK.isClientToServer());
     }
 
     @Test
@@ -176,8 +228,18 @@ public class TcpOpcodeTest {
     }
 
     @Test
-    public void testIsClientToServer_fetchMaterials_returnsFalse() {
-        assertFalse(TcpOpcode.FETCH_MATERIALS.isClientToServer());
+    public void testIsClientToServer_unpair_returnsFalse() {
+        assertFalse(TcpOpcode.UNPAIR.isClientToServer());
+    }
+
+    @Test
+    public void testIsClientToServer_distributeMaterial_returnsFalse() {
+        assertFalse(TcpOpcode.DISTRIBUTE_MATERIAL.isClientToServer());
+    }
+
+    @Test
+    public void testIsClientToServer_handAck_returnsFalse() {
+        assertFalse(TcpOpcode.HAND_ACK.isClientToServer());
     }
 
     @Test
@@ -206,6 +268,6 @@ public class TcpOpcodeTest {
 
     @Test
     public void testAllOpcodesPresent() {
-        assertEquals(8, TcpOpcode.values().length);
+        assertEquals(11, TcpOpcode.values().length);
     }
 }

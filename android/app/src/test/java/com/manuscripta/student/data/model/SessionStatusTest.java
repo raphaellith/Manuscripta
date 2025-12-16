@@ -14,6 +14,7 @@ public class SessionStatusTest {
     public void testEnumValues() {
         SessionStatus[] values = SessionStatus.values();
         // Verify that all expected enum values exist
+        assertNotNull(SessionStatus.valueOf("RECEIVED"));
         assertNotNull(SessionStatus.valueOf("ACTIVE"));
         assertNotNull(SessionStatus.valueOf("PAUSED"));
         assertNotNull(SessionStatus.valueOf("COMPLETED"));
@@ -21,11 +22,19 @@ public class SessionStatusTest {
     }
 
     @Test
+    public void testReceivedStatus() {
+        SessionStatus status = SessionStatus.RECEIVED;
+        assertNotNull(status);
+        assertEquals("RECEIVED", status.name());
+        assertEquals(0, status.ordinal());
+    }
+
+    @Test
     public void testActiveStatus() {
         SessionStatus status = SessionStatus.ACTIVE;
         assertNotNull(status);
         assertEquals("ACTIVE", status.name());
-        assertEquals(0, status.ordinal());
+        assertEquals(1, status.ordinal());
     }
 
     @Test
@@ -33,7 +42,7 @@ public class SessionStatusTest {
         SessionStatus status = SessionStatus.PAUSED;
         assertNotNull(status);
         assertEquals("PAUSED", status.name());
-        assertEquals(1, status.ordinal());
+        assertEquals(2, status.ordinal());
     }
 
     @Test
@@ -41,7 +50,7 @@ public class SessionStatusTest {
         SessionStatus status = SessionStatus.COMPLETED;
         assertNotNull(status);
         assertEquals("COMPLETED", status.name());
-        assertEquals(2, status.ordinal());
+        assertEquals(3, status.ordinal());
     }
 
     @Test
@@ -49,11 +58,12 @@ public class SessionStatusTest {
         SessionStatus status = SessionStatus.CANCELLED;
         assertNotNull(status);
         assertEquals("CANCELLED", status.name());
-        assertEquals(3, status.ordinal());
+        assertEquals(4, status.ordinal());
     }
 
     @Test
     public void testValueOf() {
+        assertEquals(SessionStatus.RECEIVED, SessionStatus.valueOf("RECEIVED"));
         assertEquals(SessionStatus.ACTIVE, SessionStatus.valueOf("ACTIVE"));
         assertEquals(SessionStatus.PAUSED, SessionStatus.valueOf("PAUSED"));
         assertEquals(SessionStatus.COMPLETED, SessionStatus.valueOf("COMPLETED"));
