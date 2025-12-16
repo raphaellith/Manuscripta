@@ -118,5 +118,5 @@ public interface ResponseRepository {
      *
      * @param callback The callback to receive sync updates
      */
-    void syncPendingResponses(@NonNull SyncCallback callback);
+    void syncPendingResponses(SyncCallback callback);
 }
