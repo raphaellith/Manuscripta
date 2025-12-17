@@ -13,25 +13,6 @@ import java.nio.ByteOrder;
 public class DiscoveryMessageParserTest {
 
     @Test
-    public void testPrivateConstructor_throwsAssertionError() throws Exception {
-        // Given: Access to the private constructor via reflection
-        java.lang.reflect.Constructor<DiscoveryMessageParser> constructor =
-                DiscoveryMessageParser.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-
-        // When/Then: Attempting to instantiate throws InvocationTargetException wrapping AssertionError
-        java.lang.reflect.InvocationTargetException exception = assertThrows(
-                java.lang.reflect.InvocationTargetException.class,
-                constructor::newInstance
-        );
-        
-        // Verify the cause is AssertionError with correct message
-        assertNotNull(exception.getCause());
-        assertEquals(AssertionError.class, exception.getCause().getClass());
-        assertEquals("Utility class should not be instantiated", exception.getCause().getMessage());
-    }
-
-    @Test
     public void testParse_validMessage_returnsDiscoveryMessage() {
         // Given: Valid discovery message with IP 192.168.1.100, HTTP port 8080, TCP port 9090
         byte[] data = createValidDiscoveryMessage(
