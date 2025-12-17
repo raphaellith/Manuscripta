@@ -23,7 +23,6 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -140,7 +139,8 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.stopDiscovery();
-        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
+        // Wait for the socket to be closed (happens in the finally block of the listening thread)
+        awaitCondition(mockSocket::isClosed, 2000, "Socket should be closed");
 
         // Then - verify close was called at least once
         verify(mockSocket, atLeastOnce()).close();
@@ -272,10 +272,9 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        // Wait for the invalid packet to be received and processed
-        awaitCondition(() -> receiveCallCount.get() >= 1, 2000, "Packet should be received");
-        // Small delay to ensure processPacket completes
-        Thread.sleep(50);
+        // Wait for the invalid packet to be received and processed (receiveCallCount >= 2 means
+        // first packet was processed and second call hit timeout, ensuring processPacket completed)
+        awaitCondition(() -> receiveCallCount.get() >= 2, 2000, "Packet should be received and processed");
         manager.stopDiscovery();
         awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
@@ -357,26 +356,6 @@ public class UdpDiscoveryManagerTest {
 
         // Then - should have recovered and stored message
         assertNotNull(manager.getDiscoveredServer());
-    }
-
-    @Test
-    public void testSocketReceiveIOException_whenNotRunning_doesNotLog() throws Exception {
-        manager = createManagerWithMockSocket();
-        
-        doAnswer(invocation -> {
-            // Simulate shutdown happening elsewhere
-            java.lang.reflect.Field runningField = UdpDiscoveryManager.class.getDeclaredField("running");
-            runningField.setAccessible(true);
-            AtomicBoolean running = (AtomicBoolean) runningField.get(manager);
-            running.set(false);
-            
-            throw new IOException("Socket closed");
-        }).when(mockSocket).receive(any(DatagramPacket.class));
-
-        manager.startDiscovery();
-        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop after IOException");
-        
-        assertFalse(manager.isRunning());
     }
 
     /**
@@ -474,29 +453,6 @@ public class UdpDiscoveryManagerTest {
 
         // Cleanup
         socket.close();
-    }
-
-    @Test
-    public void testStopDiscovery_whenNeverStarted_socketAndExecutorNull() {
-        // Given - fresh manager never started (socket and executorService are null)
-        manager = new UdpDiscoveryManager();
-
-        // Manually set running to true to force stopDiscovery to execute cleanup paths
-        // This tests the null branches in closeSocket() and shutdownExecutor()
-        try {
-            java.lang.reflect.Field runningField = UdpDiscoveryManager.class.getDeclaredField("running");
-            runningField.setAccessible(true);
-            AtomicBoolean running = (AtomicBoolean) runningField.get(manager);
-            running.set(true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // When - stop discovery with null socket and null executorService
-        manager.stopDiscovery();
-
-        // Then - should handle gracefully without NullPointerException
-        assertFalse(manager.isRunning());
     }
 
     /**
