@@ -1,4 +1,4 @@
-package com.manuscripta.student.network;
+package com.manuscripta.student.network.udp;
 
 import android.util.Log;
 

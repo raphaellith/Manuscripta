@@ -2,7 +2,7 @@ package com.manuscripta.student.di;
 
 import static org.junit.Assert.assertNotNull;
 
-import com.manuscripta.student.network.UdpDiscoveryManager;
+import com.manuscripta.student.network.udp.UdpDiscoveryManager;
 
 import org.junit.Test;
 

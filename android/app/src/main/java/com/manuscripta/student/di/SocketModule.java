@@ -1,6 +1,6 @@
 package com.manuscripta.student.di;
 
-import com.manuscripta.student.network.UdpDiscoveryManager;
+import com.manuscripta.student.network.udp.UdpDiscoveryManager;
 
 import javax.inject.Singleton;
 
