@@ -42,7 +42,12 @@ public final class TcpProtocolException extends Exception {
         /**
          * The message is null.
          */
-        NULL_MESSAGE
+        NULL_MESSAGE,
+
+        /**
+         * A connection error occurred.
+         */
+        CONNECTION_ERROR
     }
 
     /**
@@ -54,6 +59,31 @@ public final class TcpProtocolException extends Exception {
     public TcpProtocolException(@NonNull ErrorType errorType, @NonNull String message) {
         super(message);
         this.errorType = errorType;
+        this.invalidOpcode = null;
+    }
+
+    /**
+     * Creates a new TcpProtocolException with the specified message.
+     * Uses CONNECTION_ERROR as the error type.
+     *
+     * @param message A descriptive error message.
+     */
+    public TcpProtocolException(@NonNull String message) {
+        super(message);
+        this.errorType = ErrorType.CONNECTION_ERROR;
+        this.invalidOpcode = null;
+    }
+
+    /**
+     * Creates a new TcpProtocolException with the specified message and cause.
+     * Uses CONNECTION_ERROR as the error type.
+     *
+     * @param message A descriptive error message.
+     * @param cause   The underlying cause of the error.
+     */
+    public TcpProtocolException(@NonNull String message, @NonNull Throwable cause) {
+        super(message, cause);
+        this.errorType = ErrorType.CONNECTION_ERROR;
         this.invalidOpcode = null;
     }
 
