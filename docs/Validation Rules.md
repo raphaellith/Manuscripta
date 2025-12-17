@@ -128,9 +128,8 @@ If validation rules in API Contract are in contradiction to this document, this 
     (b) `Status` (enum DeviceStatus). Possible values are:
         (i) `ON_TASK`: Student is active in the app.
         (ii) `IDLE`: No activity for a threshold period.
-        (iii) `HAND_RAISED`: Student explicitly requested help.
-        (iv) `LOCKED`: Device is remotely locked.
-        (v)  `DISCONNECTED`: (Server-side inferred status).
+        (iii) `LOCKED`: Device is remotely locked.
+        (iv)  `DISCONNECTED`: (Server-side inferred status).
     (c) `BatteryLevel` (int). The battery level of the device.
     (d) `CurrentMaterialId` (uuid). The material the device is currently viewing.
     (e) `StudentView` (String). Describes the location which the student is viewing.
