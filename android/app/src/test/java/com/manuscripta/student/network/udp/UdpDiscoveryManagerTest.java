@@ -454,39 +454,4 @@ public class UdpDiscoveryManagerTest {
         assertFalse(manager.isRunning());
     }
 
-    @Test
-    public void testStopDiscovery_whenSocketAlreadyClosed_handlesGracefully() throws Exception {
-        // Given
-        manager = createManagerWithMockSocket();
-        when(mockSocket.isClosed()).thenReturn(true); // Socket already closed
-        configureMockSocketToTimeout();
-        
-        // Manually set state as if discovery was running
-        try {
-            java.lang.reflect.Field runningField = UdpDiscoveryManager.class.getDeclaredField("running");
-            runningField.setAccessible(true);
-            AtomicBoolean running = (AtomicBoolean) runningField.get(manager);
-            running.set(true);
-            
-            java.lang.reflect.Field socketField = UdpDiscoveryManager.class.getDeclaredField("socket");
-            socketField.setAccessible(true);
-            socketField.set(manager, mockSocket);
-            
-            java.lang.reflect.Field executorField =
-                    UdpDiscoveryManager.class.getDeclaredField("executorService");
-            executorField.setAccessible(true);
-            ExecutorService mockExecutor = mock(ExecutorService.class);
-            when(mockExecutor.isShutdown()).thenReturn(true); // Already shutdown
-            executorField.set(manager, mockExecutor);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // When
-        manager.stopDiscovery();
-
-        // Then - should not call close() on already-closed socket
-        verify(mockSocket, org.mockito.Mockito.never()).close();
-        assertFalse(manager.isRunning());
-    }
 }

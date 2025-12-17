@@ -79,12 +79,6 @@ public class UdpDiscoveryManager {
     private ExecutorService executorService;
 
     /**
-     * The UDP socket used for receiving discovery broadcasts.
-     */
-    @Nullable
-    private DatagramSocket socket;
-
-    /**
      * Constructs a new UdpDiscoveryManager.
      */
     @Inject
@@ -117,7 +111,6 @@ public class UdpDiscoveryManager {
     public void stopDiscovery() {
         if (running.compareAndSet(true, false)) {
             Log.d(TAG, "Stopping UDP discovery");
-            closeSocket();
             shutdownExecutor();
         } else {
             Log.d(TAG, "Discovery not running, ignoring stop request");
@@ -157,6 +150,7 @@ public class UdpDiscoveryManager {
      * Runs on a background thread.
      */
     private void listenForDiscovery() {
+        DatagramSocket socket = null;
         try {
             socket = createSocket();
             socket.setSoTimeout(SOCKET_TIMEOUT_MS);
@@ -182,7 +176,10 @@ public class UdpDiscoveryManager {
             Log.e(TAG, "Failed to create UDP socket on port " + UDP_PORT, e);
             running.set(false);
         } finally {
-            closeSocket();
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+                Log.d(TAG, "UDP socket closed");
+            }
             Log.d(TAG, "UDP discovery listener terminated");
         }
     }
@@ -230,16 +227,7 @@ public class UdpDiscoveryManager {
         return new DatagramSocket(UDP_PORT);
     }
 
-    /**
-     * Closes the UDP socket if it is open.
-     */
-    private void closeSocket() {
-        if (socket != null && !socket.isClosed()) {
-            socket.close();
-            socket = null;
-            Log.d(TAG, "UDP socket closed");
-        }
-    }
+
 
     /**
      * Shuts down the executor service.
