@@ -62,7 +62,7 @@ erDiagram
     
     DEVICE_STATUS {
         string deviceId PK
-        enum status "ON_TASK|IDLE|HAND_RAISED|LOCKED|DISCONNECTED"
+        enum status "ON_TASK|IDLE|LOCKED|DISCONNECTED"
         int batteryLevel
         string currentMaterialId FK
         string studentView "placeholder"
@@ -319,18 +319,12 @@ stateDiagram-v2
     DISCONNECTED --> ON_TASK: pairing complete
     
     ON_TASK --> IDLE: inactivity timeout
-    ON_TASK --> HAND_RAISED: raise hand
     ON_TASK --> LOCKED: LOCK_SCREEN received
     ON_TASK --> DISCONNECTED: connection lost
     
     IDLE --> ON_TASK: user activity
-    IDLE --> HAND_RAISED: raise hand
     IDLE --> LOCKED: LOCK_SCREEN received
     IDLE --> DISCONNECTED: connection lost
-    
-    HAND_RAISED --> ON_TASK: acknowledged / timeout
-    HAND_RAISED --> LOCKED: LOCK_SCREEN received
-    HAND_RAISED --> DISCONNECTED: connection lost
     
     LOCKED --> ON_TASK: UNLOCK_SCREEN received
     LOCKED --> DISCONNECTED: connection lost
@@ -414,7 +408,6 @@ classDiagram
         <<enumeration>>
         ON_TASK
         IDLE
-        HAND_RAISED
         LOCKED
         DISCONNECTED
     }
