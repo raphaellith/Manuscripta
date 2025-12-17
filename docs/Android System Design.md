@@ -138,12 +138,12 @@ sequenceDiagram
         alt New materials available
             W->>TCP: DISTRIBUTE_MATERIAL (0x05)
             TCP->>MR: onFetchMaterialsSignal()
-            MR->>TCP: Send DISTRIBUTE_ACK (0x12)
-            TCP->>W: DISTRIBUTE_ACK
             MR->>HTTP: GET /distribution/{deviceId}
             HTTP->>W: HTTP Request
             W->>HTTP: 200 OK [Distribution Bundle]
             HTTP->>MR: Return materials & questions
+            MR->>TCP: Send DISTRIBUTE_ACK (0x12)
+            TCP->>W: DISTRIBUTE_ACK
             
             loop For each material in bundle
                 MR->>MR: Process Material JSON
