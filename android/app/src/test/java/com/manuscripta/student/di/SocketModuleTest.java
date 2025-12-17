@@ -2,24 +2,22 @@ package com.manuscripta.student.di;
 
 import static org.junit.Assert.assertNotNull;
 
-import com.manuscripta.student.network.udp.UdpDiscoveryManager;
-
 import org.junit.Test;
 
 /**
  * Unit tests for {@link SocketModule}.
+ * 
+ * <p>Note: UdpDiscoveryManager uses constructor injection with @Inject and @Singleton,
+ * so it doesn't require a @Provides method in SocketModule.</p>
  */
 public class SocketModuleTest {
 
     @Test
-    public void testProvideUdpDiscoveryManager_returnsNonNull() {
-        // Given
+    public void testModuleInstantiation_createsNonNull() {
+        // Given/When
         SocketModule module = new SocketModule();
 
-        // When
-        UdpDiscoveryManager manager = module.provideUdpDiscoveryManager();
-
         // Then
-        assertNotNull(manager);
+        assertNotNull(module);
     }
 }

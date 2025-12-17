@@ -74,9 +74,10 @@ public class UdpDiscoveryManager {
 
     /**
      * Executor service for background UDP listening.
+     * Marked volatile to ensure visibility across threads.
      */
     @Nullable
-    private ExecutorService executorService;
+    private volatile ExecutorService executorService;
 
     /**
      * Constructs a new UdpDiscoveryManager.
@@ -227,10 +228,16 @@ public class UdpDiscoveryManager {
         return new DatagramSocket(UDP_PORT);
     }
 
-
-
     /**
      * Shuts down the executor service.
+     * 
+     * <p>Note: The listening thread is blocked on socket.receive() which does not
+     * respond to thread interruption. The thread will terminate when either:
+     * <ul>
+     *   <li>The socket timeout (SOCKET_TIMEOUT_MS) is reached</li>
+     *   <li>The socket is closed in the finally block after running flag is checked</li>
+     * </ul>
+     * Shutdown may therefore take up to SOCKET_TIMEOUT_MS milliseconds.</p>
      */
     private void shutdownExecutor() {
         if (executorService != null && !executorService.isShutdown()) {
