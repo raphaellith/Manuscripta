@@ -1,4 +1,4 @@
-package com.manuscripta.student.network;
+package com.manuscripta.student.network.udp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
