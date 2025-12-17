@@ -350,7 +350,6 @@ See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 ### 4.3. Device Status Enum
 -   `ON_TASK`: Student is active in the app.
 -   `IDLE`: No activity for a threshold period.
--   `HAND_RAISED`: Student explicitly requested help.
 -   `LOCKED`: Device is remotely locked.
 -   `DISCONNECTED`: (Server-side inferred status).
 
