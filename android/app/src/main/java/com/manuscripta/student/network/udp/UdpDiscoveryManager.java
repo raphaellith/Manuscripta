@@ -25,7 +25,7 @@ import javax.inject.Singleton;
  * discovery announcements from the teacher server. The manager maintains
  * the most recently discovered server information for retrieval.</p>
  *
- * <p>Per API Contract §1.1, the discovery message format is:</p>
+ * <p>Per API Contract §3.3, the discovery message format is:</p>
  * <pre>
  * | Field      | Offset | Size    | Description                              |
  * |------------|--------|---------|------------------------------------------|
