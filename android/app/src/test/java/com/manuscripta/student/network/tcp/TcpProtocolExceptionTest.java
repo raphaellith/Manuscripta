@@ -101,11 +101,12 @@ public class TcpProtocolExceptionTest {
     public void errorType_allValuesExist() {
         TcpProtocolException.ErrorType[] values = TcpProtocolException.ErrorType.values();
 
-        assertEquals(4, values.length);
+        assertEquals(5, values.length);
         assertNotNull(TcpProtocolException.ErrorType.valueOf("EMPTY_DATA"));
         assertNotNull(TcpProtocolException.ErrorType.valueOf("UNKNOWN_OPCODE"));
         assertNotNull(TcpProtocolException.ErrorType.valueOf("MALFORMED_DATA"));
         assertNotNull(TcpProtocolException.ErrorType.valueOf("NULL_MESSAGE"));
+        assertNotNull(TcpProtocolException.ErrorType.valueOf("CONNECTION_ERROR"));
     }
 
     @Test
@@ -114,5 +115,26 @@ public class TcpProtocolExceptionTest {
                 TcpProtocolException.ErrorType.EMPTY_DATA, "Test");
 
         assertTrue(exception instanceof Exception);
+    }
+
+    @Test
+    public void constructor_withMessageOnly_setsConnectionError() {
+        TcpProtocolException exception = new TcpProtocolException("Connection failed");
+
+        assertEquals(TcpProtocolException.ErrorType.CONNECTION_ERROR, exception.getErrorType());
+        assertEquals("Connection failed", exception.getMessage());
+        assertNull(exception.getInvalidOpcode());
+        assertNull(exception.getCause());
+    }
+
+    @Test
+    public void constructor_withMessageAndCause_setsConnectionErrorAndCause() {
+        Exception cause = new RuntimeException("Underlying error");
+        TcpProtocolException exception = new TcpProtocolException("Connection failed", cause);
+
+        assertEquals(TcpProtocolException.ErrorType.CONNECTION_ERROR, exception.getErrorType());
+        assertEquals("Connection failed", exception.getMessage());
+        assertNull(exception.getInvalidOpcode());
+        assertEquals(cause, exception.getCause());
     }
 }

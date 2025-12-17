@@ -96,20 +96,60 @@ public class TcpSocketManagerTest {
         assertFalse(socketManager.isConnected());
     }
 
-    // ========== setMessageListener tests ==========
+    // ========== addMessageListener tests ==========
 
     @Test
-    public void setMessageListener_acceptsNull() {
-        socketManager.setMessageListener(null);
-        // Should not throw
+    public void addMessageListener_addsListener() {
+        TcpMessageListener listener = mock(TcpMessageListener.class);
+
+        socketManager.addMessageListener(listener);
+
+        assertEquals(1, socketManager.getListenerCount());
     }
 
     @Test
-    public void setMessageListener_acceptsListener() {
-        TcpSocketManager.MessageListener listener = mock(TcpSocketManager.MessageListener.class);
+    public void addMessageListener_multipleListeners() {
+        TcpMessageListener listener1 = mock(TcpMessageListener.class);
+        TcpMessageListener listener2 = mock(TcpMessageListener.class);
 
-        socketManager.setMessageListener(listener);
-        // Should not throw
+        socketManager.addMessageListener(listener1);
+        socketManager.addMessageListener(listener2);
+
+        assertEquals(2, socketManager.getListenerCount());
+    }
+
+    @Test
+    public void addMessageListener_duplicateListenerNotAdded() {
+        TcpMessageListener listener = mock(TcpMessageListener.class);
+
+        socketManager.addMessageListener(listener);
+        socketManager.addMessageListener(listener);
+
+        assertEquals(1, socketManager.getListenerCount());
+    }
+
+    // ========== removeMessageListener tests ==========
+
+    @Test
+    public void removeMessageListener_removesListener() {
+        TcpMessageListener listener = mock(TcpMessageListener.class);
+
+        socketManager.addMessageListener(listener);
+        assertEquals(1, socketManager.getListenerCount());
+
+        socketManager.removeMessageListener(listener);
+        assertEquals(0, socketManager.getListenerCount());
+    }
+
+    @Test
+    public void removeMessageListener_nonExistentListenerDoesNothing() {
+        TcpMessageListener listener1 = mock(TcpMessageListener.class);
+        TcpMessageListener listener2 = mock(TcpMessageListener.class);
+
+        socketManager.addMessageListener(listener1);
+        socketManager.removeMessageListener(listener2);
+
+        assertEquals(1, socketManager.getListenerCount());
     }
 
     // ========== disconnect tests ==========
@@ -200,42 +240,6 @@ public class TcpSocketManagerTest {
         long cappedDelay = Math.min(8000L * 2, 8000L);
 
         assertEquals(8000L, cappedDelay);
-    }
-
-    // ========== MessageListener interface tests ==========
-
-    @Test
-    public void messageListener_onMessageReceivedExists() {
-        TcpSocketManager.MessageListener listener = new TcpSocketManager.MessageListener() {
-            @Override
-            public void onMessageReceived(@androidx.annotation.NonNull TcpMessage message) {
-                assertNotNull(message);
-            }
-
-            @Override
-            public void onError(@androidx.annotation.NonNull Exception error) {
-                // Not tested here
-            }
-        };
-
-        listener.onMessageReceived(new LockScreenMessage());
-    }
-
-    @Test
-    public void messageListener_onErrorExists() {
-        TcpSocketManager.MessageListener listener = new TcpSocketManager.MessageListener() {
-            @Override
-            public void onMessageReceived(@androidx.annotation.NonNull TcpMessage message) {
-                // Not tested here
-            }
-
-            @Override
-            public void onError(@androidx.annotation.NonNull Exception error) {
-                assertNotNull(error);
-            }
-        };
-
-        listener.onError(new IOException("Test error"));
     }
 
     // ========== Connection lifecycle tests ==========
