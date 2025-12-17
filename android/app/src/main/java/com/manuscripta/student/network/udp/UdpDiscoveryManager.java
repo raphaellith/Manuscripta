@@ -12,6 +12,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -229,7 +230,7 @@ public class UdpDiscoveryManager {
     }
 
     /**
-     * Shuts down the executor service.
+     * Shuts down the executor service and waits for the listening thread to terminate.
      * 
      * <p>Note: The listening thread is blocked on socket.receive() which does not
      * respond to thread interruption. The thread will terminate when either:
@@ -237,12 +238,24 @@ public class UdpDiscoveryManager {
      *   <li>The socket timeout (SOCKET_TIMEOUT_MS) is reached</li>
      *   <li>The socket is closed in the finally block after running flag is checked</li>
      * </ul>
-     * Shutdown may therefore take up to SOCKET_TIMEOUT_MS milliseconds.</p>
+     * This method waits for up to SOCKET_TIMEOUT_MS + 500ms to ensure the socket
+     * is fully closed before returning, preventing port binding conflicts on restart.</p>
      */
     private void shutdownExecutor() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdownNow();
+        ExecutorService executor = executorService;
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
             executorService = null;
+            try {
+                // Wait for the listening thread to close its socket
+                // Timeout is slightly longer than SOCKET_TIMEOUT_MS to allow for cleanup
+                if (!executor.awaitTermination(SOCKET_TIMEOUT_MS + 500, TimeUnit.MILLISECONDS)) {
+                    Log.w(TAG, "Executor did not terminate within timeout");
+                }
+            } catch (InterruptedException e) {
+                Log.w(TAG, "Interrupted while waiting for executor termination", e);
+                Thread.currentThread().interrupt();
+            }
             Log.d(TAG, "Executor service shut down");
         }
     }
