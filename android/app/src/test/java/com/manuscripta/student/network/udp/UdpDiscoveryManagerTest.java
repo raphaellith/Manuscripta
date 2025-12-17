@@ -244,6 +244,47 @@ public class UdpDiscoveryManagerTest {
     }
 
     @Test
+    public void testReceiveInvalidPacket_logsWarningOnParseFailure() throws Exception {
+        // Given - packet with correct length (9 bytes) but wrong opcode
+        // This triggers IllegalArgumentException in DiscoveryMessageParser.parse()
+        // which is caught and logged as a warning in processPacket()
+        manager = createManagerWithMockSocket();
+        AtomicInteger receiveCallCount = new AtomicInteger(0);
+        byte[] invalidOpcodePacket = new byte[]{
+                0x01, // Wrong opcode (should be 0x00)
+                (byte) 192, (byte) 168, 1, 100, // IP address
+                0x1F, (byte) 0x90, // HTTP port (8080 little-endian)
+                (byte) 0x82, 0x23  // TCP port (9090 little-endian)
+        };
+        
+        doAnswer(invocation -> {
+            int count = receiveCallCount.incrementAndGet();
+            if (count == 1) {
+                // First call: return invalid packet
+                DatagramPacket packet = invocation.getArgument(0);
+                System.arraycopy(invalidOpcodePacket, 0, packet.getData(), 0, invalidOpcodePacket.length);
+                packet.setLength(invalidOpcodePacket.length);
+                return null;
+            }
+            // Subsequent calls: timeout
+            throw new SocketTimeoutException();
+        }).when(mockSocket).receive(any(DatagramPacket.class));
+
+        // When
+        manager.startDiscovery();
+        // Wait for the invalid packet to be received and processed
+        awaitCondition(() -> receiveCallCount.get() >= 1, 2000, "Packet should be received");
+        // Small delay to ensure processPacket completes
+        Thread.sleep(50);
+        manager.stopDiscovery();
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
+
+        // Then - should not have stored anything due to parse failure
+        // The IllegalArgumentException catch block logs the warning
+        assertNull(manager.getDiscoveredServer());
+    }
+
+    @Test
     public void testSocketException_handledGracefully() throws Exception {
         // Given
         manager = new UdpDiscoveryManager() {
