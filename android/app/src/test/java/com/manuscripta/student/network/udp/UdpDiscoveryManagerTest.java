@@ -26,6 +26,7 @@ import java.nio.ByteOrder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * Unit tests for {@link UdpDiscoveryManager}.
@@ -71,7 +72,7 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        Thread.sleep(50); // Allow thread to start
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
 
         // Then
         assertTrue(manager.isRunning());
@@ -86,7 +87,7 @@ public class UdpDiscoveryManagerTest {
         manager = createManagerWithMockSocket();
         configureMockSocketToTimeout();
         manager.startDiscovery();
-        Thread.sleep(50);
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
         assertTrue(manager.isRunning());
 
         // When - call start again
@@ -105,12 +106,12 @@ public class UdpDiscoveryManagerTest {
         manager = createManagerWithMockSocket();
         configureMockSocketToTimeout();
         manager.startDiscovery();
-        Thread.sleep(50);
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
         assertTrue(manager.isRunning());
 
         // When
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then
         assertFalse(manager.isRunning());
@@ -135,11 +136,11 @@ public class UdpDiscoveryManagerTest {
         manager = createManagerWithMockSocket();
         configureMockSocketToTimeout();
         manager.startDiscovery();
-        Thread.sleep(50);
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
 
         // When
         manager.stopDiscovery();
-        Thread.sleep(100);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then - verify close was called at least once
         verify(mockSocket, atLeastOnce()).close();
@@ -163,9 +164,9 @@ public class UdpDiscoveryManagerTest {
         configureMockSocketToReceiveOnce(validPacketData);
         
         manager.startDiscovery();
-        Thread.sleep(100);
+        awaitCondition(() -> manager.getDiscoveredServer() != null, 2000, "Server should be discovered");
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
         
         assertNotNull(manager.getDiscoveredServer());
 
@@ -186,9 +187,9 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        Thread.sleep(100);
+        awaitCondition(() -> manager.getDiscoveredServer() != null, 2000, "Server should be discovered");
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then
         DiscoveryMessage message = manager.getDiscoveredServer();
@@ -210,9 +211,12 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        Thread.sleep(150);
+        awaitCondition(() -> {
+            DiscoveryMessage msg = manager.getDiscoveredServer();
+            return msg != null && "10.0.0.1".equals(msg.getIpAddress());
+        }, 2000, "Second (latest) server should be discovered");
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then - should have the second (latest) packet
         DiscoveryMessage message = manager.getDiscoveredServer();
@@ -231,9 +235,9 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        Thread.sleep(100);
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then - should not have stored anything
         assertNull(manager.getDiscoveredServer());
@@ -251,7 +255,7 @@ public class UdpDiscoveryManagerTest {
 
         // When/Then - should not throw, just log error
         manager.startDiscovery();
-        Thread.sleep(100);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop after socket error");
         
         // Should handle gracefully
         assertFalse(manager.isRunning());
@@ -268,14 +272,14 @@ public class UdpDiscoveryManagerTest {
 
         // When - start
         manager.startDiscovery();
-        Thread.sleep(50);
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
 
         // Then - running
         assertTrue(manager.isRunning());
 
         // When - stop
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then - not running
         assertFalse(manager.isRunning());
@@ -306,9 +310,9 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        Thread.sleep(200);
+        awaitCondition(() -> manager.getDiscoveredServer() != null, 2000, "Server should be discovered after recovery");
         manager.stopDiscovery();
-        Thread.sleep(50);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then - should have recovered and stored message
         assertNotNull(manager.getDiscoveredServer());
@@ -329,7 +333,7 @@ public class UdpDiscoveryManagerTest {
         }).when(mockSocket).receive(any(DatagramPacket.class));
 
         manager.startDiscovery();
-        Thread.sleep(100);
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop after IOException");
         
         assertFalse(manager.isRunning());
     }
@@ -452,6 +456,26 @@ public class UdpDiscoveryManagerTest {
 
         // Then - should handle gracefully without NullPointerException
         assertFalse(manager.isRunning());
+    }
+
+    /**
+     * Polls a condition until it becomes true or timeout is reached.
+     * This replaces flaky Thread.sleep() calls with deterministic waiting.
+     *
+     * @param condition The condition to wait for
+     * @param timeoutMs Maximum time to wait in milliseconds
+     * @param message Error message if timeout is reached
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
+    private void awaitCondition(Supplier<Boolean> condition, long timeoutMs, String message)
+            throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (!condition.get()) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError("Timeout: " + message);
+            }
+            Thread.sleep(10);  // Small polling interval
+        }
     }
 
 }
