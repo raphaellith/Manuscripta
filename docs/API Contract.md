@@ -19,17 +19,9 @@ The system uses a **hybrid multi-channel networking approach** with separate pro
 
 If a performance bottleneck is observed during implementation, UDP may be introduced for additional message types.
 
-### Material Distribution Pattern (Heartbeat-Triggered Fetch)
+### Material Distribution Pattern
 
-Since the Windows server cannot push HTTP requests to Android clients, material distribution uses a **heartbeat-triggered fetch** pattern:
-
-1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
-2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
-3. **If materials are available**, the server responds with a `DISTRIBUTE_MATERIAL` (0x05) TCP message
-4. **Android Client** receives the signal and initiates an HTTP `GET /distribution/{deviceId}` request to fetch the distribution bundle
-5. **Android Client** processes the returned materials and questions
-
-This pattern ensures material distribution works within the constraint that the server cannot initiate connections to clients.
+*DELETED* — See `Session Interaction.md` §2-3 for the authoritative heartbeat-triggered fetch pattern and material distribution process.
 
 **Connection Establishment:**
 Each protocol operates on its own channel. A connection is deemed established only after pairing procedures on **all channels** (HTTP and TCP) have been completed successfully.
@@ -280,7 +272,7 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
-| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges receipt of DISTRIBUTE_MATERIAL signal |
+| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{deviceId}` |
 
 **Example: Status Update Message**
 ```
