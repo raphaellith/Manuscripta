@@ -10,10 +10,14 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
+
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -31,6 +35,9 @@ import java.util.function.Supplier;
  * Unit tests for {@link UdpDiscoveryManager}.
  */
 public class UdpDiscoveryManagerTest {
+
+    @Rule
+    public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
     private UdpDiscoveryManager manager;
     private DatagramSocket mockSocket;
@@ -473,6 +480,340 @@ public class UdpDiscoveryManagerTest {
             }
             Thread.sleep(10);  // Small polling interval
         }
+    }
+
+    // ========== State Transition Tests ==========
+
+    @Test
+    public void testGetDiscoveryState_initiallyIdle() {
+        // Given
+        manager = new UdpDiscoveryManager();
+
+        // Then
+        assertEquals(DiscoveryState.IDLE, manager.getDiscoveryState().getValue());
+    }
+
+    @Test
+    public void testStartDiscovery_transitionsToSearchingState() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        configureMockSocketToTimeout();
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.SEARCHING,
+                2000, "State should transition to SEARCHING");
+
+        // Then
+        assertEquals(DiscoveryState.SEARCHING, manager.getDiscoveryState().getValue());
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    @Test
+    public void testReceiveValidPacket_transitionsToFoundState() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.FOUND,
+                2000, "State should transition to FOUND");
+
+        // Then
+        assertEquals(DiscoveryState.FOUND, manager.getDiscoveryState().getValue());
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    @Test
+    public void testStopDiscovery_transitionsToIdleState() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        configureMockSocketToTimeout();
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.SEARCHING,
+                2000, "State should transition to SEARCHING");
+
+        // When
+        manager.stopDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.IDLE,
+                2000, "State should transition to IDLE");
+
+        // Then
+        assertEquals(DiscoveryState.IDLE, manager.getDiscoveryState().getValue());
+    }
+
+    @Test
+    public void testSocketException_transitionsToErrorState() throws Exception {
+        // Given
+        manager = new UdpDiscoveryManager() {
+            @Override
+            DatagramSocket createSocket() throws SocketException {
+                throw new SocketException("Cannot bind to port");
+            }
+        };
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.ERROR,
+                2000, "State should transition to ERROR");
+
+        // Then
+        assertEquals(DiscoveryState.ERROR, manager.getDiscoveryState().getValue());
+    }
+
+    @Test
+    public void testSocketException_setsLastError() throws Exception {
+        // Given
+        manager = new UdpDiscoveryManager() {
+            @Override
+            DatagramSocket createSocket() throws SocketException {
+                throw new SocketException("Cannot bind to port");
+            }
+        };
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getLastError() != null, 2000, "Error should be set");
+
+        // Then
+        assertEquals("Cannot bind to port", manager.getLastError());
+    }
+
+    @Test
+    public void testGetLastError_initiallyNull() {
+        // Given
+        manager = new UdpDiscoveryManager();
+
+        // Then
+        assertNull(manager.getLastError());
+    }
+
+    // ========== Timeout Tests ==========
+
+    @Test
+    public void testTimeout_transitionsToTimeoutState() throws Exception {
+        // Given - very short timeout for testing
+        manager = createManagerWithMockSocket();
+        manager.setTimeoutMs(100); // 100ms timeout
+        configureMockSocketToTimeout();
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.TIMEOUT,
+                2000, "State should transition to TIMEOUT");
+
+        // Then
+        assertEquals(DiscoveryState.TIMEOUT, manager.getDiscoveryState().getValue());
+        assertFalse(manager.isRunning());
+    }
+
+    @Test
+    public void testTimeout_cancelledOnDiscovery() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        manager.setTimeoutMs(5000); // Long timeout
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        // When - server discovered before timeout
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.FOUND,
+                2000, "State should transition to FOUND");
+
+        // Then - should be FOUND, not TIMEOUT
+        assertEquals(DiscoveryState.FOUND, manager.getDiscoveryState().getValue());
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    @Test
+    public void testTimeout_cancelledOnStop() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        manager.setTimeoutMs(10000); // Long timeout
+        configureMockSocketToTimeout();
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.SEARCHING,
+                2000, "State should transition to SEARCHING");
+
+        // When - stop before timeout
+        manager.stopDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.IDLE,
+                2000, "State should transition to IDLE");
+
+        // Then - should be IDLE, not TIMEOUT
+        assertEquals(DiscoveryState.IDLE, manager.getDiscoveryState().getValue());
+    }
+
+    @Test
+    public void testGetTimeoutMs_returnsDefaultValue() {
+        // Given
+        manager = new UdpDiscoveryManager();
+
+        // Then
+        assertEquals(UdpDiscoveryManager.DEFAULT_TIMEOUT_MS, manager.getTimeoutMs());
+    }
+
+    @Test
+    public void testSetTimeoutMs_updatesTimeoutValue() {
+        // Given
+        manager = new UdpDiscoveryManager();
+
+        // When
+        manager.setTimeoutMs(5000);
+
+        // Then
+        assertEquals(5000, manager.getTimeoutMs());
+    }
+
+    // ========== Listener Tests ==========
+
+    @Test
+    public void testAddListener_receivesDiscoveryCallback() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        AtomicBoolean callbackReceived = new AtomicBoolean(false);
+        OnServerDiscoveredListener listener = message -> {
+            assertEquals("192.168.1.100", message.getIpAddress());
+            callbackReceived.set(true);
+        };
+        manager.addListener(listener);
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(callbackReceived::get, 2000, "Listener should receive callback");
+
+        // Then
+        assertTrue(callbackReceived.get());
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    @Test
+    public void testRemoveListener_noLongerReceivesCallback() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        AtomicBoolean callbackReceived = new AtomicBoolean(false);
+        OnServerDiscoveredListener listener = message -> callbackReceived.set(true);
+        manager.addListener(listener);
+        manager.removeListener(listener);
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveredServer() != null, 2000, "Server should be discovered");
+        manager.stopDiscovery();
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
+
+        // Then - callback should NOT have been received
+        assertFalse(callbackReceived.get());
+    }
+
+    @Test
+    public void testAddListener_duplicate_notAddedTwice() {
+        // Given
+        manager = new UdpDiscoveryManager();
+        OnServerDiscoveredListener listener = message -> { };
+
+        // When
+        manager.addListener(listener);
+        manager.addListener(listener);
+
+        // Then
+        assertEquals(1, manager.getListenerCount());
+    }
+
+    @Test
+    public void testGetListenerCount_initiallyZero() {
+        // Given
+        manager = new UdpDiscoveryManager();
+
+        // Then
+        assertEquals(0, manager.getListenerCount());
+    }
+
+    @Test
+    public void testAddListener_incrementsCount() {
+        // Given
+        manager = new UdpDiscoveryManager();
+        OnServerDiscoveredListener listener = message -> { };
+
+        // When
+        manager.addListener(listener);
+
+        // Then
+        assertEquals(1, manager.getListenerCount());
+    }
+
+    @Test
+    public void testRemoveListener_decrementsCount() {
+        // Given
+        manager = new UdpDiscoveryManager();
+        OnServerDiscoveredListener listener = message -> { };
+        manager.addListener(listener);
+        assertEquals(1, manager.getListenerCount());
+
+        // When
+        manager.removeListener(listener);
+
+        // Then
+        assertEquals(0, manager.getListenerCount());
+    }
+
+    @Test
+    public void testListenerException_doesNotAffectOtherListeners() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        AtomicBoolean secondListenerCalled = new AtomicBoolean(false);
+
+        // First listener throws exception
+        OnServerDiscoveredListener throwingListener = message -> {
+            throw new RuntimeException("Test exception");
+        };
+        // Second listener should still be called
+        OnServerDiscoveredListener normalListener = message -> secondListenerCalled.set(true);
+
+        manager.addListener(throwingListener);
+        manager.addListener(normalListener);
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(secondListenerCalled::get, 2000, "Second listener should be called");
+
+        // Then
+        assertTrue(secondListenerCalled.get());
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    // ========== Default Timeout Constant Test ==========
+
+    @Test
+    public void testDefaultTimeoutMs_isCorrectValue() {
+        // Then
+        assertEquals(15000, UdpDiscoveryManager.DEFAULT_TIMEOUT_MS);
     }
 
 }
