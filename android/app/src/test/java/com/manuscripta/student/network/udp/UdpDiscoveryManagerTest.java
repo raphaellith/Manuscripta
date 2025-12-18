@@ -14,7 +14,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.content.Context;
+
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
+
+import com.manuscripta.student.utils.MulticastLockManager;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,10 +45,18 @@ public class UdpDiscoveryManagerTest {
 
     private UdpDiscoveryManager manager;
     private DatagramSocket mockSocket;
+    private Context mockContext;
+    private MulticastLockManager mockLockManager;
 
     @Before
     public void setUp() throws Exception {
         mockSocket = mock(DatagramSocket.class);
+        mockContext = mock(Context.class);
+        mockLockManager = mock(MulticastLockManager.class);
+        
+        // Configure multicast lock manager to succeed by default
+        when(mockLockManager.acquire(any(Context.class))).thenReturn(true);
+        
         AtomicBoolean closed = new AtomicBoolean(false);
         when(mockSocket.isClosed()).thenAnswer(invocation -> closed.get());
         doAnswer(invocation -> {
@@ -56,7 +68,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testConstructor_createsInstance() {
         // When
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertNotNull(manager);
@@ -126,7 +138,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testStopDiscovery_whenNotRunning_noOp() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         assertFalse(manager.isRunning());
 
         // When
@@ -156,7 +168,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testGetDiscoveredServer_initiallyNull() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertNull(manager.getDiscoveredServer());
@@ -293,7 +305,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testSocketException_handledGracefully() throws Exception {
         // Given
-        manager = new UdpDiscoveryManager() {
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager) {
             @Override
             DatagramSocket createSocket() throws SocketException {
                 throw new SocketException("Cannot bind to port");
@@ -371,7 +383,7 @@ public class UdpDiscoveryManagerTest {
      * @return UdpDiscoveryManager with mock socket
      */
     private UdpDiscoveryManager createManagerWithMockSocket() {
-        return new UdpDiscoveryManager() {
+        return new UdpDiscoveryManager(mockContext, mockLockManager) {
             @Override
             DatagramSocket createSocket() {
                 return mockSocket;
@@ -449,7 +461,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testCreateSocket_returnsDatagramSocket() throws Exception {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // When
         DatagramSocket socket = manager.createSocket();
@@ -487,7 +499,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testGetDiscoveryState_initiallyIdle() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertEquals(DiscoveryState.IDLE, manager.getDiscoveryState().getValue());
@@ -552,7 +564,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testSocketException_transitionsToErrorState() throws Exception {
         // Given
-        manager = new UdpDiscoveryManager() {
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager) {
             @Override
             DatagramSocket createSocket() throws SocketException {
                 throw new SocketException("Cannot bind to port");
@@ -571,7 +583,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testSocketException_setsLastError() throws Exception {
         // Given
-        manager = new UdpDiscoveryManager() {
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager) {
             @Override
             DatagramSocket createSocket() throws SocketException {
                 throw new SocketException("Cannot bind to port");
@@ -589,7 +601,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testGetLastError_initiallyNull() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertNull(manager.getLastError());
@@ -657,7 +669,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testGetTimeoutMs_returnsDefaultValue() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertEquals(UdpDiscoveryManager.DEFAULT_TIMEOUT_MS, manager.getTimeoutMs());
@@ -666,7 +678,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testSetTimeoutMs_updatesTimeoutValue() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // When
         manager.setTimeoutMs(5000);
@@ -729,7 +741,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testAddListener_duplicate_notAddedTwice() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         OnServerDiscoveredListener listener = message -> { };
 
         // When
@@ -743,7 +755,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testGetListenerCount_initiallyZero() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
 
         // Then
         assertEquals(0, manager.getListenerCount());
@@ -752,7 +764,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testAddListener_incrementsCount() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         OnServerDiscoveredListener listener = message -> { };
 
         // When
@@ -765,7 +777,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testRemoveListener_decrementsCount() {
         // Given
-        manager = new UdpDiscoveryManager();
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         OnServerDiscoveredListener listener = message -> { };
         manager.addListener(listener);
         assertEquals(1, manager.getListenerCount());
@@ -814,6 +826,76 @@ public class UdpDiscoveryManagerTest {
     public void testDefaultTimeoutMs_isCorrectValue() {
         // Then
         assertEquals(15000, UdpDiscoveryManager.DEFAULT_TIMEOUT_MS);
+    }
+
+    // ========== Multicast Lock Tests ==========
+
+    @Test
+    public void testStartDiscovery_acquiresMulticastLock() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        configureMockSocketToTimeout();
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
+
+        // Then
+        verify(mockLockManager).acquire(mockContext);
+
+        // Cleanup
+        manager.stopDiscovery();
+    }
+
+    @Test
+    public void testStopDiscovery_releasesMulticastLock() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        configureMockSocketToTimeout();
+        manager.startDiscovery();
+        awaitCondition(manager::isRunning, 2000, "Manager should start running");
+
+        // When
+        manager.stopDiscovery();
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
+
+        // Then
+        verify(mockLockManager).release();
+    }
+
+    @Test
+    public void testTimeout_releasesMulticastLock() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        manager.setTimeoutMs(100); // Short timeout
+        configureMockSocketToTimeout();
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.TIMEOUT,
+                2000, "State should transition to TIMEOUT");
+
+        // Then
+        verify(mockLockManager).release();
+    }
+
+    @Test
+    public void testSocketException_releasesMulticastLock() throws Exception {
+        // Given
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager) {
+            @Override
+            DatagramSocket createSocket() throws SocketException {
+                throw new SocketException("Cannot bind to port");
+            }
+        };
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.ERROR,
+                2000, "State should transition to ERROR");
+
+        // Then
+        verify(mockLockManager).release();
     }
 
 }

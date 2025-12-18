@@ -1,5 +1,6 @@
 package com.manuscripta.student.network.udp;
 
+import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -7,6 +8,10 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import com.manuscripta.student.utils.MulticastLockManager;
+
+import dagger.hilt.android.qualifiers.ApplicationContext;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -127,10 +132,29 @@ public class UdpDiscoveryManager {
     private volatile long timeoutMs = DEFAULT_TIMEOUT_MS;
 
     /**
+     * Application context for acquiring multicast lock.
+     */
+    @NonNull
+    private final Context applicationContext;
+
+    /**
+     * Manager for multicast lock acquisition and release.
+     */
+    @NonNull
+    private final MulticastLockManager multicastLockManager;
+
+    /**
      * Constructs a new UdpDiscoveryManager.
+     *
+     * @param applicationContext The application context for multicast lock.
+     * @param multicastLockManager The multicast lock manager.
      */
     @Inject
-    public UdpDiscoveryManager() {
+    public UdpDiscoveryManager(
+            @ApplicationContext @NonNull Context applicationContext,
+            @NonNull MulticastLockManager multicastLockManager) {
+        this.applicationContext = applicationContext;
+        this.multicastLockManager = multicastLockManager;
         this.discoveryState = new MutableLiveData<>(DiscoveryState.IDLE);
     }
 
@@ -211,6 +235,11 @@ public class UdpDiscoveryManager {
             lastError.set(null);
             updateState(DiscoveryState.SEARCHING);
             
+            // Acquire multicast lock to receive broadcast packets
+            if (!multicastLockManager.acquire(applicationContext)) {
+                Log.w(TAG, "Failed to acquire multicast lock, discovery may not work");
+            }
+            
             executorService = Executors.newSingleThreadExecutor();
             executorService.submit(this::listenForDiscovery);
             
@@ -231,6 +260,7 @@ public class UdpDiscoveryManager {
             Log.d(TAG, "Stopping UDP discovery");
             cancelTimeout();
             shutdownExecutor();
+            multicastLockManager.release();
             updateState(DiscoveryState.IDLE);
         } else {
             Log.d(TAG, "Discovery not running, ignoring stop request");
@@ -312,6 +342,7 @@ public class UdpDiscoveryManager {
             Log.d(TAG, "Discovery timeout after " + timeoutMs + "ms");
             updateState(DiscoveryState.TIMEOUT);
             shutdownExecutor();
+            multicastLockManager.release();
         }
     }
 
@@ -362,6 +393,7 @@ public class UdpDiscoveryManager {
     private void handleSocketError(@NonNull SocketException e) {
         running.set(false);
         cancelTimeout();
+        multicastLockManager.release();
         lastError.set(e.getMessage());
         updateState(DiscoveryState.ERROR);
     }
