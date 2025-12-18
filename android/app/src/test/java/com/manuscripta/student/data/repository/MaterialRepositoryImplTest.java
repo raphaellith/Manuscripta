@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -67,14 +68,16 @@ public class MaterialRepositoryImplTest {
         assertNotNull(repository);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void constructor_nullDao_throwsException() {
-        new MaterialRepositoryImpl(null, mockFileStorageManager);
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(null, mockFileStorageManager));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void constructor_nullFileStorageManager_throwsException() {
-        new MaterialRepositoryImpl(mockDao, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, null));
     }
 
     // ========== getMaterialById tests ==========
@@ -99,19 +102,22 @@ public class MaterialRepositoryImplTest {
         assertNull(result);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getMaterialById_nullId_throwsException() {
-        repository.getMaterialById(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getMaterialById(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getMaterialById_emptyId_throwsException() {
-        repository.getMaterialById("");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getMaterialById(""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getMaterialById_blankId_throwsException() {
-        repository.getMaterialById("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getMaterialById("   "));
     }
 
     // ========== getAllMaterials tests ==========
@@ -154,9 +160,10 @@ public class MaterialRepositoryImplTest {
         assertEquals(MaterialType.READING, result.get(0).getType());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getMaterialsByType_nullType_throwsException() {
-        repository.getMaterialsByType(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getMaterialsByType(null));
     }
 
     // ========== getMaterialsLiveData tests ==========
@@ -204,9 +211,10 @@ public class MaterialRepositoryImplTest {
         assertEquals(1, liveDataValue.size());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void saveMaterial_nullMaterial_throwsException() {
-        repository.saveMaterial(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.saveMaterial(null));
     }
 
     // ========== saveMaterials tests ==========
@@ -230,9 +238,10 @@ public class MaterialRepositoryImplTest {
         verify(mockDao, never()).insertAll(anyList());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void saveMaterials_nullList_throwsException() {
-        repository.saveMaterials(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.saveMaterials(null));
     }
 
     // ========== deleteMaterial tests ==========
@@ -251,19 +260,22 @@ public class MaterialRepositoryImplTest {
         verify(mockFileStorageManager).deleteAttachmentsForMaterial(TEST_MATERIAL_ID);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void deleteMaterial_nullId_throwsException() {
-        repository.deleteMaterial(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.deleteMaterial(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void deleteMaterial_emptyId_throwsException() {
-        repository.deleteMaterial("");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.deleteMaterial(""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void deleteMaterial_blankId_throwsException() {
-        repository.deleteMaterial("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.deleteMaterial("   "));
     }
 
     // ========== deleteAllMaterials tests ==========
@@ -324,19 +336,22 @@ public class MaterialRepositoryImplTest {
         assertFalse(repository.isSyncing());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void syncMaterials_nullDeviceId_throwsException() {
-        repository.syncMaterials(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.syncMaterials(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void syncMaterials_emptyDeviceId_throwsException() {
-        repository.syncMaterials("");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.syncMaterials(""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void syncMaterials_blankDeviceId_throwsException() {
-        repository.syncMaterials("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.syncMaterials("   "));
     }
 
     @Test
