@@ -106,6 +106,11 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
     /**
      * Internal method to update device status. Must be called within synchronized block.
      * Extracted to avoid reentrant locking when called from initialiseDeviceStatus.
+     *
+     * @param deviceId          The unique identifier of the device
+     * @param status            The new device status
+     * @param currentMaterialId The ID of the material currently being viewed (nullable)
+     * @param studentView       The current student view state (nullable)
      */
     private void updateStatusInternal(@NonNull String deviceId,
                                       @NonNull DeviceStatus status,
