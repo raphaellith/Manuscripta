@@ -109,6 +109,11 @@ public class MaterialRepositoryImplTest {
         repository.getMaterialById("");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void getMaterialById_blankId_throwsException() {
+        repository.getMaterialById("   ");
+    }
+
     // ========== getAllMaterials tests ==========
 
     @Test
@@ -256,6 +261,11 @@ public class MaterialRepositoryImplTest {
         repository.deleteMaterial("");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void deleteMaterial_blankId_throwsException() {
+        repository.deleteMaterial("   ");
+    }
+
     // ========== deleteAllMaterials tests ==========
 
     @Test
@@ -322,6 +332,11 @@ public class MaterialRepositoryImplTest {
     @Test(expected = IllegalArgumentException.class)
     public void syncMaterials_emptyDeviceId_throwsException() {
         repository.syncMaterials("");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void syncMaterials_blankDeviceId_throwsException() {
+        repository.syncMaterials("   ");
     }
 
     @Test
