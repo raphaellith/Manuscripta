@@ -6,7 +6,8 @@ import androidx.annotation.NonNull;
  * Callback interface for pairing handshake events.
  *
  * <p>Implementations receive notifications about pairing progress and outcomes.
- * Callbacks are invoked on the main (UI) thread for safe UI updates.
+ * Callbacks may be invoked from background threads; implementations should
+ * post to the main thread if UI updates are needed.
  *
  * @see PairingManager
  */

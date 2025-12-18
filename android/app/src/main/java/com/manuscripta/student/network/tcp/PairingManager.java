@@ -266,6 +266,7 @@ public class PairingManager implements TcpMessageListener {
     public void onError(@NonNull TcpProtocolException error) {
         if (pairingInProgress.get()) {
             Log.w(TAG, "TCP error during pairing: " + error.getMessage());
+            handlePairingFailure("TCP protocol error: " + error.getMessage());
         }
     }
 
@@ -275,10 +276,16 @@ public class PairingManager implements TcpMessageListener {
      * Sends the PAIRING_REQUEST message and starts the timeout timer.
      */
     private void sendPairingRequest() {
+        // Capture deviceId under lock for thread safety
+        final String capturedDeviceId;
+        synchronized (lock) {
+            capturedDeviceId = deviceId;
+        }
+
         try {
-            PairingRequestMessage request = new PairingRequestMessage(deviceId);
+            PairingRequestMessage request = new PairingRequestMessage(capturedDeviceId);
             socketManager.send(request);
-            Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + deviceId);
+            Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + capturedDeviceId);
 
             // Start timeout timer
             startTimeoutTimer();
@@ -354,8 +361,9 @@ public class PairingManager implements TcpMessageListener {
                     + (config.getRetryCount() + 1) + ")");
 
             if (attempt <= config.getRetryCount()) {
-                // Retry
+                // Retry - clean up resources before next attempt
                 Log.i(TAG, "Retrying pairing...");
+                cancelTimeoutTimer();
                 socketManager.disconnect();
                 attemptPairing();
             } else {
