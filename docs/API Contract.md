@@ -19,17 +19,9 @@ The system uses a **hybrid multi-channel networking approach** with separate pro
 
 If a performance bottleneck is observed during implementation, UDP may be introduced for additional message types.
 
-### Material Distribution Pattern (Heartbeat-Triggered Fetch)
+### Material Distribution Pattern
 
-Since the Windows server cannot push HTTP requests to Android clients, material distribution uses a **heartbeat-triggered fetch** pattern:
-
-1. **Android Client** sends periodic `STATUS_UPDATE` (0x10) heartbeat messages via TCP
-2. **Windows Server** receives the heartbeat and checks if new materials are available for this device
-3. **If materials are available**, the server responds with a `DISTRIBUTE_MATERIAL` (0x05) TCP message
-4. **Android Client** receives the signal and initiates an HTTP `GET /materials` request to fetch the material list
-5. **Android Client** downloads individual materials via `GET /materials/{id}`
-
-This pattern ensures material distribution works within the constraint that the server cannot initiate connections to clients.
+*DELETED* — See `Session Interaction.md` §2-3 for the authoritative heartbeat-triggered fetch pattern and material distribution process.
 
 **Connection Establishment:**
 Each protocol operates on its own channel. A connection is deemed established only after pairing procedures on **all channels** (HTTP and TCP) have been completed successfully.
@@ -108,7 +100,7 @@ Downloads specific attachment files referenced within material content.
     The response body will contain the raw binary data of the requested file (e.g., image, PDF).
     -   **Content-Type:** `image/png`, `application/pdf`, etc. (determined by the server based on file type).
 
-**Note:** The `content` field within material details (`GET /materials/{id}`) may contain references to these attachments using URLs like `/attachments/{id}`. The Android client is expected to fetch these referenced attachments separately.
+**Note:** The `content` field within materials (returned by `GET /distribution/{deviceId}`) may contain references to these attachments using URLs like `/attachments/{id}`. The Android client is expected to fetch these referenced attachments separately.
 
 ### 2.2. Tablet Configuration (Server -> Client)
 
@@ -280,7 +272,7 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
-| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges receipt of DISTRIBUTE_MATERIAL signal |
+| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{deviceId}` |
 
 **Example: Status Update Message**
 ```
@@ -358,7 +350,6 @@ See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 ### 4.3. Device Status Enum
 -   `ON_TASK`: Student is active in the app.
 -   `IDLE`: No activity for a threshold period.
--   `HAND_RAISED`: Student explicitly requested help.
 -   `LOCKED`: Device is remotely locked.
 -   `DISCONNECTED`: (Server-side inferred status).
 
