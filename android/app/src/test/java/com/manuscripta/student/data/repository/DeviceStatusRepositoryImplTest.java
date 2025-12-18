@@ -184,6 +184,23 @@ public class DeviceStatusRepositoryImplTest {
         assertEquals(TEST_BATTERY_LEVEL, liveDataValue.getBatteryLevel());
     }
 
+    @Test
+    public void updateBatteryLevel_entityNotFoundInDatabase_updatesInMemoryOnly() {
+        // First initialise with a device to set currentDeviceId
+        repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
+
+        // Mock getById to return null, simulating entity not found in database
+        when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(null);
+
+        repository.updateBatteryLevel(TEST_BATTERY_LEVEL);
+
+        // Verify battery level is updated in memory
+        assertEquals(TEST_BATTERY_LEVEL, repository.getCurrentBatteryLevel());
+
+        // Verify DAO insert called only once (from updateStatus), not for battery update
+        verify(mockDao, times(1)).insert(any(DeviceStatusEntity.class));
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void updateBatteryLevel_belowMinimum_throwsException() {
         repository.updateBatteryLevel(-1);
