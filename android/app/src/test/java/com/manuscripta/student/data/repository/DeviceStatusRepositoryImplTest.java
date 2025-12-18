@@ -3,6 +3,7 @@ package com.manuscripta.student.data.repository;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -54,9 +55,10 @@ public class DeviceStatusRepositoryImplTest {
         assertNotNull(repository);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void constructor_nullDao_throwsException() {
-        new DeviceStatusRepositoryImpl(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> new DeviceStatusRepositoryImpl(null));
     }
 
     // ========== getDeviceStatus tests ==========
@@ -84,19 +86,22 @@ public class DeviceStatusRepositoryImplTest {
         assertNull(result);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getDeviceStatus_nullDeviceId_throwsException() {
-        repository.getDeviceStatus(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getDeviceStatus(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getDeviceStatus_emptyDeviceId_throwsException() {
-        repository.getDeviceStatus("");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getDeviceStatus(""));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getDeviceStatus_blankDeviceId_throwsException() {
-        repository.getDeviceStatus("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getDeviceStatus("   "));
     }
 
     // ========== getDeviceStatusLiveData tests ==========
@@ -145,19 +150,22 @@ public class DeviceStatusRepositoryImplTest {
         assertEquals(DeviceStatus.ON_TASK, liveDataValue.getStatus());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateStatus_nullDeviceId_throwsException() {
-        repository.updateStatus(null, DeviceStatus.ON_TASK, null, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.updateStatus(null, DeviceStatus.ON_TASK, null, null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateStatus_nullStatus_throwsException() {
-        repository.updateStatus(TEST_DEVICE_ID, null, null, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.updateStatus(TEST_DEVICE_ID, null, null, null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateStatus_blankDeviceId_throwsException() {
-        repository.updateStatus("   ", DeviceStatus.ON_TASK, null, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.updateStatus("   ", DeviceStatus.ON_TASK, null, null));
     }
 
     // ========== updateBatteryLevel tests ==========
@@ -184,14 +192,16 @@ public class DeviceStatusRepositoryImplTest {
         assertEquals(TEST_BATTERY_LEVEL, liveDataValue.getBatteryLevel());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateBatteryLevel_belowMinimum_throwsException() {
-        repository.updateBatteryLevel(-1);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.updateBatteryLevel(-1));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateBatteryLevel_aboveMaximum_throwsException() {
-        repository.updateBatteryLevel(101);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.updateBatteryLevel(101));
     }
 
     @Test
@@ -204,6 +214,24 @@ public class DeviceStatusRepositoryImplTest {
     public void updateBatteryLevel_atMaximum_succeeds() {
         repository.updateBatteryLevel(100);
         assertEquals(100, repository.getCurrentBatteryLevel());
+    }
+
+    @Test
+    public void updateBatteryLevel_entityNotFound_updatesMemoryOnly() {
+        // Set a current device via updateStatus (this inserts an entity)
+        repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
+
+        // Simulate entity not found in database when updating battery level
+        when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(null);
+
+        repository.updateBatteryLevel(TEST_BATTERY_LEVEL);
+
+        // Battery level should still be updated in memory
+        assertEquals(TEST_BATTERY_LEVEL, repository.getCurrentBatteryLevel());
+
+        // DAO insert called once for updateStatus, but not again for battery update
+        // since entity was not found
+        verify(mockDao, times(1)).insert(any(DeviceStatusEntity.class));
     }
 
     // ========== setOnTask tests ==========
@@ -281,14 +309,16 @@ public class DeviceStatusRepositoryImplTest {
         assertNull(repository.getDeviceStatusLiveData().getValue());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void clearDeviceStatus_nullDeviceId_throwsException() {
-        repository.clearDeviceStatus(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.clearDeviceStatus(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void clearDeviceStatus_blankDeviceId_throwsException() {
-        repository.clearDeviceStatus("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.clearDeviceStatus("   "));
     }
 
     @Test
@@ -359,14 +389,16 @@ public class DeviceStatusRepositoryImplTest {
         assertEquals(DeviceStatus.ON_TASK, liveDataValue.getStatus());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void initialiseDeviceStatus_nullDeviceId_throwsException() {
-        repository.initialiseDeviceStatus(null);
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.initialiseDeviceStatus(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void initialiseDeviceStatus_blankDeviceId_throwsException() {
-        repository.initialiseDeviceStatus("   ");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.initialiseDeviceStatus("   "));
     }
 
     // ========== getCurrentBatteryLevel tests ==========
