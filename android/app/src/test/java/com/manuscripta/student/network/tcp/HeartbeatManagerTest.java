@@ -389,12 +389,11 @@ public class HeartbeatManagerTest {
 
         heartbeatManager.start();
 
-        // HeartbeatConfig clamps interval to MIN_INTERVAL_MS (1000ms), so wait for 2+ heartbeats
-        // First heartbeat at t=0, second at t=1000ms
-        Thread.sleep(1500);
+        // Use Mockito timeout() instead of Thread.sleep() for deterministic testing
+        // HeartbeatConfig clamps interval to MIN_INTERVAL_MS (1000ms)
+        // First heartbeat at t=0, second at t=1000ms, so wait up to 2000ms for 2 sends
+        verify(mockSocketManager, timeout(2000).atLeast(2)).send(any());
 
-        // Verify at least 2 heartbeats were sent
-        verify(mockSocketManager, atLeastOnce()).send(any());
         assertTrue("Expected at least 2 heartbeats", heartbeatManager.getHeartbeatCount() >= 2);
     }
 
