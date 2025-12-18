@@ -99,23 +99,34 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
         }
 
         synchronized (lock) {
-            com.manuscripta.student.domain.model.DeviceStatus domainStatus =
-                    com.manuscripta.student.domain.model.DeviceStatus.create(
-                            deviceId,
-                            status,
-                            currentBatteryLevel,
-                            currentMaterialId,
-                            studentView
-                    );
-
-            DeviceStatusEntity entity = DeviceStatusMapper.toEntity(domainStatus);
-            deviceStatusDao.insert(entity);
-
-            currentDeviceId = deviceId;
-            statusLiveData.postValue(domainStatus);
-
-            Log.d(TAG, "Updated status for device " + deviceId + " to " + status);
+            updateStatusInternal(deviceId, status, currentMaterialId, studentView);
         }
+    }
+
+    /**
+     * Internal method to update device status. Must be called within synchronized block.
+     * Extracted to avoid reentrant locking when called from initialiseDeviceStatus.
+     */
+    private void updateStatusInternal(@NonNull String deviceId,
+                                      @NonNull DeviceStatus status,
+                                      @Nullable String currentMaterialId,
+                                      @Nullable String studentView) {
+        com.manuscripta.student.domain.model.DeviceStatus domainStatus =
+                com.manuscripta.student.domain.model.DeviceStatus.create(
+                        deviceId,
+                        status,
+                        currentBatteryLevel,
+                        currentMaterialId,
+                        studentView
+                );
+
+        DeviceStatusEntity entity = DeviceStatusMapper.toEntity(domainStatus);
+        deviceStatusDao.insert(entity);
+
+        currentDeviceId = deviceId;
+        statusLiveData.postValue(domainStatus);
+
+        Log.d(TAG, "Updated status for device " + deviceId + " to " + status);
     }
 
     @Override
@@ -150,7 +161,15 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
                     statusLiveData.postValue(updatedStatus);
 
                     Log.d(TAG, "Updated battery level to " + batteryLevel + "%");
+                } else {
+                    // Entity not found in database despite having currentDeviceId
+                    Log.w(TAG, "updateBatteryLevel: No entity found for device " + currentDeviceId
+                            + ". Battery level updated in memory only.");
                 }
+            } else {
+                // No device currently tracked; battery level stored for next status update
+                Log.d(TAG, "updateBatteryLevel: No current device tracked. "
+                        + "Battery level (" + batteryLevel + "%) stored for next status update.");
             }
         }
     }
@@ -206,10 +225,13 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
         synchronized (lock) {
             DeviceStatusEntity existing = deviceStatusDao.getById(deviceId);
             if (existing == null) {
-                updateStatus(deviceId, DeviceStatus.IDLE, null, null);
+                // Use internal method to avoid reentrant locking
+                updateStatusInternal(deviceId, DeviceStatus.IDLE, null, null);
                 Log.d(TAG, "Initialised device status for " + deviceId);
             } else {
                 currentDeviceId = deviceId;
+                // Sync in-memory battery level with persisted value for consistency
+                currentBatteryLevel = existing.getBatteryLevel();
                 statusLiveData.postValue(DeviceStatusMapper.toDomain(existing));
                 Log.d(TAG, "Loaded existing status for device " + deviceId);
             }
@@ -218,7 +240,9 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
 
     @Override
     public int getCurrentBatteryLevel() {
-        return currentBatteryLevel;
+        synchronized (lock) {
+            return currentBatteryLevel;
+        }
     }
 
     /**

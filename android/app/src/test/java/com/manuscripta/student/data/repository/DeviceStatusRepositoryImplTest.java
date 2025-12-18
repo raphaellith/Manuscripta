@@ -379,7 +379,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== Thread safety tests ==========
 
     @Test
-    public void concurrentUpdates_areThreadSafe() throws InterruptedException {
+    public void concurrentUpdates_differentDevices_areThreadSafe() throws InterruptedException {
         int threadCount = 10;
         java.util.concurrent.CountDownLatch latch =
                 new java.util.concurrent.CountDownLatch(threadCount);
@@ -401,6 +401,40 @@ public class DeviceStatusRepositoryImplTest {
 
         // Verify all 10 inserts were called
         verify(mockDao, times(threadCount)).insert(any(DeviceStatusEntity.class));
+    }
+
+    @Test
+    public void concurrentUpdates_sameDevice_areThreadSafe() throws InterruptedException {
+        // Test concurrent updates to the SAME device ID to verify proper synchronization
+        int threadCount = 10;
+        java.util.concurrent.CountDownLatch latch =
+                new java.util.concurrent.CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int index = i;
+            new Thread(() -> {
+                // All threads update the same device with different statuses
+                DeviceStatus status = (index % 2 == 0) ? DeviceStatus.ON_TASK : DeviceStatus.IDLE;
+                repository.updateStatus(
+                        TEST_DEVICE_ID,
+                        status,
+                        "material-" + index,
+                        null
+                );
+                latch.countDown();
+            }).start();
+        }
+
+        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+
+        // Verify all 10 inserts were called (all targeting same device)
+        verify(mockDao, times(threadCount)).insert(any(DeviceStatusEntity.class));
+
+        // Verify final state is consistent (LiveData has a value for TEST_DEVICE_ID)
+        com.manuscripta.student.domain.model.DeviceStatus finalStatus =
+                repository.getDeviceStatusLiveData().getValue();
+        assertNotNull(finalStatus);
+        assertEquals(TEST_DEVICE_ID, finalStatus.getDeviceId());
     }
 
     // ========== Helper methods ==========
