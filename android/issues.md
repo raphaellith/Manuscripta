@@ -618,6 +618,60 @@ Create Hilt module for providing repository instances.
 
 ---
 
+### 2.7 [Android] Implement TCP Acknowledgement Signal Handling
+
+- Labels: `android`, `repository-layer`, `network-layer`
+
+**Description:**
+Implement sending and receiving of explicit TCP acknowledgement signals as defined in `API Contract.md` §3.6.1. These ACKs provide application-level confirmation of message receipt beyond TCP-level acknowledgements.
+
+**ACK Signal Reference (API Contract §3.6.1):**
+
+| Request | ACK | Android Role |
+|---------|-----|--------------|
+| `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | **Receives** — Covered by issue 6.8 (TCP pairing handshake) |
+| `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | **Receives** — Covered by issue 6.5 (Raise Hand feature) |
+| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | **Sends** — ⚠️ **This issue** |
+
+**Scope:** This issue covers the `DISTRIBUTE_ACK` signal which must be sent by the Android client after successfully receiving materials via HTTP.
+
+**Protocol Reference:**
+
+- **Opcode:** `0x12` (DISTRIBUTE_ACK)
+- **Operand:** Device ID (UTF-8 string)
+- **Trigger:** Successful HTTP 200 response from `GET /distribution/{deviceId}`
+
+**Integration Flow:**
+
+1. `HeartbeatManager` receives `DISTRIBUTE_MATERIAL` (0x05) from server
+2. `HeartbeatManager` invokes `MaterialAvailableCallback.onMaterialsAvailable()`
+3. `MaterialRepository` calls `GET /distribution/{deviceId}` via HTTP
+4. On HTTP 200 OK response, `MaterialRepository` sends `DISTRIBUTE_ACK` (0x12) via `TcpSocketManager`
+5. Server receives ACK and marks distribution as confirmed
+
+**Related Requirements:** NET1, CON2A
+
+**Tasks:**
+- Create `DistributeAckMessage.java` implementing `TcpMessage` (opcode 0x12, Device ID operand)
+- Update `MaterialRepository` to send `DISTRIBUTE_ACK` after successful HTTP fetch
+- Inject `TcpSocketManager` into `MaterialRepository` for sending ACK
+- Handle send failure gracefully (log error, do not block material storage)
+- Write unit tests for message encoding
+- Write integration tests for the full flow
+
+**Acceptance Criteria:**
+- [ ] `DistributeAckMessage` class created with correct opcode (0x12) and encoding
+- [ ] `MaterialRepository` sends `DISTRIBUTE_ACK` after successful `GET /distribution/{deviceId}`
+- [ ] Device ID correctly included in ACK operand
+- [ ] ACK send failure does not block material storage
+- [ ] 95% test coverage
+- [ ] Checkstyle compliant
+- [ ] Javadoc for all public methods
+
+**Dependencies:** Issue 2.1 (MaterialRepository), Issue 6.8 (TCP Socket Layer)
+
+---
+
 ## Sub-tasks: Network Layer
 
 ### 3.1 [Android] Create Material DTOs
