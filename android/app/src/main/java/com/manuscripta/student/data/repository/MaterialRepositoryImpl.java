@@ -65,6 +65,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /**
      * Creates a new MaterialRepositoryImpl with the given dependencies.
      *
+     * <p>Note: Null checks are performed despite @NonNull annotations because annotations
+     * are only compile-time hints in Java and do not prevent null values at runtime.
+     * This defensive approach ensures fail-fast behaviour for invalid constructor calls.</p>
+     *
+     * <p>The constructor calls {@link #refreshMaterialsLiveData()} to initialize LiveData
+     * with existing materials. This is safe because all fields are assigned before the call
+     * and the DAO read operation has no side effects.</p>
+     *
      * @param materialDao        The DAO for material persistence
      * @param fileStorageManager The file storage manager for attachments
      * @throws IllegalArgumentException if materialDao or fileStorageManager is null
@@ -82,7 +90,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         this.fileStorageManager = fileStorageManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
-        // Initialize LiveData with existing materials
+        // Initialize LiveData with existing materials from database.
+        // Safe to call here as all fields are initialized and getAll() is a pure read.
         refreshMaterialsLiveData();
     }
 
@@ -147,6 +156,11 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     public void saveMaterials(@NonNull List<Material> materials) {
         if (materials == null) {
             throw new IllegalArgumentException("Materials list cannot be null");
+        }
+
+        if (materials.isEmpty()) {
+            Log.d(TAG, "No materials to save, skipping insert");
+            return;
         }
 
         synchronized (lock) {
@@ -262,7 +276,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     /**
      * Refreshes the materials LiveData with current database contents.
-     * Must be called within synchronized block.
+     *
+     * <p>Must be called within synchronized block for thread safety.</p>
+     *
+     * <p><b>Thread safety note:</b> This method uses {@link MutableLiveData#postValue(Object)}
+     * which is asynchronous. When multiple threads modify data concurrently, the order of
+     * LiveData updates may not strictly reflect the order of database modifications. If strict
+     * ordering is required, consider using {@link MutableLiveData#setValue(Object)} from the
+     * main thread instead.</p>
      */
     private void refreshMaterialsLiveData() {
         List<MaterialEntity> entities = materialDao.getAll();

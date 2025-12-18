@@ -222,7 +222,7 @@ public class MaterialRepositoryImplTest {
     public void saveMaterials_emptyList_doesNotInsert() {
         repository.saveMaterials(new ArrayList<>());
 
-        verify(mockDao).insertAll(anyList());
+        verify(mockDao, never()).insertAll(anyList());
     }
 
     @Test(expected = IllegalArgumentException.class)
