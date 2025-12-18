@@ -148,9 +148,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/Hilt_*.class",
             "**/*_Impl.class",
             "**/*_Impl$*.class",
-            "**/*_GeneratedInjector.class",
-            "**/MulticastLockManager.class",
-            "**/MulticastLockManager$*.class"
+            "**/*_GeneratedInjector.class"
         )
     }
 
@@ -198,9 +196,7 @@ tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             "**/Hilt_*.class",
             "**/*_Impl.class",
             "**/*_Impl$*.class",
-            "**/*_GeneratedInjector.class",
-            "**/MulticastLockManager.class",
-            "**/MulticastLockManager$*.class"
+            "**/*_GeneratedInjector.class"
         )
     }
 
