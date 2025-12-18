@@ -4,14 +4,21 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,6 +32,8 @@ import javax.inject.Singleton;
  * <p>Listens for UDP broadcast messages on port 5913 and parses incoming
  * discovery announcements from the teacher server. The manager maintains
  * the most recently discovered server information for retrieval.</p>
+ *
+ * <p>This class is thread-safe and exposes discovery state via LiveData for UI observation.</p>
  *
  * <p>Per API Contract §3.3, the discovery message format is:</p>
  * <pre>
@@ -64,6 +73,11 @@ public class UdpDiscoveryManager {
     private static final int SOCKET_TIMEOUT_MS = 1000;
 
     /**
+     * Default discovery timeout in milliseconds.
+     */
+    public static final long DEFAULT_TIMEOUT_MS = 15000;
+
+    /**
      * The most recently discovered server information.
      */
     private final AtomicReference<DiscoveryMessage> discoveredServer = new AtomicReference<>(null);
@@ -74,6 +88,21 @@ public class UdpDiscoveryManager {
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     /**
+     * LiveData for discovery state observation.
+     */
+    private final MutableLiveData<DiscoveryState> discoveryState;
+
+    /**
+     * The last error message, if any.
+     */
+    private final AtomicReference<String> lastError = new AtomicReference<>(null);
+
+    /**
+     * Thread-safe list of discovery listeners.
+     */
+    private final List<OnServerDiscoveredListener> listeners = new CopyOnWriteArrayList<>();
+
+    /**
      * Executor service for background UDP listening.
      * Marked volatile to ensure visibility across threads.
      */
@@ -81,11 +110,93 @@ public class UdpDiscoveryManager {
     private volatile ExecutorService executorService;
 
     /**
+     * Scheduled executor for timeout handling.
+     */
+    @Nullable
+    private volatile ScheduledExecutorService scheduledExecutor;
+
+    /**
+     * Future for the timeout task.
+     */
+    @Nullable
+    private volatile ScheduledFuture<?> timeoutFuture;
+
+    /**
+     * Configurable timeout in milliseconds.
+     */
+    private volatile long timeoutMs = DEFAULT_TIMEOUT_MS;
+
+    /**
      * Constructs a new UdpDiscoveryManager.
      */
     @Inject
     public UdpDiscoveryManager() {
-        // Default constructor for Hilt injection
+        this.discoveryState = new MutableLiveData<>(DiscoveryState.IDLE);
+    }
+
+    /**
+     * Returns the current discovery state as LiveData for UI observation.
+     *
+     * @return LiveData containing the current discovery state.
+     */
+    @NonNull
+    public LiveData<DiscoveryState> getDiscoveryState() {
+        return discoveryState;
+    }
+
+    /**
+     * Returns the last error message, if any.
+     *
+     * @return The last error message, or null if no error occurred.
+     */
+    @Nullable
+    public String getLastError() {
+        return lastError.get();
+    }
+
+    /**
+     * Adds a listener to receive server discovery events.
+     *
+     * <p>The same listener instance can only be added once.</p>
+     *
+     * @param listener The listener to add. Must not be null.
+     * @see #removeListener(OnServerDiscoveredListener)
+     */
+    public void addListener(@NonNull OnServerDiscoveredListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * Removes a previously registered listener.
+     *
+     * @param listener The listener to remove. Must not be null.
+     * @see #addListener(OnServerDiscoveredListener)
+     */
+    public void removeListener(@NonNull OnServerDiscoveredListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Sets the discovery timeout in milliseconds.
+     *
+     * <p>Must be called before startDiscovery() to take effect.</p>
+     *
+     * @param timeoutMs The timeout in milliseconds.
+     */
+    public void setTimeoutMs(long timeoutMs) {
+        this.timeoutMs = timeoutMs;
+    }
+
+    /**
+     * Returns the configured timeout in milliseconds.
+     *
+     * @return The timeout in milliseconds.
+     */
+    @VisibleForTesting
+    long getTimeoutMs() {
+        return timeoutMs;
     }
 
     /**
@@ -97,8 +208,13 @@ public class UdpDiscoveryManager {
     public void startDiscovery() {
         if (running.compareAndSet(false, true)) {
             Log.d(TAG, "Starting UDP discovery on port " + UDP_PORT);
+            lastError.set(null);
+            updateState(DiscoveryState.SEARCHING);
+            
             executorService = Executors.newSingleThreadExecutor();
             executorService.submit(this::listenForDiscovery);
+            
+            scheduleTimeout();
         } else {
             Log.d(TAG, "Discovery already running, ignoring start request");
         }
@@ -113,7 +229,9 @@ public class UdpDiscoveryManager {
     public void stopDiscovery() {
         if (running.compareAndSet(true, false)) {
             Log.d(TAG, "Stopping UDP discovery");
+            cancelTimeout();
             shutdownExecutor();
+            updateState(DiscoveryState.IDLE);
         } else {
             Log.d(TAG, "Discovery not running, ignoring stop request");
         }
@@ -148,6 +266,56 @@ public class UdpDiscoveryManager {
     }
 
     /**
+     * Returns the number of registered listeners for testing purposes.
+     *
+     * @return The number of registered listeners.
+     */
+    @VisibleForTesting
+    int getListenerCount() {
+        return listeners.size();
+    }
+
+    /**
+     * Schedules the timeout task.
+     */
+    private void scheduleTimeout() {
+        scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+        timeoutFuture = scheduledExecutor.schedule(
+                this::handleTimeout,
+                timeoutMs,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    /**
+     * Cancels the timeout task and shuts down the scheduled executor.
+     */
+    private void cancelTimeout() {
+        ScheduledFuture<?> future = timeoutFuture;
+        if (future != null) {
+            future.cancel(false);
+            timeoutFuture = null;
+        }
+        
+        ScheduledExecutorService executor = scheduledExecutor;
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
+            scheduledExecutor = null;
+        }
+    }
+
+    /**
+     * Handles the timeout event.
+     */
+    private void handleTimeout() {
+        if (running.compareAndSet(true, false)) {
+            Log.d(TAG, "Discovery timeout after " + timeoutMs + "ms");
+            updateState(DiscoveryState.TIMEOUT);
+            shutdownExecutor();
+        }
+    }
+
+    /**
      * Main listening loop for UDP discovery messages.
      * Runs on a background thread.
      */
@@ -176,7 +344,7 @@ public class UdpDiscoveryManager {
             }
         } catch (SocketException e) {
             Log.e(TAG, "Failed to create UDP socket on port " + UDP_PORT, e);
-            running.set(false);
+            handleSocketError(e);
         } finally {
             if (socket != null && !socket.isClosed()) {
                 socket.close();
@@ -184,6 +352,18 @@ public class UdpDiscoveryManager {
             }
             Log.d(TAG, "UDP discovery listener terminated");
         }
+    }
+
+    /**
+     * Handles socket errors by setting error state.
+     *
+     * @param e The socket exception that occurred.
+     */
+    private void handleSocketError(@NonNull SocketException e) {
+        running.set(false);
+        cancelTimeout();
+        lastError.set(e.getMessage());
+        updateState(DiscoveryState.ERROR);
     }
 
     /**
@@ -199,8 +379,30 @@ public class UdpDiscoveryManager {
             Log.d(TAG, "Discovered server: " + message.getIpAddress()
                     + " HTTP:" + message.getHttpPort()
                     + " TCP:" + message.getTcpPort());
+            
+            // Cancel timeout and update state
+            cancelTimeout();
+            updateState(DiscoveryState.FOUND);
+            
+            // Notify listeners
+            notifyListeners(message);
         } catch (IllegalArgumentException e) {
             Log.w(TAG, "Failed to parse discovery message: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Notifies all registered listeners of a discovered server.
+     *
+     * @param message The discovery message.
+     */
+    private void notifyListeners(@NonNull DiscoveryMessage message) {
+        for (OnServerDiscoveredListener listener : listeners) {
+            try {
+                listener.onServerDiscovered(message);
+            } catch (Exception e) {
+                Log.e(TAG, "Exception in listener onServerDiscovered", e);
+            }
         }
     }
 
@@ -227,6 +429,15 @@ public class UdpDiscoveryManager {
      */
     DatagramSocket createSocket() throws SocketException {
         return new DatagramSocket(UDP_PORT);
+    }
+
+    /**
+     * Updates the discovery state using thread-safe postValue.
+     *
+     * @param state The new discovery state.
+     */
+    private void updateState(@NonNull DiscoveryState state) {
+        discoveryState.postValue(state);
     }
 
     /**
