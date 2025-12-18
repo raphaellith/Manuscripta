@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -93,6 +94,11 @@ public class DeviceStatusRepositoryImplTest {
         repository.getDeviceStatus("");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void getDeviceStatus_blankDeviceId_throwsException() {
+        repository.getDeviceStatus("   ");
+    }
+
     // ========== getDeviceStatusLiveData tests ==========
 
     @Test
@@ -149,6 +155,11 @@ public class DeviceStatusRepositoryImplTest {
         repository.updateStatus(TEST_DEVICE_ID, null, null, null);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void updateStatus_blankDeviceId_throwsException() {
+        repository.updateStatus("   ", DeviceStatus.ON_TASK, null, null);
+    }
+
     // ========== updateBatteryLevel tests ==========
 
     @Test
@@ -162,6 +173,15 @@ public class DeviceStatusRepositoryImplTest {
         repository.updateBatteryLevel(TEST_BATTERY_LEVEL);
 
         assertEquals(TEST_BATTERY_LEVEL, repository.getCurrentBatteryLevel());
+
+        // Verify DAO persistence (insert called twice: once for updateStatus, once for battery)
+        verify(mockDao, times(2)).insert(any(DeviceStatusEntity.class));
+
+        // Verify LiveData was updated with new battery level
+        com.manuscripta.student.domain.model.DeviceStatus liveDataValue =
+                repository.getDeviceStatusLiveData().getValue();
+        assertNotNull(liveDataValue);
+        assertEquals(TEST_BATTERY_LEVEL, liveDataValue.getBatteryLevel());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -266,6 +286,28 @@ public class DeviceStatusRepositoryImplTest {
         repository.clearDeviceStatus(null);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void clearDeviceStatus_blankDeviceId_throwsException() {
+        repository.clearDeviceStatus("   ");
+    }
+
+    @Test
+    public void clearDeviceStatus_nonCurrentDevice_doesNotAffectLiveData() {
+        // Set device-1 as current
+        repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
+        assertNotNull(repository.getDeviceStatusLiveData().getValue());
+        assertEquals(TEST_DEVICE_ID,
+                repository.getDeviceStatusLiveData().getValue().getDeviceId());
+
+        // Clear device-2 (not current)
+        repository.clearDeviceStatus("other-device-456");
+
+        // LiveData should still contain device-1's status
+        assertNotNull(repository.getDeviceStatusLiveData().getValue());
+        assertEquals(TEST_DEVICE_ID,
+                repository.getDeviceStatusLiveData().getValue().getDeviceId());
+    }
+
     // ========== clearAllDeviceStatus tests ==========
 
     @Test
@@ -322,6 +364,11 @@ public class DeviceStatusRepositoryImplTest {
         repository.initialiseDeviceStatus(null);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void initialiseDeviceStatus_blankDeviceId_throwsException() {
+        repository.initialiseDeviceStatus("   ");
+    }
+
     // ========== getCurrentBatteryLevel tests ==========
 
     @Test
@@ -351,6 +398,9 @@ public class DeviceStatusRepositoryImplTest {
         }
 
         assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+
+        // Verify all 10 inserts were called
+        verify(mockDao, times(threadCount)).insert(any(DeviceStatusEntity.class));
     }
 
     // ========== Helper methods ==========

@@ -216,11 +216,7 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
         }
     }
 
-    /**
-     * Gets the current battery level.
-     *
-     * @return The current battery level percentage (0-100)
-     */
+    @Override
     public int getCurrentBatteryLevel() {
         return currentBatteryLevel;
     }
