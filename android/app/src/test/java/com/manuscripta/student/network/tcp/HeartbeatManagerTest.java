@@ -84,6 +84,17 @@ public class HeartbeatManagerTest {
         manager.destroy();
     }
 
+    @Test
+    public void constructor_withSocketManagerOnly_usesDefaultConfig() {
+        HeartbeatManager manager = new HeartbeatManager(mockSocketManager);
+
+        assertEquals(HeartbeatConfig.DEFAULT_INTERVAL_MS,
+                     manager.getConfig().getIntervalMs());
+        assertTrue(manager.getConfig().isEnabled());
+
+        manager.destroy();
+    }
+
     // ========== start/stop tests ==========
 
     @Test
@@ -172,6 +183,18 @@ public class HeartbeatManagerTest {
     public void sendHeartbeat_handlesIOException() throws Exception {
         when(mockSocketManager.isConnected()).thenReturn(true);
         doThrow(new IOException("Test")).when(mockSocketManager).send(any());
+
+        // Should not throw
+        heartbeatManager.sendHeartbeat();
+
+        assertEquals(0, heartbeatManager.getHeartbeatCount());
+    }
+
+    @Test
+    public void sendHeartbeat_handlesTcpProtocolException() throws Exception {
+        when(mockSocketManager.isConnected()).thenReturn(true);
+        doThrow(new TcpProtocolException("Test protocol error"))
+            .when(mockSocketManager).send(any());
 
         // Should not throw
         heartbeatManager.sendHeartbeat();
@@ -289,6 +312,19 @@ public class HeartbeatManagerTest {
         assertFalse(heartbeatManager.isRunning());
     }
 
+    @Test
+    public void onError_handlesGracefully() {
+        when(mockSocketManager.isConnected()).thenReturn(true);
+        heartbeatManager.start();
+        assertTrue(heartbeatManager.isRunning());
+
+        // Should not throw and heartbeat should continue
+        heartbeatManager.onError(new TcpProtocolException("Test error"));
+
+        // Verify heartbeat continues running
+        assertTrue(heartbeatManager.isRunning());
+    }
+
     // ========== Config update tests ==========
 
     @Test
@@ -299,6 +335,17 @@ public class HeartbeatManagerTest {
 
         assertEquals(10000L, heartbeatManager.getConfig().getIntervalMs());
         assertFalse(heartbeatManager.getConfig().isEnabled());
+    }
+
+    @Test
+    public void setConfig_doesNotStartWhenNotRunning() {
+        assertFalse(heartbeatManager.isRunning());
+        HeartbeatConfig newConfig = new HeartbeatConfig(5000L, true);
+
+        heartbeatManager.setConfig(newConfig);
+
+        assertEquals(5000L, heartbeatManager.getConfig().getIntervalMs());
+        assertFalse(heartbeatManager.isRunning()); // Should NOT auto-start
     }
 
     @Test

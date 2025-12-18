@@ -6,14 +6,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
+import com.google.gson.Gson;
 import com.manuscripta.student.domain.model.DeviceStatus;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -78,6 +78,8 @@ public class HeartbeatManager implements TcpMessageListener {
 
     /** The TCP socket manager for sending messages. */
     private final TcpSocketManager socketManager;
+    /** Gson instance for JSON serialization. */
+    private final Gson gson;
     /** Lock object for synchronising heartbeat operations. */
     private final Object lock = new Object();
 
@@ -110,7 +112,7 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     @Inject
     public HeartbeatManager(@NonNull TcpSocketManager socketManager) {
-        this(socketManager, new HeartbeatConfig());
+        this(socketManager, new HeartbeatConfig(), new Gson());
     }
 
     /**
@@ -121,8 +123,23 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public HeartbeatManager(@NonNull TcpSocketManager socketManager,
                             @NonNull HeartbeatConfig config) {
+        this(socketManager, config, new Gson());
+    }
+
+    /**
+     * Creates a new HeartbeatManager with all dependencies.
+     *
+     * @param socketManager The TCP socket manager for sending messages.
+     * @param config        The heartbeat configuration.
+     * @param gson          The Gson instance for JSON serialization.
+     */
+    @VisibleForTesting
+    HeartbeatManager(@NonNull TcpSocketManager socketManager,
+                     @NonNull HeartbeatConfig config,
+                     @NonNull Gson gson) {
         this.socketManager = socketManager;
         this.config = config;
+        this.gson = gson;
         // Register as listener to receive DISTRIBUTE_MATERIAL messages
         this.socketManager.addMessageListener(this);
     }
@@ -324,31 +341,26 @@ public class HeartbeatManager implements TcpMessageListener {
         DeviceStatusProvider provider = this.statusProvider;
         DeviceStatus status = provider != null ? provider.getDeviceStatus() : null;
 
-        JSONObject json = new JSONObject();
-        try {
-            if (status != null) {
-                json.put("DeviceId", status.getDeviceId());
-                json.put("Status", status.getStatus().name());
-                json.put("BatteryLevel", status.getBatteryLevel());
-                if (status.getCurrentMaterialId() != null) {
-                    json.put("CurrentMaterialId", status.getCurrentMaterialId());
-                }
-                if (status.getStudentView() != null) {
-                    json.put("StudentView", status.getStudentView());
-                }
-                json.put("Timestamp", status.getLastUpdated() / 1000); // Convert to seconds
-            } else {
-                // Minimal payload when no status available
-                json.put("DeviceId", "unknown");
-                json.put("Status", "IDLE");
-                json.put("BatteryLevel", 0);
-                json.put("Timestamp", System.currentTimeMillis() / 1000);
+        Map<String, Object> json = new LinkedHashMap<>();
+        if (status != null) {
+            json.put("DeviceId", status.getDeviceId());
+            json.put("Status", status.getStatus().name());
+            json.put("BatteryLevel", status.getBatteryLevel());
+            if (status.getCurrentMaterialId() != null) {
+                json.put("CurrentMaterialId", status.getCurrentMaterialId());
             }
-        } catch (JSONException e) {
-            Log.e(TAG, "Error building status JSON", e);
-            return "{}";
+            if (status.getStudentView() != null) {
+                json.put("StudentView", status.getStudentView());
+            }
+            json.put("Timestamp", status.getLastUpdated() / 1000); // Convert to seconds
+        } else {
+            // Minimal payload when no status available
+            json.put("DeviceId", "unknown");
+            json.put("Status", "IDLE");
+            json.put("BatteryLevel", 0);
+            json.put("Timestamp", System.currentTimeMillis() / 1000);
         }
-        return json.toString();
+        return gson.toJson(json);
     }
 
     /**
