@@ -25,7 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
+import androidx.test.core.app.ApplicationProvider;
 import org.robolectric.annotation.Config;
 
 /**
@@ -102,7 +102,7 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideFileStorageManager_returnsManager() {
-        Context context = RuntimeEnvironment.getApplication();
+        Context context = ApplicationProvider.getApplicationContext();
 
         FileStorageManager result = repositoryModule.provideFileStorageManager(context);
 

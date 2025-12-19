@@ -141,6 +141,10 @@ public interface MaterialRepository {
      *   <li>Sends DISTRIBUTE_ACK to confirm receipt</li>
      * </ol>
      *
+     * <p><b>Threading:</b> This method performs network I/O and should be called
+     * from a background thread. The implementation handles its own synchronization
+     * for thread-safe access to local storage.</p>
+     *
      * @param deviceId The device ID to fetch materials for
      * @throws IllegalArgumentException if deviceId is null or empty
      */
