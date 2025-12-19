@@ -207,6 +207,7 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
             deviceStatusDao.deleteById(deviceId);
             if (deviceId.equals(currentDeviceId)) {
                 currentDeviceId = null;
+                currentBatteryLevel = DEFAULT_BATTERY_LEVEL;
                 statusLiveData.postValue(null);
             }
             Log.d(TAG, "Cleared status for device " + deviceId);
@@ -218,6 +219,7 @@ public class DeviceStatusRepositoryImpl implements DeviceStatusRepository {
         synchronized (lock) {
             deviceStatusDao.deleteAll();
             currentDeviceId = null;
+            currentBatteryLevel = DEFAULT_BATTERY_LEVEL;
             statusLiveData.postValue(null);
             Log.d(TAG, "Cleared all device status records");
         }

@@ -51,12 +51,12 @@ public class DeviceStatusRepositoryImplTest {
     // ========== Constructor tests ==========
 
     @Test
-    public void constructor_createsInstance() {
+    public void testConstructor_createsInstance() {
         assertNotNull(repository);
     }
 
     @Test
-    public void constructor_nullDao_throwsException() {
+    public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new DeviceStatusRepositoryImpl(null));
     }
@@ -64,7 +64,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== getDeviceStatus tests ==========
 
     @Test
-    public void getDeviceStatus_existingDevice_returnsStatus() {
+    public void testGetDeviceStatus_existingDevice_returnsStatus() {
         DeviceStatusEntity entity = createTestEntity(TEST_DEVICE_ID, DeviceStatus.ON_TASK);
         when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(entity);
 
@@ -77,7 +77,7 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void getDeviceStatus_nonExistingDevice_returnsNull() {
+    public void testGetDeviceStatus_nonExistingDevice_returnsNull() {
         when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(null);
 
         com.manuscripta.student.domain.model.DeviceStatus result =
@@ -87,19 +87,19 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void getDeviceStatus_nullDeviceId_throwsException() {
+    public void testGetDeviceStatus_nullDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getDeviceStatus(null));
     }
 
     @Test
-    public void getDeviceStatus_emptyDeviceId_throwsException() {
+    public void testGetDeviceStatus_emptyDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getDeviceStatus(""));
     }
 
     @Test
-    public void getDeviceStatus_blankDeviceId_throwsException() {
+    public void testGetDeviceStatus_blankDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getDeviceStatus("   "));
     }
@@ -107,7 +107,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== getDeviceStatusLiveData tests ==========
 
     @Test
-    public void getDeviceStatusLiveData_returnsNonNullLiveData() {
+    public void testGetDeviceStatusLiveData_returnsNonNullLiveData() {
         LiveData<com.manuscripta.student.domain.model.DeviceStatus> liveData =
                 repository.getDeviceStatusLiveData();
 
@@ -115,7 +115,7 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void getDeviceStatusLiveData_initialValueIsNull() {
+    public void testGetDeviceStatusLiveData_initialValueIsNull() {
         LiveData<com.manuscripta.student.domain.model.DeviceStatus> liveData =
                 repository.getDeviceStatusLiveData();
 
@@ -125,7 +125,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== updateStatus tests ==========
 
     @Test
-    public void updateStatus_insertsEntityIntoDao() {
+    public void testUpdateStatus_insertsEntityIntoDao() {
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.ON_TASK, TEST_MATERIAL_ID, null);
 
         ArgumentCaptor<DeviceStatusEntity> captor =
@@ -139,7 +139,7 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void updateStatus_updatesLiveData() {
+    public void testUpdateStatus_updatesLiveData() {
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.ON_TASK, TEST_MATERIAL_ID, null);
 
         com.manuscripta.student.domain.model.DeviceStatus liveDataValue =
@@ -151,19 +151,19 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void updateStatus_nullDeviceId_throwsException() {
+    public void testUpdateStatus_nullDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.updateStatus(null, DeviceStatus.ON_TASK, null, null));
     }
 
     @Test
-    public void updateStatus_nullStatus_throwsException() {
+    public void testUpdateStatus_nullStatus_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.updateStatus(TEST_DEVICE_ID, null, null, null));
     }
 
     @Test
-    public void updateStatus_blankDeviceId_throwsException() {
+    public void testUpdateStatus_blankDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.updateStatus("   ", DeviceStatus.ON_TASK, null, null));
     }
@@ -171,7 +171,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== updateBatteryLevel tests ==========
 
     @Test
-    public void updateBatteryLevel_validLevel_updatesBatteryLevel() {
+    public void testUpdateBatteryLevel_validLevel_updatesBatteryLevel() {
         // First initialise with a device
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
 
@@ -193,31 +193,31 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void updateBatteryLevel_belowMinimum_throwsException() {
+    public void testUpdateBatteryLevel_belowMinimum_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.updateBatteryLevel(-1));
     }
 
     @Test
-    public void updateBatteryLevel_aboveMaximum_throwsException() {
+    public void testUpdateBatteryLevel_aboveMaximum_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.updateBatteryLevel(101));
     }
 
     @Test
-    public void updateBatteryLevel_atMinimum_succeeds() {
+    public void testUpdateBatteryLevel_atMinimum_succeeds() {
         repository.updateBatteryLevel(0);
         assertEquals(0, repository.getCurrentBatteryLevel());
     }
 
     @Test
-    public void updateBatteryLevel_atMaximum_succeeds() {
+    public void testUpdateBatteryLevel_atMaximum_succeeds() {
         repository.updateBatteryLevel(100);
         assertEquals(100, repository.getCurrentBatteryLevel());
     }
 
     @Test
-    public void updateBatteryLevel_entityNotFound_updatesMemoryOnly() {
+    public void testUpdateBatteryLevel_entityNotFound_updatesMemoryOnly() {
         // Set a current device via updateStatus (this inserts an entity)
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
 
@@ -237,7 +237,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== setOnTask tests ==========
 
     @Test
-    public void setOnTask_updatesStatusToOnTask() {
+    public void testSetOnTask_updatesStatusToOnTask() {
         repository.setOnTask(TEST_DEVICE_ID, TEST_MATERIAL_ID);
 
         ArgumentCaptor<DeviceStatusEntity> captor =
@@ -252,7 +252,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== setIdle tests ==========
 
     @Test
-    public void setIdle_updatesStatusToIdle() {
+    public void testSetIdle_updatesStatusToIdle() {
         repository.setIdle(TEST_DEVICE_ID);
 
         ArgumentCaptor<DeviceStatusEntity> captor =
@@ -265,7 +265,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== setLocked tests ==========
 
     @Test
-    public void setLocked_updatesStatusToLocked() {
+    public void testSetLocked_updatesStatusToLocked() {
         repository.setLocked(TEST_DEVICE_ID);
 
         ArgumentCaptor<DeviceStatusEntity> captor =
@@ -278,7 +278,7 @@ public class DeviceStatusRepositoryImplTest {
     // ========== setDisconnected tests ==========
 
     @Test
-    public void setDisconnected_updatesStatusToDisconnected() {
+    public void testSetDisconnected_updatesStatusToDisconnected() {
         repository.setDisconnected(TEST_DEVICE_ID);
 
         ArgumentCaptor<DeviceStatusEntity> captor =
@@ -291,14 +291,14 @@ public class DeviceStatusRepositoryImplTest {
     // ========== clearDeviceStatus tests ==========
 
     @Test
-    public void clearDeviceStatus_deletesFromDao() {
+    public void testClearDeviceStatus_deletesFromDao() {
         repository.clearDeviceStatus(TEST_DEVICE_ID);
 
         verify(mockDao).deleteById(TEST_DEVICE_ID);
     }
 
     @Test
-    public void clearDeviceStatus_currentDevice_clearsLiveData() {
+    public void testClearDeviceStatus_currentDevice_clearsLiveData() {
         // First set the current device
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
         assertNotNull(repository.getDeviceStatusLiveData().getValue());
@@ -310,19 +310,35 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void clearDeviceStatus_nullDeviceId_throwsException() {
+    public void testClearDeviceStatus_currentDevice_resetsBatteryLevel() {
+        // First set the current device and update battery level
+        repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
+        DeviceStatusEntity entity = createTestEntity(TEST_DEVICE_ID, DeviceStatus.IDLE);
+        when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(entity);
+        repository.updateBatteryLevel(50);
+        assertEquals(50, repository.getCurrentBatteryLevel());
+
+        // Clear current device
+        repository.clearDeviceStatus(TEST_DEVICE_ID);
+
+        // Battery level should be reset to default (100)
+        assertEquals(100, repository.getCurrentBatteryLevel());
+    }
+
+    @Test
+    public void testClearDeviceStatus_nullDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.clearDeviceStatus(null));
     }
 
     @Test
-    public void clearDeviceStatus_blankDeviceId_throwsException() {
+    public void testClearDeviceStatus_blankDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.clearDeviceStatus("   "));
     }
 
     @Test
-    public void clearDeviceStatus_nonCurrentDevice_doesNotAffectLiveData() {
+    public void testClearDeviceStatus_nonCurrentDevice_doesNotAffectLiveData() {
         // Set device-1 as current
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
         assertNotNull(repository.getDeviceStatusLiveData().getValue());
@@ -341,14 +357,14 @@ public class DeviceStatusRepositoryImplTest {
     // ========== clearAllDeviceStatus tests ==========
 
     @Test
-    public void clearAllDeviceStatus_deletesAllFromDao() {
+    public void testClearAllDeviceStatus_deletesAllFromDao() {
         repository.clearAllDeviceStatus();
 
         verify(mockDao).deleteAll();
     }
 
     @Test
-    public void clearAllDeviceStatus_clearsLiveData() {
+    public void testClearAllDeviceStatus_clearsLiveData() {
         // First set a device
         repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
 
@@ -357,10 +373,26 @@ public class DeviceStatusRepositoryImplTest {
         assertNull(repository.getDeviceStatusLiveData().getValue());
     }
 
+    @Test
+    public void testClearAllDeviceStatus_resetsBatteryLevel() {
+        // First set a device and update battery level
+        repository.updateStatus(TEST_DEVICE_ID, DeviceStatus.IDLE, null, null);
+        DeviceStatusEntity entity = createTestEntity(TEST_DEVICE_ID, DeviceStatus.IDLE);
+        when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(entity);
+        repository.updateBatteryLevel(50);
+        assertEquals(50, repository.getCurrentBatteryLevel());
+
+        // Clear all device status
+        repository.clearAllDeviceStatus();
+
+        // Battery level should be reset to default (100)
+        assertEquals(100, repository.getCurrentBatteryLevel());
+    }
+
     // ========== initialiseDeviceStatus tests ==========
 
     @Test
-    public void initialiseDeviceStatus_newDevice_createsIdleStatus() {
+    public void testInitialiseDeviceStatus_newDevice_createsIdleStatus() {
         when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(null);
 
         repository.initialiseDeviceStatus(TEST_DEVICE_ID);
@@ -373,7 +405,7 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void initialiseDeviceStatus_existingDevice_loadsExistingStatus() {
+    public void testInitialiseDeviceStatus_existingDevice_loadsExistingStatus() {
         DeviceStatusEntity existing = createTestEntity(TEST_DEVICE_ID, DeviceStatus.ON_TASK);
         when(mockDao.getById(TEST_DEVICE_ID)).thenReturn(existing);
 
@@ -390,13 +422,13 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void initialiseDeviceStatus_nullDeviceId_throwsException() {
+    public void testInitialiseDeviceStatus_nullDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.initialiseDeviceStatus(null));
     }
 
     @Test
-    public void initialiseDeviceStatus_blankDeviceId_throwsException() {
+    public void testInitialiseDeviceStatus_blankDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.initialiseDeviceStatus("   "));
     }
@@ -404,14 +436,14 @@ public class DeviceStatusRepositoryImplTest {
     // ========== getCurrentBatteryLevel tests ==========
 
     @Test
-    public void getCurrentBatteryLevel_defaultValue_returns100() {
+    public void testGetCurrentBatteryLevel_defaultValue_returns100() {
         assertEquals(100, repository.getCurrentBatteryLevel());
     }
 
     // ========== Thread safety tests ==========
 
     @Test
-    public void concurrentUpdates_differentDevices_areThreadSafe() throws InterruptedException {
+    public void testConcurrentUpdates_differentDevices_areThreadSafe() throws InterruptedException {
         int threadCount = 10;
         java.util.concurrent.CountDownLatch latch =
                 new java.util.concurrent.CountDownLatch(threadCount);
@@ -436,7 +468,7 @@ public class DeviceStatusRepositoryImplTest {
     }
 
     @Test
-    public void concurrentUpdates_sameDevice_areThreadSafe() throws InterruptedException {
+    public void testConcurrentUpdates_sameDevice_areThreadSafe() throws InterruptedException {
         // Test concurrent updates to the SAME device ID to verify proper synchronization
         int threadCount = 10;
         java.util.concurrent.CountDownLatch latch =
