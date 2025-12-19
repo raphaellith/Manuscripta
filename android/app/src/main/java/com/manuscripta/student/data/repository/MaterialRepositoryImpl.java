@@ -23,7 +23,7 @@ import javax.inject.Singleton;
 
 /**
  * Implementation of {@link MaterialRepository} that manages educational materials
- * with local persistence and network synchronisation.
+ * with local persistence and network synchronization.
  *
  * <p>Features:</p>
  * <ul>

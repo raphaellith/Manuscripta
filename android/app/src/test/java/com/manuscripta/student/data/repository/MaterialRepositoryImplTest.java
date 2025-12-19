@@ -64,18 +64,18 @@ public class MaterialRepositoryImplTest {
     // ========== Constructor tests ==========
 
     @Test
-    public void constructor_createsInstance() {
+    public void testConstructor_createsInstance() {
         assertNotNull(repository);
     }
 
     @Test
-    public void constructor_nullDao_throwsException() {
+    public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(null, mockFileStorageManager));
     }
 
     @Test
-    public void constructor_nullFileStorageManager_throwsException() {
+    public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, null));
     }
@@ -83,7 +83,7 @@ public class MaterialRepositoryImplTest {
     // ========== getMaterialById tests ==========
 
     @Test
-    public void getMaterialById_existingMaterial_returnsMaterial() {
+    public void testGetMaterialById_existingMaterial_returnsMaterial() {
         MaterialEntity entity = createTestEntity(TEST_MATERIAL_ID);
         when(mockDao.getById(TEST_MATERIAL_ID)).thenReturn(entity);
 
@@ -94,7 +94,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void getMaterialById_nonExistingMaterial_returnsNull() {
+    public void testGetMaterialById_nonExistingMaterial_returnsNull() {
         when(mockDao.getById(TEST_MATERIAL_ID)).thenReturn(null);
 
         Material result = repository.getMaterialById(TEST_MATERIAL_ID);
@@ -103,19 +103,19 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void getMaterialById_nullId_throwsException() {
+    public void testGetMaterialById_nullId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getMaterialById(null));
     }
 
     @Test
-    public void getMaterialById_emptyId_throwsException() {
+    public void testGetMaterialById_emptyId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getMaterialById(""));
     }
 
     @Test
-    public void getMaterialById_blankId_throwsException() {
+    public void testGetMaterialById_blankId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getMaterialById("   "));
     }
@@ -123,7 +123,7 @@ public class MaterialRepositoryImplTest {
     // ========== getAllMaterials tests ==========
 
     @Test
-    public void getAllMaterials_returnsMaterials() {
+    public void testGetAllMaterials_returnsMaterials() {
         List<MaterialEntity> entities = Arrays.asList(
                 createTestEntity("mat1"),
                 createTestEntity("mat2")
@@ -136,7 +136,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void getAllMaterials_emptyDatabase_returnsEmptyList() {
+    public void testGetAllMaterials_emptyDatabase_returnsEmptyList() {
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
 
         List<Material> result = repository.getAllMaterials();
@@ -148,7 +148,7 @@ public class MaterialRepositoryImplTest {
     // ========== getMaterialsByType tests ==========
 
     @Test
-    public void getMaterialsByType_returnsMaterialsOfType() {
+    public void testGetMaterialsByType_returnsMaterialsOfType() {
         List<MaterialEntity> entities = Collections.singletonList(
                 createTestEntity(TEST_MATERIAL_ID, MaterialType.READING)
         );
@@ -161,7 +161,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void getMaterialsByType_nullType_throwsException() {
+    public void testGetMaterialsByType_nullType_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.getMaterialsByType(null));
     }
@@ -169,14 +169,14 @@ public class MaterialRepositoryImplTest {
     // ========== getMaterialsLiveData tests ==========
 
     @Test
-    public void getMaterialsLiveData_returnsNonNullLiveData() {
+    public void testGetMaterialsLiveData_returnsNonNullLiveData() {
         LiveData<List<Material>> liveData = repository.getMaterialsLiveData();
 
         assertNotNull(liveData);
     }
 
     @Test
-    public void getMaterialsLiveData_initialValue_isEmpty() {
+    public void testGetMaterialsLiveData_initialValue_isEmpty() {
         LiveData<List<Material>> liveData = repository.getMaterialsLiveData();
 
         assertNotNull(liveData.getValue());
@@ -186,7 +186,7 @@ public class MaterialRepositoryImplTest {
     // ========== saveMaterial tests ==========
 
     @Test
-    public void saveMaterial_insertsIntoDao() {
+    public void testSaveMaterial_insertsIntoDao() {
         Material material = createTestDomainMaterial(TEST_MATERIAL_ID);
 
         repository.saveMaterial(material);
@@ -197,7 +197,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void saveMaterial_refreshesLiveData() {
+    public void testSaveMaterial_refreshesLiveData() {
         Material material = createTestDomainMaterial(TEST_MATERIAL_ID);
         List<MaterialEntity> entities = Collections.singletonList(
                 createTestEntity(TEST_MATERIAL_ID)
@@ -212,7 +212,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void saveMaterial_nullMaterial_throwsException() {
+    public void testSaveMaterial_nullMaterial_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.saveMaterial(null));
     }
@@ -220,7 +220,7 @@ public class MaterialRepositoryImplTest {
     // ========== saveMaterials tests ==========
 
     @Test
-    public void saveMaterials_insertsAllIntoDao() {
+    public void testSaveMaterials_insertsAllIntoDao() {
         List<Material> materials = Arrays.asList(
                 createTestDomainMaterial("mat1"),
                 createTestDomainMaterial("mat2")
@@ -232,14 +232,14 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void saveMaterials_emptyList_doesNotInsert() {
+    public void testSaveMaterials_emptyList_doesNotInsert() {
         repository.saveMaterials(new ArrayList<>());
 
         verify(mockDao, never()).insertAll(anyList());
     }
 
     @Test
-    public void saveMaterials_nullList_throwsException() {
+    public void testSaveMaterials_nullList_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.saveMaterials(null));
     }
@@ -247,33 +247,33 @@ public class MaterialRepositoryImplTest {
     // ========== deleteMaterial tests ==========
 
     @Test
-    public void deleteMaterial_deletesFromDao() {
+    public void testDeleteMaterial_deletesFromDao() {
         repository.deleteMaterial(TEST_MATERIAL_ID);
 
         verify(mockDao).deleteById(TEST_MATERIAL_ID);
     }
 
     @Test
-    public void deleteMaterial_deletesAttachments() {
+    public void testDeleteMaterial_deletesAttachments() {
         repository.deleteMaterial(TEST_MATERIAL_ID);
 
         verify(mockFileStorageManager).deleteAttachmentsForMaterial(TEST_MATERIAL_ID);
     }
 
     @Test
-    public void deleteMaterial_nullId_throwsException() {
+    public void testDeleteMaterial_nullId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.deleteMaterial(null));
     }
 
     @Test
-    public void deleteMaterial_emptyId_throwsException() {
+    public void testDeleteMaterial_emptyId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.deleteMaterial(""));
     }
 
     @Test
-    public void deleteMaterial_blankId_throwsException() {
+    public void testDeleteMaterial_blankId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.deleteMaterial("   "));
     }
@@ -281,14 +281,14 @@ public class MaterialRepositoryImplTest {
     // ========== deleteAllMaterials tests ==========
 
     @Test
-    public void deleteAllMaterials_deletesAllFromDao() {
+    public void testDeleteAllMaterials_deletesAllFromDao() {
         repository.deleteAllMaterials();
 
         verify(mockDao).deleteAll();
     }
 
     @Test
-    public void deleteAllMaterials_clearsAllAttachments() {
+    public void testDeleteAllMaterials_clearsAllAttachments() {
         repository.deleteAllMaterials();
 
         verify(mockFileStorageManager).clearAllAttachments();
@@ -297,7 +297,7 @@ public class MaterialRepositoryImplTest {
     // ========== getMaterialCount tests ==========
 
     @Test
-    public void getMaterialCount_returnsCount() {
+    public void testGetMaterialCount_returnsCount() {
         when(mockDao.getCount()).thenReturn(5);
 
         int count = repository.getMaterialCount();
@@ -308,7 +308,7 @@ public class MaterialRepositoryImplTest {
     // ========== setMaterialAvailableCallback tests ==========
 
     @Test
-    public void setMaterialAvailableCallback_setsCallback() {
+    public void testSetMaterialAvailableCallback_setsCallback() {
         MaterialRepository.MaterialAvailableCallback callback =
                 () -> { };
 
@@ -318,7 +318,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void setMaterialAvailableCallback_nullCallback_doesNotThrow() {
+    public void testSetMaterialAvailableCallback_nullCallback_doesNotThrow() {
         repository.setMaterialAvailableCallback(null);
 
         // No exception means success
@@ -327,7 +327,7 @@ public class MaterialRepositoryImplTest {
     // ========== syncMaterials tests ==========
 
     @Test
-    public void syncMaterials_setsAndClearsSyncingFlag() {
+    public void testSyncMaterials_setsAndClearsSyncingFlag() {
         assertFalse(repository.isSyncing());
 
         repository.syncMaterials(TEST_DEVICE_ID);
@@ -337,25 +337,25 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void syncMaterials_nullDeviceId_throwsException() {
+    public void testSyncMaterials_nullDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.syncMaterials(null));
     }
 
     @Test
-    public void syncMaterials_emptyDeviceId_throwsException() {
+    public void testSyncMaterials_emptyDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.syncMaterials(""));
     }
 
     @Test
-    public void syncMaterials_blankDeviceId_throwsException() {
+    public void testSyncMaterials_blankDeviceId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.syncMaterials("   "));
     }
 
     @Test
-    public void syncMaterials_notifiesCallback() {
+    public void testSyncMaterials_notifiesCallback() {
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
 
@@ -367,14 +367,14 @@ public class MaterialRepositoryImplTest {
     // ========== isSyncing tests ==========
 
     @Test
-    public void isSyncing_initiallyFalse() {
+    public void testIsSyncing_initiallyFalse() {
         assertFalse(repository.isSyncing());
     }
 
     // ========== notifyMaterialsAvailable tests ==========
 
     @Test
-    public void notifyMaterialsAvailable_callsCallback() {
+    public void testNotifyMaterialsAvailable_callsCallback() {
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
 
@@ -384,7 +384,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void notifyMaterialsAvailable_noCallback_doesNotThrow() {
+    public void testNotifyMaterialsAvailable_noCallback_doesNotThrow() {
         repository.setMaterialAvailableCallback(null);
 
         repository.notifyMaterialsAvailable();
@@ -395,7 +395,7 @@ public class MaterialRepositoryImplTest {
     // ========== Thread safety tests ==========
 
     @Test
-    public void concurrentSaves_areThreadSafe() throws InterruptedException {
+    public void testConcurrentSaves_areThreadSafe() throws InterruptedException {
         int threadCount = 10;
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -411,7 +411,7 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void concurrentDeletes_areThreadSafe() throws InterruptedException {
+    public void testConcurrentDeletes_areThreadSafe() throws InterruptedException {
         int threadCount = 10;
         CountDownLatch latch = new CountDownLatch(threadCount);
 
