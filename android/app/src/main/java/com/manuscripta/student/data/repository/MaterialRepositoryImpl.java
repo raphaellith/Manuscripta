@@ -290,9 +290,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * <p>Failures are logged but do not propagate exceptions, allowing the caller
      * to continue processing even if the ACK fails to send.</p>
      *
+     * <p>Package-private to allow testing error handling. This method is not yet
+     * called from production code as HTTP fetch is not implemented.</p>
+     *
      * @param deviceId The device ID to include in the ACK
      */
-    private void sendDistributeAck(@NonNull String deviceId) {
+    void sendDistributeAck(@NonNull String deviceId) {
         validateNotEmpty(deviceId, "Device ID");
 
         if (tcpSocketManager == null) {

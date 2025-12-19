@@ -8,6 +8,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -452,6 +453,69 @@ public class MaterialRepositoryImplTest {
         repository.syncMaterials(TEST_DEVICE_ID);
 
         // No exception means success
+    }
+
+    // ========== sendDistributeAck tests ==========
+
+    @Test
+    public void testSendDistributeAck_sendsMessageWithCorrectDeviceId()
+            throws IOException, TcpProtocolException {
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        ArgumentCaptor<DistributeAckMessage> captor =
+                ArgumentCaptor.forClass(DistributeAckMessage.class);
+        verify(mockTcpSocketManager).send(captor.capture());
+        assertEquals(TEST_DEVICE_ID, captor.getValue().getDeviceId());
+    }
+
+    @Test
+    public void testSendDistributeAck_nullTcpSocketManager_doesNotThrow() {
+        // repository has null TcpSocketManager
+        repository.sendDistributeAck(TEST_DEVICE_ID);
+
+        // No exception means success - gracefully handles missing socket manager
+    }
+
+    @Test
+    public void testSendDistributeAck_ioException_doesNotPropagate()
+            throws IOException, TcpProtocolException {
+        doThrow(new IOException("Network error"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        // Should not throw - failures are logged but don't propagate
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSendDistributeAck_tcpProtocolException_doesNotPropagate()
+            throws IOException, TcpProtocolException {
+        doThrow(new TcpProtocolException("Protocol error"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        // Should not throw - failures are logged but don't propagate
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSendDistributeAck_nullDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck(null));
+    }
+
+    @Test
+    public void testSendDistributeAck_emptyDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck(""));
+    }
+
+    @Test
+    public void testSendDistributeAck_blankDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck("   "));
     }
 
     // ========== Thread safety tests ==========
