@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,6 +140,12 @@ public class MaterialRepositoryImplTest {
                 () -> repository.getMaterialById(""));
     }
 
+    @Test
+    public void testGetMaterialById_blankId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.getMaterialById("   "));
+    }
+
     // ========== getAllMaterials tests ==========
 
     @Test
@@ -251,18 +258,29 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void testSaveMaterials_emptyList_stillInsertsEmptyList() {
+    public void testSaveMaterials_emptyList_doesNotInsert() {
         repository.saveMaterials(new ArrayList<>());
 
-        // Note: The implementation still calls insertAll even with an empty list.
-        // This is acceptable as Room handles empty lists efficiently.
-        verify(mockDao).insertAll(anyList());
+        // Empty list should return early without calling insertAll
+        verify(mockDao, never()).insertAll(anyList());
     }
 
     @Test
     public void testSaveMaterials_nullList_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.saveMaterials(null));
+    }
+
+    @Test
+    public void testSaveMaterials_nullElementInList_throwsException() {
+        List<Material> materials = new ArrayList<>();
+        materials.add(createTestDomainMaterial("mat1"));
+        materials.add(null);
+        materials.add(createTestDomainMaterial("mat3"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> repository.saveMaterials(materials));
+        assertTrue(exception.getMessage().contains("null at index 1"));
     }
 
     // ========== deleteMaterial tests ==========
@@ -291,6 +309,12 @@ public class MaterialRepositoryImplTest {
     public void testDeleteMaterial_emptyId_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.deleteMaterial(""));
+    }
+
+    @Test
+    public void testDeleteMaterial_blankId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.deleteMaterial("   "));
     }
 
     // ========== deleteAllMaterials tests ==========
@@ -446,6 +470,9 @@ public class MaterialRepositoryImplTest {
         }
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+        // Verify all saves were actually called
+        verify(mockDao, times(threadCount)).insert(any(MaterialEntity.class));
     }
 
     @Test
@@ -462,6 +489,9 @@ public class MaterialRepositoryImplTest {
         }
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+        // Verify all deletes were actually called
+        verify(mockDao, times(threadCount)).deleteById(any(String.class));
     }
 
     // ========== Helper methods ==========
