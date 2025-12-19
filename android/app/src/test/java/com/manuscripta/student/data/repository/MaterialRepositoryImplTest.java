@@ -556,6 +556,8 @@ public class MaterialRepositoryImplTest {
 
         // Verify all deletes were actually called
         verify(mockDao, times(threadCount)).deleteById(any(String.class));
+        verify(mockFileStorageManager, times(threadCount))
+                .deleteAttachmentsForMaterial(any(String.class));
     }
 
     // ========== Helper methods ==========
