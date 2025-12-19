@@ -18,11 +18,11 @@ This document specifies the process through which the two clients communicate du
 
 (1) The Android device must, as long as deemed paired, send a TCP status update message according to the "heart rate" specified in s1(1), to the Windows device, to indicate its current status.
 
-(2) The Windows device should implicitly signal acceptance through TCP acknowledgements. Malformed packets shall be dealt accordingly in the API Contract.
+(2) The Windows device should implicitly signal acceptance through TCP acknowledgement messages. Malformed packets shall be dealt accordingly in the API Contract.
 
 (3) If a Windows device has not received a heartbeat message from a paired Android device A for 10 seconds, it shall change A's status to `DISCONNECTED`, and inform the user accordingly.
 
-(4) If a heart beat has not been acknowledged by the Windows device, the Android device should still send heart beats at the heart rate, and should notify the user that they have been disconnected if 3 consecutive messages are left unacknowledged when the next message is scheduled to be sent. If no acknowledgement has been received within 60 seconds, the Android client should deem itself as unpaired, and use the process in Pairing Process Specification s3.
+(4) For the purpose of this section, a heartbeat is considered unacknowledged if the underlying TCP socket reports a transmission failure or timeout. If 3 consecutive heartbeat messages are unacknowledged, the Android device should notify the user that they have been disconnected. If the connection remains broken for 60 seconds, the Android client should deem itself unpaired, and use the process in Pairing Process Specification s3.
 
 ## Section 3: Distributing Materials
 
@@ -37,13 +37,27 @@ This document specifies the process through which the two clients communicate du
     (i) Takes a DeviceId as an input.
     (ii) Returns, if any, material entities and their related questions.
 
-As specified in `API Contract.md` §2.5.
+This is specified in `API Contract.md` §2.5.
+
+(5) The Android client must, on successful receipt of materials from the REST API end point defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message as defined in `API Contract.md` §3.6.
+
+(6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message, it shall indicate to the user (teacher) that the distribution to that specific device has failed.
 
 ## Section 4: Submitting a Response
 
 (1) The Android client may submit a response to a question by using `POST /responses` and `POST /responses/batch` in API specifications.
 
 (2) The Android client may evaluate the correctness of the response if it is straightforward to do so (such as for multiple choice, true / false or simple blank filling questions), and place the result of evaluation in the `IsCorrect` field. 
+
+## Section 4A: Raising Hand
+
+(1) The Android client should signal that its user is asked for help by sending a TCP `HAND_RAISED` (0x11) message.
+
+(2) The Windows client, on receipt of the `HAND_RAISED` message, should signal the teacher that the corresponding student tablet is currently asking for help. It must explicitly acknowledge the hand-raise by sending a TCP `HAND_ACK` (0x06) message.
+
+(3) If the Android client does not receive an acknowledgement specified in (2) from the Windows machine within 3 seconds, it should resend the `HAND_RAISED` message, until a `HAND_ACK` message is received.
+
+(4) If the Windows device receives multiple `HAND_RAISED` messages from the same Android device, it should only signal the teacher once before acknowledgement from the user.
 
 ## Section 5: Lifetime of a Session
 
@@ -84,8 +98,27 @@ The following state transitions are permitted:
 
 (6) **EndTime Requirement**
 
-Per `Validation Rules.md` §2D(3)(a), any transition to `PAUSED`, `COMPLETED`, or `CANCELLED` must set the `EndTime` field to the current timestamp.
+Per `Validation Rules.md` §2D(3)(c), any transition to `PAUSED`, `COMPLETED`, or `CANCELLED` must set the `EndTime` field to the current timestamp.
 
 (7) **Automatic Cancellation**
 
 A session shall be automatically transitioned to `CANCELLED` if the device is deemed unpaired as defined in Section 2(4) of this document.
+
+## Section 6: Remote Control Interactions
+
+(1) The Windows client may send control commands to the Android device. The Android device shall acknowledge these commands implicitly via observable state changes or subsequent requests.
+
+(2) **Screen Lock/Unlock**
+
+    (a) On receipt of `LOCK_SCREEN` (0x01), the Android device must lock its UI. The subsequent `STATUS_UPDATE` heartbeats (as defined in Section 2) must report the `Status` field as `LOCKED`.
+    (b) On receipt of `UNLOCK_SCREEN` (0x02), the Android device must restore user interaction. The subsequent `STATUS_UPDATE` heartbeats must report the `Status` field as `ON_TASK` or `IDLE`, as appropriate.
+    (c) If the Windows client does not receive the expected status in the subsequent `STATUS_UPDATE` message (or within 6 seconds), it should indicate to the user (teacher) that the command has failed.
+
+(3) **Configuration Refresh**
+
+    (a) On receipt of `REFRESH_CONFIG` (0x03), the Android device must immediately call `GET /config` (as specified in `API Contract.md` §2.2). The server's receipt of this HTTP request serves as the acknowledgement.
+    (b) If the Windows client does not receive the `GET /config` request within 5 seconds of sending `REFRESH_CONFIG`, it should indicate to the user (teacher) that the configuration refresh has failed.
+
+(4) **Unpairing**
+
+    (a) On receipt of `UNPAIR` (0x04), the Android device must terminate the TCP connection. The severance of the connection serves as the acknowledgement.
