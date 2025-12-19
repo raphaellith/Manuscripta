@@ -165,8 +165,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
         synchronized (lock) {
             List<MaterialEntity> entities = new ArrayList<>(materials.size());
+            int index = 0;
             for (Material material : materials) {
+                if (material == null) {
+                    throw new IllegalArgumentException(
+                            "Materials list cannot contain null elements (null at index " + index + ")");
+                }
                 entities.add(MaterialMapper.toEntity(material));
+                index++;
             }
             materialDao.insertAll(entities);
             refreshMaterialsLiveData();
@@ -244,12 +250,18 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Material sync requested for device " + deviceId
                     + " - HTTP fetch not yet implemented");
 
-            // Notify callback that materials may be available
-            notifyMaterialsAvailable();
-
         } finally {
             syncing.set(false);
             Log.d(TAG, "Material sync completed for device: " + deviceId);
+        }
+
+        // Notify callback that materials may be available. This is invoked
+        // outside the sync state management block to ensure callback behaviour
+        // cannot interfere with clearing the syncing flag.
+        try {
+            notifyMaterialsAvailable();
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Error while notifying materials availability callback", e);
         }
     }
 
@@ -261,8 +273,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /**
      * Notifies the callback that materials are available.
      * Called when DISTRIBUTE_MATERIAL signal is received.
+     *
+     * <p>Package-private to prevent external components from triggering callbacks
+     * outside the intended flow. Internal components in the same package can still
+     * invoke this method when handling TCP signals.</p>
      */
-    public void notifyMaterialsAvailable() {
+    void notifyMaterialsAvailable() {
         MaterialAvailableCallback callback;
         synchronized (lock) {
             callback = this.materialAvailableCallback;
@@ -277,7 +293,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /**
      * Refreshes the materials LiveData with current database contents.
      *
-     * <p>Must be called within synchronized block for thread safety.</p>
+     * <p>This method does not perform explicit synchronization; callers should ensure any
+     * required thread-safety when invoking it.</p>
      *
      * <p><b>Thread safety note:</b> This method uses {@link MutableLiveData#postValue(Object)}
      * which is asynchronous. When multiple threads modify data concurrently, the order of

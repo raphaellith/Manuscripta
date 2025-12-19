@@ -408,6 +408,10 @@ public class MaterialRepositoryImplTest {
         }
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+        // Verify all saves were actually called
+        verify(mockDao, org.mockito.Mockito.times(threadCount))
+                .insert(any(MaterialEntity.class));
     }
 
     @Test
@@ -424,6 +428,26 @@ public class MaterialRepositoryImplTest {
         }
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+        // Verify all deletes were actually called
+        verify(mockDao, org.mockito.Mockito.times(threadCount)).deleteById(any(String.class));
+        verify(mockFileStorageManager, org.mockito.Mockito.times(threadCount))
+                .deleteAttachmentsForMaterial(any(String.class));
+    }
+
+    // ========== Null element validation tests ==========
+
+    @Test
+    public void testSaveMaterials_nullElementInList_throwsException() {
+        List<Material> materials = new ArrayList<>();
+        materials.add(createTestDomainMaterial("mat1"));
+        materials.add(null);
+        materials.add(createTestDomainMaterial("mat3"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> repository.saveMaterials(materials));
+
+        assertTrue(exception.getMessage().contains("null at index 1"));
     }
 
     // ========== Helper methods ==========
