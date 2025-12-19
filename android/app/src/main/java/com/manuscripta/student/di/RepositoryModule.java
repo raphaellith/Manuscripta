@@ -2,6 +2,8 @@ package com.manuscripta.student.di;
 
 import android.content.Context;
 
+import androidx.annotation.Nullable;
+
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
@@ -12,6 +14,7 @@ import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import javax.inject.Singleton;
@@ -106,12 +109,14 @@ public class RepositoryModule {
      *
      * @param materialDao        The MaterialDao instance
      * @param fileStorageManager The FileStorageManager instance
+     * @param tcpSocketManager   The TcpSocketManager for sending ACKs (nullable)
      * @return MaterialRepository instance
      */
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
-                                                        FileStorageManager fileStorageManager) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager);
+                                                        FileStorageManager fileStorageManager,
+                                                        @Nullable TcpSocketManager tcpSocketManager) {
+        return new MaterialRepositoryImpl(materialDao, fileStorageManager, tcpSocketManager);
     }
 }

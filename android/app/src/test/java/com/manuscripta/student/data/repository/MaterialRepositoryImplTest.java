@@ -8,7 +8,9 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +21,12 @@ import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.FileStorageManager;
+
+import java.io.IOException;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,7 +56,11 @@ public class MaterialRepositoryImplTest {
     @Mock
     private FileStorageManager mockFileStorageManager;
 
+    @Mock
+    private TcpSocketManager mockTcpSocketManager;
+
     private MaterialRepositoryImpl repository;
+    private MaterialRepositoryImpl repositoryWithTcp;
 
     private static final String TEST_MATERIAL_ID = "test-material-123";
     private static final String TEST_DEVICE_ID = "test-device-456";
@@ -58,7 +69,11 @@ public class MaterialRepositoryImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
-        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager);
+        // Repository without TcpSocketManager (for backward compatibility tests)
+        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null);
+        // Repository with TcpSocketManager (for ACK tests)
+        repositoryWithTcp = new MaterialRepositoryImpl(mockDao, mockFileStorageManager,
+                mockTcpSocketManager);
     }
 
     // ========== Constructor tests ==========
@@ -69,15 +84,27 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
+    public void testConstructor_withTcpSocketManager_createsInstance() {
+        assertNotNull(repositoryWithTcp);
+    }
+
+    @Test
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(null, mockFileStorageManager));
+                () -> new MaterialRepositoryImpl(null, mockFileStorageManager, null));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, null));
+                () -> new MaterialRepositoryImpl(mockDao, null, null));
+    }
+
+    @Test
+    public void testConstructor_nullTcpSocketManager_doesNotThrow() {
+        MaterialRepositoryImpl repo = new MaterialRepositoryImpl(mockDao, mockFileStorageManager,
+                null);
+        assertNotNull(repo);
     }
 
     // ========== getMaterialById tests ==========
@@ -235,6 +262,7 @@ public class MaterialRepositoryImplTest {
     public void testSaveMaterials_emptyList_doesNotInsert() {
         repository.saveMaterials(new ArrayList<>());
 
+        // Empty list should return early without calling insertAll
         verify(mockDao, never()).insertAll(anyList());
     }
 
@@ -242,6 +270,18 @@ public class MaterialRepositoryImplTest {
     public void testSaveMaterials_nullList_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> repository.saveMaterials(null));
+    }
+
+    @Test
+    public void testSaveMaterials_nullElementInList_throwsException() {
+        List<Material> materials = new ArrayList<>();
+        materials.add(createTestDomainMaterial("mat1"));
+        materials.add(null);
+        materials.add(createTestDomainMaterial("mat3"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> repository.saveMaterials(materials));
+        assertTrue(exception.getMessage().contains("null at index 1"));
     }
 
     // ========== deleteMaterial tests ==========
@@ -392,6 +432,92 @@ public class MaterialRepositoryImplTest {
         // No exception means success
     }
 
+    // ========== DISTRIBUTE_ACK tests ==========
+    // Note: Per API Contract §3.6.1, DISTRIBUTE_ACK should only be sent after
+    // successfully fetching and storing materials via HTTP. Since HTTP fetch
+    // is not yet implemented, syncMaterials does NOT send the ACK.
+
+    @Test
+    public void testSyncMaterials_doesNotSendAckUntilHttpImplemented()
+            throws IOException, TcpProtocolException {
+        // Per API Contract §3.6.1, ACK should only be sent after successful HTTP fetch
+        // Since HTTP is not implemented, no ACK should be sent
+        repositoryWithTcp.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager, never()).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSyncMaterials_withoutTcpSocketManager_doesNotThrow() {
+        // repository has null TcpSocketManager
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // No exception means success
+    }
+
+    // ========== sendDistributeAck tests ==========
+
+    @Test
+    public void testSendDistributeAck_sendsMessageWithCorrectDeviceId()
+            throws IOException, TcpProtocolException {
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        ArgumentCaptor<DistributeAckMessage> captor =
+                ArgumentCaptor.forClass(DistributeAckMessage.class);
+        verify(mockTcpSocketManager).send(captor.capture());
+        assertEquals(TEST_DEVICE_ID, captor.getValue().getDeviceId());
+    }
+
+    @Test
+    public void testSendDistributeAck_nullTcpSocketManager_doesNotThrow() {
+        // repository has null TcpSocketManager
+        repository.sendDistributeAck(TEST_DEVICE_ID);
+
+        // No exception means success - gracefully handles missing socket manager
+    }
+
+    @Test
+    public void testSendDistributeAck_ioException_doesNotPropagate()
+            throws IOException, TcpProtocolException {
+        doThrow(new IOException("Network error"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        // Should not throw - failures are logged but don't propagate
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSendDistributeAck_tcpProtocolException_doesNotPropagate()
+            throws IOException, TcpProtocolException {
+        doThrow(new TcpProtocolException("Protocol error"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        // Should not throw - failures are logged but don't propagate
+        repositoryWithTcp.sendDistributeAck(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSendDistributeAck_nullDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck(null));
+    }
+
+    @Test
+    public void testSendDistributeAck_emptyDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck(""));
+    }
+
+    @Test
+    public void testSendDistributeAck_blankDeviceId_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> repositoryWithTcp.sendDistributeAck("   "));
+    }
+
     // ========== Thread safety tests ==========
 
     @Test
@@ -410,8 +536,7 @@ public class MaterialRepositoryImplTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS));
 
         // Verify all saves were actually called
-        verify(mockDao, org.mockito.Mockito.times(threadCount))
-                .insert(any(MaterialEntity.class));
+        verify(mockDao, times(threadCount)).insert(any(MaterialEntity.class));
     }
 
     @Test
@@ -430,24 +555,9 @@ public class MaterialRepositoryImplTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS));
 
         // Verify all deletes were actually called
-        verify(mockDao, org.mockito.Mockito.times(threadCount)).deleteById(any(String.class));
-        verify(mockFileStorageManager, org.mockito.Mockito.times(threadCount))
+        verify(mockDao, times(threadCount)).deleteById(any(String.class));
+        verify(mockFileStorageManager, times(threadCount))
                 .deleteAttachmentsForMaterial(any(String.class));
-    }
-
-    // ========== Null element validation tests ==========
-
-    @Test
-    public void testSaveMaterials_nullElementInList_throwsException() {
-        List<Material> materials = new ArrayList<>();
-        materials.add(createTestDomainMaterial("mat1"));
-        materials.add(null);
-        materials.add(createTestDomainMaterial("mat3"));
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> repository.saveMaterials(materials));
-
-        assertTrue(exception.getMessage().contains("null at index 1"));
     }
 
     // ========== Helper methods ==========
