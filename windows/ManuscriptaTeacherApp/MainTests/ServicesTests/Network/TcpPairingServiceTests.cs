@@ -190,4 +190,76 @@ public class TcpPairingServiceTests : IDisposable
     }
 
     #endregion
+
+    #region SendLockScreenAsync Tests
+
+    [Fact]
+    public async Task SendLockScreenAsync_WhenDeviceNotConnected_LogsWarning()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid().ToString();
+
+        // Act
+        await _service.SendLockScreenAsync(deviceId);
+
+        // Assert - Verify warning was logged about client not connected
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region SendUnlockScreenAsync Tests
+
+    [Fact]
+    public async Task SendUnlockScreenAsync_WhenDeviceNotConnected_LogsWarning()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid().ToString();
+
+        // Act
+        await _service.SendUnlockScreenAsync(deviceId);
+
+        // Assert - Verify warning was logged about client not connected
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region SendDistributeMaterialAsync Tests
+
+    [Fact]
+    public async Task SendDistributeMaterialAsync_WhenDeviceNotConnected_LogsWarningAndTimesOut()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid().ToString();
+
+        // Act - Timeout is 30s but device is not connected so it will skip the wait
+        await _service.SendDistributeMaterialAsync(deviceId);
+
+        // Assert - Verify warning was logged about client not connected
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
 }
