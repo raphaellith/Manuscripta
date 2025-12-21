@@ -21,4 +21,19 @@ public interface ITcpPairingService
     /// Gets whether the service is currently listening.
     /// </summary>
     bool IsListening { get; }
+
+    /// <summary>
+    /// Sends a LOCK_SCREEN (0x01) command to the specified device.
+    /// </summary>
+    Task SendLockScreenAsync(string deviceId);
+
+    /// <summary>
+    /// Sends an UNLOCK_SCREEN (0x02) command to the specified device.
+    /// </summary>
+    Task SendUnlockScreenAsync(string deviceId);
+
+    /// <summary>
+    /// Sends a DISTRIBUTE_MATERIAL (0x05) command to the specified device and waits for DISTRIBUTE_ACK.
+    /// </summary>
+    Task SendDistributeMaterialAsync(string deviceId);
 }
