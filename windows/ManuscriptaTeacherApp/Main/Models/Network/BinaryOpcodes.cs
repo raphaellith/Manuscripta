@@ -23,6 +23,18 @@ public static class BinaryOpcodes
     /// <summary>Triggers tablet to re-fetch configuration via HTTP.</summary>
     public const byte RefreshConfig = 0x03;
 
+    /// <summary>
+    /// Unpairs the device.
+    /// Per API Contract.md §3.4.
+    /// </summary>
+    public const byte Unpair = 0x04;
+
+    /// <summary>
+    /// Instructs device to fetch materials for a session.
+    /// Per API Contract.md §3.4 and Session Interaction.md §3.
+    /// </summary>
+    public const byte DistributeMaterial = 0x05;
+
     // Client → Server Status (TCP) (§3.6)
     /// <summary>Reports device status to teacher. Operand: JSON payload.</summary>
     public const byte StatusUpdate = 0x10;

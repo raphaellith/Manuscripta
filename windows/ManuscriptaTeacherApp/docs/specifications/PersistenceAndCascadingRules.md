@@ -13,10 +13,7 @@ This document is effective for the Windows app only.
     (a) `MaterialDataEntity`.
     (b) `QuestionDataEntity`.
 
-(2) Unless otherwise specified, any create, update and delete operations on the following data entity classes should be short-term persisted:
-
-    (a) `ResponseDataEntity`.
-    (b) `SessionDataEntity`.
+(2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
 (3) In this document —
 
