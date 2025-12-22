@@ -42,6 +42,14 @@ If validation rules in API Contract are in contradiction to this document, this 
     (b) `Title` (String). Maximum Length = 500 Characters.
     (c) `Content` (String).
     (d) `Timestamp` (Long). The unix timestamp of the previous modification.
+    (e) `ReadingAge` (int).
+    (f) `AgeGroup` (enum AgeGroupOption). Possible options are listed below.
+        (i) `FOUR_TO_SIX`: The material is targeted to users aged between 4 and 6.
+        (ii) `SEVEN_TO_NINE`: The material is targeted to users aged between 7 and 9.
+        (iii) `TEN_TO_THIRTEEN`: The material is targeted to users aged between 10 and 13.
+        (iv) `FOURTEEN_OR_ABOVE`: The material is targeted to users aged 14 or above.
+
+
 
 (2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
 
