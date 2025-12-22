@@ -46,6 +46,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (b) `Title` (string): The length of this string is limited to a maximum of 500 characters.
 
+    (c) `Description` (string).
+
 
 ### Section 2D - Material
 
