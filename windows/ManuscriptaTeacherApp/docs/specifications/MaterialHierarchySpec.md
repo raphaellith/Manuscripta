@@ -20,7 +20,7 @@ This document defines the hierarchical system for grouping and organising Materi
 
 
 
-## Section 2 - Entity classes for each Hierarchical Level
+## Section 2 - Entity classes for Each Hierarchical Level
 
 ### Section 2A - Unit Collection
 
@@ -55,4 +55,10 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (1) A material is represented by a `MaterialEntity` class. In addition to those specified by Section 2A of `Validation Rules.md`, this class must also contain the following fields.
 
-    (a) `LessonId` (UUID): References the unit to which this material belongs.
+    (a) `LessonId` (UUID): References the lesson to which this material belongs.
+    (b) `ReadingAge` (int).
+    (c) `AgeGroup` (enum AgeGroupOption). Possible options are listed below.
+        (i) `FOUR_TO_SIX`: The material is targeted at users aged between 4 and 6.
+        (ii) `SEVEN_TO_NINE`: The material is targeted at users aged between 7 and 9.
+        (iii) `TEN_TO_THIRTEEN`: The material is targeted at users aged between 10 and 13.
+        (iv) `FOURTEEN_OR_ABOVE`: The material is targeted at users aged 14 or above.
