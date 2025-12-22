@@ -37,6 +37,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (b) `Title` (string): The length of this string is limited to a maximum of 500 characters.
 
+    (c) `SourceDocuments` (List<System.IO.Path>): A list of file paths pointing to source documents.
+
 
 ### Section 2C - Lesson
 
@@ -51,6 +53,6 @@ This document defines the hierarchical system for grouping and organising Materi
 
 ### Section 2D - Material
 
-(1) A material is represented by a `MaterialEntity` class. This class must contain the following attributes. Also see `Validation Rules.md` for additional requirements regarding this class.
+(1) A material is represented by a `MaterialEntity` class. In addition to those specified by Section 2A of `Validation Rules.md`, this class must also contain the following fields.
 
     (a) `LessonId` (UUID): References the unit to which this material belongs.
