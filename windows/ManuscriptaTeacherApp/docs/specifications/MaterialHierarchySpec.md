@@ -40,7 +40,7 @@ This document defines the hierarchical system for grouping and organising Materi
 
 ### Section 2C - Lesson
 
-(1) A lesson is represented by a `Lesson` class. This class must contain the following attributes.
+(1) A lesson is represented by a `LessonEntity` class. This class must contain the following attributes.
 
     (a) `UnitId` (UUID): References the unit to which this lesson belongs.
 
@@ -49,6 +49,6 @@ This document defines the hierarchical system for grouping and organising Materi
 
 ### Section 2D - Material
 
-(1) A material is represented by a `Material` class. This class must contain the following attributes. Also see `Validation Rules.md` for additional requirements regarding this class.
+(1) A material is represented by a `MaterialEntity` class. This class must contain the following attributes. Also see `Validation Rules.md` for additional requirements regarding this class.
 
     (a) `LessonId` (UUID): References the unit to which this material belongs.
