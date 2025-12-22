@@ -91,3 +91,4 @@ Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specificat
 - `AICodingConstitution.md`, this document.
 - `ServiceSpec.md`, the specification regarding the service layer.
 - `PersistenceAndCascadingRules.md`, the rules for persisting models and cascading deletes.
+- `MaterialHierarchySpec.md`, the specification that defines the hierarchical system for grouping and organising Material items in the model layer.

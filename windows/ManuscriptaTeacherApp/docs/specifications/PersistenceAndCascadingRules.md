@@ -12,6 +12,9 @@ This document is effective for the Windows app only.
 
     (a) `MaterialDataEntity`.
     (b) `QuestionDataEntity`.
+    (c) `UnitCollectionDataEntity`.
+    (d) `UnitDataEntity`.
+    (e) `LessonDataEntity`.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
@@ -22,9 +25,16 @@ This document is effective for the Windows app only.
 
 ## Section 2 - Requirements for Orphan Removal
 
-(1) A deletion of a material M must delete any questions associated with M.
+(1) The deletion of a material M must delete any questions associated with M.
 
-(2) A deletion of a question Q must delete any responses associated with Q.
+(2) The deletion of a question Q must delete any responses associated with Q.
+
+(3) The deletion of a unit collection C must delete any units associated with C.
+
+(4) The deletion of a unit U must delete any lessons associated with U.
+
+(5) The deletion of a lesson L must delete any materials associated with L.
+
 
 ## Appendix 1 - Using this Document (Instruction to AI Agents)
 
