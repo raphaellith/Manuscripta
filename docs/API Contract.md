@@ -198,18 +198,15 @@ Retrieves materials and questions assigned to a specific device.
 
 ### 2.6. Returning Feedback (Server -> Client via TCP trigger)
 
-Retrieves feedback for a specific response previously submitted specific device.
+Retrieves all available feedback for written answer responses previously submitted by a specific student device.
 
--   **Endpoint:** `GET /distribution/{deviceId}`
+-   **Endpoint:** `GET /feedback/{deviceId}`
 -   **Response:** `200 OK`
     ```json
     {
-      "materials": [
-        // Array of MaterialEntity objects as defined in Validation Rules.md §2A
+      "feedback": [
+        // Array of FeedbackEntity objects as defined in Validation Rules.md §2F
       ],
-      "questions": [
-        // Array of QuestionEntity objects as defined in Validation Rules.md §2B
-      ]
     }
     ```
 -   **Error Response:** `404 Not Found` (if no materials available for deviceId)

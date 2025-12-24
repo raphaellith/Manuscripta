@@ -148,17 +148,14 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) `ResponseId` (UUID). The response targeted by this feedback.
 
+    (b) `Text` (String): Textual feedback.
 
-(2) In addition to the mandatory fields in (1), a `ResponseEntity` object may have the following fields:
-
-    (a) `Text` (String): Textual feedback.
-
-    (b) `Marks` (int): Number of marks awarded to the response.
-
-
-(3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+    
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `ResponseId` specified in 1(a) must associate with a `ResponseEntity` (R).
+
+    (b) The `QuestionEntity` (Q) with which R is associated must have `WRITTEN_ANSWER` as its `QuestionType` attribute.
 
 
 ### Section 3 - ID Generation Policy
