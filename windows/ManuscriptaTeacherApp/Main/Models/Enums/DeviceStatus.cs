@@ -12,9 +12,6 @@ public enum DeviceStatus
     /// <summary>No activity for a threshold period.</summary>
     IDLE,
 
-    /// <summary>Student explicitly requested help.</summary>
-    HAND_RAISED,
-
     /// <summary>Device is remotely locked.</summary>
     LOCKED,
 

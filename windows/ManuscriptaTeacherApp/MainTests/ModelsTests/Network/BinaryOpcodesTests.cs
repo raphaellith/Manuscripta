@@ -80,6 +80,20 @@ public class BinaryOpcodesTests
     }
 
     [Fact]
+    public void HandAck_HasCorrectValue()
+    {
+        // Per API Contract §3.4: HAND_ACK = 0x06
+        Assert.Equal(0x06, BinaryOpcodes.HandAck);
+    }
+
+    [Fact]
+    public void DistributeAck_HasCorrectValue()
+    {
+        // Per API Contract §3.6: DISTRIBUTE_ACK = 0x12
+        Assert.Equal(0x12, BinaryOpcodes.DistributeAck);
+    }
+
+    [Fact]
     public void OpcodeRanges_AreCorrect()
     {
         // Verify opcode ranges per API Contract §3.2
@@ -92,10 +106,12 @@ public class BinaryOpcodesTests
         Assert.InRange(BinaryOpcodes.RefreshConfig, 0x01, 0x0F);
         Assert.InRange(BinaryOpcodes.Unpair, 0x01, 0x0F);
         Assert.InRange(BinaryOpcodes.DistributeMaterial, 0x01, 0x0F);
+        Assert.InRange(BinaryOpcodes.HandAck, 0x01, 0x0F);
 
         // 0x10-0x1F: Client → Server Status (TCP)
         Assert.InRange(BinaryOpcodes.StatusUpdate, 0x10, 0x1F);
         Assert.InRange(BinaryOpcodes.HandRaised, 0x10, 0x1F);
+        Assert.InRange(BinaryOpcodes.DistributeAck, 0x10, 0x1F);
 
         // 0x20-0x2F: Pairing (TCP)
         Assert.InRange(BinaryOpcodes.PairingRequest, 0x20, 0x2F);

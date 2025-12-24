@@ -54,4 +54,16 @@ public static class BinaryOpcodes
     /// Operand: None
     /// </summary>
     public const byte PairingAck = 0x21;
+
+    /// <summary>
+    /// Acknowledges receipt of HAND_RAISED message.
+    /// Operand: Device ID (UTF-8 string)
+    /// </summary>
+    public const byte HandAck = 0x06;
+
+    /// <summary>
+    /// Acknowledges successful receipt of materials via HTTP.
+    /// Operand: Device ID (UTF-8 string)
+    /// </summary>
+    public const byte DistributeAck = 0x12;
 }

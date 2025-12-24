@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 using Main.Models.Network;
 
@@ -186,6 +187,82 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         }
     }
 
+    public async Task SendLockScreenAsync(string deviceId)
+    {
+        await SendCommandAsync(deviceId, BinaryOpcodes.LockScreen, null);
+    }
+
+    public async Task SendUnlockScreenAsync(string deviceId)
+    {
+        await SendCommandAsync(deviceId, BinaryOpcodes.UnlockScreen, null);
+    }
+
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _distributionAcks = new();
+
+    public async Task SendDistributeMaterialAsync(string deviceId)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        _distributionAcks[deviceId] = tcs;
+
+        try
+        {
+            await SendCommandAsync(deviceId, BinaryOpcodes.DistributeMaterial, null);
+
+            // Wait for 30 seconds for ACK
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));
+
+            if (completedTask == tcs.Task && tcs.Task.Result)
+            {
+                // ACK received
+                _logger.LogInformation("Received DISTRIBUTE_ACK for device {DeviceId}", deviceId);
+            }
+            else
+            {
+                // Timeout or explicit failure
+                _logger.LogWarning("Timeout waiting for DISTRIBUTE_ACK from device {DeviceId}", deviceId);
+                // Report to console as per requirement
+                Console.WriteLine($"[ERROR] Distribution to device {deviceId} failed (Timeout)");
+            }
+        }
+        finally
+        {
+            _distributionAcks.TryRemove(deviceId, out _);
+        }
+    }
+
+    private async Task SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
+    {
+        // Per Pairing Process.md §2(4), we must have stored the deviceId during the pairing phase.
+        // We look up the active TCP connection associated with this deviceId from our registry.
+        TcpClient? client = null;
+        if (_deviceConnections.TryGetValue(deviceId, out client) && client.Connected) 
+        {
+            // Found it
+        }
+        else 
+        {
+            _logger.LogWarning("Client {DeviceId} not connected", deviceId);
+            return;
+        }
+
+        try {
+            var stream = client.GetStream();
+            var message = new byte[1 + (operand?.Length ?? 0)];
+            message[0] = opcode;
+            if (operand != null)
+            {
+                Array.Copy(operand, 0, message, 1, operand.Length);
+            }
+            await stream.WriteAsync(message, 0, message.Length);
+            _logger.LogInformation("Sent opcode {Opcode:X2} to {DeviceId}", opcode, deviceId);
+        } catch (Exception ex) {
+            _logger.LogError(ex, "Failed to send command to {DeviceId}", deviceId);
+        }
+    }
+
+    // Secondary index for device ID to client
+    private readonly ConcurrentDictionary<string, TcpClient> _deviceConnections = new();
+
     private async Task ProcessMessageAsync(NetworkStream stream, byte[] data, string clientId)
     {
         var opcode = PairingMessage.GetOpcode(data);
@@ -203,10 +280,62 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             case BinaryOpcodes.PairingRequest:
                 await HandlePairingRequestAsync(stream, data, clientId);
                 break;
+                
+            case BinaryOpcodes.HandRaised:
+                await HandleHandRaisedAsync(stream, data, clientId);
+                break;
+
+            case BinaryOpcodes.DistributeAck: // 0x12
+                HandleDistributeAck(data);
+                break;
 
             default:
                 _logger.LogWarning("Unknown opcode {Opcode:X2} from {ClientId}", opcode, clientId);
                 break;
+        }
+    }
+
+    private async Task HandleHandRaisedAsync(NetworkStream stream, byte[] data, string clientId)
+    {
+        try 
+        {
+            // Message format: Opcode (1) + DeviceId (UTF-8)
+            // Same format as PairingRequest essentially for decoding the ID
+            var deviceIdString = ParsingHelper.ExtractString(data);
+            
+            _logger.LogInformation("HAND_RAISED received from {DeviceId}", deviceIdString);
+            
+            // 1. Signal teacher (Console for now)
+            Console.WriteLine($"[ALERT] Student {deviceIdString} raised hand!");
+
+            // 2. Send HAND_ACK (0x06) + DeviceID
+            var ackPayload = Encoding.UTF8.GetBytes(deviceIdString);
+            var ackMessage = new byte[1 + ackPayload.Length];
+            ackMessage[0] = BinaryOpcodes.HandAck;
+            Array.Copy(ackPayload, 0, ackMessage, 1, ackPayload.Length);
+            
+            await stream.WriteAsync(ackMessage, 0, ackMessage.Length);
+            _logger.LogInformation("Sent HAND_ACK to {DeviceId}", deviceIdString);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling HAND_RAISED from {ClientId}", clientId);
+        }
+    }
+
+    private void HandleDistributeAck(byte[] data)
+    {
+        try
+        {
+             var deviceIdString = ParsingHelper.ExtractString(data);
+             if (_distributionAcks.TryGetValue(deviceIdString, out var tcs))
+             {
+                 tcs.TrySetResult(true);
+             }
+        }
+        catch(Exception ex)
+        {
+            _logger.LogError(ex, "Error handling DISTRIBUTE_ACK");
         }
     }
 
@@ -234,6 +363,12 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 _logger.LogInformation("Device {DeviceId} re-paired via TCP", deviceId);
             }
 
+            // Store connection mapping
+            if (_connectedClients.TryGetValue(clientId, out var client)) 
+            {
+                _deviceConnections.AddOrUpdate(deviceId.ToString(), client, (k, v) => client);
+            }
+
             // Send PAIRING_ACK
             var ackData = PairingMessage.EncodePairingAck();
             await stream.WriteAsync(ackData, 0, ackData.Length);
@@ -258,5 +393,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         _listener?.Dispose();
         _cts?.Dispose();
         _disposed = true;
+    }
+    
+    // Helper class for parsing (inlined for simplicity in this artifact)
+    private static class ParsingHelper {
+        public static string ExtractString(byte[] data) {
+            if (data == null || data.Length < 2) return string.Empty;
+            return Encoding.UTF8.GetString(data, 1, data.Length - 1);
+        }
     }
 }

@@ -84,12 +84,11 @@ public class DeviceStatusEntityTests
     [Theory]
     [InlineData(DeviceStatus.ON_TASK)]
     [InlineData(DeviceStatus.IDLE)]
-    [InlineData(DeviceStatus.HAND_RAISED)]
     [InlineData(DeviceStatus.LOCKED)]
     [InlineData(DeviceStatus.DISCONNECTED)]
     public void Status_CanBeSetToAllValidValues(DeviceStatus status)
     {
-        // Per §2E(1)(b): Status enum with 5 possible values
+        // Per §2E(1)(b): Status enum with 4 possible values (HAND_RAISED is not a device status)
         var entity = new DeviceStatusEntity { Status = status };
         Assert.Equal(status, entity.Status);
     }
