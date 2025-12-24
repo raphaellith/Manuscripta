@@ -45,6 +45,9 @@ As specified in `API Contract.md` §2.5.
 
 (2) The Android client may evaluate the correctness of the response if it is straightforward to do so (such as for multiple choice, true / false or simple blank filling questions), and place the result of evaluation in the `IsCorrect` field. 
 
+(3) Each Android client must not, at any point, submit two responses related to the same question.
+
+
 ## Section 5: Lifetime of a Session
 
 (1) **Session States**

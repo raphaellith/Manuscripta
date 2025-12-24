@@ -94,6 +94,8 @@ If validation rules in API Contract are in contradiction to this document, this 
     (c) If Q's `QuestionType` is `TRUE_FALSE`, the `Answer`, specified in 2(a), must be a valid boolean value.
     (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
     (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+    (f) There must not already exist a previously created `ResponseEntity` object with an identical `QuestionId` and `DeviceId` combination.
+
 
 ### Section 2D - Data Validation Rules for `SessionEntity`
 
