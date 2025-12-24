@@ -20,6 +20,7 @@ builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
 builder.Services.AddScoped<DeviceIdValidator>();
 
 // Register network services (singletons for background services)
+builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
 builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 

@@ -188,4 +188,85 @@ public class DeviceRegistryServiceTests : IDisposable
     }
 
     #endregion
+
+    #region UnregisterDeviceAsync Tests
+
+    [Fact]
+    public async Task UnregisterDeviceAsync_ExistingDevice_ReturnsTrue()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        await _service.RegisterDeviceAsync(deviceId);
+
+        // Act
+        var result = await _service.UnregisterDeviceAsync(deviceId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task UnregisterDeviceAsync_ExistingDevice_RemovesFromDatabase()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        await _service.RegisterDeviceAsync(deviceId);
+        Assert.True(await _service.IsDevicePairedAsync(deviceId));
+
+        // Act
+        await _service.UnregisterDeviceAsync(deviceId);
+
+        // Assert
+        Assert.False(await _service.IsDevicePairedAsync(deviceId));
+        var device = await _context.PairedDevices.FindAsync(deviceId);
+        Assert.Null(device);
+    }
+
+    [Fact]
+    public async Task UnregisterDeviceAsync_NonExistentDevice_ReturnsFalse()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        // Act
+        var result = await _service.UnregisterDeviceAsync(deviceId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UnregisterDeviceAsync_AfterUnregister_CanRegisterAgain()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        await _service.RegisterDeviceAsync(deviceId);
+        await _service.UnregisterDeviceAsync(deviceId);
+
+        // Act
+        var result = await _service.RegisterDeviceAsync(deviceId);
+
+        // Assert
+        Assert.True(result);
+        Assert.True(await _service.IsDevicePairedAsync(deviceId));
+    }
+
+    [Fact]
+    public async Task UnregisterDeviceAsync_DoesNotAffectOtherDevices()
+    {
+        // Arrange
+        var deviceId1 = Guid.NewGuid();
+        var deviceId2 = Guid.NewGuid();
+        await _service.RegisterDeviceAsync(deviceId1);
+        await _service.RegisterDeviceAsync(deviceId2);
+
+        // Act
+        await _service.UnregisterDeviceAsync(deviceId1);
+
+        // Assert
+        Assert.False(await _service.IsDevicePairedAsync(deviceId1));
+        Assert.True(await _service.IsDevicePairedAsync(deviceId2));
+    }
+
+    #endregion
 }

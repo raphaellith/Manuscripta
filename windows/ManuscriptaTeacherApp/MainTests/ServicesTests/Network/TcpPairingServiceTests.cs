@@ -16,6 +16,7 @@ public class TcpPairingServiceTests : IDisposable
 {
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
     private readonly Mock<ILogger<TcpPairingService>> _mockLogger;
+    private readonly Mock<IRefreshConfigTracker> _mockRefreshConfigTracker;
     private readonly IOptions<NetworkSettings> _options;
     private readonly IServiceProvider _serviceProvider;
     private readonly TcpPairingService _service;
@@ -24,6 +25,7 @@ public class TcpPairingServiceTests : IDisposable
     {
         _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
         _mockLogger = new Mock<ILogger<TcpPairingService>>();
+        _mockRefreshConfigTracker = new Mock<IRefreshConfigTracker>();
         
         // Use a random port to avoid conflicts in parallel tests
         var port = new Random().Next(10000, 60000);
@@ -49,7 +51,7 @@ public class TcpPairingServiceTests : IDisposable
         
         _serviceProvider = mockServiceProvider.Object;
         
-        _service = new TcpPairingService(_options, _serviceProvider, _mockLogger.Object);
+        _service = new TcpPairingService(_options, _serviceProvider, _mockLogger.Object, _mockRefreshConfigTracker.Object);
     }
 
     public void Dispose()
@@ -64,7 +66,7 @@ public class TcpPairingServiceTests : IDisposable
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TcpPairingService(null!, _serviceProvider, _mockLogger.Object));
+            new TcpPairingService(null!, _serviceProvider, _mockLogger.Object, _mockRefreshConfigTracker.Object));
     }
 
     [Fact]
@@ -72,7 +74,7 @@ public class TcpPairingServiceTests : IDisposable
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TcpPairingService(_options, null!, _mockLogger.Object));
+            new TcpPairingService(_options, null!, _mockLogger.Object, _mockRefreshConfigTracker.Object));
     }
 
     [Fact]
@@ -80,7 +82,7 @@ public class TcpPairingServiceTests : IDisposable
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new TcpPairingService(_options, _serviceProvider, null!));
+            new TcpPairingService(_options, _serviceProvider, null!, _mockRefreshConfigTracker.Object));
     }
 
     #endregion
@@ -259,6 +261,62 @@ public class TcpPairingServiceTests : IDisposable
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    #endregion
+
+    #region SendUnpairAsync Tests
+
+    [Fact]
+    public async Task SendUnpairAsync_WhenDeviceNotConnected_LogsWarningAndUnregistersDevice()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid().ToString();
+        _mockDeviceRegistry.Setup(r => r.UnregisterDeviceAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _service.SendUnpairAsync(deviceId);
+
+        // Assert - Verify warning was logged about client not connected
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        // Verify device was unregistered from registry
+        _mockDeviceRegistry.Verify(
+            r => r.UnregisterDeviceAsync(Guid.Parse(deviceId)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendUnpairAsync_WithInvalidDeviceIdFormat_LogsWarning()
+    {
+        // Arrange - invalid GUID format
+        var invalidDeviceId = "not-a-guid";
+
+        // Act
+        await _service.SendUnpairAsync(invalidDeviceId);
+
+        // Assert - Verify warning was logged about invalid device ID format
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Invalid device ID format")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        // Verify UnregisterDeviceAsync was NOT called
+        _mockDeviceRegistry.Verify(
+            r => r.UnregisterDeviceAsync(It.IsAny<Guid>()),
+            Times.Never);
     }
 
     #endregion
