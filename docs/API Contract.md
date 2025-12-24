@@ -198,7 +198,7 @@ Retrieves materials and questions assigned to a specific device.
 
 ### 2.6. Returning Feedback (Server -> Client via TCP trigger)
 
-Retrieves all available feedback for written answer responses previously submitted by a specific student device.
+Retrieves all available feedback for responses previously submitted by a specific student device.
 
 -   **Endpoint:** `GET /feedback/{deviceId}`
 -   **Response:** `200 OK`
