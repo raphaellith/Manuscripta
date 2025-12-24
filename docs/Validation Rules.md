@@ -155,7 +155,6 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) The `ResponseId` specified in 1(a) must associate with a `ResponseEntity` (R).
 
-    (b) The `QuestionEntity` (Q) with which R is associated must have `WRITTEN_ANSWER` as its `QuestionType` attribute.
 
 
 ### Section 3 - ID Generation Policy
