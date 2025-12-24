@@ -209,7 +209,7 @@ Retrieves all available feedback for responses previously submitted by a specifi
       ],
     }
     ```
--   **Error Response:** `404 Not Found` (if no materials available for deviceId)
+-   **Error Response:** `404 Not Found` (if no feedback available for deviceId)
 
 
 ## 3. Binary Protocol (TCP & UDP)
