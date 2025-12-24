@@ -57,8 +57,4 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `LessonId` (UUID): References the lesson to which this material belongs.
     (b) `ReadingAge` (int).
-    (c) `AgeGroup` (enum AgeGroupOption). Possible options are listed below.
-        (i) `FOUR_TO_SIX`: The material is targeted at users aged between 4 and 6.
-        (ii) `SEVEN_TO_NINE`: The material is targeted at users aged between 7 and 9.
-        (iii) `TEN_TO_THIRTEEN`: The material is targeted at users aged between 10 and 13.
-        (iv) `FOURTEEN_OR_ABOVE`: The material is targeted at users aged 14 or above.
+    (c) `ActualAge` (int).
