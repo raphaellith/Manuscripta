@@ -89,3 +89,13 @@ Per `Validation Rules.md` §2D(3)(a), any transition to `PAUSED`, `COMPLETED`, o
 (7) **Automatic Cancellation**
 
 A session shall be automatically transitioned to `CANCELLED` if the device is deemed unpaired as defined in Section 2(4) of this document.
+
+
+
+## Section 6: Returning Feedback
+
+(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x06`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
+
+(2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
+
+(3) For each feedback received from the endpoint in (2), the Android client creates a separate `FeedbackEntity`.
