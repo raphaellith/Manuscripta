@@ -20,7 +20,7 @@ This document defines the hierarchical system for grouping and organising Materi
 
 
 
-## Section 2 - Entity classes for each Hierarchical Level
+## Section 2 - Entity classes for Each Hierarchical Level
 
 ### Section 2A - Unit Collection
 
@@ -55,4 +55,10 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (1) A material is represented by a `MaterialEntity` class. In addition to those specified by Section 2A of `Validation Rules.md`, this class must also contain the following fields.
 
-    (a) `LessonId` (UUID): References the unit to which this material belongs.
+    (a) `LessonId` (UUID): References the lesson to which this material belongs.
+    
+
+(2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
+
+    (a) `ReadingAge` (int).
+    (b) `ActualAge` (int).
