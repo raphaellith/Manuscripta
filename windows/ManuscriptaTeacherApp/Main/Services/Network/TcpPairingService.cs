@@ -7,6 +7,11 @@ using Microsoft.Extensions.Options;
 using System.Text;
 
 using Main.Models.Network;
+using Main.Models.Events;
+using Main.Models.Entities;
+using Main.Models.Enums;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Main.Services.Network;
 
@@ -23,6 +28,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     private readonly NetworkSettings _settings;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TcpPairingService> _logger;
+    private readonly IRefreshConfigTracker _refreshConfigTracker;
     
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
@@ -30,15 +36,32 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     private bool _disposed;
     
     private readonly ConcurrentDictionary<string, TcpClient> _connectedClients = new();
+    
+    // Heartbeat tracking per Session Interaction.md §2(3)
+    private readonly ConcurrentDictionary<string, DateTime> _lastHeartbeat = new();
+    private Timer? _heartbeatMonitorTimer;
+    private const int HeartbeatTimeoutSeconds = 10;
+
+    // Pending LOCK/UNLOCK commands per Session Interaction.md §6(2)(c)
+    // Key: deviceId, Value: expected DeviceStatus (LOCKED for lock, null means ON_TASK or IDLE for unlock)
+    private readonly ConcurrentDictionary<string, (DeviceStatus ExpectedStatus, TaskCompletionSource<bool> Tcs, DateTime SentAt)> _pendingLockUnlock = new();
+    private const int LockUnlockTimeoutSeconds = 6;
+
+    // Events
+    public event EventHandler<DeviceStatusEventArgs>? StatusUpdateReceived;
+    public event EventHandler<DeviceStatusEventArgs>? DeviceDisconnected;
+    public event EventHandler<ControlTimeoutEventArgs>? ControlCommandTimedOut;
 
     public TcpPairingService(
         IOptions<NetworkSettings> settings,
         IServiceProvider serviceProvider,
-        ILogger<TcpPairingService> logger)
+        ILogger<TcpPairingService> logger,
+        IRefreshConfigTracker refreshConfigTracker)
     {
         _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _refreshConfigTracker = refreshConfigTracker ?? throw new ArgumentNullException(nameof(refreshConfigTracker));
     }
 
     /// <inheritdoc />
@@ -61,6 +84,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             _listener.Start();
             _isListening = true;
             _logger.LogInformation("TCP pairing service listening on port {Port}", _settings.TcpPort);
+
+            // Start heartbeat monitoring per Session Interaction.md §2(3)
+            _heartbeatMonitorTimer = new Timer(
+                CheckHeartbeats!,
+                null,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(1));
 
             await AcceptClientsAsync(_cts.Token);
         }
@@ -90,6 +120,8 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         _logger.LogInformation("Stopping TCP listener");
         _cts?.Cancel();
         _listener?.Stop();
+        _heartbeatMonitorTimer?.Dispose();
+        _heartbeatMonitorTimer = null;
         
         // Close all connected clients
         foreach (var client in _connectedClients.Values)
@@ -187,14 +219,73 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends LOCK_SCREEN (0x01) to device and waits for LOCKED status confirmation.
+    /// Per Session Interaction.md §6(2)(a) and §6(2)(c): 6-second timeout.
+    /// </summary>
     public async Task SendLockScreenAsync(string deviceId)
     {
-        await SendCommandAsync(deviceId, BinaryOpcodes.LockScreen, null);
+        var tcs = new TaskCompletionSource<bool>();
+        _pendingLockUnlock[deviceId] = (DeviceStatus.LOCKED, tcs, DateTime.UtcNow);
+
+        try
+        {
+            await SendCommandAsync(deviceId, BinaryOpcodes.LockScreen, null);
+            _logger.LogInformation("Sent LOCK_SCREEN to {DeviceId}", deviceId);
+
+            // Wait up to 6 seconds for STATUS_UPDATE with LOCKED status
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(LockUnlockTimeoutSeconds)));
+
+            if (completedTask == tcs.Task && tcs.Task.Result)
+            {
+                _logger.LogInformation("LOCK_SCREEN confirmed for {DeviceId}", deviceId);
+            }
+            else
+            {
+                _logger.LogWarning("Timeout waiting for LOCK_SCREEN confirmation from {DeviceId}", deviceId);
+                Console.WriteLine($"[WARNING] Lock screen failed for device {deviceId} (Timeout)");
+                ControlCommandTimedOut?.Invoke(this, new ControlTimeoutEventArgs(deviceId, "LOCK_SCREEN"));
+            }
+        }
+        finally
+        {
+            _pendingLockUnlock.TryRemove(deviceId, out _);
+        }
     }
 
+    /// <summary>
+    /// Sends UNLOCK_SCREEN (0x02) to device and waits for ON_TASK/IDLE status confirmation.
+    /// Per Session Interaction.md §6(2)(b) and §6(2)(c): 6-second timeout.
+    /// </summary>
     public async Task SendUnlockScreenAsync(string deviceId)
     {
-        await SendCommandAsync(deviceId, BinaryOpcodes.UnlockScreen, null);
+        var tcs = new TaskCompletionSource<bool>();
+        // Use ON_TASK as placeholder; we accept either ON_TASK or IDLE
+        _pendingLockUnlock[deviceId] = (DeviceStatus.ON_TASK, tcs, DateTime.UtcNow);
+
+        try
+        {
+            await SendCommandAsync(deviceId, BinaryOpcodes.UnlockScreen, null);
+            _logger.LogInformation("Sent UNLOCK_SCREEN to {DeviceId}", deviceId);
+
+            // Wait up to 6 seconds for STATUS_UPDATE with ON_TASK or IDLE status
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(LockUnlockTimeoutSeconds)));
+
+            if (completedTask == tcs.Task && tcs.Task.Result)
+            {
+                _logger.LogInformation("UNLOCK_SCREEN confirmed for {DeviceId}", deviceId);
+            }
+            else
+            {
+                _logger.LogWarning("Timeout waiting for UNLOCK_SCREEN confirmation from {DeviceId}", deviceId);
+                Console.WriteLine($"[WARNING] Unlock screen failed for device {deviceId} (Timeout)");
+                ControlCommandTimedOut?.Invoke(this, new ControlTimeoutEventArgs(deviceId, "UNLOCK_SCREEN"));
+            }
+        }
+        finally
+        {
+            _pendingLockUnlock.TryRemove(deviceId, out _);
+        }
     }
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _distributionAcks = new();
@@ -228,6 +319,46 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         {
             _distributionAcks.TryRemove(deviceId, out _);
         }
+    }
+
+    /// <summary>
+    /// Sends an UNPAIR (0x04) command to the specified device and removes it from registry.
+    /// Per Pairing Process.md §3(2): "send a TCP UNPAIR message (opcode 0x04)...and remove the Android client from its registry."
+    /// </summary>
+    public async Task SendUnpairAsync(string deviceId)
+    {
+        _logger.LogInformation("Initiating unpair for device {DeviceId}", deviceId);
+
+        // 1. Send UNPAIR command to the device
+        await SendCommandAsync(deviceId, BinaryOpcodes.Unpair, null);
+
+        // 2. Remove device from registry
+        if (Guid.TryParse(deviceId, out var deviceGuid))
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var deviceRegistry = scope.ServiceProvider.GetRequiredService<IDeviceRegistryService>();
+            await deviceRegistry.UnregisterDeviceAsync(deviceGuid);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid device ID format for unpair: {DeviceId}", deviceId);
+        }
+
+        // 3. Close the TCP connection
+        if (_deviceConnections.TryRemove(deviceId, out var client))
+        {
+            try
+            {
+                client.Close();
+                _logger.LogInformation("Closed TCP connection for unpaired device {DeviceId}", deviceId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error closing connection for device {DeviceId}", deviceId);
+            }
+        }
+
+        Console.WriteLine($"[INFO] Device {deviceId} has been unpaired");
     }
 
     private async Task SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
@@ -287,6 +418,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
             case BinaryOpcodes.DistributeAck: // 0x12
                 HandleDistributeAck(data);
+                break;
+
+            case BinaryOpcodes.StatusUpdate: // 0x10
+                HandleStatusUpdate(data, clientId);
                 break;
 
             default:
@@ -394,6 +529,157 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         _cts?.Dispose();
         _disposed = true;
     }
+
+    /// <summary>
+    /// Handles STATUS_UPDATE (0x10) messages from Android devices.
+    /// Per Session Interaction.md §2(1): devices send status updates at heart rate.
+    /// </summary>
+    private void HandleStatusUpdate(byte[] data, string clientId)
+    {
+        try
+        {
+            // Parse JSON payload (skip opcode byte)
+            var jsonPayload = Encoding.UTF8.GetString(data, 1, data.Length - 1);
+            
+            // Configure JSON options to handle string-to-enum conversion
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            
+            var statusEntity = JsonSerializer.Deserialize<DeviceStatusEntity>(jsonPayload, jsonOptions);
+
+            if (statusEntity == null || statusEntity.DeviceId == Guid.Empty)
+            {
+                _logger.LogWarning("Invalid STATUS_UPDATE payload from {ClientId}", clientId);
+                return;
+            }
+
+            var deviceIdString = statusEntity.DeviceId.ToString();
+
+            // Update heartbeat tracking
+            _lastHeartbeat[deviceIdString] = DateTime.UtcNow;
+
+            _logger.LogDebug(
+                "STATUS_UPDATE from {DeviceId}: Status={Status}, Battery={Battery}",
+                deviceIdString, statusEntity.Status, statusEntity.BatteryLevel);
+
+            // Raise event with DeviceStatusEntity data
+            var eventArgs = new DeviceStatusEventArgs(
+                deviceIdString,
+                statusEntity.Status.ToString(),
+                statusEntity.BatteryLevel,
+                statusEntity.CurrentMaterialId.ToString(),
+                statusEntity.StudentView,
+                statusEntity.Timestamp);
+
+            StatusUpdateReceived?.Invoke(this, eventArgs);
+
+            // Check for pending LOCK/UNLOCK confirmations per §6(2)(c)
+            if (_pendingLockUnlock.TryGetValue(deviceIdString, out var pending))
+            {
+                bool confirmed = false;
+                
+                if (pending.ExpectedStatus == DeviceStatus.LOCKED)
+                {
+                    // For LOCK_SCREEN, expect LOCKED
+                    confirmed = statusEntity.Status == DeviceStatus.LOCKED;
+                }
+                else
+                {
+                    // For UNLOCK_SCREEN, accept ON_TASK or IDLE
+                    confirmed = statusEntity.Status == DeviceStatus.ON_TASK || 
+                                statusEntity.Status == DeviceStatus.IDLE;
+                }
+
+                if (confirmed)
+                {
+                    pending.Tcs.TrySetResult(true);
+                }
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse STATUS_UPDATE JSON from {ClientId}", clientId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling STATUS_UPDATE from {ClientId}", clientId);
+        }
+    }
+
+    /// <summary>
+    /// Checks for heartbeat silence and marks devices as DISCONNECTED.
+    /// Per Session Interaction.md §2(3): after 10 seconds of no heartbeat.
+    /// </summary>
+    private void CheckHeartbeats(object? state)
+    {
+        var now = DateTime.UtcNow;
+        var timeout = TimeSpan.FromSeconds(HeartbeatTimeoutSeconds);
+
+        foreach (var kvp in _lastHeartbeat)
+        {
+            if (now - kvp.Value > timeout)
+            {
+                var deviceId = kvp.Key;
+                _logger.LogWarning(
+                    "Device {DeviceId} deemed DISCONNECTED (no heartbeat for {Seconds}s)",
+                    deviceId, HeartbeatTimeoutSeconds);
+
+                Console.WriteLine($"[WARNING] Device {deviceId} has been DISCONNECTED (no heartbeat)");
+
+                // Raise disconnection event
+                var eventArgs = new DeviceStatusEventArgs(
+                    deviceId,
+                    "DISCONNECTED",
+                    0, null, null,
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+                DeviceDisconnected?.Invoke(this, eventArgs);
+
+                // Remove from tracking to avoid repeated notifications
+                _lastHeartbeat.TryRemove(deviceId, out _);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sends REFRESH_CONFIG (0x03) command to trigger device to re-fetch configuration.
+    /// Per Session Interaction.md §6(3): 5-second timeout for GET /config request.
+    /// </summary>
+    public async Task SendRefreshConfigAsync(string deviceId)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        _refreshConfigTracker.ExpectConfigRequest(deviceId, tcs);
+
+        try
+        {
+            await SendCommandAsync(deviceId, BinaryOpcodes.RefreshConfig, null);
+            _logger.LogInformation("Sent REFRESH_CONFIG to {DeviceId}", deviceId);
+
+            // Wait up to 5 seconds for GET /config request (implicit ACK)
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+
+            if (completedTask == tcs.Task && tcs.Task.Result)
+            {
+                _logger.LogInformation("REFRESH_CONFIG acknowledged by {DeviceId}", deviceId);
+            }
+            else
+            {
+                _logger.LogWarning("Timeout waiting for REFRESH_CONFIG acknowledgement from {DeviceId}", deviceId);
+                Console.WriteLine($"[WARNING] Configuration refresh failed for device {deviceId} (Timeout)");
+                ControlCommandTimedOut?.Invoke(this, new ControlTimeoutEventArgs(deviceId, "REFRESH_CONFIG"));
+            }
+        }
+        finally
+        {
+            // Ensure we clean up if timeout occurred
+            tcs.TrySetCanceled();
+        }
+    }
+
+    
     
     // Helper class for parsing (inlined for simplicity in this artifact)
     private static class ParsingHelper {

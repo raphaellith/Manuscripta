@@ -59,4 +59,23 @@ public class DeviceRegistryService : IDeviceRegistryService
         return await _context.PairedDevices
             .AnyAsync(d => d.DeviceId == deviceId);
     }
+
+    /// <inheritdoc />
+    public async Task<bool> UnregisterDeviceAsync(Guid deviceId)
+    {
+        var device = await _context.PairedDevices
+            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
+
+        if (device == null)
+        {
+            _logger.LogInformation("Device {DeviceId} not found in registry, nothing to remove", deviceId);
+            return false;
+        }
+
+        _context.PairedDevices.Remove(device);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Device {DeviceId} unpaired and removed from registry", deviceId);
+        return true;
+    }
 }

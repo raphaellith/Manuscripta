@@ -24,4 +24,12 @@ public interface IDeviceRegistryService
     /// <param name="deviceId">The device ID to check.</param>
     /// <returns>True if the device is paired; otherwise, false.</returns>
     Task<bool> IsDevicePairedAsync(Guid deviceId);
+
+    /// <summary>
+    /// Removes a device from the registry (unpairing).
+    /// Per Pairing Process.md §3(2): "It should also remove the Android client from its registry."
+    /// </summary>
+    /// <param name="deviceId">The device ID to remove.</param>
+    /// <returns>True if the device was removed; false if it wasn't registered.</returns>
+    Task<bool> UnregisterDeviceAsync(Guid deviceId);
 }
