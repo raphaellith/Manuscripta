@@ -64,6 +64,7 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) `Options` (List<String>): The list of the options available, for multiple choice questions.
     (b) `CorrectAnswer` (Generic / Optional): The expected correct answer.
+    (c) `MaxScore` (int): The maximum number of marks available for this question.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
@@ -148,12 +149,20 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) `ResponseId` (UUID). The response targeted by this feedback.
 
-    (b) `Text` (String): Textual feedback.
+    (b) At least one of the following.
+        
+        (i) `Text` (String): Textual feedback.
+
+        (ii) `Marks` (int): Number of marks awarded.
 
     
 (2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `ResponseId` specified in 1(a) must associate with a `ResponseEntity` (R).
+
+    (b) The `QuestionEntity` (Q) with which R is associated must not have a `CorrectAnswer` field.
+
+    (c) If the `Marks` field is present, then Q must have a `MaxScore` field, and the `Marks` value must not exceed the value of `MaxScore` given by Q.
 
 
 
