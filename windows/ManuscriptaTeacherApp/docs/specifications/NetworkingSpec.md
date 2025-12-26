@@ -82,4 +82,4 @@ This document defines the Windows application's networking specifications, which
 
         (ii) When a response to a material has been received.
 
-        (iii) When a AI assistant response has been generated.
+        (iii) When an AI assistant response has been generated.
