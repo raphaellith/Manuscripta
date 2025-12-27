@@ -21,6 +21,7 @@ public class DistributionServiceTests
 
     private readonly Guid _testDeviceId = Guid.NewGuid();
     private readonly Guid _testMaterialId = Guid.NewGuid();
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public DistributionServiceTests()
     {
@@ -99,6 +100,7 @@ public class DistributionServiceTests
 
         var material = new ReadingMaterialEntity(
             _testMaterialId,
+            _testLessonId,
             "Test Material",
             "Test Content");
 
@@ -169,8 +171,8 @@ public class DistributionServiceTests
         _mockDeviceRegistry.Setup(x => x.IsDevicePairedAsync(_testDeviceId))
             .ReturnsAsync(true);
 
-        var material1 = new ReadingMaterialEntity(materialId1, "Material 1", "Content 1");
-        var material2 = new ReadingMaterialEntity(materialId2, "Material 2", "Content 2");
+        var material1 = new ReadingMaterialEntity(materialId1, _testLessonId, "Material 1", "Content 1");
+        var material2 = new ReadingMaterialEntity(materialId2, _testLessonId, "Material 2", "Content 2");
 
         _mockMaterialRepo.Setup(x => x.GetByIdAsync(materialId1)).ReturnsAsync(material1);
         _mockMaterialRepo.Setup(x => x.GetByIdAsync(materialId2)).ReturnsAsync(material2);
@@ -197,7 +199,7 @@ public class DistributionServiceTests
         _mockDeviceRegistry.Setup(x => x.IsDevicePairedAsync(_testDeviceId))
             .ReturnsAsync(true);
 
-        var material = new ReadingMaterialEntity(_testMaterialId, "Test", "Test");
+        var material = new ReadingMaterialEntity(_testMaterialId, _testLessonId, "Test", "Test");
 
         _mockMaterialRepo.Setup(x => x.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
         _mockQuestionRepo.Setup(x => x.GetByMaterialIdAsync(_testMaterialId))

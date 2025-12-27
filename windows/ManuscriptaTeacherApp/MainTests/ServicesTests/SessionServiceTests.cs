@@ -19,6 +19,7 @@ public class SessionServiceTests
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
     private readonly DeviceIdValidator _deviceIdValidator;
     private readonly SessionService _service;
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public SessionServiceTests()
     {
@@ -41,7 +42,7 @@ public class SessionServiceTests
     {
         // Arrange - §2(3)(a)
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,
@@ -69,7 +70,7 @@ public class SessionServiceTests
     {
         // Arrange - §2D(3)(a) compliant
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,
@@ -131,7 +132,7 @@ public class SessionServiceTests
     {
         // Arrange - §2D(3)(a): Non-active sessions must have EndTime
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,

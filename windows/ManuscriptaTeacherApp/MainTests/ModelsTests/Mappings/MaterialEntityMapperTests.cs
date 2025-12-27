@@ -9,6 +9,8 @@ namespace MainTests.ModelsTests.Mappings;
 
 public class MaterialEntityMapperTests
 {
+    private readonly Guid _testLessonId = Guid.NewGuid();
+
     [Fact]
     public void ToDataEntity_WithReadingMaterial_MapsCorrectly()
     {
@@ -17,38 +19,39 @@ public class MaterialEntityMapperTests
         var title = "Reading Material";
         var content = "Content here";
         var timestamp = DateTime.UtcNow;
-        var entity = new ReadingMaterialEntity(id, title, content, timestamp);
+        var entity = new ReadingMaterialEntity(id, _testLessonId, title, content, timestamp);
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
 
         // Assert
         Assert.Equal(id, dataEntity.Id);
+        Assert.Equal(_testLessonId, dataEntity.LessonId);
         Assert.Equal(title, dataEntity.Title);
         Assert.Equal(content, dataEntity.Content);
         Assert.Equal(MaterialType.READING, dataEntity.MaterialType);
         Assert.Equal(timestamp, dataEntity.Timestamp);
-        Assert.False(dataEntity.Synced);
     }
 
     [Fact]
     public void ToDataEntity_WithWorksheet_MapsCorrectly()
     {
         // Arrange
-        var entity = new WorksheetMaterialEntity(Guid.NewGuid(), "Worksheet", "Content");
+        var entity = new WorksheetMaterialEntity(Guid.NewGuid(), _testLessonId, "Worksheet", "Content");
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
 
         // Assert
         Assert.Equal(MaterialType.WORKSHEET, dataEntity.MaterialType);
+        Assert.Equal(_testLessonId, dataEntity.LessonId);
     }
 
     [Fact]
     public void ToDataEntity_WithPoll_MapsCorrectly()
     {
         // Arrange
-        var entity = new PollMaterialEntity(Guid.NewGuid(), "Poll", "Content");
+        var entity = new PollMaterialEntity(Guid.NewGuid(), _testLessonId, "Poll", "Content");
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
@@ -61,7 +64,7 @@ public class MaterialEntityMapperTests
     public void ToDataEntity_WithQuiz_MapsCorrectly()
     {
         // Arrange
-        var entity = new QuizMaterialEntity(Guid.NewGuid(), "Quiz", "Content");
+        var entity = new QuizMaterialEntity(Guid.NewGuid(), _testLessonId, "Quiz", "Content");
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
@@ -77,7 +80,7 @@ public class MaterialEntityMapperTests
         var metadata = "{\"author\":\"Test\"}";
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
         var entity = new ReadingMaterialEntity(
-            Guid.NewGuid(), "Title", "Content", null, metadata, vocabularyTerms);
+            Guid.NewGuid(), _testLessonId, "Title", "Content", null, metadata, vocabularyTerms);
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
@@ -99,17 +102,18 @@ public class MaterialEntityMapperTests
     {
         // Arrange
         var id = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
         var title = "Reading";
         var content = "Content";
         var timestamp = DateTime.UtcNow;
         var dataEntity = new MaterialDataEntity
         {
             Id = id,
+            LessonId = lessonId,
             MaterialType = MaterialType.READING,
             Title = title,
             Content = content,
-            Timestamp = timestamp,
-            Synced = false
+            Timestamp = timestamp
         };
 
         // Act
@@ -118,6 +122,7 @@ public class MaterialEntityMapperTests
         // Assert
         Assert.IsType<ReadingMaterialEntity>(entity);
         Assert.Equal(id, entity.Id);
+        Assert.Equal(lessonId, entity.LessonId);
         Assert.Equal(title, entity.Title);
         Assert.Equal(content, entity.Content);
         Assert.Equal(MaterialType.READING, entity.MaterialType);
@@ -131,11 +136,11 @@ public class MaterialEntityMapperTests
         var dataEntity = new MaterialDataEntity
         {
             Id = Guid.NewGuid(),
+            LessonId = Guid.NewGuid(),
             MaterialType = MaterialType.WORKSHEET,
             Title = "Worksheet",
             Content = "Content",
-            Timestamp = DateTime.UtcNow,
-            Synced = false
+            Timestamp = DateTime.UtcNow
         };
 
         // Act
@@ -153,11 +158,11 @@ public class MaterialEntityMapperTests
         var dataEntity = new MaterialDataEntity
         {
             Id = Guid.NewGuid(),
+            LessonId = Guid.NewGuid(),
             MaterialType = MaterialType.POLL,
             Title = "Poll",
             Content = "Content",
-            Timestamp = DateTime.UtcNow,
-            Synced = false
+            Timestamp = DateTime.UtcNow
         };
 
         // Act
@@ -175,11 +180,11 @@ public class MaterialEntityMapperTests
         var dataEntity = new MaterialDataEntity
         {
             Id = Guid.NewGuid(),
+            LessonId = Guid.NewGuid(),
             MaterialType = MaterialType.QUIZ,
             Title = "Quiz",
             Content = "Content",
-            Timestamp = DateTime.UtcNow,
-            Synced = false
+            Timestamp = DateTime.UtcNow
         };
 
         // Act
@@ -202,13 +207,14 @@ public class MaterialEntityMapperTests
     {
         // Arrange
         var id = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
         var title = "Original Title";
         var content = "Original Content";
         var timestamp = DateTime.UtcNow;
         var metadata = "{\"test\":true}";
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
 
-        var original = new QuizMaterialEntity(id, title, content, timestamp, metadata, vocabularyTerms);
+        var original = new QuizMaterialEntity(id, lessonId, title, content, timestamp, metadata, vocabularyTerms);
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(original);
@@ -217,6 +223,7 @@ public class MaterialEntityMapperTests
         // Assert
         Assert.NotNull(roundTripped);
         Assert.Equal(original.Id, roundTripped!.Id);
+        Assert.Equal(original.LessonId, roundTripped.LessonId);
         Assert.Equal(original.Title, roundTripped.Title);
         Assert.Equal(original.Content, roundTripped.Content);
         Assert.Equal(original.MaterialType, roundTripped.MaterialType);
