@@ -2,6 +2,7 @@ using System;
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
@@ -17,11 +18,16 @@ public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _materialRepository;
     private readonly IQuestionRepository _questionRepository;
+    private readonly ILessonRepository _lessonRepository;
 
-    public MaterialService(IMaterialRepository materialRepository, IQuestionRepository questionRepository)
+    public MaterialService(
+        IMaterialRepository materialRepository, 
+        IQuestionRepository questionRepository,
+        ILessonRepository lessonRepository)
     {
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
     }
 
     #region Material Operations
@@ -32,7 +38,7 @@ public class MaterialService : IMaterialService
             throw new ArgumentNullException(nameof(material));
 
         // Validate material
-        ValidateMaterial(material);
+        await ValidateMaterialAsync(material);
 
         await _materialRepository.AddAsync(material);
         return material;
@@ -54,7 +60,7 @@ public class MaterialService : IMaterialService
             throw new ArgumentNullException(nameof(material));
 
         // Validate material
-        ValidateMaterial(material);
+        await ValidateMaterialAsync(material);
 
         // Ensure material exists
         var existing = await _materialRepository.GetByIdAsync(material.Id);
@@ -84,13 +90,19 @@ public class MaterialService : IMaterialService
 
     #region Validation
 
-    private void ValidateMaterial(MaterialEntity material)
+    private async Task ValidateMaterialAsync(MaterialEntity material)
     {
         if (string.IsNullOrWhiteSpace(material.Title))
             throw new ArgumentException("Material title cannot be empty.", nameof(material));
 
         if (string.IsNullOrWhiteSpace(material.Content))
             throw new ArgumentException("Material content cannot be empty.", nameof(material));
+
+        // Validate LessonId references a valid Lesson
+        // Per AdditionalValidationRules.md §2D(1)(a)
+        var lesson = await _lessonRepository.GetByIdAsync(material.LessonId);
+        if (lesson == null)
+            throw new InvalidOperationException($"Lesson with ID {material.LessonId} not found.");
     }
     #endregion
 }

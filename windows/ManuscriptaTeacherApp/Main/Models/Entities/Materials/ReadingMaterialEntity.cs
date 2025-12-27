@@ -4,15 +4,14 @@ using Main.Models.Enums;
 namespace Main.Models.Entities.Materials;
 
 /// <summary>
-/// Represents reading material without questions.
-/// Pure content for students to read and study.
+/// Represents a reading material without questions.
 /// </summary>
 public class ReadingMaterialEntity : MaterialEntity
 {
     private ReadingMaterialEntity() : base() { }
 
-    public ReadingMaterialEntity(Guid id, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
-        : base(id, title, content, MaterialType.READING, timestamp, metadata, vocabularyTerms)
+    public ReadingMaterialEntity(Guid id, Guid lessonId, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null, int? readingAge = null, int? actualAge = null)
+        : base(id, lessonId, title, content, MaterialType.READING, timestamp, metadata, vocabularyTerms, readingAge, actualAge)
     {
     }
 }

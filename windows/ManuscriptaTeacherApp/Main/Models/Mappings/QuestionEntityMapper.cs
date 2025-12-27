@@ -26,8 +26,7 @@ public static class QuestionEntityMapper
                 QuestionText = mc.QuestionText,
                 QuestionType = QuestionType.MULTIPLE_CHOICE,
                 Options = mc.Options,
-                CorrectAnswer = mc.CorrectAnswerIndex.ToString(),
-                Synced = false
+                CorrectAnswer = mc.CorrectAnswerIndex.ToString()
             },
             TrueFalseQuestionEntity tf => new QuestionDataEntity
             {
@@ -36,8 +35,7 @@ public static class QuestionEntityMapper
                 QuestionText = tf.QuestionText,
                 QuestionType = QuestionType.TRUE_FALSE,
                 Options = null,
-                CorrectAnswer = tf.CorrectAnswer.ToString(),
-                Synced = false
+                CorrectAnswer = tf.CorrectAnswer.ToString()
             },
             WrittenAnswerQuestionEntity wa => new QuestionDataEntity
             {
@@ -46,8 +44,7 @@ public static class QuestionEntityMapper
                 QuestionText = wa.QuestionText,
                 QuestionType = QuestionType.WRITTEN_ANSWER,
                 Options = null,
-                CorrectAnswer = wa.CorrectAnswer,
-                Synced = false
+                CorrectAnswer = wa.CorrectAnswer
             },
             _ => throw new InvalidOperationException($"Unknown question entity type: {entity.GetType().Name}")
         };
