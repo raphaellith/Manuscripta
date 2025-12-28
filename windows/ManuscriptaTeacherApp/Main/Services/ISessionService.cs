@@ -41,22 +41,4 @@ public interface ISessionService
     /// §2(3)(b)
     /// </summary>
     Task<SessionEntity> CancelSessionAsync(Guid id);
-
-    /// <summary>
-    /// Retrieves all sessions.
-    /// §2(3)(c)
-    /// </summary>
-    Task<IEnumerable<SessionEntity>> GetAllSessionsAsync();
-
-    /// <summary>
-    /// Retrieves a session by its ID.
-    /// §2(3)(d)
-    /// </summary>
-    Task<SessionEntity?> GetSessionByIdAsync(Guid id);
-
-    /// <summary>
-    /// Deletes a session.
-    /// §2(3)(e)
-    /// </summary>
-    Task DeleteSessionAsync(Guid id);
 }

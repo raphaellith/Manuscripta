@@ -289,69 +289,6 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task GetQuestionByIdAsync_ExistingQuestion_ReturnsQuestion()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            true
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act
-        var result = await _service.GetQuestionByIdAsync(questionId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(questionId, result!.Id);
-        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetQuestionByIdAsync_NonExistingQuestion_ReturnsNull()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync((QuestionEntity?)null);
-
-        // Act
-        var result = await _service.GetQuestionByIdAsync(questionId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetQuestionsByMaterialIdAsync_ReturnsQuestions()
-    {
-        // Arrange
-        var materialId = Guid.NewGuid();
-        var questions = new List<QuestionEntity>
-        {
-            new TrueFalseQuestionEntity(Guid.NewGuid(), materialId, "Q1", true),
-            new MultipleChoiceQuestionEntity(Guid.NewGuid(), materialId, "Q2", 
-                new List<string> { "A", "B" }, 0)
-        };
-
-        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
-            .ReturnsAsync(questions);
-
-        // Act
-        var result = await _service.GetQuestionsByMaterialIdAsync(materialId);
-
-        // Assert
-        var resultList = result.ToList();
-        Assert.Equal(2, resultList.Count);
-        _mockQuestionRepo.Verify(r => r.GetByMaterialIdAsync(materialId), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateQuestionAsync_ValidQuestion_Success()
     {
         // Arrange

@@ -120,67 +120,6 @@ public class MaterialServiceTests
     }
 
     [Fact]
-    public async Task GetMaterialByIdAsync_ExistingMaterial_ReturnsMaterial()
-    {
-        // Arrange
-        var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(
-            materialId,
-            _testLessonId,
-            "Test Material",
-            "Test Content"
-        );
-
-        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
-            .ReturnsAsync(material);
-
-        // Act
-        var result = await _service.GetMaterialByIdAsync(materialId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(materialId, result!.Id);
-        _mockMaterialRepo.Verify(r => r.GetByIdAsync(materialId), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetMaterialByIdAsync_NonExistingMaterial_ReturnsNull()
-    {
-        // Arrange
-        var materialId = Guid.NewGuid();
-        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
-            .ReturnsAsync((MaterialEntity?)null);
-
-        // Act
-        var result = await _service.GetMaterialByIdAsync(materialId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetAllMaterialsAsync_ReturnsMaterialsList()
-    {
-        // Arrange
-        var materials = new List<MaterialEntity>
-        {
-            new WorksheetMaterialEntity(Guid.NewGuid(), _testLessonId, "Material 1", "Content 1"),
-            new QuizMaterialEntity(Guid.NewGuid(), _testLessonId, "Material 2", "Content 2")
-        };
-
-        _mockMaterialRepo.Setup(r => r.GetAllAsync())
-            .ReturnsAsync(materials);
-
-        // Act
-        var result = await _service.GetAllMaterialsAsync();
-
-        // Assert
-        var resultList = result.ToList();
-        Assert.Equal(2, resultList.Count);
-        _mockMaterialRepo.Verify(r => r.GetAllAsync(), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateMaterialAsync_ValidMaterial_Success()
     {
         // Arrange
