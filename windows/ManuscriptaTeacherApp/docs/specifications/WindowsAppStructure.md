@@ -75,7 +75,7 @@ This document defines the structure of the Windows app, and the directories and 
         (iii) A 'peer layer', in respect to a layer L, means a layer which is neither an upstream layer nor a downstream layer of L.
     
     (b) The relationships between layers are set out below, and 'downstream layer' relationships shall be constructed accordingly:
-        (i) The Data layer shall be an upstream layer of the Model layer.
+        (i) The Model layer shall be peer layer of the Data layer.
         (ii) The Model layer shall be an upstream layer of the Service layer.
         (iii) The Service layer shall be an upstream layer of the Controller layer.
 
@@ -87,7 +87,7 @@ This document defines the structure of the Windows app, and the directories and 
 
     (c) The Service layer should be functionally complete in relation to any downstream layer. That is to say, the service layer should remove the need of any downstream layer to access any upstream layers directly.
 
-    (d) The Service layer, collectively with all upstream layers, must enforce all constraints defined in the Data Validation Specification.
+    (d) The Service layer, collectively with all upstream layers, must enforce all constraints defined in the Validation Rules.
 
 ## Section 2B - Directory Structure of `UI`
 
