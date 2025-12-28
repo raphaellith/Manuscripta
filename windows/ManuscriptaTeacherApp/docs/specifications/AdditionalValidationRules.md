@@ -1,8 +1,8 @@
-# Material Hierarchy (Windows)
+# Additional Validation Rules (Windows)
 
 ## Explanatory Note
 
-This document defines the hierarchical system for grouping and organising Material items in the model layer.
+This document defines the hierarchical system for grouping and organising Material items in the model layer. It also defines additional applicability of the validation rules on the Windows client.
 
 
 ## Section 1 - General Principles
@@ -18,7 +18,9 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (3) Excluding the top level, any entity belonging to a given level must contain the UUID of an entity belonging to the level immediately above. It must not contain UUIDs of entities belonging to any other level.
 
+(4) This document shall be treated as providing additional rules for the validation rules defined in `Validation Rules.md`, per Section 1(7) thereof.
 
+(5) The applicability of this document, as well as Sections 2A to 2C (`MaterialEntity`, `QuestionEntity`, `ResponseEntity`) of `Validation Rules.md`, shall extend to the corresponding Data Entities, enforced implicitly by the polymorphic domain entity classes, and explicitly by the appropriate services.
 
 ## Section 2 - Entity classes for Each Hierarchical Level
 
@@ -62,3 +64,5 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
+
+(3) Additional fields defined in this Section do not apply to the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
