@@ -37,6 +37,7 @@ This document defines the structure of the Windows app, and the directories and 
         |- Services/
         | |- Network/
         | |- Repositories/
+        | |- Hubs/
         |- Controllers/
         ```
 
@@ -56,12 +57,13 @@ This document defines the structure of the Windows app, and the directories and 
 
     (d) The `Services` directory shall contain the following files and subdirectories only:
         (i) `Network/`. This directory shall contain services regarding TCP and UDP networking. 
-        (ii) `Repositories/`. This directory shall contain services regarding persistence. 
-        (iii) Any other services which are not related to networking or persistence shall be placed directly in this directory.
+        (ii) `Repositories/`. This directory shall contain services regarding persistence.
+        (iii) `Hubs/`. This directory shall contain SignalR Hub classes for real-time bidirectional communication with the `UI` component.
+        (iv) Any other services which are not related to networking, persistence, or SignalR shall be placed directly in this directory.
     
     This shall be referred to as the 'Service layer'.
 
-    (e) The `Controllers` directory shall contain ASP.NET Core controllers, providing the REST APIs specified in the API Contract.
+    (e) The `Controllers` directory shall contain ASP.NET Core controllers, providing the REST APIs specified in the API Contract for external device communication.
 
     This shall be referred to as the 'Controller layer'.
 
@@ -86,4 +88,69 @@ This document defines the structure of the Windows app, and the directories and 
     (c) The Service layer should be functionally complete in relation to any downstream layer. That is to say, the service layer should remove the need of any downstream layer to access any upstream layers directly.
 
     (d) The Service layer, collectively with all upstream layers, must enforce all constraints defined in the Data Validation Specification.
+
+## Section 2B - Directory Structure of `UI`
+
+(1) **Directory Structure**
+
+    (a) The `UI` component uses the following directory structure:
+
+        ```
+        UI/
+        |- package.json
+        |- tsconfig.json
+        |- forge.config.ts
+        |- webpack.*.ts
+        |- src/
+        |  |- main/
+        |  |- preload/
+        |  |- renderer/
+        |  |  |- components/
+        |  |  |  |- layout/
+        |  |  |  |- pages/
+        |  |  |  |- modals/
+        |  |  |  |- common/
+        |  |  |- services/
+        |  |  |  |- signalr/
+        |  |  |- models/
+        |  |  |- state/
+        |  |  |- themes/
+        |  |- resources/
+        ```
+
+    (b) The `main` directory shall contain the Electron main process entry point (`index.ts`), which is responsible for creating and managing the application window.
+
+    (c) The `preload` directory shall contain the Electron preload script (`preload.ts`), which exposes secure APIs to the renderer process.
+
+    (d) The `renderer` directory shall contain the React application and shall include the following subdirectories:
+        (i) `components/`. This directory shall contain React components, organised into the following subdirectories:
+            - `layout/`. Components responsible for page structure, such as headers and sidebars.
+            - `pages/`. Page-level components corresponding to application views.
+            - `modals/`. Modal dialog components.
+            - `common/`. Shared, reusable components.
+        (ii) `services/`. This directory shall contain communication logic with the `Main` component:
+            - `signalr/`. SignalR hub connection, event handlers, and method invocations for real-time communication with `Main`.
+        (iii) `models/`. This directory shall contain TypeScript type definitions. Types should be aligned with DTOs and Entities defined in the `Main` component.
+        (iv) `state/`. This directory shall contain React Context providers and custom hooks for state management.
+        (v) `themes/`. This directory shall contain theme configuration files.
+
+    This shall be referred to as the 'Renderer layer'.
+
+    (e) The `resources` directory shall contain static assets such as images, icons, and documents.
+
+(2) **Communication with Main**
+
+    (a) The `UI` component shall communicate with the `Main` component via SignalR hub connection at `/hub` for real-time bidirectional communication.
+
+    (b) All communication logic shall be encapsulated within the `services` directory.
+
+    (c) No component outside of the `services` directory may make direct SignalR calls.
+
+(3) **State Management**
+
+    (a) State management shall use React Context and simple props, depending on complexity.
+
+    (b) Global state that must be shared across multiple pages shall be managed via React Context providers in the `state` directory.
+
+    (c) Local component state shall use React's `useState` hook directly.
     
