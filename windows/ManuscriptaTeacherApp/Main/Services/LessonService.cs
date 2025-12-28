@@ -37,21 +37,6 @@ public class LessonService : ILessonService
         return entity;
     }
 
-    public async Task<LessonEntity?> GetByIdAsync(Guid id)
-    {
-        return await _repository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<LessonEntity>> GetByUnitIdAsync(Guid unitId)
-    {
-        return await _repository.GetByUnitIdAsync(unitId);
-    }
-
-    public async Task<IEnumerable<LessonEntity>> GetAllAsync()
-    {
-        return await _repository.GetAllAsync();
-    }
-
     public async Task<LessonEntity> UpdateAsync(LessonEntity entity)
     {
         if (entity == null)

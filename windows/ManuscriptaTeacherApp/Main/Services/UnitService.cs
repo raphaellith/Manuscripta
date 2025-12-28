@@ -36,21 +36,6 @@ public class UnitService : IUnitService
         return entity;
     }
 
-    public async Task<UnitEntity?> GetByIdAsync(Guid id)
-    {
-        return await _repository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<UnitEntity>> GetByUnitCollectionIdAsync(Guid unitCollectionId)
-    {
-        return await _repository.GetByUnitCollectionIdAsync(unitCollectionId);
-    }
-
-    public async Task<IEnumerable<UnitEntity>> GetAllAsync()
-    {
-        return await _repository.GetAllAsync();
-    }
-
     public async Task<UnitEntity> UpdateAsync(UnitEntity entity)
     {
         if (entity == null)

@@ -157,66 +157,6 @@ public class UnitServiceTests
 
     #endregion
 
-    #region GetByIdAsync Tests
-
-    [Fact]
-    public async Task GetByIdAsync_ExistingId_ReturnsUnit()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var unit = new UnitEntity(id, Guid.NewGuid(), "Test", new List<string>());
-        _mockUnitRepo.Setup(r => r.GetByIdAsync(id))
-            .ReturnsAsync(unit);
-
-        // Act
-        var result = await _service.GetByIdAsync(id);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(id, result!.Id);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_NonExistingId_ReturnsNull()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        _mockUnitRepo.Setup(r => r.GetByIdAsync(id))
-            .ReturnsAsync((UnitEntity?)null);
-
-        // Act
-        var result = await _service.GetByIdAsync(id);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    #endregion
-
-    #region GetByUnitCollectionIdAsync Tests
-
-    [Fact]
-    public async Task GetByUnitCollectionIdAsync_ReturnsAllUnitsForCollection()
-    {
-        // Arrange
-        var unitCollectionId = Guid.NewGuid();
-        var units = new List<UnitEntity>
-        {
-            new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 1", new List<string>()),
-            new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 2", new List<string>())
-        };
-        _mockUnitRepo.Setup(r => r.GetByUnitCollectionIdAsync(unitCollectionId))
-            .ReturnsAsync(units);
-
-        // Act
-        var result = await _service.GetByUnitCollectionIdAsync(unitCollectionId);
-
-        // Assert
-        Assert.Equal(2, result.Count());
-    }
-
-    #endregion
-
     #region UpdateAsync Tests
 
     [Fact]

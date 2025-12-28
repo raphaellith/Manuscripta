@@ -185,81 +185,6 @@ public class LessonServiceTests
 
     #endregion
 
-    #region GetByIdAsync Tests
-
-    [Fact]
-    public async Task GetByIdAsync_ExistingId_ReturnsLesson()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var lesson = new LessonEntity(id, Guid.NewGuid(), "Test", "Description");
-        _mockLessonRepo.Setup(r => r.GetByIdAsync(id))
-            .ReturnsAsync(lesson);
-
-        // Act
-        var result = await _service.GetByIdAsync(id);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(id, result!.Id);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_NonExistingId_ReturnsNull()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        _mockLessonRepo.Setup(r => r.GetByIdAsync(id))
-            .ReturnsAsync((LessonEntity?)null);
-
-        // Act
-        var result = await _service.GetByIdAsync(id);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    #endregion
-
-    #region GetByUnitIdAsync Tests
-
-    [Fact]
-    public async Task GetByUnitIdAsync_ReturnsAllLessonsForUnit()
-    {
-        // Arrange
-        var unitId = Guid.NewGuid();
-        var lessons = new List<LessonEntity>
-        {
-            new LessonEntity(Guid.NewGuid(), unitId, "Lesson 1", "Description 1"),
-            new LessonEntity(Guid.NewGuid(), unitId, "Lesson 2", "Description 2")
-        };
-        _mockLessonRepo.Setup(r => r.GetByUnitIdAsync(unitId))
-            .ReturnsAsync(lessons);
-
-        // Act
-        var result = await _service.GetByUnitIdAsync(unitId);
-
-        // Assert
-        Assert.Equal(2, result.Count());
-    }
-
-    [Fact]
-    public async Task GetByUnitIdAsync_NoLessons_ReturnsEmptyCollection()
-    {
-        // Arrange
-        var unitId = Guid.NewGuid();
-        _mockLessonRepo.Setup(r => r.GetByUnitIdAsync(unitId))
-            .ReturnsAsync(new List<LessonEntity>());
-
-        // Act
-        var result = await _service.GetByUnitIdAsync(unitId);
-
-        // Assert
-        Assert.Empty(result);
-    }
-
-    #endregion
-
     #region UpdateAsync Tests
 
     [Fact]
@@ -346,44 +271,6 @@ public class LessonServiceTests
 
         // Assert
         Assert.Equal(lessonId, capturedId);
-    }
-
-    #endregion
-
-    #region GetAllAsync Tests
-
-    [Fact]
-    public async Task GetAllAsync_ReturnsAllLessons()
-    {
-        // Arrange
-        var lessons = new List<LessonEntity>
-        {
-            new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Lesson 1", "Desc 1"),
-            new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Lesson 2", "Desc 2"),
-            new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Lesson 3", "Desc 3")
-        };
-        _mockLessonRepo.Setup(r => r.GetAllAsync())
-            .ReturnsAsync(lessons);
-
-        // Act
-        var result = await _service.GetAllAsync();
-
-        // Assert
-        Assert.Equal(3, result.Count());
-    }
-
-    [Fact]
-    public async Task GetAllAsync_EmptyRepository_ReturnsEmptyCollection()
-    {
-        // Arrange
-        _mockLessonRepo.Setup(r => r.GetAllAsync())
-            .ReturnsAsync(new List<LessonEntity>());
-
-        // Act
-        var result = await _service.GetAllAsync();
-
-        // Assert
-        Assert.Empty(result);
     }
 
     #endregion

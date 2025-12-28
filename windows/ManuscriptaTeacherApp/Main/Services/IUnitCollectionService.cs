@@ -11,8 +11,6 @@ namespace Main.Services;
 public interface IUnitCollectionService
 {
     Task<UnitCollectionEntity> CreateAsync(UnitCollectionEntity entity);
-    Task<UnitCollectionEntity?> GetByIdAsync(Guid id);
-    Task<IEnumerable<UnitCollectionEntity>> GetAllAsync();
     Task<UnitCollectionEntity> UpdateAsync(UnitCollectionEntity entity);
     Task DeleteAsync(Guid id);
 }

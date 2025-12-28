@@ -33,16 +33,6 @@ public class UnitCollectionService : IUnitCollectionService
         return entity;
     }
 
-    public async Task<UnitCollectionEntity?> GetByIdAsync(Guid id)
-    {
-        return await _repository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<UnitCollectionEntity>> GetAllAsync()
-    {
-        return await _repository.GetAllAsync();
-    }
-
     public async Task<UnitCollectionEntity> UpdateAsync(UnitCollectionEntity entity)
     {
         if (entity == null)
