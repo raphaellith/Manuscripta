@@ -38,16 +38,6 @@ public class MaterialService : IMaterialService
         return material;
     }
 
-    public async Task<MaterialEntity?> GetMaterialByIdAsync(Guid id)
-    {
-        return await _materialRepository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<MaterialEntity>> GetAllMaterialsAsync()
-    {
-        return await _materialRepository.GetAllAsync();
-    }
-
     public async Task<MaterialEntity> UpdateMaterialAsync(MaterialEntity material)
     {
         if (material == null)
