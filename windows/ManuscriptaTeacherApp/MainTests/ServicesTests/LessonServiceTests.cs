@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
@@ -12,22 +11,20 @@ namespace MainTests.ServicesTests;
 
 /// <summary>
 /// Tests for LessonService.
-/// Verifies service behavior per AdditionalValidationRules.md §2C
-/// and PersistenceAndCascadingRules.md §2(5).
+/// Verifies service behavior per AdditionalValidationRules.md §2C.
+/// Cascade deletion is handled by database FK constraints per PersistenceAndCascadingRules.md §2(5).
 /// </summary>
 public class LessonServiceTests
 {
     private readonly Mock<ILessonRepository> _mockLessonRepo;
     private readonly Mock<IUnitRepository> _mockUnitRepo;
-    private readonly Mock<IMaterialRepository> _mockMaterialRepo;
     private readonly LessonService _service;
 
     public LessonServiceTests()
     {
         _mockLessonRepo = new Mock<ILessonRepository>();
         _mockUnitRepo = new Mock<IUnitRepository>();
-        _mockMaterialRepo = new Mock<IMaterialRepository>();
-        _service = new LessonService(_mockLessonRepo.Object, _mockUnitRepo.Object, _mockMaterialRepo.Object);
+        _service = new LessonService(_mockLessonRepo.Object, _mockUnitRepo.Object);
     }
 
     #region Constructor Tests
@@ -36,21 +33,14 @@ public class LessonServiceTests
     public void Constructor_NullLessonRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new LessonService(null!, _mockUnitRepo.Object, _mockMaterialRepo.Object));
+            new LessonService(null!, _mockUnitRepo.Object));
     }
 
     [Fact]
     public void Constructor_NullUnitRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new LessonService(_mockLessonRepo.Object, null!, _mockMaterialRepo.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullMaterialRepository_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            new LessonService(_mockLessonRepo.Object, _mockUnitRepo.Object, null!));
+            new LessonService(_mockLessonRepo.Object, null!));
     }
 
     #endregion
@@ -236,14 +226,14 @@ public class LessonServiceTests
 
     #endregion
 
-    #region DeleteAsync Tests - Cascade Delete per §2(5)
+    #region DeleteAsync Tests
 
     [Fact]
-    public async Task DeleteAsync_DeletesLesson()
+    public async Task DeleteAsync_CallsRepository()
     {
-        // Per PersistenceAndCascadingRules.md §2(5):
-        // Deletion of a lesson must delete all materials within it
-        // Note: Material cascade deletion is handled by database FK constraint
+        // Arrange
+        // Cascade deletion is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(5)
         var lessonId = Guid.NewGuid();
         _mockLessonRepo.Setup(r => r.DeleteAsync(lessonId))
             .Returns(Task.CompletedTask);
@@ -255,23 +245,6 @@ public class LessonServiceTests
         _mockLessonRepo.Verify(r => r.DeleteAsync(lessonId), Times.Once);
     }
 
-    [Fact]
-    public async Task DeleteAsync_CallsRepositoryWithCorrectId()
-    {
-        // Arrange
-        var lessonId = Guid.NewGuid();
-        Guid? capturedId = null;
-        
-        _mockLessonRepo.Setup(r => r.DeleteAsync(It.IsAny<Guid>()))
-            .Callback<Guid>(id => capturedId = id)
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _service.DeleteAsync(lessonId);
-
-        // Assert
-        Assert.Equal(lessonId, capturedId);
-    }
-
     #endregion
 }
+

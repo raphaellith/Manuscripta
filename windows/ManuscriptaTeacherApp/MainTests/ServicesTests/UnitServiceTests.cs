@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
@@ -12,25 +11,22 @@ namespace MainTests.ServicesTests;
 
 /// <summary>
 /// Tests for UnitService.
-/// Verifies service behavior per AdditionalValidationRules.md §2B
-/// and PersistenceAndCascadingRules.md §2(4).
+/// Verifies service behavior per AdditionalValidationRules.md §2B.
+/// Cascade deletion is handled by database FK constraints per PersistenceAndCascadingRules.md §2(4).
 /// </summary>
 public class UnitServiceTests
 {
     private readonly Mock<IUnitRepository> _mockUnitRepo;
     private readonly Mock<IUnitCollectionRepository> _mockUnitCollectionRepo;
-    private readonly Mock<ILessonRepository> _mockLessonRepo;
     private readonly UnitService _service;
 
     public UnitServiceTests()
     {
         _mockUnitRepo = new Mock<IUnitRepository>();
         _mockUnitCollectionRepo = new Mock<IUnitCollectionRepository>();
-        _mockLessonRepo = new Mock<ILessonRepository>();
         _service = new UnitService(
             _mockUnitRepo.Object, 
-            _mockUnitCollectionRepo.Object, 
-            _mockLessonRepo.Object);
+            _mockUnitCollectionRepo.Object);
     }
 
     #region Constructor Tests
@@ -39,21 +35,14 @@ public class UnitServiceTests
     public void Constructor_NullUnitRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new UnitService(null!, _mockUnitCollectionRepo.Object, _mockLessonRepo.Object));
+            new UnitService(null!, _mockUnitCollectionRepo.Object));
     }
 
     [Fact]
     public void Constructor_NullUnitCollectionRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new UnitService(_mockUnitRepo.Object, null!, _mockLessonRepo.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullLessonRepository_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            new UnitService(_mockUnitRepo.Object, _mockUnitCollectionRepo.Object, null!));
+            new UnitService(_mockUnitRepo.Object, null!));
     }
 
     #endregion
@@ -208,42 +197,15 @@ public class UnitServiceTests
 
     #endregion
 
-    #region DeleteAsync Tests - Cascade Delete per §2(4)
+    #region DeleteAsync Tests
 
     [Fact]
-    public async Task DeleteAsync_WithLessons_CascadeDeletesLessons()
-    {
-        // Arrange - Per PersistenceAndCascadingRules.md §2(4):
-        // Deletion of a unit must delete all lessons within it
-        var unitId = Guid.NewGuid();
-        var lessons = new List<LessonEntity>
-        {
-            new LessonEntity(Guid.NewGuid(), unitId, "Lesson 1", "Description 1"),
-            new LessonEntity(Guid.NewGuid(), unitId, "Lesson 2", "Description 2")
-        };
-
-        _mockLessonRepo.Setup(r => r.GetByUnitIdAsync(unitId))
-            .ReturnsAsync(lessons);
-        _mockLessonRepo.Setup(r => r.DeleteAsync(It.IsAny<Guid>()))
-            .Returns(Task.CompletedTask);
-        _mockUnitRepo.Setup(r => r.DeleteAsync(unitId))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _service.DeleteAsync(unitId);
-
-        // Assert - verify cascade deletion
-        _mockLessonRepo.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Exactly(2));
-        _mockUnitRepo.Verify(r => r.DeleteAsync(unitId), Times.Once);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_NoLessons_DeletesOnlyUnit()
+    public async Task DeleteAsync_CallsRepository()
     {
         // Arrange
+        // Cascade deletion is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(4)
         var unitId = Guid.NewGuid();
-        _mockLessonRepo.Setup(r => r.GetByUnitIdAsync(unitId))
-            .ReturnsAsync(new List<LessonEntity>());
         _mockUnitRepo.Setup(r => r.DeleteAsync(unitId))
             .Returns(Task.CompletedTask);
 
@@ -251,39 +213,9 @@ public class UnitServiceTests
         await _service.DeleteAsync(unitId);
 
         // Assert
-        _mockLessonRepo.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
         _mockUnitRepo.Verify(r => r.DeleteAsync(unitId), Times.Once);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_DeletesLessonsBeforeUnit()
-    {
-        // Arrange - verify order
-        var unitId = Guid.NewGuid();
-        var callOrder = new List<string>();
-
-        var lessons = new List<LessonEntity>
-        {
-            new LessonEntity(Guid.NewGuid(), unitId, "Lesson 1", "Description")
-        };
-
-        _mockLessonRepo.Setup(r => r.GetByUnitIdAsync(unitId))
-            .ReturnsAsync(lessons);
-        _mockLessonRepo.Setup(r => r.DeleteAsync(It.IsAny<Guid>()))
-            .Callback(() => callOrder.Add("DeleteLesson"))
-            .Returns(Task.CompletedTask);
-        _mockUnitRepo.Setup(r => r.DeleteAsync(unitId))
-            .Callback(() => callOrder.Add("DeleteUnit"))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _service.DeleteAsync(unitId);
-
-        // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("DeleteLesson", callOrder[0]);
-        Assert.Equal("DeleteUnit", callOrder[1]);
     }
 
     #endregion
 }
+

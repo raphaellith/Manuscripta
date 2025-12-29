@@ -1,32 +1,26 @@
 using System;
-
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
-using Main.Models.Entities.Questions;
-using Main.Models.Enums;
 using Main.Services.Repositories;
 
 namespace Main.Services;
 
 /// <summary>
-/// Service for managing materials and their associated questions.
-/// Enforces business rules and data validation.
+/// Service for managing materials.
+/// Enforces business rules and data validation per AdditionalValidationRules.md §2D.
+/// Cascade deletion of questions is handled by database FK constraints per PersistenceAndCascadingRules.md §2(1).
 /// </summary>
 public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _materialRepository;
-    private readonly IQuestionRepository _questionRepository;
     private readonly ILessonRepository _lessonRepository;
 
     public MaterialService(
         IMaterialRepository materialRepository, 
-        IQuestionRepository questionRepository,
         ILessonRepository lessonRepository)
     {
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
-        _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
     }
 
@@ -63,16 +57,8 @@ public class MaterialService : IMaterialService
 
     public async Task DeleteMaterialAsync(Guid id)
     {
-        // Get all questions associated with this material
-        var questions = await _questionRepository.GetByMaterialIdAsync(id);
-
-        // Delete all associated questions first
-        foreach (var question in questions)
-        {
-            await _questionRepository.DeleteAsync(question.Id);
-        }
-
-        // Delete the material
+        // Cascade deletion of questions is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(1)
         await _materialRepository.DeleteAsync(id);
     }
 
