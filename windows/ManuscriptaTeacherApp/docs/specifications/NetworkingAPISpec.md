@@ -34,7 +34,7 @@ For a description of how these server methods and client handlers are expected t
 
     (c) CRUD methods for lessons.
 
-        (i) `Task CreateUnit(LessonEntity newLessonEntity)`: Receives data for a new lesson entity (without an assigned UUID), and creates the entity with an assigned UUID.
+        (i) `Task CreateLesson(LessonEntity newLessonEntity)`: Receives data for a new lesson entity (without an assigned UUID), and creates the entity with an assigned UUID.
 
         (ii) `Task<List<LessonEntity>> GetAllLessons()`: Retrieves all lesson entities.
 
@@ -45,7 +45,7 @@ For a description of how these server methods and client handlers are expected t
 
     (d) CRUD methods for materials.
 
-        (i) `Task CreateUnit(MaterialEntity newMaterialEntity)`: Receives data for a new material entity (without an assigned UUID), and creates the entity with an assigned UUID.
+        (i) `Task CreateMaterial(MaterialEntity newMaterialEntity)`: Receives data for a new material entity (without an assigned UUID), and creates the entity with an assigned UUID.
 
         (ii) `Task<List<MaterialEntity>> GetAllMaterials()`: Retrieves all material entities.
 
