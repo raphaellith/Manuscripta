@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
+using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
@@ -16,13 +17,21 @@ public class MaterialServiceTests
 {
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
+    private readonly Mock<ILessonRepository> _mockLessonRepo;
     private readonly MaterialService _service;
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public MaterialServiceTests()
     {
         _mockMaterialRepo = new Mock<IMaterialRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
-        _service = new MaterialService(_mockMaterialRepo.Object, _mockQuestionRepo.Object);
+        _mockLessonRepo = new Mock<ILessonRepository>();
+        
+        // Setup default lesson validation to pass
+        _mockLessonRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Test Lesson", "Description"));
+        
+        _service = new MaterialService(_mockMaterialRepo.Object, _mockQuestionRepo.Object, _mockLessonRepo.Object);
     }
 
     #region Material Tests
@@ -33,6 +42,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new WorksheetMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "Test Worksheet",
             "Test Content"
         );
@@ -63,6 +73,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new QuizMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "",
             "Content"
         );
@@ -78,6 +89,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new PollMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "Title",
             ""
         );
@@ -88,11 +100,32 @@ public class MaterialServiceTests
     }
 
     [Fact]
+    public async Task CreateMaterialAsync_InvalidLessonId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var invalidLessonId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            Guid.NewGuid(),
+            invalidLessonId,
+            "Test Material",
+            "Test Content"
+        );
+
+        _mockLessonRepo.Setup(r => r.GetByIdAsync(invalidLessonId))
+            .ReturnsAsync((LessonEntity?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateMaterialAsync(material));
+    }
+
+    [Fact]
     public async Task UpdateMaterialAsync_ValidMaterial_Success()
     {
         // Arrange
         var material = new WorksheetMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "Updated Material",
             "Updated Content"
         );
@@ -125,6 +158,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new QuizMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "",
             "Content"
         );
@@ -140,6 +174,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new PollMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "Title",
             ""
         );
@@ -155,6 +190,7 @@ public class MaterialServiceTests
         // Arrange
         var material = new WorksheetMaterialEntity(
             Guid.NewGuid(),
+            _testLessonId,
             "Material",
             "Content"
         );

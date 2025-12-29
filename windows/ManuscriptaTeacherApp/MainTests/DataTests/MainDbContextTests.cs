@@ -39,8 +39,7 @@ public class MainDbContextTests
                 MaterialType = MaterialType.WORKSHEET,
                 Title = "Test Worksheet",
                 Content = "Worksheet Content",
-                Timestamp = DateTime.UtcNow,
-                Synced = false
+                Timestamp = DateTime.UtcNow
             };
 
             ctx.Materials.Add(material);
@@ -53,8 +52,7 @@ public class MainDbContextTests
                 QuestionType = QuestionType.MULTIPLE_CHOICE,
                 MaterialId = materialId,
                 Options = new System.Collections.Generic.List<string> { "3", "4", "5" },
-                CorrectAnswer = "1",
-                Synced = false
+                CorrectAnswer = "1"
             };
 
             ctx.Questions.Add(question);
@@ -89,8 +87,7 @@ public class MainDbContextTests
                 MaterialType = MaterialType.QUIZ,
                 Title = "Quiz",
                 Content = "Content",
-                Timestamp = DateTime.UtcNow,
-                Synced = false
+                Timestamp = DateTime.UtcNow
             };
             ctx.Materials.Add(material);
 
@@ -102,8 +99,7 @@ public class MainDbContextTests
                     QuestionText = $"Question {i}",
                     QuestionType = QuestionType.TRUE_FALSE,
                     MaterialId = materialId,
-                    CorrectAnswer = "True",
-                    Synced = false
+                    CorrectAnswer = "True"
                 });
             }
             ctx.SaveChanges();

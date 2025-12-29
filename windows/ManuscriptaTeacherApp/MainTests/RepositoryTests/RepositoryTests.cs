@@ -24,6 +24,28 @@ public class RepositoryTests
             .Options;
     }
 
+    /// <summary>
+    /// Creates the required hierarchy entities for material tests (UnitCollection -> Unit -> Lesson).
+    /// </summary>
+    private async Task<Guid> CreateLessonHierarchy(MainDbContext ctx)
+    {
+        var unitCollectionId = Guid.NewGuid();
+        var unitId = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
+
+        var unitCollection = new UnitCollectionEntity(unitCollectionId, "Test Unit Collection");
+        ctx.UnitCollections.Add(unitCollection);
+        
+        var unit = new UnitEntity(unitId, unitCollectionId, "Test Unit", new List<string>());
+        ctx.Units.Add(unit);
+        
+        var lesson = new LessonEntity(lessonId, unitId, "Test Lesson", "Test Description");
+        ctx.Lessons.Add(lesson);
+        
+        await ctx.SaveChangesAsync();
+        return lessonId;
+    }
+
     [Fact]
     public async Task Repositories_CanAddAndRetrieveEntities()
     {
@@ -35,6 +57,7 @@ public class RepositoryTests
         var materialId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
         var responseId = Guid.NewGuid();
+        Guid lessonId;
 
         // In-memory response repository (per PersistenceAndCascadingRules.md §1(2))
         var rRepo = new InMemoryResponseRepository();
@@ -43,6 +66,9 @@ public class RepositoryTests
         using (var ctx = new MainDbContext(options))
         {
             ctx.Database.EnsureCreated();
+            
+            // Create parent hierarchy for FK constraint
+            lessonId = await CreateLessonHierarchy(ctx);
 
             var mRepo = new EfMaterialRepository(ctx);
             var qRepo = new EfQuestionRepository(ctx);
@@ -50,6 +76,7 @@ public class RepositoryTests
             // Add material
             var material = new WorksheetMaterialEntity(
                 materialId,
+                lessonId,
                 "Test Material",
                 "Content"
             );
@@ -118,10 +145,14 @@ public class RepositoryTests
 
         var materialId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        Guid lessonId;
 
         using (var ctx = new MainDbContext(options))
         {
             ctx.Database.EnsureCreated();
+            
+            // Create parent hierarchy for FK constraint
+            lessonId = await CreateLessonHierarchy(ctx);
 
             var mRepo = new EfMaterialRepository(ctx);
             var qRepo = new EfQuestionRepository(ctx);
@@ -129,6 +160,7 @@ public class RepositoryTests
             // Add material
             var material = new QuizMaterialEntity(
                 materialId,
+                lessonId,
                 "Original Title",
                 "Original Content"
             );
@@ -151,8 +183,9 @@ public class RepositoryTests
             
             var updatedMaterial = new QuizMaterialEntity(
                 materialId,
+                material!.LessonId,
                 "Updated Title",
-                material!.Content,
+                material.Content,
                 material.Timestamp
             );
             await mRepo.UpdateAsync(updatedMaterial);
@@ -187,15 +220,20 @@ public class RepositoryTests
         var options = CreateSqliteInMemoryOptions(connection);
 
         var materialId = Guid.NewGuid();
+        Guid lessonId;
 
         using (var ctx = new MainDbContext(options))
         {
             ctx.Database.EnsureCreated();
+            
+            // Create parent hierarchy for FK constraint
+            lessonId = await CreateLessonHierarchy(ctx);
 
             var mRepo = new EfMaterialRepository(ctx);
 
             var material = new ReadingMaterialEntity(
                 materialId,
+                lessonId,
                 "To Delete",
                 "Content"
             );

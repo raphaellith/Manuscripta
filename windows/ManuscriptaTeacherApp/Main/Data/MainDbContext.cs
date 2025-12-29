@@ -11,7 +11,12 @@ public class MainDbContext : DbContext
     {
     }
 
-    // Create a DbSet<TEntity> property for each entity set, corresponding to a database table
+    // Hierarchy entities - Per PersistenceAndCascadingRules.md §1(1)(c-e)
+    public DbSet<UnitCollectionEntity> UnitCollections { get; set; }
+    public DbSet<UnitEntity> Units { get; set; }
+    public DbSet<LessonEntity> Lessons { get; set; }
+    
+    // Material/Question entities - Per PersistenceAndCascadingRules.md §1(1)(a-b)
     public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
     
@@ -31,26 +36,63 @@ public class MainDbContext : DbContext
         
         base.OnModelCreating(modelBuilder);
 
-        // Configure MaterialDataEntity
+        // Configure UnitCollectionEntity
+        modelBuilder.Entity<UnitCollectionEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        // Configure UnitEntity with cascade delete from UnitCollection
+        // Per PersistenceAndCascadingRules.md §2(3)
+        modelBuilder.Entity<UnitEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UnitCollectionId);
+            
+            entity.HasOne(u => u.UnitCollection)
+                .WithMany()
+                .HasForeignKey(u => u.UnitCollectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure LessonEntity with cascade delete from Unit
+        // Per PersistenceAndCascadingRules.md §2(4)
+        modelBuilder.Entity<LessonEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UnitId);
+            
+            entity.HasOne(l => l.Unit)
+                .WithMany()
+                .HasForeignKey(l => l.UnitId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure MaterialDataEntity with cascade delete from Lesson
+        // Per PersistenceAndCascadingRules.md §2(5)
         modelBuilder.Entity<MaterialDataEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.MaterialType).HasConversion<string>();
             entity.HasIndex(e => e.MaterialType);
             entity.HasIndex(e => e.Timestamp);
-            entity.HasIndex(e => e.Synced);
+            entity.HasIndex(e => e.LessonId);
+            
+            entity.HasOne(m => m.Lesson)
+                .WithMany()
+                .HasForeignKey(m => m.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure QuestionDataEntity
+        // Configure QuestionDataEntity with cascade delete from Material
+        // Per PersistenceAndCascadingRules.md §2(1)
         modelBuilder.Entity<QuestionDataEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.QuestionType).HasConversion<string>();
             entity.HasIndex(e => e.QuestionType);
             entity.HasIndex(e => e.MaterialId);
-            entity.HasIndex(e => e.Synced);
             
-            // Configure relationship with MaterialEntity
             entity.HasOne(q => q.Material)
                 .WithMany()
                 .HasForeignKey(q => q.MaterialId)

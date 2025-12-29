@@ -35,8 +35,7 @@ public class MaterialDataEntityTests
             Title = "Sample",
             Content = "Body",
             Metadata = "{\"a\":1}",
-            Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(12345),
-            Synced = true
+            Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(12345)
         };
 
         Assert.Equal(id, m.Id);
@@ -45,7 +44,6 @@ public class MaterialDataEntityTests
         Assert.Equal("Body", m.Content);
         Assert.Equal("{\"a\":1}", m.Metadata);
         Assert.Equal(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(12345), m.Timestamp);
-        Assert.True(m.Synced);
     }
 
     [Fact]

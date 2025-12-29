@@ -38,8 +38,7 @@ public class QuestionDataEntityTests
             QuestionText = "What is 2 + 2?",
             QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = new List<string> { "3", "4", "5" },
-            CorrectAnswer = "1",
-            Synced = true
+            CorrectAnswer = "1"
         };
 
         // Assert
@@ -49,7 +48,6 @@ public class QuestionDataEntityTests
         Assert.Equal(QuestionType.MULTIPLE_CHOICE, q.QuestionType);
         Assert.Equal(3, q.Options!.Count);
         Assert.Equal("1", q.CorrectAnswer);
-        Assert.True(q.Synced);
     }
 
     [Fact]

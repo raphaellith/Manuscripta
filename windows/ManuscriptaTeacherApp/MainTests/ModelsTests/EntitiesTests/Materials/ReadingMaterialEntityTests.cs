@@ -7,6 +7,8 @@ namespace MainTests.ModelsTests.EntitiesTests.Materials;
 
 public class ReadingMaterialEntityTests
 {
+    private readonly Guid _testLessonId = Guid.NewGuid();
+
     [Fact]
     public void Constructor_WithValidData_CreatesEntity()
     {
@@ -17,10 +19,11 @@ public class ReadingMaterialEntityTests
         var timestamp = DateTime.UtcNow;
 
         // Act
-        var entity = new ReadingMaterialEntity(id, title, content, timestamp);
+        var entity = new ReadingMaterialEntity(id, _testLessonId, title, content, timestamp);
 
         // Assert
         Assert.Equal(id, entity.Id);
+        Assert.Equal(_testLessonId, entity.LessonId);
         Assert.Equal(title, entity.Title);
         Assert.Equal(content, entity.Content);
         Assert.Equal(MaterialType.READING, entity.MaterialType);
@@ -41,7 +44,7 @@ public class ReadingMaterialEntityTests
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
 
         // Act
-        var entity = new ReadingMaterialEntity(id, title, content, timestamp, metadata, vocabularyTerms);
+        var entity = new ReadingMaterialEntity(id, _testLessonId, title, content, timestamp, metadata, vocabularyTerms);
 
         // Assert
         Assert.Equal(metadata, entity.Metadata);
@@ -56,7 +59,7 @@ public class ReadingMaterialEntityTests
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var entity = new ReadingMaterialEntity(id, "Title", "Content");
+        var entity = new ReadingMaterialEntity(id, _testLessonId, "Title", "Content");
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -68,7 +71,7 @@ public class ReadingMaterialEntityTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new ReadingMaterialEntity(Guid.NewGuid(), null!, "Content"));
+            new ReadingMaterialEntity(Guid.NewGuid(), _testLessonId, null!, "Content"));
     }
 
     [Fact]
@@ -76,6 +79,6 @@ public class ReadingMaterialEntityTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new ReadingMaterialEntity(Guid.NewGuid(), "Title", null!));
+            new ReadingMaterialEntity(Guid.NewGuid(), _testLessonId, "Title", null!));
     }
 }

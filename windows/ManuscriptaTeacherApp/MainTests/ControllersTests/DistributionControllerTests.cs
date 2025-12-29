@@ -21,6 +21,7 @@ public class DistributionControllerTests
 
     private readonly Guid _testDeviceId = Guid.NewGuid();
     private readonly Guid _testMaterialId = Guid.NewGuid();
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public DistributionControllerTests()
     {
@@ -53,7 +54,7 @@ public class DistributionControllerTests
     public async Task GetDistribution_ValidDeviceId_Returns200OK()
     {
         // Arrange
-        var material = new ReadingMaterialEntity(_testMaterialId, "Test Material", "Test Content");
+        var material = new ReadingMaterialEntity(_testMaterialId, _testLessonId, "Test Material", "Test Content");
 
         var questions = new List<QuestionEntity>
         {
@@ -76,7 +77,7 @@ public class DistributionControllerTests
     public async Task GetDistribution_ValidDeviceId_ReturnsMaterialsAndQuestions()
     {
         // Arrange
-        var material = new ReadingMaterialEntity(_testMaterialId, "Test Material", "Test Content");
+        var material = new ReadingMaterialEntity(_testMaterialId, _testLessonId, "Test Material", "Test Content");
 
         var questions = new List<QuestionEntity>
         {
@@ -178,8 +179,8 @@ public class DistributionControllerTests
     public async Task GetDistribution_MultipleMaterials_ReturnsAll()
     {
         // Arrange
-        var material1 = new ReadingMaterialEntity(Guid.NewGuid(), "Material 1", "Content 1");
-        var material2 = new ReadingMaterialEntity(Guid.NewGuid(), "Material 2", "Content 2");
+        var material1 = new ReadingMaterialEntity(Guid.NewGuid(), _testLessonId, "Material 1", "Content 1");
+        var material2 = new ReadingMaterialEntity(Guid.NewGuid(), _testLessonId, "Material 2", "Content 2");
 
         var bundle = new DistributionBundle(new[] { material1, material2 }, new List<QuestionEntity>());
         _mockDistributionService.Setup(x => x.GetDistributionBundleAsync(_testDeviceId))
