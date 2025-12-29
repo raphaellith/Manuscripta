@@ -28,7 +28,6 @@ public class QuestionEntityMapperTests
         Assert.Equal(QuestionType.MULTIPLE_CHOICE, dataEntity.QuestionType);
         Assert.Equal(options, dataEntity.Options);
         Assert.Equal("1", dataEntity.CorrectAnswer);
-        Assert.False(dataEntity.Synced);
     }
 
     [Fact]
@@ -49,7 +48,6 @@ public class QuestionEntityMapperTests
         Assert.Equal(QuestionType.TRUE_FALSE, dataEntity.QuestionType);
         Assert.Null(dataEntity.Options);
         Assert.Equal("True", dataEntity.CorrectAnswer);
-        Assert.False(dataEntity.Synced);
     }
 
     [Fact]
@@ -70,7 +68,6 @@ public class QuestionEntityMapperTests
         Assert.Equal(QuestionType.WRITTEN_ANSWER, dataEntity.QuestionType);
         Assert.Null(dataEntity.Options);
         Assert.Equal("Paris", dataEntity.CorrectAnswer);
-        Assert.False(dataEntity.Synced);
     }
 
     [Fact]
@@ -93,8 +90,7 @@ public class QuestionEntityMapperTests
             QuestionText = "Question?",
             QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = new List<string> { "A", "B", "C" },
-            CorrectAnswer = "2",
-            Synced = false
+            CorrectAnswer = "2"
         };
 
         // Act
@@ -123,8 +119,7 @@ public class QuestionEntityMapperTests
             MaterialId = materialId,
             QuestionText = "Is this true?",
             QuestionType = QuestionType.TRUE_FALSE,
-            CorrectAnswer = "False",
-            Synced = false
+            CorrectAnswer = "False"
         };
 
         // Act
@@ -152,8 +147,7 @@ public class QuestionEntityMapperTests
             MaterialId = materialId,
             QuestionText = "What is the answer?",
             QuestionType = QuestionType.WRITTEN_ANSWER,
-            CorrectAnswer = "42",
-            Synced = false
+            CorrectAnswer = "42"
         };
 
         // Act
@@ -187,8 +181,7 @@ public class QuestionEntityMapperTests
             QuestionText = "Question?",
             QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = new List<string> { "A", "B" },
-            CorrectAnswer = "not a number",
-            Synced = false
+            CorrectAnswer = "not a number"
         };
 
         // Act & Assert
@@ -205,8 +198,7 @@ public class QuestionEntityMapperTests
             MaterialId = Guid.NewGuid(),
             QuestionText = "Question?",
             QuestionType = QuestionType.TRUE_FALSE,
-            CorrectAnswer = "maybe",
-            Synced = false
+            CorrectAnswer = "maybe"
         };
 
         // Act & Assert

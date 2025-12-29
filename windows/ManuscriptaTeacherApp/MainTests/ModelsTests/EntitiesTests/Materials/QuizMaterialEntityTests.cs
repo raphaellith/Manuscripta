@@ -7,6 +7,8 @@ namespace MainTests.ModelsTests.EntitiesTests.Materials;
 
 public class QuizMaterialEntityTests
 {
+    private readonly Guid _testLessonId = Guid.NewGuid();
+
     [Fact]
     public void Constructor_WithValidData_CreatesEntity()
     {
@@ -16,10 +18,11 @@ public class QuizMaterialEntityTests
         var content = "Answer all questions to the best of your ability.";
 
         // Act
-        var entity = new QuizMaterialEntity(id, title, content);
+        var entity = new QuizMaterialEntity(id, _testLessonId, title, content);
 
         // Assert
         Assert.Equal(id, entity.Id);
+        Assert.Equal(_testLessonId, entity.LessonId);
         Assert.Equal(title, entity.Title);
         Assert.Equal(content, entity.Content);
         Assert.Equal(MaterialType.QUIZ, entity.MaterialType);
@@ -29,7 +32,7 @@ public class QuizMaterialEntityTests
     public void Constructor_SetsCorrectMaterialType()
     {
         // Arrange & Act
-        var entity = new QuizMaterialEntity(Guid.NewGuid(), "Title", "Content");
+        var entity = new QuizMaterialEntity(Guid.NewGuid(), _testLessonId, "Title", "Content");
 
         // Assert
         Assert.Equal(MaterialType.QUIZ, entity.MaterialType);

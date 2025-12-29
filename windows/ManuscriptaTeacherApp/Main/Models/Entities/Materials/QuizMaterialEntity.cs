@@ -11,8 +11,8 @@ public class QuizMaterialEntity : MaterialEntity
 {
     private QuizMaterialEntity() : base() { }
 
-    public QuizMaterialEntity(Guid id, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null)
-        : base(id, title, content, MaterialType.QUIZ, timestamp, metadata, vocabularyTerms)
+    public QuizMaterialEntity(Guid id, Guid lessonId, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null, int? readingAge = null, int? actualAge = null)
+        : base(id, lessonId, title, content, MaterialType.QUIZ, timestamp, metadata, vocabularyTerms, readingAge, actualAge)
     {
     }
 }
