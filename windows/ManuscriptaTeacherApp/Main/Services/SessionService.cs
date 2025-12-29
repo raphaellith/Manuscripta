@@ -89,24 +89,6 @@ public class SessionService : ISessionService
         return session;
     }
 
-    /// <inheritdoc/>
-    public async Task<IEnumerable<SessionEntity>> GetAllSessionsAsync()
-    {
-        return await _sessionRepository.GetAllAsync();
-    }
-
-    /// <inheritdoc/>
-    public async Task<SessionEntity?> GetSessionByIdAsync(Guid id)
-    {
-        return await _sessionRepository.GetByIdAsync(id);
-    }
-
-    /// <inheritdoc/>
-    public async Task DeleteSessionAsync(Guid id)
-    {
-        await _sessionRepository.DeleteAsync(id);
-    }
-
     #region Helpers
 
     /// <summary>
