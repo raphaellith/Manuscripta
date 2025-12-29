@@ -92,3 +92,4 @@ Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specificat
 - `ServiceSpec.md`, the specification regarding the service layer.
 - `PersistenceAndCascadingRules.md`, the rules for persisting models and cascading deletes.
 - `MaterialHierarchySpec.md`, the specification that defines the hierarchical system for grouping and organising Material items in the model layer.
+- `NetworkingSpec.md`, the networking specification that describes the bidirectional communication between its Electron front end and its ASP.NET Core back end.
