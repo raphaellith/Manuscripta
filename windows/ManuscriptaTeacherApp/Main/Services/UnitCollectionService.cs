@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Main.Models.Entities;
 using Main.Services.Repositories;
@@ -8,19 +7,16 @@ namespace Main.Services;
 
 /// <summary>
 /// Service for managing unit collections.
-/// Enforces business rules and handles cascade deletion per PersistenceAndCascadingRules.md §2(3).
+/// Enforces business rules per AdditionalValidationRules.md §2A.
+/// Cascade deletion of units is handled by database FK constraints per PersistenceAndCascadingRules.md §2(3).
 /// </summary>
 public class UnitCollectionService : IUnitCollectionService
 {
     private readonly IUnitCollectionRepository _repository;
-    private readonly IUnitRepository _unitRepository;
 
-    public UnitCollectionService(
-        IUnitCollectionRepository repository,
-        IUnitRepository unitRepository)
+    public UnitCollectionService(IUnitCollectionRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _unitRepository = unitRepository ?? throw new ArgumentNullException(nameof(unitRepository));
     }
 
     public async Task<UnitCollectionEntity> CreateAsync(UnitCollectionEntity entity)
@@ -50,15 +46,8 @@ public class UnitCollectionService : IUnitCollectionService
 
     public async Task DeleteAsync(Guid id)
     {
-        // Per PersistenceAndCascadingRules.md §2(3): Delete associated units first
-        // Note: Database cascade delete will handle this automatically,
-        // but we explicitly delete here for consistency with service-layer cascade pattern
-        var units = await _unitRepository.GetByUnitCollectionIdAsync(id);
-        foreach (var unit in units)
-        {
-            await _unitRepository.DeleteAsync(unit.Id);
-        }
-
+        // Cascade deletion of units is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(3)
         await _repository.DeleteAsync(id);
     }
 

@@ -1,22 +1,22 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
-using Main.Models.Entities.Questions;
-using Main.Models.Enums;
 using Main.Services;
 using Main.Services.Repositories;
 
 namespace MainTests.ServicesTests;
 
+/// <summary>
+/// Tests for MaterialService.
+/// Verifies service behavior per AdditionalValidationRules.md §2D.
+/// Cascade deletion is handled by database FK constraints per PersistenceAndCascadingRules.md §2(1).
+/// </summary>
 public class MaterialServiceTests
 {
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
-    private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<ILessonRepository> _mockLessonRepo;
     private readonly MaterialService _service;
     private readonly Guid _testLessonId = Guid.NewGuid();
@@ -24,14 +24,13 @@ public class MaterialServiceTests
     public MaterialServiceTests()
     {
         _mockMaterialRepo = new Mock<IMaterialRepository>();
-        _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockLessonRepo = new Mock<ILessonRepository>();
         
         // Setup default lesson validation to pass
         _mockLessonRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Test Lesson", "Description"));
         
-        _service = new MaterialService(_mockMaterialRepo.Object, _mockQuestionRepo.Object, _mockLessonRepo.Object);
+        _service = new MaterialService(_mockMaterialRepo.Object, _mockLessonRepo.Object);
     }
 
     #region Material Tests
@@ -204,31 +203,13 @@ public class MaterialServiceTests
     }
 
     [Fact]
-    public async Task DeleteMaterialAsync_WithQuestions_DeletesMaterialAndQuestions()
+    public async Task DeleteMaterialAsync_CallsRepository()
     {
         // Arrange
+        // Cascade deletion of questions is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(1)
         var materialId = Guid.NewGuid();
-        var questions = new List<QuestionEntity>
-        {
-            new MultipleChoiceQuestionEntity(
-                Guid.NewGuid(),
-                materialId,
-                "Question 1",
-                new List<string> { "A", "B", "C" },
-                0
-            ),
-            new TrueFalseQuestionEntity(
-                Guid.NewGuid(),
-                materialId,
-                "Question 2",
-                true
-            )
-        };
 
-        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
-            .ReturnsAsync(questions);
-        _mockQuestionRepo.Setup(r => r.DeleteAsync(It.IsAny<Guid>()))
-            .Returns(Task.CompletedTask);
         _mockMaterialRepo.Setup(r => r.DeleteAsync(materialId))
             .Returns(Task.CompletedTask);
 
@@ -236,10 +217,9 @@ public class MaterialServiceTests
         await _service.DeleteMaterialAsync(materialId);
 
         // Assert
-        _mockQuestionRepo.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Exactly(2));
         _mockMaterialRepo.Verify(r => r.DeleteAsync(materialId), Times.Once);
     }
 
-
     #endregion
 }
+

@@ -1,30 +1,26 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Main.Models.Entities;
-using Main.Models.Entities.Materials;
 using Main.Services.Repositories;
 
 namespace Main.Services;
 
 /// <summary>
 /// Service for managing lessons.
-/// Enforces business rules and handles cascade deletion per PersistenceAndCascadingRules.md §2(5).
+/// Enforces business rules per AdditionalValidationRules.md §2C.
+/// Cascade deletion of materials is handled by database FK constraints per PersistenceAndCascadingRules.md §2(5).
 /// </summary>
 public class LessonService : ILessonService
 {
     private readonly ILessonRepository _repository;
     private readonly IUnitRepository _unitRepository;
-    private readonly IMaterialRepository _materialRepository;
 
     public LessonService(
         ILessonRepository repository,
-        IUnitRepository unitRepository,
-        IMaterialRepository materialRepository)
+        IUnitRepository unitRepository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitRepository = unitRepository ?? throw new ArgumentNullException(nameof(unitRepository));
-        _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
     }
 
     public async Task<LessonEntity> CreateAsync(LessonEntity entity)
@@ -54,15 +50,8 @@ public class LessonService : ILessonService
 
     public async Task DeleteAsync(Guid id)
     {
-        // Per PersistenceAndCascadingRules.md §2(5): Delete associated materials first
-        // Get all materials and delete those associated with this lesson
-        var allMaterials = await _materialRepository.GetAllAsync();
-        foreach (var material in allMaterials)
-        {
-            // MaterialEntity doesn't have LessonId (it's in MaterialDataEntity)
-            // The cascade delete in the database handles this automatically
-        }
-
+        // Cascade deletion of materials is handled by database FK constraints
+        // per PersistenceAndCascadingRules.md §2(5)
         await _repository.DeleteAsync(id);
     }
 
