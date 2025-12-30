@@ -117,16 +117,25 @@ public class TcpPairingServiceTests : IDisposable
     [Fact]
     public async Task IsListening_AfterStopping_ReturnsFalse()
     {
-        // Arrange
+        // Arrange - Use a dedicated service with its own port to avoid conflicts
+        var dedicatedOptions = Options.Create(new NetworkSettings
+        {
+            HttpPort = 5911,
+            TcpPort = new Random().Next(10000, 60000),
+            UdpBroadcastPort = 5913,
+            BroadcastIntervalMs = 3000
+        });
+        using var dedicatedService = new TcpPairingService(dedicatedOptions, _serviceProvider, _mockLogger.Object, _mockRefreshConfigTracker.Object);
+        
         using var cts = new CancellationTokenSource();
-        var listenTask = _service.StartListeningAsync(cts.Token);
-        await Task.Delay(50);
+        var listenTask = dedicatedService.StartListeningAsync(cts.Token);
+        await Task.Delay(100); // Give it more time to start
 
         // Act
-        _service.StopListening();
+        dedicatedService.StopListening();
         
         // Assert
-        Assert.False(_service.IsListening);
+        Assert.False(dedicatedService.IsListening);
         
         // Cleanup
         cts.Cancel();
@@ -156,13 +165,22 @@ public class TcpPairingServiceTests : IDisposable
     [Fact]
     public async Task StartListeningAsync_CalledTwice_LogsWarning()
     {
-        // Arrange
+        // Arrange - Use a dedicated service with its own port to avoid conflicts
+        var dedicatedOptions = Options.Create(new NetworkSettings
+        {
+            HttpPort = 5911,
+            TcpPort = new Random().Next(10000, 60000),
+            UdpBroadcastPort = 5913,
+            BroadcastIntervalMs = 3000
+        });
+        using var dedicatedService = new TcpPairingService(dedicatedOptions, _serviceProvider, _mockLogger.Object, _mockRefreshConfigTracker.Object);
+        
         using var cts = new CancellationTokenSource();
-        var listenTask1 = _service.StartListeningAsync(cts.Token);
-        await Task.Delay(50);
+        var listenTask1 = dedicatedService.StartListeningAsync(cts.Token);
+        await Task.Delay(100);
 
         // Act
-        var listenTask2 = _service.StartListeningAsync(cts.Token);
+        var listenTask2 = dedicatedService.StartListeningAsync(cts.Token);
         await listenTask2; // Should return immediately
 
         // Assert - Verify warning was logged

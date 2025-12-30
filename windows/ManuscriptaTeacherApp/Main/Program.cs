@@ -19,6 +19,18 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
 builder.Services.AddScoped<DeviceIdValidator>();
 
+// Register repository services for hub
+builder.Services.AddScoped<Main.Services.Repositories.IUnitCollectionRepository, Main.Services.Repositories.EfUnitCollectionRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IUnitRepository, Main.Services.Repositories.EfUnitRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.ILessonRepository, Main.Services.Repositories.EfLessonRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IMaterialRepository, Main.Services.Repositories.EfMaterialRepository>();
+
+// Register CRUD services for hub
+builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+builder.Services.AddScoped<IMaterialService, MaterialService>();
+
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
@@ -30,7 +42,23 @@ builder.Services.AddHostedService<TcpPairingHostedService>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
+// Enable CORS for Electron renderer (running on different port)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowElectron", policy =>
+    {
+        policy.WithOrigins("http://localhost:9000", "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
@@ -38,6 +66,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
+
+// Apply CORS policy
+app.UseCors("AllowElectron");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -52,7 +83,7 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 
 app.MapControllers();
-app.MapHub<Main.Services.Hubs.MainHub>("/hub");
+app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/hub");
 
 app.Run();
 
