@@ -92,6 +92,5 @@ Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specificat
 - `WindowsAppStructure.md`, defines the directory structure and hierarchy of layers for the Windows app.
 - `PersistenceAndCascadingRules.md`, the rules for persisting models and cascading deletes.
 - `AdditionalValidationRules.md`, defines the material hierarchy and additional Windows-specific validation rules per `Validation Rules.md` §1(7).
-- `MaterialHierarchySpec.md`, the specification that defines the hierarchical system for grouping and organising Material items in the model layer.
 - `NetworkingAPISpec.md`, the networking specification that describes the bidirectional communication methods between its Electron front end and its ASP.NET Core back end.
 - `NetworkingInteractionSpec.md`, the networking specification that describes how server methods and client handlers are expected to interact
