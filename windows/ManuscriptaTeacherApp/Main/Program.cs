@@ -30,6 +30,7 @@ builder.Services.AddHostedService<TcpPairingHostedService>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -51,6 +52,7 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 
 app.MapControllers();
+app.MapHub<Main.Services.Hubs.MainHub>("/hub");
 
 app.Run();
 
