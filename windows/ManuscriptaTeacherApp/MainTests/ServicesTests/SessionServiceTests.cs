@@ -19,6 +19,7 @@ public class SessionServiceTests
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
     private readonly DeviceIdValidator _deviceIdValidator;
     private readonly SessionService _service;
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public SessionServiceTests()
     {
@@ -41,7 +42,7 @@ public class SessionServiceTests
     {
         // Arrange - §2(3)(a)
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,
@@ -69,7 +70,7 @@ public class SessionServiceTests
     {
         // Arrange - §2D(3)(a) compliant
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,
@@ -131,7 +132,7 @@ public class SessionServiceTests
     {
         // Arrange - §2D(3)(a): Non-active sessions must have EndTime
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Test Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Test Material", "Content");
         var session = new SessionEntity(
             Guid.NewGuid(),
             materialId,
@@ -334,106 +335,6 @@ public class SessionServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CancelSessionAsync(sessionId));
         Assert.Contains("not found", exception.Message);
-    }
-
-    #endregion
-
-    #region GetAllSessionsAsync Tests
-
-    [Fact]
-    public async Task GetAllSessionsAsync_ReturnsSessions()
-    {
-        // Arrange - §2(3)(c)
-        var sessions = new List<SessionEntity>
-        {
-            new SessionEntity(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, SessionStatus.ACTIVE, Guid.NewGuid()),
-            new SessionEntity(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddHours(-1), SessionStatus.COMPLETED, Guid.NewGuid(), DateTime.UtcNow)
-        };
-
-        _mockSessionRepo.Setup(r => r.GetAllAsync())
-            .ReturnsAsync(sessions);
-
-        // Act
-        var result = await _service.GetAllSessionsAsync();
-
-        // Assert
-        Assert.Equal(2, result.Count());
-    }
-
-    [Fact]
-    public async Task GetAllSessionsAsync_EmptyRepository_ReturnsEmptyCollection()
-    {
-        // Arrange
-        _mockSessionRepo.Setup(r => r.GetAllAsync())
-            .ReturnsAsync(new List<SessionEntity>());
-
-        // Act
-        var result = await _service.GetAllSessionsAsync();
-
-        // Assert
-        Assert.Empty(result);
-    }
-
-    #endregion
-
-    #region GetSessionByIdAsync Tests
-
-    [Fact]
-    public async Task GetSessionByIdAsync_ExistingSession_ReturnsSession()
-    {
-        // Arrange - §2(3)(d)
-        var sessionId = Guid.NewGuid();
-        var session = new SessionEntity(
-            sessionId,
-            Guid.NewGuid(),
-            DateTime.UtcNow,
-            SessionStatus.ACTIVE,
-            Guid.NewGuid()
-        );
-
-        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId))
-            .ReturnsAsync(session);
-
-        // Act
-        var result = await _service.GetSessionByIdAsync(sessionId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(sessionId, result!.Id);
-    }
-
-    [Fact]
-    public async Task GetSessionByIdAsync_NonExistingSession_ReturnsNull()
-    {
-        // Arrange
-        var sessionId = Guid.NewGuid();
-        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId))
-            .ReturnsAsync((SessionEntity?)null);
-
-        // Act
-        var result = await _service.GetSessionByIdAsync(sessionId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    #endregion
-
-    #region DeleteSessionAsync Tests
-
-    [Fact]
-    public async Task DeleteSessionAsync_CallsRepositoryDelete()
-    {
-        // Arrange - §2(3)(e)
-        var sessionId = Guid.NewGuid();
-        _mockSessionRepo.Setup(r => r.DeleteAsync(sessionId))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _service.DeleteSessionAsync(sessionId);
-
-        // Assert
-        _mockSessionRepo.Verify(r => r.DeleteAsync(sessionId), Times.Once);
     }
 
     #endregion

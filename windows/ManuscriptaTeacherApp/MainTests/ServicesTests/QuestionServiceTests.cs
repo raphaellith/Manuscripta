@@ -18,6 +18,7 @@ public class QuestionServiceTests
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly QuestionService _service;
+    private readonly Guid _testLessonId = Guid.NewGuid();
 
     public QuestionServiceTests()
     {
@@ -34,6 +35,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(
             materialId,
+            _testLessonId,
             "Worksheet",
             "Content"
         );
@@ -72,7 +74,7 @@ public class QuestionServiceTests
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
         var question = new TrueFalseQuestionEntity(
             Guid.NewGuid(),
             materialId,
@@ -116,6 +118,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new ReadingMaterialEntity(
             materialId,
+            _testLessonId,
             "Reading Material",
             "Content"
         );
@@ -143,6 +146,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new PollMaterialEntity(
             materialId,
+            _testLessonId,
             "Poll",
             "Content"
         );
@@ -169,6 +173,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new QuizMaterialEntity(
             materialId,
+            _testLessonId,
             "Quiz",
             "Content"
         );
@@ -195,6 +200,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(
             materialId,
+            _testLessonId,
             "Worksheet",
             "Content"
         );
@@ -225,6 +231,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new PollMaterialEntity(
             materialId,
+            _testLessonId,
             "Poll",
             "Content"
         );
@@ -256,6 +263,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new QuizMaterialEntity(
             materialId,
+            _testLessonId,
             "Quiz",
             "Content"
         );
@@ -281,74 +289,11 @@ public class QuestionServiceTests
     }
 
     [Fact]
-    public async Task GetQuestionByIdAsync_ExistingQuestion_ReturnsQuestion()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            true
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act
-        var result = await _service.GetQuestionByIdAsync(questionId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(questionId, result!.Id);
-        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetQuestionByIdAsync_NonExistingQuestion_ReturnsNull()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync((QuestionEntity?)null);
-
-        // Act
-        var result = await _service.GetQuestionByIdAsync(questionId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetQuestionsByMaterialIdAsync_ReturnsQuestions()
-    {
-        // Arrange
-        var materialId = Guid.NewGuid();
-        var questions = new List<QuestionEntity>
-        {
-            new TrueFalseQuestionEntity(Guid.NewGuid(), materialId, "Q1", true),
-            new MultipleChoiceQuestionEntity(Guid.NewGuid(), materialId, "Q2", 
-                new List<string> { "A", "B" }, 0)
-        };
-
-        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
-            .ReturnsAsync(questions);
-
-        // Act
-        var result = await _service.GetQuestionsByMaterialIdAsync(materialId);
-
-        // Assert
-        var resultList = result.ToList();
-        Assert.Equal(2, resultList.Count);
-        _mockQuestionRepo.Verify(r => r.GetByMaterialIdAsync(materialId), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateQuestionAsync_ValidQuestion_Success()
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
         var question = new TrueFalseQuestionEntity(
             Guid.NewGuid(),
             materialId,
@@ -385,7 +330,7 @@ public class QuestionServiceTests
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
         var question = new TrueFalseQuestionEntity(
             Guid.NewGuid(),
             materialId,
@@ -409,7 +354,7 @@ public class QuestionServiceTests
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var material = new ReadingMaterialEntity(materialId, "Reading", "Content");
+        var material = new ReadingMaterialEntity(materialId, _testLessonId, "Reading", "Content");
         var question = new TrueFalseQuestionEntity(
             Guid.NewGuid(),
             materialId,
@@ -432,7 +377,7 @@ public class QuestionServiceTests
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(materialId, "Material", "Content");
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
         var question = new TrueFalseQuestionEntity(
             Guid.NewGuid(),
             materialId,
@@ -457,6 +402,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new PollMaterialEntity(
             materialId,
+            _testLessonId,
             "Poll",
             "Content"
         );
@@ -484,6 +430,7 @@ public class QuestionServiceTests
         var materialId = Guid.NewGuid();
         var material = new QuizMaterialEntity(
             materialId,
+            _testLessonId,
             "Quiz",
             "Content"
         );

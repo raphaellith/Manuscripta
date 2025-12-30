@@ -23,6 +23,8 @@ This document is effective for the Windows app only.
     (a) "Long-term persistence" means that data must be retrievable after the application restarts.
     (b) "Short-term persistence" means that unless otherwise specified, data must be retrievable during the corresponding application run, but must not be persisted beyond the application run.
 
+(4) The provisions in this document shall define required outcome behaviour. They do not mandate any particular implementation mechanism. An implementation that achieves these outcomes through any means (including but not limited to database foreign key constraints, service-layer logic, or any combination thereof) shall be considered compliant.
+
 ## Section 2 - Requirements for Orphan Removal
 
 (1) The deletion of a material M must delete any questions associated with M.

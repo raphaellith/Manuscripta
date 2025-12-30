@@ -34,16 +34,6 @@ public class ResponseService : IResponseService
         return response;
     }
 
-    public async Task<ResponseEntity?> GetResponseByIdAsync(Guid id)
-    {
-        return await _responseRepository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<ResponseEntity>> GetResponsesByQuestionIdAsync(Guid questionId)
-    {
-        return await _responseRepository.GetByQuestionIdAsync(questionId);
-    }
-
     public async Task<ResponseEntity> UpdateResponseAsync(ResponseEntity response)
     {
         if (response == null)
@@ -59,11 +49,6 @@ public class ResponseService : IResponseService
 
         await _responseRepository.UpdateAsync(response);
         return response;
-    }
-
-    public async Task DeleteResponseAsync(Guid id)
-    {
-        await _responseRepository.DeleteAsync(id);
     }
 
     #region Validation

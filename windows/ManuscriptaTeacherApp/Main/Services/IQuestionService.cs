@@ -11,8 +11,6 @@ namespace Main.Services;
 public interface IQuestionService
 {
     Task<QuestionEntity> CreateQuestionAsync(QuestionEntity question);
-    Task<QuestionEntity?> GetQuestionByIdAsync(Guid id);
-    Task<IEnumerable<QuestionEntity>> GetQuestionsByMaterialIdAsync(Guid materialId);
     Task<QuestionEntity> UpdateQuestionAsync(QuestionEntity question);
     Task DeleteQuestionAsync(Guid id);
 }

@@ -20,13 +20,15 @@ public static class MaterialEntityMapper
         return new MaterialDataEntity
         {
             Id = entity.Id,
+            LessonId = entity.LessonId,
             MaterialType = entity.MaterialType,
             Title = entity.Title,
             Content = entity.Content,
             Metadata = entity.Metadata,
             VocabularyTerms = entity.VocabularyTerms ?? new System.Text.Json.Nodes.JsonArray(),
             Timestamp = entity.Timestamp,
-            Synced = false
+            ReadingAge = entity.ReadingAge,
+            ActualAge = entity.ActualAge
         };
     }
 
@@ -42,35 +44,47 @@ public static class MaterialEntityMapper
         {
             MaterialType.READING => new ReadingMaterialEntity(
                 id: dataEntity.Id,
+                lessonId: dataEntity.LessonId,
                 title: dataEntity.Title ?? string.Empty,
                 content: dataEntity.Content ?? string.Empty,
                 timestamp: dataEntity.Timestamp,
                 metadata: dataEntity.Metadata,
-                vocabularyTerms: dataEntity.VocabularyTerms
+                vocabularyTerms: dataEntity.VocabularyTerms,
+                readingAge: dataEntity.ReadingAge,
+                actualAge: dataEntity.ActualAge
             ),
             MaterialType.WORKSHEET => new WorksheetMaterialEntity(
                 id: dataEntity.Id,
+                lessonId: dataEntity.LessonId,
                 title: dataEntity.Title ?? string.Empty,
                 content: dataEntity.Content ?? string.Empty,
                 timestamp: dataEntity.Timestamp,
                 metadata: dataEntity.Metadata,
-                vocabularyTerms: dataEntity.VocabularyTerms
+                vocabularyTerms: dataEntity.VocabularyTerms,
+                readingAge: dataEntity.ReadingAge,
+                actualAge: dataEntity.ActualAge
             ),
             MaterialType.POLL => new PollMaterialEntity(
                 id: dataEntity.Id,
+                lessonId: dataEntity.LessonId,
                 title: dataEntity.Title ?? string.Empty,
                 content: dataEntity.Content ?? string.Empty,
                 timestamp: dataEntity.Timestamp,
                 metadata: dataEntity.Metadata,
-                vocabularyTerms: dataEntity.VocabularyTerms
+                vocabularyTerms: dataEntity.VocabularyTerms,
+                readingAge: dataEntity.ReadingAge,
+                actualAge: dataEntity.ActualAge
             ),
             MaterialType.QUIZ => new QuizMaterialEntity(
                 id: dataEntity.Id,
+                lessonId: dataEntity.LessonId,
                 title: dataEntity.Title ?? string.Empty,
                 content: dataEntity.Content ?? string.Empty,
                 timestamp: dataEntity.Timestamp,
                 metadata: dataEntity.Metadata,
-                vocabularyTerms: dataEntity.VocabularyTerms
+                vocabularyTerms: dataEntity.VocabularyTerms,
+                readingAge: dataEntity.ReadingAge,
+                actualAge: dataEntity.ActualAge
             ),
             _ => throw new InvalidOperationException($"Unknown material type: {dataEntity.MaterialType}")
         };

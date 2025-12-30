@@ -11,9 +11,6 @@ namespace Main.Services;
 public interface IResponseService
 {
     Task<ResponseEntity> CreateResponseAsync(ResponseEntity response);
-    Task<ResponseEntity?> GetResponseByIdAsync(Guid id);
-    Task<IEnumerable<ResponseEntity>> GetResponsesByQuestionIdAsync(Guid questionId);
     Task<ResponseEntity> UpdateResponseAsync(ResponseEntity response);
-    Task DeleteResponseAsync(Guid id);
 }
 

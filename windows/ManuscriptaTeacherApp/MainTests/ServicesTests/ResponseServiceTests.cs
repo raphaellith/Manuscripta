@@ -319,68 +319,6 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task GetResponseByIdAsync_ExistingResponse_ReturnsResponse()
-    {
-        // Arrange
-        var responseId = Guid.NewGuid();
-        var response = new TrueFalseResponseEntity(
-            responseId,
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            true
-        );
-
-        _mockResponseRepo.Setup(r => r.GetByIdAsync(responseId))
-            .ReturnsAsync(response);
-
-        // Act
-        var result = await _service.GetResponseByIdAsync(responseId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(responseId, result!.Id);
-        _mockResponseRepo.Verify(r => r.GetByIdAsync(responseId), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetResponseByIdAsync_NonExistingResponse_ReturnsNull()
-    {
-        // Arrange
-        var responseId = Guid.NewGuid();
-        _mockResponseRepo.Setup(r => r.GetByIdAsync(responseId))
-            .ReturnsAsync((ResponseEntity?)null);
-
-        // Act
-        var result = await _service.GetResponseByIdAsync(responseId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetResponsesByQuestionIdAsync_ReturnsResponses()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        var responses = new List<ResponseEntity>
-        {
-            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), true),
-            new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), false)
-        };
-
-        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
-            .ReturnsAsync(responses);
-
-        // Act
-        var result = await _service.GetResponsesByQuestionIdAsync(questionId);
-
-        // Assert
-        var resultList = result.ToList();
-        Assert.Equal(2, resultList.Count);
-        _mockResponseRepo.Verify(r => r.GetByQuestionIdAsync(questionId), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateResponseAsync_ValidResponse_Success()
     {
         // Arrange
@@ -497,20 +435,5 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateResponseAsync(response));
         Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task DeleteResponseAsync_CallsRepository()
-    {
-        // Arrange
-        var responseId = Guid.NewGuid();
-        _mockResponseRepo.Setup(r => r.DeleteAsync(responseId))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _service.DeleteResponseAsync(responseId);
-
-        // Assert
-        _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 }

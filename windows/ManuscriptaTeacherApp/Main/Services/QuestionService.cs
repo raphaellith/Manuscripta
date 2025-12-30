@@ -40,16 +40,6 @@ public class QuestionService : IQuestionService
         return question;
     }
 
-    public async Task<QuestionEntity?> GetQuestionByIdAsync(Guid id)
-    {
-        return await _questionRepository.GetByIdAsync(id);
-    }
-
-    public async Task<IEnumerable<QuestionEntity>> GetQuestionsByMaterialIdAsync(Guid materialId)
-    {
-        return await _questionRepository.GetByMaterialIdAsync(materialId);
-    }
-
     public async Task<QuestionEntity> UpdateQuestionAsync(QuestionEntity question)
     {
         if (question == null)
