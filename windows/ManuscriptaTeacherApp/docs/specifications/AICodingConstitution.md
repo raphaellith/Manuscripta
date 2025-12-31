@@ -89,7 +89,8 @@ Project-wide specifications, located in `main` branch, `/docs`:
 Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specifications`, `windows-app` branch:
 
 - `AICodingConstitution.md`, this document.
-- `ServiceSpec.md`, the specification regarding the service layer.
+- `WindowsAppStructure.md`, defines the directory structure and hierarchy of layers for the Windows app.
 - `PersistenceAndCascadingRules.md`, the rules for persisting models and cascading deletes.
-- `MaterialHierarchySpec.md`, the specification that defines the hierarchical system for grouping and organising Material items in the model layer.
-- `NetworkingSpec.md`, the networking specification that describes the bidirectional communication between its Electron front end and its ASP.NET Core back end.
+- `AdditionalValidationRules.md`, defines the material hierarchy and additional Windows-specific validation rules per `Validation Rules.md` §1(7).
+- `NetworkingAPISpec.md`, the networking specification that describes the bidirectional communication methods between its Electron front end and its ASP.NET Core back end.
+- `NetworkingInteractionSpec.md`, the networking specification that describes how server methods and client handlers are expected to interact
