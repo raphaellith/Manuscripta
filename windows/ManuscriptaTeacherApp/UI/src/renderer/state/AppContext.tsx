@@ -81,6 +81,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         try {
             setState(prev => ({ ...prev, isLoading: true, error: null }));
 
+            // Ensure connection is established before fetching
+            await signalRService.startConnection();
+            setState(prev => ({ ...prev, isConnected: true }));
+
             const [collections, units, lessons, materials] = await Promise.all([
                 signalRService.getAllUnitCollections(),
                 signalRService.getAllUnits(),
@@ -100,17 +104,28 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             console.error('Failed to fetch data:', err);
             setState(prev => ({
                 ...prev,
+                isConnected: false,
                 isLoading: false,
-                error: 'Failed to load data from server.',
+                error: 'Unable to load your library. Please try again.',
             }));
         }
     }, []);
 
     useEffect(() => {
         const init = async () => {
-            await signalRService.startConnection();
-            setState(prev => ({ ...prev, isConnected: true }));
-            await fetchAllData();
+            try {
+                await signalRService.startConnection();
+                setState(prev => ({ ...prev, isConnected: true }));
+                await fetchAllData();
+            } catch (err) {
+                console.error('Failed to initialize connection:', err);
+                setState(prev => ({
+                    ...prev,
+                    isConnected: false,
+                    isLoading: false,
+                    error: 'Unable to load your library. Please ensure the application is running and try again.',
+                }));
+            }
         };
         init();
         return () => signalRService.stopConnection();

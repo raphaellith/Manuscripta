@@ -19,22 +19,38 @@ class SignalRService {
 
     constructor() {
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5913/hub")
+            .withUrl("http://localhost:5910/hub")
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build();
     }
 
-    public async startConnection(): Promise<void> {
-        try {
-            if (this.connection.state === signalR.HubConnectionState.Disconnected) {
+    /**
+     * Starts the SignalR connection with automatic retries.
+     * Returns a promise that resolves when connection is established.
+     */
+    public async startConnection(maxRetries = 5, retryDelayMs = 2000): Promise<void> {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                if (this.connection.state === signalR.HubConnectionState.Connected) {
+                    return; // Already connected
+                }
+                if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
+                    // Wait a bit if in transitional state
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    continue;
+                }
                 await this.connection.start();
                 console.log("SignalR Connection Started.");
+                return; // Success
+            } catch (err) {
+                console.error(`SignalR connection attempt ${attempt}/${maxRetries} failed:`, err);
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                }
             }
-        } catch (err) {
-            console.error("Error while starting SignalR connection: " + err);
-            setTimeout(() => this.startConnection(), 5000);
         }
+        throw new Error("Failed to establish connection after multiple attempts.");
     }
 
     public stopConnection(): void {
