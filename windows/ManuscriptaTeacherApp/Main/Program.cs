@@ -36,9 +36,11 @@ builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
 builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 
-// Register background services for UDP broadcasting and TCP pairing
-builder.Services.AddHostedService<UdpBroadcastHostedService>();
-builder.Services.AddHostedService<TcpPairingHostedService>();
+// NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
+// They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
+// The services are registered as singletons above and can be injected where needed.
+// builder.Services.AddHostedService<UdpBroadcastHostedService>();
+// builder.Services.AddHostedService<TcpPairingHostedService>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
