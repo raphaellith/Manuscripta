@@ -109,11 +109,12 @@ public class DistributionServiceTests
 
         var questions = new List<QuestionEntity>
         {
-            new TrueFalseQuestionEntity(
+            new MultipleChoiceQuestionEntity(
                 Guid.NewGuid(),
                 _testMaterialId,
                 "Is this a test?",
-                true)
+                new List<string> { "Yes", "No" },
+                0)
         };
 
         _mockQuestionRepo.Setup(x => x.GetByMaterialIdAsync(_testMaterialId))

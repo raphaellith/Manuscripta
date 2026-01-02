@@ -58,7 +58,7 @@ public class DistributionControllerTests
 
         var questions = new List<QuestionEntity>
         {
-            new TrueFalseQuestionEntity(Guid.NewGuid(), _testMaterialId, "Is this a test?", true)
+            new MultipleChoiceQuestionEntity(Guid.NewGuid(), _testMaterialId, "Is this a test?", new List<string> { "Yes", "No" }, 0)
         };
 
         var bundle = new DistributionBundle(new[] { material }, questions);
@@ -81,7 +81,7 @@ public class DistributionControllerTests
 
         var questions = new List<QuestionEntity>
         {
-            new TrueFalseQuestionEntity(Guid.NewGuid(), _testMaterialId, "Is this a test?", true)
+            new MultipleChoiceQuestionEntity(Guid.NewGuid(), _testMaterialId, "Is this a test?", new List<string> { "Yes", "No" }, 0)
         };
 
         var bundle = new DistributionBundle(new[] { material }, questions);

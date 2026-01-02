@@ -84,14 +84,11 @@ public class QuestionService : IQuestionService
         if (material.MaterialType == MaterialType.READING)
             throw new InvalidOperationException("Questions cannot be associated with reading materials.");
 
-        // Rule 2B(3)(b): Written Questions must not be associated with Polls and Quizzes
+        // Rule 2B(3)(b): Written Questions must not be associated with Polls
         if (question is WrittenAnswerQuestionEntity)
         {
             if (material.MaterialType == MaterialType.POLL)
                 throw new InvalidOperationException("Written answer questions cannot be associated with polls.");
-
-            if (material.MaterialType == MaterialType.QUIZ)
-                throw new InvalidOperationException("Written answer questions cannot be associated with quizzes.");
         }
     }
 

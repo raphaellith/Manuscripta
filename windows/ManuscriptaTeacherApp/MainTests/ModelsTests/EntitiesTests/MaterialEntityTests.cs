@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Nodes;
 using Xunit;
 using Main.Models.Entities;
 using Main.Models.Enums;
@@ -31,7 +30,7 @@ public class MaterialDataEntityTests
         var m = new MaterialDataEntity
         {
             Id = id,
-            MaterialType = MaterialType.QUIZ,
+            MaterialType = MaterialType.WORKSHEET,
             Title = "Sample",
             Content = "Body",
             Metadata = "{\"a\":1}",
@@ -39,7 +38,7 @@ public class MaterialDataEntityTests
         };
 
         Assert.Equal(id, m.Id);
-        Assert.Equal(MaterialType.QUIZ, m.MaterialType);
+        Assert.Equal(MaterialType.WORKSHEET, m.MaterialType);
         Assert.Equal("Sample", m.Title);
         Assert.Equal("Body", m.Content);
         Assert.Equal("{\"a\":1}", m.Metadata);
@@ -54,11 +53,9 @@ public class MaterialDataEntityTests
         var reading = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.READING, Title = "R", Content = "C", Timestamp = epoch.AddSeconds(1) };
         var worksheet = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.WORKSHEET, Title = "W", Content = "C", Timestamp = epoch.AddSeconds(1) };
         var poll = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.POLL, Title = "P", Content = "C", Timestamp = epoch.AddSeconds(1) };
-        var quiz = new MaterialDataEntity { Id = Guid.NewGuid(), MaterialType = MaterialType.QUIZ, Title = "Q", Content = "C", Timestamp = epoch.AddSeconds(1) };
 
         Assert.Equal(MaterialType.READING, reading.MaterialType);
         Assert.Equal(MaterialType.WORKSHEET, worksheet.MaterialType);
         Assert.Equal(MaterialType.POLL, poll.MaterialType);
-        Assert.Equal(MaterialType.QUIZ, quiz.MaterialType);
     }
 }

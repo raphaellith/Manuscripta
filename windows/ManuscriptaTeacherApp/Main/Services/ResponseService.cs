@@ -86,7 +86,6 @@ public class ResponseService : IResponseService
         var isValid = (response, question) switch
         {
             (MultipleChoiceResponseEntity, MultipleChoiceQuestionEntity) => true,
-            (TrueFalseResponseEntity, TrueFalseQuestionEntity) => true,
             (WrittenAnswerResponseEntity, WrittenAnswerQuestionEntity) => true,
             _ => false
         };
