@@ -89,12 +89,11 @@ Where `marker-name` shall be the marker type and attributes shall be specified a
 (3) **Centred Text**. Text shall be centred using the `center` marker:
 
 ```
-:::center
-This text will be centred.
-:::
+!!! center
+    This text will be centred.
 ```
 
-    (a) Content within the marker may include other markdown elements.
+    (a) Content within the marker may include other markdown elements, each line indented by four spaces.
     (b) Nested custom markers shall not be supported.
 
 (4) **Question Reference**. A reference to a `QuestionEntity` shall be embedded using the `question` marker:
