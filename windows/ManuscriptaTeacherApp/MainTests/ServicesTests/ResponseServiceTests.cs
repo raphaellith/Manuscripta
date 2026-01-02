@@ -175,7 +175,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_TrueFalseResponse_Success()
+    public async Task CreateResponseAsync_MultipleChoiceWithTrueFalseOptions_Success()
     {
         // Arrange - Now uses multiple choice with True/False options
         var questionId = Guid.NewGuid();
