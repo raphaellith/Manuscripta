@@ -40,7 +40,7 @@ If validation rules in API Contract are in contradiction to this document, this 
         (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
         (iv) QUIZ - Multiple Choice Quizzes
     (b) `Title` (String). Maximum Length = 500 Characters.
-    (c) `Content` (String).
+    (c) `Content` (String). Refer to Material Encoding Specification for encoding rules.
     (d) `Timestamp` (Long). The unix timestamp of the previous modification.
 
 (2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
