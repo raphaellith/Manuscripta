@@ -80,8 +80,7 @@ Where `marker-name` shall be the marker type and attributes shall be specified a
 (2) **PDF Embed**. PDF documents shall be embedded using the `pdf` marker:
 
 ```
-:::pdf{id="attachment-uuid"}
-:::
+!!! pdf id="attachment-uuid"
 ```
 
     (a) The `id` attribute shall be mandatory and shall reference a valid attachment.
