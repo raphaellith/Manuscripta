@@ -125,6 +125,6 @@ This text will be centred.
 | Inline LaTeX | `$...$` | `$x^2 + y^2 = z^2$` |
 | Block LaTeX | `$$...$$` | `$$\int_0^1 f(x) dx$$` |
 | Image | `![alt](/attachments/id)` | `![diagram](/attachments/abc-123)` |
-| PDF embed | `:::pdf{id="..."}:::` | `:::pdf{id="abc-123"}:::` |
-| Centred text | `:::center ... :::` | See §4(3) |
-| Question ref | `:::question{id="..."}:::` | See §4(4) |
+| PDF embed | `!!! pdf id="..."` | `!!! pdf id="abc-123"` |
+| Centred text | `!!! center` | See §4(3) |
+| Question ref | `!!! question id="..."` | See §4(4) |
