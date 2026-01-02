@@ -76,14 +76,20 @@ public class MulticastLockManager {
     /**
      * Acquires a multicast lock to enable UDP broadcast reception.
      *
-     * <p>This method is idempotent; calling it when a lock is already held does nothing.</p>
+     * <p>This method is idempotent and thread-safe; calling it when a lock is already held
+     * does nothing.</p>
      *
      * @param context The context to acquire the lock with.
      * @return true if the lock was acquired successfully, false otherwise.
      */
-    public boolean acquire(@NonNull Context context) {
+    public synchronized boolean acquire(@NonNull Context context) {
         if (multicastLock != null && multicastLock.isHeld()) {
             return true;
+        }
+
+        // Ensure required permissions are granted before attempting to acquire the lock
+        if (!hasRequiredPermissions(context)) {
+            return false;
         }
 
         WifiManager wifiManager = (WifiManager) context.getApplicationContext()
@@ -92,18 +98,25 @@ public class MulticastLockManager {
             return false;
         }
 
-        multicastLock = wifiManager.createMulticastLock(LOCK_TAG);
-        multicastLock.setReferenceCounted(true);
-        multicastLock.acquire();
-        return true;
+        try {
+            multicastLock = wifiManager.createMulticastLock(LOCK_TAG);
+            multicastLock.setReferenceCounted(true);
+            multicastLock.acquire();
+            return true;
+        } catch (SecurityException e) {
+            // Permissions may have been revoked; ensure no stale lock reference
+            multicastLock = null;
+            return false;
+        }
     }
 
     /**
      * Releases the multicast lock if held.
      *
-     * <p>This method is idempotent; calling it when no lock is held does nothing.</p>
+     * <p>This method is idempotent and thread-safe; calling it when no lock is held
+     * does nothing.</p>
      */
-    public void release() {
+    public synchronized void release() {
         if (multicastLock != null && multicastLock.isHeld()) {
             multicastLock.release();
         }
@@ -113,9 +126,11 @@ public class MulticastLockManager {
     /**
      * Checks if a multicast lock is currently held.
      *
+     * <p>This method is thread-safe.</p>
+     *
      * @return true if a lock is held, false otherwise.
      */
-    public boolean isHeld() {
+    public synchronized boolean isHeld() {
         return multicastLock != null && multicastLock.isHeld();
     }
 }

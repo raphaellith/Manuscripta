@@ -1,76 +1,34 @@
 package com.manuscripta.student.network.udp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
 
 /**
  * Unit tests for {@link DiscoveryState} enum.
+ * 
+ * <p>Note: Tests for built-in Java enum methods (values(), valueOf()) have been
+ * intentionally omitted as they test guaranteed Java language behavior rather
+ * than application-specific logic.</p>
  */
 public class DiscoveryStateTest {
 
     @Test
-    public void values_containsAllStates() {
-        // When
-        DiscoveryState[] values = DiscoveryState.values();
-
-        // Then
-        assertEquals(5, values.length);
-        assertEquals(DiscoveryState.IDLE, values[0]);
-        assertEquals(DiscoveryState.SEARCHING, values[1]);
-        assertEquals(DiscoveryState.FOUND, values[2]);
-        assertEquals(DiscoveryState.TIMEOUT, values[3]);
-        assertEquals(DiscoveryState.ERROR, values[4]);
+    public void discoveryState_hasExpectedNumberOfStates() {
+        // Verify the enum has the expected number of states
+        // This serves as a regression test if states are accidentally added/removed
+        assertEquals("DiscoveryState should have exactly 5 states", 
+                5, DiscoveryState.values().length);
     }
 
     @Test
-    public void valueOf_returnsIdleState() {
-        // When
-        DiscoveryState state = DiscoveryState.valueOf("IDLE");
-
-        // Then
-        assertEquals(DiscoveryState.IDLE, state);
-    }
-
-    @Test
-    public void valueOf_returnsSearchingState() {
-        // When
-        DiscoveryState state = DiscoveryState.valueOf("SEARCHING");
-
-        // Then
-        assertEquals(DiscoveryState.SEARCHING, state);
-    }
-
-    @Test
-    public void valueOf_returnsFoundState() {
-        // When
-        DiscoveryState state = DiscoveryState.valueOf("FOUND");
-
-        // Then
-        assertEquals(DiscoveryState.FOUND, state);
-    }
-
-    @Test
-    public void valueOf_returnsTimeoutState() {
-        // When
-        DiscoveryState state = DiscoveryState.valueOf("TIMEOUT");
-
-        // Then
-        assertEquals(DiscoveryState.TIMEOUT, state);
-    }
-
-    @Test
-    public void valueOf_returnsErrorState() {
-        // When
-        DiscoveryState state = DiscoveryState.valueOf("ERROR");
-
-        // Then
-        assertEquals(DiscoveryState.ERROR, state);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void valueOf_throwsForInvalidState() {
-        // When
-        DiscoveryState.valueOf("INVALID_STATE");
+    public void discoveryState_allStatesExist() {
+        // Verify all expected states are defined (compile-time check essentially)
+        assertNotNull(DiscoveryState.IDLE);
+        assertNotNull(DiscoveryState.SEARCHING);
+        assertNotNull(DiscoveryState.FOUND);
+        assertNotNull(DiscoveryState.TIMEOUT);
+        assertNotNull(DiscoveryState.ERROR);
     }
 }

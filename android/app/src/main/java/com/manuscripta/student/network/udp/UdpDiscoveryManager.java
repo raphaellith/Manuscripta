@@ -336,11 +336,19 @@ public class UdpDiscoveryManager {
 
     /**
      * Handles the timeout event.
+     * 
+     * <p>Only transitions to TIMEOUT state if currently SEARCHING. This prevents
+     * a race condition where the timeout could override FOUND state if both events
+     * occur near-simultaneously.</p>
      */
     private void handleTimeout() {
         if (running.compareAndSet(true, false)) {
-            Log.d(TAG, "Discovery timeout after " + timeoutMs + "ms");
-            updateState(DiscoveryState.TIMEOUT);
+            // Only set TIMEOUT if we're still SEARCHING - avoid overriding FOUND state
+            DiscoveryState currentState = discoveryState.getValue();
+            if (currentState == DiscoveryState.SEARCHING) {
+                Log.d(TAG, "Discovery timeout after " + timeoutMs + "ms");
+                updateState(DiscoveryState.TIMEOUT);
+            }
             shutdownExecutor();
             multicastLockManager.release();
         }
@@ -411,6 +419,9 @@ public class UdpDiscoveryManager {
             Log.d(TAG, "Discovered server: " + message.getIpAddress()
                     + " HTTP:" + message.getHttpPort()
                     + " TCP:" + message.getTcpPort());
+            
+            // Set running to false to prevent timeout from firing after discovery
+            running.set(false);
             
             // Cancel timeout and update state
             cancelTimeout();

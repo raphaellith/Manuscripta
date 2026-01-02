@@ -219,8 +219,8 @@ public class UdpDiscoveryManagerTest {
     }
 
     @Test
-    public void testReceiveMultiplePackets_storesLatest() throws Exception {
-        // Given
+    public void testReceiveMultiplePackets_storesFirst() throws Exception {
+        // Given - discovery stops after first valid packet is found (per design)
         manager = createManagerWithMockSocket();
         byte[] firstPacket = createValidDiscoveryMessage(
                 new byte[]{(byte) 192, (byte) 168, 1, 1}, 8080, 9090);
@@ -230,19 +230,18 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        awaitCondition(() -> {
-            DiscoveryMessage msg = manager.getDiscoveredServer();
-            return msg != null && "10.0.0.1".equals(msg.getIpAddress());
-        }, 2000, "Second (latest) server should be discovered");
-        manager.stopDiscovery();
-        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
+        awaitCondition(() -> manager.getDiscoveredServer() != null, 
+                2000, "Server should be discovered");
 
-        // Then - should have the second (latest) packet
+        // Then - should have the first packet (discovery stops after finding a server)
         DiscoveryMessage message = manager.getDiscoveredServer();
         assertNotNull(message);
-        assertEquals("10.0.0.1", message.getIpAddress());
-        assertEquals(443, message.getHttpPort());
-        assertEquals(8443, message.getTcpPort());
+        assertEquals("192.168.1.1", message.getIpAddress());
+        assertEquals(8080, message.getHttpPort());
+        assertEquals(9090, message.getTcpPort());
+        
+        // Verify state transitioned to FOUND
+        assertEquals(DiscoveryState.FOUND, manager.getDiscoveryState().getValue());
     }
 
     @Test
