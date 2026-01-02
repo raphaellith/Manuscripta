@@ -52,6 +52,28 @@ This document defines the markdown-based encoding for the `Content` field of `Ma
     (a) Inline LaTeX shall be delimited by single dollar signs: `$...$`.
     (b) Block LaTeX shall be delimited by double dollar signs: `$$...$$`.
 
+(8) **Code Blocks**. Preformatted code shall be specified using triple backticks:
+
+```
+```language
+code content
+```
+```
+
+    (a) The language identifier (e.g., `python`, `javascript`) is optional and may be used for syntax highlighting.
+    (b) Code within the block shall be rendered in a monospace font without further markdown processing.
+
+(9) **Blockquotes**. Quoted text shall be specified using the `>` prefix:
+
+    (a) `> text` — Single-line blockquote.
+    (b) Multiple consecutive lines prefixed with `>` shall form a single blockquote.
+    (c) Nested blockquotes (e.g., `>> text`) shall be supported.
+
+(10) **Horizontal Rules**. Horizontal dividers shall be specified using three or more hyphens on a line:
+
+    (a) `---` — Horizontal rule.
+    (b) The line shall contain only hyphens and optional surrounding whitespace.
+
 ## Section 3: Attachment References
 
 (1) **Image Syntax**. Images shall be embedded using standard markdown image syntax with attachment paths:
@@ -120,6 +142,9 @@ Where `marker-name` shall be the marker type and attributes shall be specified a
 | Table | `\| col \| col \|` | See §2(6) |
 | Inline LaTeX | `$...$` | `$x^2 + y^2 = z^2$` |
 | Block LaTeX | `$$...$$` | `$$\int_0^1 f(x) dx$$` |
+| Code block | ` ``` ` | See §2(8) |
+| Blockquote | `> text` | `> Quote here` |
+| Horizontal rule | `---` | See §2(10) |
 | Image | `![alt](/attachments/id)` | `![diagram](/attachments/abc-123)` |
 | PDF embed | `!!! pdf id="..."` | `!!! pdf id="abc-123"` |
 | Centred text | `!!! center` | See §4(3) |
