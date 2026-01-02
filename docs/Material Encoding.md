@@ -68,12 +68,11 @@ Where `{id}` shall be the UUID of the attachment.
 
 ## Section 4: Custom Markers
 
-(1) **General Syntax**. Custom markers shall use a fence-style syntax:
+(1) **General Syntax**. Custom markers shall use the Admonition syntax as supported by the flexmark-java library:
 
 ```
-:::{marker-name}{attributes}
-content
-:::
+!!! marker-name attribute="value"
+    content
 ```
 
 Where `{marker-name}` shall be the marker type and `{attributes}` shall be a set of key-value pairs in the format `key="value"`.
