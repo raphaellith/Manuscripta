@@ -175,7 +175,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_TrueFalseResponse_Success()
+    public async Task CreateResponseAsync_MultipleChoiceWithTrueFalseOptions_Success()
     {
         // Arrange - Now uses multiple choice with True/False options
         var questionId = Guid.NewGuid();
@@ -238,7 +238,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
         // Arrange - Written response for multiple choice question
         var questionId = Guid.NewGuid();
@@ -294,7 +294,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_WrittenResponseForTrueFalse_ThrowsInvalidOperationException()
+    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
         // Arrange - Written answer for MC question
         var questionId = Guid.NewGuid();
@@ -413,7 +413,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task UpdateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    public async Task UpdateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
         // Arrange - Written response for multiple choice question
         var questionId = Guid.NewGuid();
