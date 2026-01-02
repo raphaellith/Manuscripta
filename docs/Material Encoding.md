@@ -54,11 +54,11 @@ This document defines the markdown-based encoding for the `Content` field of `Ma
 
 (8) **Code Blocks**. Preformatted code shall be specified using triple backticks:
 
-```
+````
 ```language
 code content
 ```
-```
+````
 
     (a) The language identifier (e.g., `python`, `javascript`) is optional and may be used for syntax highlighting.
     (b) Code within the block shall be rendered in a monospace font without further markdown processing.
