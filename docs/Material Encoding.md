@@ -99,8 +99,7 @@ Where `marker-name` shall be the marker type and attributes shall be specified a
 (4) **Question Reference**. A reference to a `QuestionEntity` shall be embedded using the `question` marker:
 
 ```
-:::question{id="question-uuid"}
-:::
+!!! question id="question-uuid"
 ```
 
     (a) The `id` attribute shall be mandatory and shall reference a valid `QuestionEntity` associated with the material, as defined in Validation Rules §2B.
