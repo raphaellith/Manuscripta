@@ -50,7 +50,7 @@ If validation rules in API Contract are in contradiction to this document, this 
         (i) READING - The material is a reading material without questions
         (ii) WORKSHEET - The material is a worksheet with a mix of question types
         (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
-        (iv) QUIZ - Multiple Choice Quizzes
+        (iv) [DELETED]
     (b) `Title` (String). Maximum Length = 500 Characters.
     (c) `Content` (String).
     (d) `Timestamp` (Long). The unix timestamp of the previous modification.
@@ -67,7 +67,7 @@ If validation rules in API Contract are in contradiction to this document, this 
     (a) `MaterialId` (UUID).
     (b) `QuestionType` (enum QuestionType). Possible Values are:
         (i) `MULTIPLE_CHOICE`: A question with a list of possible options.
-        (ii) `TRUE_FALSE`: A question whose response will be expected to be either true or false.
+        (ii) [DELETED]
         (iii) `WRITTEN_ANSWER`: A question whose response will be expected to be typed or handwritten.
     (c) `QuestionText` (String).
 
@@ -79,10 +79,10 @@ If validation rules in API Contract are in contradiction to this document, this 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `MaterialId` specified in (1)(a) must associate with a `MaterialEntity` (M) whose `MaterialType` is not `READING`.
-    (b) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, M's MaterialType must not be `POLL` or `QUIZ`.
+    (b) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, M's MaterialType must not be `POLL`.
     (c) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `Options`, as specified in (2)(a) must be non-empty.
     (d) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid index in its `Options`.
-    (e) When `QuestionType` specified in (1)(b) is `TRUE_FALSE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid boolean value.
+    (e) [DELETED]
     (f) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, its `CorrectAnswer`, as specified in (2)(b), must be a valid String.
 
 ### Section 2C - Data Validation Rules for `ResponseEntity` Objects
@@ -96,13 +96,13 @@ If validation rules in API Contract are in contradiction to this document, this 
 
 (2) In addition to the mandatory fields in (1), a `ResponseEntity` object may have the following fields:
 
-    (a) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice, True/False or simple blank filling). 
+    (a) `IsCorrect` (Boolean): The android device may assist in validating simple questions (such as Multiple Choice or simple blank filling).
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `QuestionId` specified in 1(a) must associate with a `QuestionMaterial` (Q).
     (b) If Q's `QuestionType` is `MULTIPLE_CHOICE`, the `Answer`, specified in 2(a), must be a valid index in Q's `Options`.
-    (c) If Q's `QuestionType` is `TRUE_FALSE`, the `Answer`, specified in 2(a), must be a valid boolean value.
+    (c) [DELETED]
     (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
     (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
 
