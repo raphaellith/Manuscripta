@@ -234,7 +234,7 @@ public class QuestionServiceTests
     [Fact]
     public async Task CreateQuestionAsync_MultipleChoiceInQuiz_Success()
     {
-        // Arrange - Multiple choice questions ARE allowed in quizzes
+        // Arrange
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(
             materialId,
