@@ -294,7 +294,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_WrittenResponseForTrueFalse_ThrowsInvalidOperationException()
+    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
         // Arrange - Written answer for MC question
         var questionId = Guid.NewGuid();
