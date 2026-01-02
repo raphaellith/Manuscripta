@@ -75,7 +75,7 @@ Where `{id}` shall be the UUID of the attachment.
     content
 ```
 
-Where `{marker-name}` shall be the marker type and `{attributes}` shall be a set of key-value pairs in the format `key="value"`.
+Where `marker-name` shall be the marker type and attributes shall be specified as space-separated key-value pairs. Content within the marker shall be indented by four spaces.
 
 (2) **PDF Embed**. PDF documents shall be embedded using the `pdf` marker:
 
