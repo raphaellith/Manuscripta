@@ -413,7 +413,7 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task UpdateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    public async Task UpdateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
         // Arrange - Written response for multiple choice question
         var questionId = Guid.NewGuid();
