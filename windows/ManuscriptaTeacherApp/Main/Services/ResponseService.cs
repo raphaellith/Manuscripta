@@ -137,6 +137,11 @@ public class ResponseService : IResponseService
                     $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
         }
 
+        // Rule 2C(3)(f): One response per question per device
+        if (await _responseRepository.ExistsForQuestionAndDeviceAsync(response.QuestionId, response.DeviceId))
+            throw new InvalidOperationException(
+                $"A response for question {response.QuestionId} from device {response.DeviceId} already exists.");
+
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);
     }
@@ -160,6 +165,11 @@ public class ResponseService : IResponseService
                     $"Answer index {mcResponse.AnswerIndex} is out of range. " +
                     $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
         }
+
+        // Rule 2C(3)(f): One response per question per device
+        if (await _responseRepository.ExistsForQuestionAndDeviceAsync(response.QuestionId, response.DeviceId))
+            throw new InvalidOperationException(
+                $"A response for question {response.QuestionId} from device {response.DeviceId} already exists.");
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);

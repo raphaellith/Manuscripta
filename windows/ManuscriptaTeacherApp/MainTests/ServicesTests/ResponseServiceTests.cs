@@ -29,6 +29,10 @@ public class ResponseServiceTests
         _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>()))
             .ReturnsAsync(true);
         
+        // Default: no duplicate responses exist
+        _mockResponseRepo.Setup(r => r.ExistsForQuestionAndDeviceAsync(It.IsAny<Guid>(), It.IsAny<Guid>()))
+            .ReturnsAsync(false);
+        
         _deviceIdValidator = new DeviceIdValidator(_mockDeviceRegistry.Object);
         _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object, _deviceIdValidator);
     }
@@ -546,6 +550,29 @@ public class ResponseServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateResponseBatchAsync(new List<ResponseEntity>()));
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_DuplicateQuestionDeviceCombination_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2C(3)(f): One response per question per device
+        var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, deviceId, 1);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        // Response already exists for this question-device combination
+        _mockResponseRepo.Setup(r => r.ExistsForQuestionAndDeviceAsync(questionId, deviceId))
+            .ReturnsAsync(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseAsync(response));
+        Assert.Contains("already exists", exception.Message);
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Never);
     }
 
     #endregion
