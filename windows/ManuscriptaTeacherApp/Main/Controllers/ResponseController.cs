@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 using Main.Models.Dtos;
 using Main.Models.Entities.Responses;
@@ -193,7 +194,8 @@ public class ResponseController : ControllerBase
             return BadRequest(new { error = $"{fieldPrefix}Timestamp is required" });
         }
 
-        if (!DateTime.TryParse(request.Timestamp, out _))
+        if (!DateTime.TryParse(request.Timestamp, CultureInfo.InvariantCulture, 
+            DateTimeStyles.RoundtripKind, out _))
         {
             return BadRequest(new { error = $"{fieldPrefix}Timestamp must be a valid ISO 8601 date" });
         }
@@ -210,7 +212,8 @@ public class ResponseController : ControllerBase
         var id = Guid.Parse(request.Id);
         var questionId = Guid.Parse(request.QuestionId);
         var deviceId = Guid.Parse(request.DeviceId);
-        var timestamp = DateTime.Parse(request.Timestamp);
+        var timestamp = DateTime.Parse(request.Timestamp, CultureInfo.InvariantCulture, 
+            DateTimeStyles.RoundtripKind);
 
         // Get the question to determine response type
         var question = await _questionRepository.GetByIdAsync(questionId);
