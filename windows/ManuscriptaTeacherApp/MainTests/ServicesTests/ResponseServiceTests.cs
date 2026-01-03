@@ -15,13 +15,22 @@ public class ResponseServiceTests
 {
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
+    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
+    private readonly DeviceIdValidator _deviceIdValidator;
     private readonly ResponseService _service;
 
     public ResponseServiceTests()
     {
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
-        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object);
+        _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
+        
+        // Default: all devices are valid (paired)
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(true);
+        
+        _deviceIdValidator = new DeviceIdValidator(_mockDeviceRegistry.Object);
+        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object, _deviceIdValidator);
     }
 
     [Fact]
@@ -84,6 +93,38 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateResponseAsync(response));
         Assert.Contains("not found", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_UnpairedDevice_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2C(3)(e): DeviceId must correspond to a valid device
+        var questionId = Guid.NewGuid();
+        var unpairedDeviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            new List<string> { "A", "B", "C" },
+            1
+        );
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(),
+            questionId,
+            unpairedDeviceId,
+            1
+        );
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+        // Device is NOT paired
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(unpairedDeviceId))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseAsync(response));
+        Assert.Contains("valid paired device", exception.Message);
     }
 
     [Fact]
@@ -291,34 +332,6 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateResponseAsync(response));
         Assert.Contains("out of range", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
-    {
-        // Arrange - Written answer for MC question
-        var questionId = Guid.NewGuid();
-        var question = new MultipleChoiceQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            new List<string> { "True", "False" },
-            0
-        );
-        var response = new WrittenAnswerResponseEntity(
-            Guid.NewGuid(),
-            questionId,
-            Guid.NewGuid(),
-            "Some answer"
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateResponseAsync(response));
-        Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

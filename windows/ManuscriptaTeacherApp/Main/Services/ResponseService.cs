@@ -15,11 +15,16 @@ public class ResponseService : IResponseService
 {
     private readonly IResponseRepository _responseRepository;
     private readonly IQuestionRepository _questionRepository;
+    private readonly DeviceIdValidator _deviceIdValidator;
 
-    public ResponseService(IResponseRepository responseRepository, IQuestionRepository questionRepository)
+    public ResponseService(
+        IResponseRepository responseRepository,
+        IQuestionRepository questionRepository,
+        DeviceIdValidator deviceIdValidator)
     {
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _deviceIdValidator = deviceIdValidator ?? throw new ArgumentNullException(nameof(deviceIdValidator));
     }
 
     public async Task<ResponseEntity> CreateResponseAsync(ResponseEntity response)
@@ -64,6 +69,10 @@ public class ResponseService : IResponseService
         var question = await _questionRepository.GetByIdAsync(response.QuestionId);
         if (question == null)
             throw new InvalidOperationException($"Question with ID {response.QuestionId} not found.");
+
+        // Rule 2C(3)(e): DeviceId must correspond to a valid device
+        if (!await _deviceIdValidator.IsValidDeviceIdAsync(response.DeviceId))
+            throw new InvalidOperationException($"Device ID {response.DeviceId} does not correspond to a valid paired device.");
 
         // Rule 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
         if (response is MultipleChoiceResponseEntity mcResponse && question is MultipleChoiceQuestionEntity mcQuestion)
