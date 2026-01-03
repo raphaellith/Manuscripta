@@ -118,11 +118,8 @@ public class ResponseController : ControllerBase
                 entities.Add(entity);
             }
 
-            // All validations passed - now create all responses
-            foreach (var entity in entities)
-            {
-                await _responseService.CreateResponseAsync(entity);
-            }
+            // Use atomic batch creation with optimized device validation
+            await _responseService.CreateResponseBatchAsync(entities);
 
             _logger.LogInformation("Batch of {Count} responses submitted successfully", request.Responses.Count);
 

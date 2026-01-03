@@ -454,4 +454,99 @@ public class ResponseServiceTests
             () => _service.UpdateResponseAsync(response));
         Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    #region Batch Tests
+
+    [Fact]
+    public async Task CreateResponseBatchAsync_ValidBatch_Success()
+    {
+        // Arrange
+        var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            new List<string> { "A", "B", "C" },
+            1
+        );
+
+        var responses = new List<ResponseEntity>
+        {
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 1),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 2)
+        };
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+
+        // Act
+        await _service.CreateResponseBatchAsync(responses);
+
+        // Assert - all responses added
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task CreateResponseBatchAsync_OptimizesDeviceValidation_OnlyChecksUniqueDevices()
+    {
+        // Arrange - 3 responses from same device, should only validate device once
+        var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
+
+        var responses = new List<ResponseEntity>
+        {
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 1),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0)
+        };
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+
+        // Act
+        await _service.CreateResponseBatchAsync(responses);
+
+        // Assert - device validation called only once for the single unique device
+        _mockDeviceRegistry.Verify(
+            r => r.IsDevicePairedAsync(deviceId), 
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateResponseBatchAsync_InvalidDevice_ThrowsAndNothingStored()
+    {
+        // Arrange
+        var questionId = Guid.NewGuid();
+        var invalidDeviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
+
+        var responses = new List<ResponseEntity>
+        {
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, invalidDeviceId, 0)
+        };
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(invalidDeviceId))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseBatchAsync(responses));
+        
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateResponseBatchAsync_EmptyBatch_ThrowsArgumentException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.CreateResponseBatchAsync(new List<ResponseEntity>()));
+    }
+
+    #endregion
 }

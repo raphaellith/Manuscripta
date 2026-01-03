@@ -284,8 +284,8 @@ public class ResponseControllerTests
 
         _mockQuestionRepository.Setup(r => r.GetByIdAsync(_testQuestionId))
             .ReturnsAsync(question);
-        _mockResponseService.Setup(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()))
-            .ReturnsAsync((ResponseEntity r) => r);
+        _mockResponseService.Setup(s => s.CreateResponseBatchAsync(It.IsAny<IEnumerable<ResponseEntity>>()))
+            .Returns(Task.CompletedTask);
 
         var request = new BatchResponseRequest
         {
@@ -302,7 +302,7 @@ public class ResponseControllerTests
         // Assert
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, statusResult.StatusCode);
-        _mockResponseService.Verify(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Exactly(2));
+        _mockResponseService.Verify(s => s.CreateResponseBatchAsync(It.IsAny<IEnumerable<ResponseEntity>>()), Times.Once);
     }
 
     [Fact]
@@ -347,9 +347,9 @@ public class ResponseControllerTests
 
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
-        // Verify no responses were created
+        // Verify no responses were created via batch
         _mockResponseService.Verify(
-            s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Never);
+            s => s.CreateResponseBatchAsync(It.IsAny<IEnumerable<ResponseEntity>>()), Times.Never);
     }
 
     [Fact]
@@ -381,7 +381,7 @@ public class ResponseControllerTests
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
         _mockResponseService.Verify(
-            s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Never);
+            s => s.CreateResponseBatchAsync(It.IsAny<IEnumerable<ResponseEntity>>()), Times.Never);
     }
 
     #endregion
