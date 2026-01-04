@@ -328,7 +328,7 @@ This section documents explicit and implicit acknowledgement mechanisms for TCP 
 | `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
 | `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
 | `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
-| `RETURN_FEEDBACK (0x06)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
+| `RETURN_FEEDBACK (0x07)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
 
 #### Implicit ACKs
 
