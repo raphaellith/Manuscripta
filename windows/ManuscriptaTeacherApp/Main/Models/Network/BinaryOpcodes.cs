@@ -66,4 +66,17 @@ public static class BinaryOpcodes
     /// Operand: Device ID (UTF-8 string)
     /// </summary>
     public const byte DistributeAck = 0x12;
+
+    /// <summary>
+    /// Instructs device to retrieve feedback.
+    /// Per API Contract.md §3.4 and Session Interaction.md §7.
+    /// </summary>
+    public const byte ReturnFeedback = 0x07;
+
+    /// <summary>
+    /// Acknowledges successful receipt of feedback via HTTP.
+    /// Operand: Device ID (UTF-8 string)
+    /// Per API Contract.md §3.6.
+    /// </summary>
+    public const byte FeedbackAck = 0x13;
 }

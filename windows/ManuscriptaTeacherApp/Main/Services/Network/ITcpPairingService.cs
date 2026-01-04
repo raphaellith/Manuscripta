@@ -50,6 +50,12 @@ public interface ITcpPairingService
     Task SendRefreshConfigAsync(string deviceId);
 
     /// <summary>
+    /// Sends a RETURN_FEEDBACK (0x07) command to the specified device and waits for FEEDBACK_ACK.
+    /// Per Session Interaction.md §7 and API Contract.md §3.4.
+    /// </summary>
+    Task SendReturnFeedbackAsync(string deviceId);
+
+    /// <summary>
     /// Event raised when a device status update (STATUS_UPDATE 0x10) is received.
     /// Per Session Interaction.md §2.
     /// </summary>
