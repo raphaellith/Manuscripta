@@ -59,6 +59,9 @@ This is specified in `API Contract.md` §2.5.
 
 (4) If the Windows device receives multiple `HAND_RAISED` messages from the same Android device, it should only signal the teacher once before acknowledgement from the user.
 
+(3) Each Android client must not, at any point, submit two responses related to the same question.
+
+
 ## Section 5: Lifetime of a Session
 
 (1) **Session States**
@@ -122,3 +125,12 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 (4) **Unpairing**
 
     (a) On receipt of `UNPAIR` (0x04), the Android device must terminate the TCP connection. The severance of the connection serves as the acknowledgement.
+
+
+## Section 7: Returning Feedback
+
+(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x06`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
+
+(2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
+
+(3) For each feedback received from the endpoint in (2), the Android client creates a separate `FeedbackEntity`.
