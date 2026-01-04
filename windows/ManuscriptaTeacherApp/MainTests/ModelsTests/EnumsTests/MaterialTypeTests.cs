@@ -10,16 +10,16 @@ public class MaterialTypeTests
     {
         var names = System.Enum.GetNames(typeof(MaterialType));
 
-        Assert.Contains("QUIZ", names);
         Assert.Contains("WORKSHEET", names);
         Assert.Contains("POLL", names);
         Assert.Contains("READING", names);
+        Assert.Equal(3, names.Length);
     }
 
     [Fact]
     public void Parse_FromString_Works()
     {
-        var v = System.Enum.Parse(typeof(MaterialType), "QUIZ");
-        Assert.Equal(MaterialType.QUIZ, (MaterialType)v);
+        var v = System.Enum.Parse(typeof(MaterialType), "WORKSHEET");
+        Assert.Equal(MaterialType.WORKSHEET, (MaterialType)v);
     }
 }

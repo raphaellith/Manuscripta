@@ -33,28 +33,6 @@ public class ResponseEntityMapperTests
     }
 
     [Fact]
-    public void ToDataEntity_WithTrueFalseResponse_MapsCorrectly()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var questionId = Guid.NewGuid();
-        var deviceId = Guid.NewGuid();
-        var timestamp = DateTime.UtcNow;
-        var response = new TrueFalseResponseEntity(id, questionId, deviceId, false, timestamp, false);
-
-        // Act
-        var dataEntity = ResponseEntityMapper.ToDataEntity(response);
-
-        // Assert
-        Assert.Equal(id, dataEntity.Id);
-        Assert.Equal(questionId, dataEntity.QuestionId);
-        Assert.Equal(deviceId, dataEntity.DeviceId);
-        Assert.Equal("False", dataEntity.Answer);
-        Assert.False(dataEntity.IsCorrect);
-        Assert.Equal(timestamp, dataEntity.Timestamp);
-    }
-
-    [Fact]
     public void ToDataEntity_WithWrittenAnswerResponse_MapsCorrectly()
     {
         // Arrange
@@ -116,33 +94,6 @@ public class ResponseEntityMapperTests
     }
 
     [Fact]
-    public void ToEntity_WithTrueFalseResponse_MapsCorrectly()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var questionId = Guid.NewGuid();
-        var materialId = Guid.NewGuid();
-        var deviceId = Guid.NewGuid();
-        var timestamp = DateTime.UtcNow;
-
-        var question = new TrueFalseQuestionEntity(questionId, materialId, "Question?", true);
-        var dataEntity = new ResponseDataEntity(id, questionId, deviceId, "True", true, timestamp);
-
-        // Act
-        var entity = ResponseEntityMapper.ToEntity(dataEntity, question);
-
-        // Assert
-        Assert.IsType<TrueFalseResponseEntity>(entity);
-        var tfEntity = (TrueFalseResponseEntity)entity;
-        Assert.Equal(id, tfEntity.Id);
-        Assert.Equal(questionId, tfEntity.QuestionId);
-        Assert.Equal(deviceId, tfEntity.DeviceId);
-        Assert.True(tfEntity.Answer);
-        Assert.True(tfEntity.IsCorrect);
-        Assert.Equal(timestamp, tfEntity.Timestamp);
-    }
-
-    [Fact]
     public void ToEntity_WithWrittenAnswerResponse_MapsCorrectly()
     {
         // Arrange
@@ -173,7 +124,7 @@ public class ResponseEntityMapperTests
     public void ToEntity_WithNullDataEntity_ThrowsArgumentNullException()
     {
         // Arrange
-        var question = new TrueFalseQuestionEntity(Guid.NewGuid(), Guid.NewGuid(), "Q?", true);
+        var question = new MultipleChoiceQuestionEntity(Guid.NewGuid(), Guid.NewGuid(), "Q?", new List<string> { "A", "B" }, 0);
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => ResponseEntityMapper.ToEntity(null!, question));
@@ -199,17 +150,6 @@ public class ResponseEntityMapperTests
             0
         );
         var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, Guid.NewGuid(), "not a number");
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => ResponseEntityMapper.ToEntity(dataEntity, question));
-    }
-
-    [Fact]
-    public void ToEntity_WithInvalidAnswerForTrueFalse_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var question = new TrueFalseQuestionEntity(Guid.NewGuid(), Guid.NewGuid(), "Question?", true);
-        var dataEntity = new ResponseDataEntity(Guid.NewGuid(), question.Id, Guid.NewGuid(), "maybe");
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => ResponseEntityMapper.ToEntity(dataEntity, question));

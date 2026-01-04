@@ -59,7 +59,7 @@ public class QuestionDataEntityTests
             Id = Guid.NewGuid(),
             MaterialId = Guid.NewGuid(),
             QuestionText = "True or False?",
-            QuestionType = QuestionType.TRUE_FALSE,
+            QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = null,
             CorrectAnswer = "True"
         };

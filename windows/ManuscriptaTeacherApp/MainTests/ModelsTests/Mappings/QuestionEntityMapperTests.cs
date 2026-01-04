@@ -31,26 +31,6 @@ public class QuestionEntityMapperTests
     }
 
     [Fact]
-    public void ToDataEntity_WithTrueFalseQuestion_MapsCorrectly()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var materialId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(id, materialId, "Is this true?", true);
-
-        // Act
-        var dataEntity = QuestionEntityMapper.ToDataEntity(question);
-
-        // Assert
-        Assert.Equal(id, dataEntity.Id);
-        Assert.Equal(materialId, dataEntity.MaterialId);
-        Assert.Equal("Is this true?", dataEntity.QuestionText);
-        Assert.Equal(QuestionType.TRUE_FALSE, dataEntity.QuestionType);
-        Assert.Null(dataEntity.Options);
-        Assert.Equal("True", dataEntity.CorrectAnswer);
-    }
-
-    [Fact]
     public void ToDataEntity_WithWrittenAnswerQuestion_MapsCorrectly()
     {
         // Arrange
@@ -108,34 +88,6 @@ public class QuestionEntityMapperTests
     }
 
     [Fact]
-    public void ToEntity_WithTrueFalseDataEntity_MapsCorrectly()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var materialId = Guid.NewGuid();
-        var dataEntity = new QuestionDataEntity
-        {
-            Id = id,
-            MaterialId = materialId,
-            QuestionText = "Is this true?",
-            QuestionType = QuestionType.TRUE_FALSE,
-            CorrectAnswer = "False"
-        };
-
-        // Act
-        var entity = QuestionEntityMapper.ToEntity(dataEntity);
-
-        // Assert
-        Assert.IsType<TrueFalseQuestionEntity>(entity);
-        var tfEntity = (TrueFalseQuestionEntity)entity;
-        Assert.Equal(id, tfEntity.Id);
-        Assert.Equal(materialId, tfEntity.MaterialId);
-        Assert.Equal("Is this true?", tfEntity.QuestionText);
-        Assert.Equal(QuestionType.TRUE_FALSE, tfEntity.QuestionType);
-        Assert.False(tfEntity.CorrectAnswer);
-    }
-
-    [Fact]
     public void ToEntity_WithWrittenAnswerDataEntity_MapsCorrectly()
     {
         // Arrange
@@ -182,23 +134,6 @@ public class QuestionEntityMapperTests
             QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = new List<string> { "A", "B" },
             CorrectAnswer = "not a number"
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => QuestionEntityMapper.ToEntity(dataEntity));
-    }
-
-    [Fact]
-    public void ToEntity_WithInvalidCorrectAnswerForTrueFalse_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var dataEntity = new QuestionDataEntity
-        {
-            Id = Guid.NewGuid(),
-            MaterialId = Guid.NewGuid(),
-            QuestionText = "Question?",
-            QuestionType = QuestionType.TRUE_FALSE,
-            CorrectAnswer = "maybe"
         };
 
         // Act & Assert
