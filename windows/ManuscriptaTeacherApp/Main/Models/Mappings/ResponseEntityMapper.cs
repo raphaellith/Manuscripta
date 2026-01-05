@@ -20,7 +20,6 @@ public static class ResponseEntityMapper
         string answer = entity switch
         {
             MultipleChoiceResponseEntity mc => mc.AnswerIndex.ToString(),
-            TrueFalseResponseEntity tf => tf.Answer.ToString(),
             WrittenAnswerResponseEntity wa => wa.Answer,
             _ => throw new InvalidOperationException($"Unknown response entity type: {entity.GetType().Name}")
         };
@@ -56,14 +55,6 @@ public static class ResponseEntityMapper
                 timestamp: dataEntity.Timestamp,
                 isCorrect: dataEntity.IsCorrect
             ),
-            TrueFalseQuestionEntity _ => new TrueFalseResponseEntity(
-                id: dataEntity.Id,
-                questionId: dataEntity.QuestionId,
-                deviceId: dataEntity.DeviceId,
-                answer: ParseBool(dataEntity.Answer),
-                timestamp: dataEntity.Timestamp,
-                isCorrect: dataEntity.IsCorrect
-            ),
             WrittenAnswerQuestionEntity _ => new WrittenAnswerResponseEntity(
                 id: dataEntity.Id,
                 questionId: dataEntity.QuestionId,
@@ -80,13 +71,6 @@ public static class ResponseEntityMapper
     {
         if (string.IsNullOrEmpty(value) || !int.TryParse(value, out int result))
             throw new InvalidOperationException($"Invalid integer value for answer: {value}");
-        return result;
-    }
-
-    private static bool ParseBool(string? value)
-    {
-        if (string.IsNullOrEmpty(value) || !bool.TryParse(value, out bool result))
-            throw new InvalidOperationException($"Invalid boolean value for answer: {value}");
         return result;
     }
 }

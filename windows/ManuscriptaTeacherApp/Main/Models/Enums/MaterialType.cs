@@ -2,8 +2,7 @@ namespace Main.Models.Enums;
 
 public enum MaterialType
 {
-    QUIZ,
+    READING,
     WORKSHEET,
-    POLL,
-    READING
+    POLL
 }

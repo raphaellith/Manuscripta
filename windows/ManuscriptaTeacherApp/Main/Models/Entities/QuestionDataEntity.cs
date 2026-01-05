@@ -31,6 +31,12 @@ public class QuestionDataEntity
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
 
+    /// <summary>
+    /// The maximum number of marks available for this question.
+    /// Per Validation Rules §2B(2)(c).
+    /// </summary>
+    public int? MaxScore { get; set; }
+
     // Foreign key navigation (internal: available to services/repositories within assembly)
     [ForeignKey("MaterialId")]
     internal MaterialDataEntity? Material { get; set; }

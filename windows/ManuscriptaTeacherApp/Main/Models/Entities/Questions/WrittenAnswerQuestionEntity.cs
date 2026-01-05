@@ -14,8 +14,8 @@ public class WrittenAnswerQuestionEntity : QuestionEntity
 
     private WrittenAnswerQuestionEntity() : base() { }
 
-    public WrittenAnswerQuestionEntity(Guid id, Guid materialId, string questionText, string correctAnswer)
-        : base(id, materialId, questionText, QuestionType.WRITTEN_ANSWER)
+    public WrittenAnswerQuestionEntity(Guid id, Guid materialId, string questionText, string correctAnswer, int? maxScore = null)
+        : base(id, materialId, questionText, QuestionType.WRITTEN_ANSWER, maxScore)
     {
         CorrectAnswer = correctAnswer ?? throw new ArgumentNullException(nameof(correctAnswer));
     }

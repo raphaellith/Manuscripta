@@ -59,12 +59,42 @@ public class QuestionDataEntityTests
             Id = Guid.NewGuid(),
             MaterialId = Guid.NewGuid(),
             QuestionText = "True or False?",
-            QuestionType = QuestionType.TRUE_FALSE,
+            QuestionType = QuestionType.MULTIPLE_CHOICE,
             Options = null,
             CorrectAnswer = "True"
         };
 
         // Assert
         Assert.Null(q.Options);
+    }
+
+    [Fact]
+    public void MaxScore_CanBeSetAndNull()
+    {
+        // Arrange & Act - with MaxScore
+        var withScore = new QuestionDataEntity
+        {
+            Id = Guid.NewGuid(),
+            MaterialId = Guid.NewGuid(),
+            QuestionText = "Written answer question",
+            QuestionType = QuestionType.WRITTEN_ANSWER,
+            MaxScore = 10
+        };
+
+        // Assert
+        Assert.Equal(10, withScore.MaxScore);
+
+        // Arrange & Act - without MaxScore (null)
+        var withoutScore = new QuestionDataEntity
+        {
+            Id = Guid.NewGuid(),
+            MaterialId = Guid.NewGuid(),
+            QuestionText = "Multiple choice question",
+            QuestionType = QuestionType.MULTIPLE_CHOICE,
+            Options = new List<string> { "A", "B" }
+        };
+
+        // Assert
+        Assert.Null(withoutScore.MaxScore);
     }
 }

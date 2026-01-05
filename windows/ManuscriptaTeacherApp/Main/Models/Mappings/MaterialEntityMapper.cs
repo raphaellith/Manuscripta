@@ -75,17 +75,6 @@ public static class MaterialEntityMapper
                 readingAge: dataEntity.ReadingAge,
                 actualAge: dataEntity.ActualAge
             ),
-            MaterialType.QUIZ => new QuizMaterialEntity(
-                id: dataEntity.Id,
-                lessonId: dataEntity.LessonId,
-                title: dataEntity.Title ?? string.Empty,
-                content: dataEntity.Content ?? string.Empty,
-                timestamp: dataEntity.Timestamp,
-                metadata: dataEntity.Metadata,
-                vocabularyTerms: dataEntity.VocabularyTerms,
-                readingAge: dataEntity.ReadingAge,
-                actualAge: dataEntity.ActualAge
-            ),
             _ => throw new InvalidOperationException($"Unknown material type: {dataEntity.MaterialType}")
         };
     }

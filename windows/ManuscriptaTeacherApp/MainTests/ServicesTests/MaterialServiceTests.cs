@@ -70,7 +70,7 @@ public class MaterialServiceTests
     public async Task CreateMaterialAsync_EmptyTitle_ThrowsArgumentException()
     {
         // Arrange
-        var material = new QuizMaterialEntity(
+        var material = new WorksheetMaterialEntity(
             Guid.NewGuid(),
             _testLessonId,
             "",
@@ -155,7 +155,7 @@ public class MaterialServiceTests
     public async Task UpdateMaterialAsync_EmptyTitle_ThrowsArgumentException()
     {
         // Arrange
-        var material = new QuizMaterialEntity(
+        var material = new WorksheetMaterialEntity(
             Guid.NewGuid(),
             _testLessonId,
             "",
