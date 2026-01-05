@@ -17,7 +17,6 @@ interface CreateMaterialModalProps {
 const materialTypes: { value: MaterialType; label: string; color: string }[] = [
     { value: 'READING', label: 'Reading', color: 'bg-brand-green text-white' },
     { value: 'WORKSHEET', label: 'Worksheet', color: 'bg-brand-yellow text-gray-900' },
-    { value: 'QUIZ', label: 'Quiz', color: 'bg-brand-orange text-white' },
     { value: 'POLL', label: 'Poll', color: 'bg-purple-500 text-white' },
 ];
 
@@ -79,8 +78,8 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                                 key={type.value}
                                 onClick={() => setMaterialType(type.value)}
                                 className={`px-5 py-2 rounded-md font-sans font-medium text-sm transition-all shadow-sm ${materialType === type.value
-                                        ? `${type.color} transform -translate-y-0.5`
-                                        : 'bg-gray-100 text-text-body hover:bg-gray-200'
+                                    ? `${type.color} transform -translate-y-0.5`
+                                    : 'bg-gray-100 text-text-body hover:bg-gray-200'
                                     }`}
                             >
                                 {type.label}

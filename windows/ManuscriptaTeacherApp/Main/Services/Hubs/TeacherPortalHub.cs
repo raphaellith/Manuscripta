@@ -218,8 +218,6 @@ public class TeacherPortalHub : Hub
         {
             MaterialType.READING => new ReadingMaterialEntity(
                 id, dto.LessonId, dto.Title, dto.Content, null, dto.Metadata, dto.VocabularyTerms, dto.ReadingAge, dto.ActualAge),
-            MaterialType.QUIZ => new QuizMaterialEntity(
-                id, dto.LessonId, dto.Title, dto.Content, null, dto.Metadata, dto.VocabularyTerms, dto.ReadingAge, dto.ActualAge),
             MaterialType.WORKSHEET => new WorksheetMaterialEntity(
                 id, dto.LessonId, dto.Title, dto.Content, null, dto.Metadata, dto.VocabularyTerms, dto.ReadingAge, dto.ActualAge),
             MaterialType.POLL => new PollMaterialEntity(

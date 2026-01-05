@@ -22,7 +22,7 @@ export interface LessonEntity {
     description: string;
 }
 
-export type MaterialType = 'READING' | 'QUIZ' | 'WORKSHEET' | 'POLL';
+export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL';
 
 export interface MaterialEntity {
     id: string;

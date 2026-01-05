@@ -69,10 +69,10 @@ export interface LessonFolder {
 // === Data Model Alignment with Validation Rules ===
 
 // Content type enum alignment
-export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL' | 'QUIZ' | 'LESSON';
+export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL' | 'LESSON';
 
 // Question types for quizzes
-export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'WRITTEN_ANSWER';
+export type QuestionType = 'MULTIPLE_CHOICE' | 'WRITTEN_ANSWER';
 
 // Device status alignment
 export type DeviceStatus = 'ON_TASK' | 'IDLE' | 'HAND_RAISED' | 'LOCKED' | 'DISCONNECTED';
