@@ -76,15 +76,15 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) When creating a material, the front-end should -
 
-    (a) Prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of this document with empty content.
+    (a) prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of this document with empty content.
 
-    (b) Prompt the user to select the method of creation, through one of the following initial means:
+    (b) prompt the user to select the method of creation, through one of the following initial means:
 
         (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method.
 
         (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll.
     
-    (c) The user should be informed that they will still be able to make manual edits, or invoke the AI assistant, after the initial creation.
+    (c) inform the user that they will still be able to make manual edits, or invoke the AI assistant, after the initial creation.
 
 
 
