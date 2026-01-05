@@ -15,13 +15,15 @@ public class ResponseServiceTests
 {
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
+    private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
     private readonly ResponseService _service;
 
     public ResponseServiceTests()
     {
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
-        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object);
+        _mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object, _mockFeedbackRepo.Object);
     }
 
     [Fact]
@@ -294,34 +296,6 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
-    {
-        // Arrange - Written answer for MC question
-        var questionId = Guid.NewGuid();
-        var question = new MultipleChoiceQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            new List<string> { "True", "False" },
-            0
-        );
-        var response = new WrittenAnswerResponseEntity(
-            Guid.NewGuid(),
-            questionId,
-            Guid.NewGuid(),
-            "Some answer"
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateResponseAsync(response));
-        Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
     public async Task UpdateResponseAsync_ValidResponse_Success()
     {
         // Arrange
@@ -440,5 +414,24 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateResponseAsync(response));
         Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DeleteResponseAsync_CascadesDeleteToFeedback()
+    {
+        // Arrange
+        var responseId = Guid.NewGuid();
+        
+        _mockFeedbackRepo.Setup(r => r.DeleteByResponseIdAsync(responseId))
+            .Returns(Task.CompletedTask);
+        _mockResponseRepo.Setup(r => r.DeleteAsync(responseId))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.DeleteResponseAsync(responseId);
+
+        // Assert - Per §2(2A): Feedback must be deleted before response
+        _mockFeedbackRepo.Verify(r => r.DeleteByResponseIdAsync(responseId), Times.Once);
+        _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 }

@@ -17,8 +17,8 @@ public class MultipleChoiceQuestionEntity : QuestionEntity
 
     private MultipleChoiceQuestionEntity() : base() { }
 
-    public MultipleChoiceQuestionEntity(Guid id, Guid materialId, string questionText, List<string> options, int correctAnswerIndex)
-        : base(id, materialId, questionText, QuestionType.MULTIPLE_CHOICE)
+    public MultipleChoiceQuestionEntity(Guid id, Guid materialId, string questionText, List<string> options, int correctAnswerIndex, int? maxScore = null)
+        : base(id, materialId, questionText, QuestionType.MULTIPLE_CHOICE, maxScore)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         

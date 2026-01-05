@@ -289,6 +289,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     }
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _distributionAcks = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _feedbackAcks = new();
 
     public async Task SendDistributeMaterialAsync(string deviceId)
     {
@@ -318,6 +319,39 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         finally
         {
             _distributionAcks.TryRemove(deviceId, out _);
+        }
+    }
+
+    /// <summary>
+    /// Sends RETURN_FEEDBACK (0x07) to device and waits for FEEDBACK_ACK.
+    /// Per Session Interaction.md §7 and API Contract.md §3.4.
+    /// </summary>
+    public async Task SendReturnFeedbackAsync(string deviceId)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        _feedbackAcks[deviceId] = tcs;
+
+        try
+        {
+            await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
+            _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId}", deviceId);
+
+            // Wait for 30 seconds for ACK (similar to distribution)
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));
+
+            if (completedTask == tcs.Task && tcs.Task.Result)
+            {
+                _logger.LogInformation("Received FEEDBACK_ACK for device {DeviceId}", deviceId);
+            }
+            else
+            {
+                _logger.LogWarning("Timeout waiting for FEEDBACK_ACK from device {DeviceId}", deviceId);
+                Console.WriteLine($"[ERROR] Feedback delivery to device {deviceId} failed (Timeout)");
+            }
+        }
+        finally
+        {
+            _feedbackAcks.TryRemove(deviceId, out _);
         }
     }
 
@@ -420,6 +454,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 HandleDistributeAck(data);
                 break;
 
+            case BinaryOpcodes.FeedbackAck: // 0x13
+                HandleFeedbackAck(data);
+                break;
+
             case BinaryOpcodes.StatusUpdate: // 0x10
                 HandleStatusUpdate(data, clientId);
                 break;
@@ -471,6 +509,28 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         catch(Exception ex)
         {
             _logger.LogError(ex, "Error handling DISTRIBUTE_ACK");
+        }
+    }
+
+    /// <summary>
+    /// Handles FEEDBACK_ACK (0x13) messages from Android devices.
+    /// Per API Contract.md §3.6: acknowledges successful receipt of feedback via HTTP.
+    /// </summary>
+    private void HandleFeedbackAck(byte[] data)
+    {
+        try
+        {
+            var deviceIdString = ParsingHelper.ExtractString(data);
+            _logger.LogInformation("Received FEEDBACK_ACK from {DeviceId}", deviceIdString);
+            
+            if (_feedbackAcks.TryGetValue(deviceIdString, out var tcs))
+            {
+                tcs.TrySetResult(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling FEEDBACK_ACK");
         }
     }
 

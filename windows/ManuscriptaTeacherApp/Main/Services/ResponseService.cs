@@ -15,11 +15,16 @@ public class ResponseService : IResponseService
 {
     private readonly IResponseRepository _responseRepository;
     private readonly IQuestionRepository _questionRepository;
+    private readonly IFeedbackRepository _feedbackRepository;
 
-    public ResponseService(IResponseRepository responseRepository, IQuestionRepository questionRepository)
+    public ResponseService(
+        IResponseRepository responseRepository, 
+        IQuestionRepository questionRepository,
+        IFeedbackRepository feedbackRepository)
     {
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
     }
 
     public async Task<ResponseEntity> CreateResponseAsync(ResponseEntity response)
@@ -49,6 +54,16 @@ public class ResponseService : IResponseService
 
         await _responseRepository.UpdateAsync(response);
         return response;
+    }
+
+    /// <summary>
+    /// Deletes a response and its associated feedback.
+    /// Per PersistenceAndCascadingRules.md §2(2A): The deletion of a response R must delete any feedback associated with R.
+    /// </summary>
+    public async Task DeleteResponseAsync(Guid id)
+    {
+        await _feedbackRepository.DeleteByResponseIdAsync(id);
+        await _responseRepository.DeleteAsync(id);
     }
 
     #region Validation
