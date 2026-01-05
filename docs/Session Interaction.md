@@ -133,4 +133,8 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 (2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
 
-(3) For each feedback received from the endpoint in (2), the Android client creates a separate `FeedbackEntity`.
+(3) For each feedback received from the endpoint in (2), the Android client must create a separate `FeedbackEntity`.
+
+(4) The Android client must, on successful receipt of feedback from the REST API endpoint defined in (2), send a TCP `FEEDBACK_ACK` (0x13) message, as defined in `API Contract.md` §3.6, to the Windows client.
+
+(5) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message from a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message, it shall indicate to the user (teacher) that it has failed to return feedback to that specific device.
