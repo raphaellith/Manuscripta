@@ -84,16 +84,17 @@ public class FeedbackService : IFeedbackService
     }
 
     /// <summary>
-    /// Determines if a question has a CorrectAnswer field.
-    /// MultipleChoiceQuestionEntity has CorrectAnswerIndex (equivalent).
-    /// WrittenAnswerQuestionEntity has CorrectAnswer string.
+    /// Determines if a question has a CorrectAnswer field that enables auto-grading.
+    /// Per Validation Rules §2F(2)(b): Feedback cannot be provided for questions with CorrectAnswer.
+    /// - MultipleChoiceQuestionEntity always has CorrectAnswerIndex (auto-gradable).
+    /// - WrittenAnswerQuestionEntity is auto-gradable only if CorrectAnswer is supplied (not null/empty).
     /// </summary>
     private static bool HasCorrectAnswer(QuestionEntity question)
     {
         return question switch
         {
-            MultipleChoiceQuestionEntity => true, // Has CorrectAnswerIndex
-            WrittenAnswerQuestionEntity => true,  // Has CorrectAnswer string
+            MultipleChoiceQuestionEntity => true, // Always has CorrectAnswerIndex
+            WrittenAnswerQuestionEntity waq => !string.IsNullOrEmpty(waq.CorrectAnswer), // Only if answer supplied
             _ => false
         };
     }

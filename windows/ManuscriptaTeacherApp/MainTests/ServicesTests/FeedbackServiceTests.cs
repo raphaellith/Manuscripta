@@ -108,13 +108,14 @@ public class FeedbackServiceTests
     [Fact]
     public async Task CreateFeedbackAsync_MarksWithoutMaxScore_ThrowsInvalidOperationException()
     {
-        // Arrange - WrittenAnswerQuestion has CorrectAnswer, so this will fail on §2F(2)(b) first
-        // This test is for documentation purposes; in current implementation all question types have CorrectAnswer
+        // Arrange - WrittenAnswerQuestion WITHOUT CorrectAnswer allows feedback per §2F(2)(b)
+        // But providing Marks without MaxScore should fail per §2F(2)(c)
         var responseId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
         var feedback = new FeedbackEntity(Guid.NewGuid(), responseId, marks: 5);
         
         var response = new WrittenAnswerResponseEntity(responseId, questionId, Guid.NewGuid(), "Answer");
+        // Empty CorrectAnswer means no auto-grading, so feedback is allowed
         var question = new WrittenAnswerQuestionEntity(questionId, Guid.NewGuid(), "Describe...", "");
         
         _responseRepositoryMock.Setup(r => r.GetByIdAsync(responseId))
@@ -122,11 +123,61 @@ public class FeedbackServiceTests
         _questionRepositoryMock.Setup(q => q.GetByIdAsync(questionId))
             .ReturnsAsync(question);
 
-        // Act & Assert - Will fail on §2F(2)(b) since WrittenAnswer has CorrectAnswer
+        // Act & Assert - Will fail on §2F(2)(c) since question has no MaxScore
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.CreateFeedbackAsync(feedback));
 
-        // Current implementation rejects all questions with CorrectAnswer field
+        Assert.Contains("MaxScore", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateFeedbackAsync_WrittenAnswerWithCorrectAnswer_ThrowsInvalidOperationException()
+    {
+        // Arrange - WrittenAnswerQuestion WITH CorrectAnswer is auto-graded
+        var responseId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(Guid.NewGuid(), responseId, text: "Good work!");
+        
+        var response = new WrittenAnswerResponseEntity(responseId, questionId, Guid.NewGuid(), "Paris");
+        var question = new WrittenAnswerQuestionEntity(questionId, Guid.NewGuid(), "What is the capital of France?", "Paris");
+        
+        _responseRepositoryMock.Setup(r => r.GetByIdAsync(responseId))
+            .ReturnsAsync(response);
+        _questionRepositoryMock.Setup(q => q.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+
+        // Act & Assert - Per §2F(2)(b): Question with CorrectAnswer cannot receive feedback
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.CreateFeedbackAsync(feedback));
+
         Assert.Contains("CorrectAnswer", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateFeedbackAsync_WrittenAnswerWithoutCorrectAnswer_Success()
+    {
+        // Arrange - WrittenAnswerQuestion WITHOUT CorrectAnswer allows manual feedback
+        var responseId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, responseId, text: "Great essay!");
+        
+        var response = new WrittenAnswerResponseEntity(responseId, questionId, Guid.NewGuid(), "My essay...");
+        // Empty CorrectAnswer means this is a manually-graded question
+        var question = new WrittenAnswerQuestionEntity(questionId, Guid.NewGuid(), "Write an essay about...", "", maxScore: 10);
+        
+        _responseRepositoryMock.Setup(r => r.GetByIdAsync(responseId))
+            .ReturnsAsync(response);
+        _questionRepositoryMock.Setup(q => q.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+        _feedbackRepositoryMock.Setup(r => r.AddAsync(It.IsAny<FeedbackEntity>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateFeedbackAsync(feedback);
+
+        // Assert - Feedback should be created successfully
+        Assert.Equal(feedbackId, result.Id);
+        _feedbackRepositoryMock.Verify(r => r.AddAsync(feedback), Times.Once);
     }
 }
