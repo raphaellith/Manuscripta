@@ -131,7 +131,8 @@ Used during the pairing handshake to register a student device with the teacher 
 -   **Body:**
     ```json
     {
-      "DeviceId": "device-uuid-generated-by-client"
+      "DeviceId": "device-uuid-generated-by-client",
+      "name": "device-name-provided-by-user"
     }
     ```
 -   **Response:** `201 Created`
