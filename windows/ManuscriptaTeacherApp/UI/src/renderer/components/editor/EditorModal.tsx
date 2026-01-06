@@ -11,10 +11,10 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Gapcursor from '@tiptap/extension-gapcursor';
-import TableExt from '@tiptap/extension-table';
-import TableRowExt from '@tiptap/extension-table-row';
-import TableCellExt from '@tiptap/extension-table-cell';
-import TableHeaderExt from '@tiptap/extension-table-header';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
@@ -180,13 +180,13 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             // Gap cursor for positioning before/after block elements like tables
             Gapcursor,
             // Table extensions
-            TableExt.Table.configure({
+            Table.configure({
                 resizable: false,
                 allowTableNodeSelection: true,
             }),
-            TableRowExt.TableRow,
-            TableCellExt.TableCell,
-            TableHeaderExt.TableHeader,
+            TableRow,
+            TableCell,
+            TableHeader,
             // Standard extensions
             Image.configure({
                 inline: true,
