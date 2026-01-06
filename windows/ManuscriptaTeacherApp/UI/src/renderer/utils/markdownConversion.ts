@@ -81,17 +81,13 @@ turndownService.addRule('centeredText', {
     }
 });
 
-// Handle images - convert to attachment syntax
+// Handle images - convert to standard markdown image syntax
 turndownService.addRule('images', {
     filter: 'img',
     replacement: function (_content, node) {
         const img = node as HTMLImageElement;
         const alt = img.alt || '';
         const src = img.src || '';
-        // If it's an attachment URL, use as-is; otherwise wrap
-        if (src.includes('/attachments/')) {
-            return `![${alt}](${src})`;
-        }
         return `![${alt}](${src})`;
     }
 });
@@ -151,7 +147,20 @@ export function markdownToHtml(markdown: string): string {
             // Apply text-align: center to all block-level elements (p, h1-h6)
             blockHtml = blockHtml.replace(
                 /<(p|h[1-6])([^>]*)>/g,
-                '<$1$2 style="text-align: center;">'
+                (_tagMatch, tagName, attrs) => {
+                    let newAttrs = attrs || '';
+                    const styleMatch = newAttrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
+                    if (styleMatch) {
+                        const existingStyle = styleMatch[1];
+                        const updatedStyle = (existingStyle.trim().endsWith(';') || existingStyle.trim() === '')
+                            ? existingStyle + ' text-align: center;'
+                            : existingStyle + '; text-align: center;';
+                        newAttrs = newAttrs.replace(styleMatch[1], updatedStyle);
+                    } else {
+                        newAttrs = (newAttrs || '') + ' style="text-align: center;"';
+                    }
+                    return `<${tagName}${newAttrs}>`;
+                }
             );
             return blockHtml;
         }
