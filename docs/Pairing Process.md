@@ -31,10 +31,10 @@ This document defines the pairing process between the Windows device and the And
     (b) The HTTP port to be used.
     (c) The TCP port to be used.
 
-(2) The Android device, on discovery of a message as specified in (1), must:
+(2) The Android device, when instructed by the user to pair with the Windows device and on discovery of a message as specified in (1), must:
     (a) Extract the IP address and ports in that message.
     (b) Establish a TCP connection to the Windows device and send a `PAIRING_REQUEST` message (opcode `0x20`), as specified in `API Contract.md` §3.5. This message must contain the deviceId that the Android device generates.
-    (c) Make a POST request to the `/pair` endpoint, as specified in `API Contract.md` §2.4, with a body containing the deviceId.
+    (c) Make a POST request to the `/pair` endpoint, as specified in `API Contract.md` §2.4, with a body containing the deviceId and device name provided by the user.
 
 (3) The Windows device should respond to the messages defined in (2) to signal correct message transmission in that channel:
     (a) On receipt of a message specified in (2)(b), respond with a `PAIRING_ACK` message (opcode `0x21`), as specified in `API Contract.md` §3.5, which indicates that message transmission through TCP was successful.
