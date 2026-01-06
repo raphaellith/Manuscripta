@@ -153,6 +153,66 @@ class SignalRService {
     public async deleteMaterial(id: string): Promise<void> {
         await this.connection.invoke("DeleteMaterial", id);
     }
+
+    // ==========================================
+    // Classroom Methods - Frontend Workflow Spec §5
+    // (Stub implementations - backend not yet implemented)
+    // ==========================================
+
+    public async pairDevices(): Promise<void> {
+        // TODO: Implement when backend PairDevices method is available
+        console.warn('pairDevices: Not yet implemented');
+        await this.connection.invoke("PairDevices");
+    }
+
+    public async getAllPairedDevices(): Promise<PairedDeviceEntity[]> {
+        // TODO: Implement when backend is available
+        console.warn('getAllPairedDevices: Not yet implemented');
+        return await this.connection.invoke<PairedDeviceEntity[]>("GetAllPairedDevices");
+    }
+
+    public async getAllDeviceStatuses(): Promise<DeviceStatusEntity[]> {
+        // TODO: Implement when backend is available
+        console.warn('getAllDeviceStatuses: Not yet implemented');
+        return await this.connection.invoke<DeviceStatusEntity[]>("GetAllDeviceStatuses");
+    }
+
+    public async lockDevices(deviceIds: string[]): Promise<void> {
+        // TODO: Implement when backend is available
+        console.warn('lockDevices: Not yet implemented');
+        await this.connection.invoke("LockDevices", deviceIds);
+    }
+
+    public async unlockDevices(deviceIds: string[]): Promise<void> {
+        // TODO: Implement when backend is available
+        console.warn('unlockDevices: Not yet implemented');
+        await this.connection.invoke("UnlockDevices", deviceIds);
+    }
+
+    public async deployMaterial(materialId: string): Promise<void> {
+        // TODO: Implement when backend is available
+        console.warn('deployMaterial: Not yet implemented');
+        await this.connection.invoke("DeployMaterial", materialId);
+    }
+
+    public async finishMaterial(materialId: string): Promise<void> {
+        // TODO: Implement when backend is available
+        console.warn('finishMaterial: Not yet implemented');
+        await this.connection.invoke("FinishMaterial", materialId);
+    }
+}
+
+// Stub types for classroom functionality (to be moved to models when implemented)
+interface PairedDeviceEntity {
+    id: string;
+    deviceId: string;
+    deviceName?: string;
+}
+
+interface DeviceStatusEntity {
+    deviceId: string;
+    status: 'ON_TASK' | 'IDLE' | 'LOCKED' | 'DISCONNECTED';
+    batteryLevel?: number;
 }
 
 const signalRService = new SignalRService();

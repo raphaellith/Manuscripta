@@ -10,6 +10,7 @@ import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
+import { EditorModal } from '../editor/EditorModal';
 import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
@@ -63,7 +64,8 @@ type ModalState =
     | { type: 'createCollection' }
     | { type: 'createUnit'; collection: UnitCollectionEntity }
     | { type: 'createLesson'; unit: UnitEntity }
-    | { type: 'createMaterial'; lesson: LessonEntity };
+    | { type: 'createMaterial'; lesson: LessonEntity }
+    | { type: 'editMaterial'; material: MaterialEntity };
 
 export const LessonLibraryPage: React.FC = () => {
     const {
@@ -84,7 +86,6 @@ export const LessonLibraryPage: React.FC = () => {
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
-    const [selectedMaterial, setSelectedMaterial] = useState<MaterialEntity | null>(null);
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
 
     const toggleSet = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
@@ -111,17 +112,13 @@ export const LessonLibraryPage: React.FC = () => {
     };
 
     const handleDeleteMaterial = async (materialId: string) => {
-        // Clear detail panel if deleting the currently selected material
-        if (selectedMaterial?.id === materialId) {
-            setSelectedMaterial(null);
-        }
         await deleteMaterial(materialId);
     };
 
     return (
         <div className="flex h-[calc(100vh-220px)] min-h-[500px] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            {/* Tree Sidebar - from prototype */}
-            <div className="w-80 border-r border-gray-200 flex flex-col bg-gray-50/50">
+            {/* Tree View */}
+            <div className="flex-1 flex flex-col bg-gray-50/50">
                 <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Explorer</span>
                     <button
@@ -239,9 +236,8 @@ export const LessonLibraryPage: React.FC = () => {
                                                                         getMaterialsForLesson(lesson.id).map(material => (
                                                                             <div
                                                                                 key={material.id}
-                                                                                className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group ${selectedMaterial?.id === material.id ? 'bg-brand-orange/10 border-l-brand-orange' : 'hover:bg-gray-50'
-                                                                                    }`}
-                                                                                onClick={() => setSelectedMaterial(material)}
+                                                                                className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
+                                                                                onClick={() => setModal({ type: 'editMaterial', material })}
                                                                             >
                                                                                 {getContentIcon(material.materialType)}
                                                                                 <span className="text-sm text-text-body truncate flex-1">{material.title}</span>
@@ -276,55 +272,6 @@ export const LessonLibraryPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Detail Panel - from prototype */}
-            <div className="flex-1 flex flex-col">
-                {selectedMaterial ? (
-                    <>
-                        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                            <div className="flex items-center gap-3 mb-3">
-                                <h2 className="text-2xl font-semibold text-text-heading">{selectedMaterial.title}</h2>
-                                <span className={`text-xs font-semibold px-2 py-1 rounded-md uppercase tracking-wide ${selectedMaterial.materialType === 'READING' ? 'bg-brand-green text-white' :
-                                    selectedMaterial.materialType === 'WORKSHEET' ? 'bg-brand-yellow text-gray-900' :
-                                        'bg-purple-500 text-white'
-                                    }`}>
-                                    {selectedMaterial.materialType}
-                                </span>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                                Created {new Date(selectedMaterial.timestamp).toLocaleDateString()}
-                            </p>
-                        </div>
-                        <div className="flex-1 p-6 overflow-y-auto">
-                            {selectedMaterial.content ? (
-                                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selectedMaterial.content }} />
-                            ) : (
-                                <p className="text-gray-400 italic">No content yet. Click Edit to add content.</p>
-                            )}
-                        </div>
-                        <div className="p-4 border-t border-gray-200 bg-white flex gap-3">
-                            <button className="px-4 py-2 bg-brand-green text-white font-medium text-sm rounded-md hover:bg-green-800 transition-colors">
-                                Edit Content
-                            </button>
-                            <button
-                                onClick={() => handleDeleteMaterial(selectedMaterial.id)}
-                                className="px-4 py-2 bg-white text-red-600 border border-red-300 font-medium text-sm rounded-md hover:bg-red-50 transition-colors"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-400">
-                        <div className="text-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p className="text-lg">Select a material to view details</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
             {/* Modals */}
             {modal.type === 'createCollection' && (
                 <CreateCollectionModal
@@ -354,6 +301,12 @@ export const LessonLibraryPage: React.FC = () => {
                     lessonTitle={modal.lesson.title}
                     onClose={() => setModal({ type: 'none' })}
                     onCreate={(title, materialType) => handleCreateMaterial(modal.lesson.id, title, materialType)}
+                />
+            )}
+            {modal.type === 'editMaterial' && (
+                <EditorModal
+                    material={modal.material}
+                    onClose={() => setModal({ type: 'none' })}
                 />
             )}
         </div>
