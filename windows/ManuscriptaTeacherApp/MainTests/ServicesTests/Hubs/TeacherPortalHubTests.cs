@@ -10,6 +10,7 @@ using Main.Models.Enums;
 using Main.Services;
 using Main.Services.Hubs;
 using Main.Services.Repositories;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MainTests.ServicesTests.Hubs;
 
@@ -428,18 +429,44 @@ public class TeacherPortalHubTests
     }
 
     [Fact]
-    public async Task UpdateMaterial_CallsService()
+    public async Task UpdateMaterial_ValidDto_UpdatesViaRepository()
     {
         // Arrange
-        var entity = new ReadingMaterialEntity(Guid.NewGuid(), Guid.NewGuid(), "Updated Material", "Content");
-        _mockMaterialService.Setup(s => s.UpdateMaterialAsync(entity))
-            .ReturnsAsync(entity);
+        var materialId = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
+        var existingMaterial = new ReadingMaterialEntity(materialId, lessonId, "Original Title", "Original Content");
+        var dto = new InternalUpdateMaterialDto(
+            materialId, lessonId, "Updated Title", "Updated Content", MaterialType.READING);
+        
+        _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(existingMaterial);
+        _mockMaterialRepository.Setup(r => r.UpdateAsync(It.IsAny<MaterialEntity>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        await _hub.UpdateMaterial(entity);
+        await _hub.UpdateMaterial(dto);
 
         // Assert
-        _mockMaterialService.Verify(s => s.UpdateMaterialAsync(entity), Times.Once);
+        _mockMaterialRepository.Verify(r => r.GetByIdAsync(materialId), Times.Once);
+        _mockMaterialRepository.Verify(r => r.UpdateAsync(It.Is<MaterialEntity>(m =>
+            m.Id == materialId &&
+            m.Title == "Updated Title" &&
+            m.Content == "Updated Content"
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateMaterial_NonExistingMaterial_ThrowsHubException()
+    {
+        // Arrange
+        var dto = new InternalUpdateMaterialDto(
+            Guid.NewGuid(), Guid.NewGuid(), "Title", "Content", MaterialType.READING);
+        
+        _mockMaterialRepository.Setup(r => r.GetByIdAsync(dto.Id))
+            .ReturnsAsync((MaterialEntity?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.UpdateMaterial(dto));
     }
 
     [Fact]

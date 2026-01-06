@@ -195,9 +195,23 @@ public class TeacherPortalHub : Hub
     /// Updates a material entity.
     /// Per NetworkingAPISpec §1(1)(d)(iii).
     /// </summary>
-    public async Task UpdateMaterial(MaterialEntity updated)
+    public async Task UpdateMaterial(InternalUpdateMaterialDto dto)
     {
-        await _materialService.UpdateMaterialAsync(updated);
+        // Get existing material to determine concrete type (using repository directly)
+        var existing = await _materialRepository.GetByIdAsync(dto.Id);
+        if (existing == null)
+            throw new HubException($"Material with ID {dto.Id} not found.");
+
+        // Update properties
+        existing.Title = dto.Title;
+        existing.Content = dto.Content;
+        existing.Metadata = dto.Metadata;
+        existing.VocabularyTerms = dto.VocabularyTerms;
+        existing.ReadingAge = dto.ReadingAge;
+        existing.ActualAge = dto.ActualAge;
+        existing.Timestamp = DateTime.UtcNow;
+
+        await _materialRepository.UpdateAsync(existing);
     }
 
     /// <summary>
