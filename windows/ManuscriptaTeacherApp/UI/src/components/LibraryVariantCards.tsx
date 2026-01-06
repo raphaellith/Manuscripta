@@ -23,7 +23,7 @@ interface NavigationState {
 }
 
 const getTypeStyles = (type: string) => {
-  switch(type) {
+  switch (type) {
     case 'Reading': return { bg: 'bg-brand-green/10', border: 'border-brand-green', text: 'text-brand-green' };
     case 'Worksheet': return { bg: 'bg-brand-yellow/20', border: 'border-brand-yellow', text: 'text-yellow-700' };
     case 'Quiz': return { bg: 'bg-brand-orange-light', border: 'border-brand-orange', text: 'text-brand-orange' };
@@ -32,9 +32,9 @@ const getTypeStyles = (type: string) => {
   }
 };
 
-const getContentIcon = (type: string, size: string = 'h-8 w-8') => {
+const getContentIcon = (type: string, size = 'h-8 w-8') => {
   const baseClass = `${size} flex-shrink-0`;
-  switch(type) {
+  switch (type) {
     case 'Worksheet': return (
       <svg xmlns="http://www.w3.org/2000/svg" className={`${baseClass} text-brand-yellow`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -80,8 +80,8 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return { collections, units, lessonFolders, contentItems };
-    
-    const matchedItems = contentItems.filter(item => 
+
+    const matchedItems = contentItems.filter(item =>
       item.title.toLowerCase().includes(query)
     );
     const matchedFolders = lessonFolders.filter(folder =>
@@ -97,7 +97,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
       col.name.toLowerCase().includes(query) ||
       matchedUnits.some(u => col.unitIds.includes(u.id))
     );
-    
+
     return {
       collections: matchedCollections,
       units: matchedUnits,
@@ -106,7 +106,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
     };
   }, [searchQuery, collections, units, lessonFolders, contentItems]);
 
-  const getUnitsForCollection = (collection: Collection) => 
+  const getUnitsForCollection = (collection: Collection) =>
     filteredData.units.filter(u => collection.unitIds.includes(u.id));
 
   const getFoldersForUnit = (unit: Unit) =>
@@ -218,7 +218,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
   const renderUnits = () => {
     if (!nav.collection) return null;
     const unitsInCollection = getUnitsForCollection(nav.collection);
-    
+
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {unitsInCollection.length === 0 ? (
@@ -253,7 +253,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
     if (!nav.unit) return null;
     const foldersInUnit = getFoldersForUnit(nav.unit);
     const standaloneItems = getStandaloneItems(nav.unit);
-    
+
     return (
       <>
         <div className="flex items-center justify-between mb-4">
@@ -276,7 +276,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
               >
                 <div className="w-14 h-14 rounded-lg bg-brand-blue/10 flex items-center justify-center mb-4 group-hover:bg-brand-blue/20 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-brand-blue" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                    <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                   </svg>
                 </div>
                 <div className="text-xs text-gray-400 mb-1">Lesson #{folder.number}</div>
@@ -286,7 +286,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
             );
           })}
         </div>
-        
+
         {standaloneItems.length > 0 && (
           <>
             <h2 className="text-lg font-medium text-gray-600 mb-4">Standalone Content</h2>
@@ -330,7 +330,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
             </div>
           </>
         )}
-        
+
         {foldersInUnit.length === 0 && standaloneItems.length === 0 && (
           <p className="text-gray-500 italic text-center py-10">No lessons or content in this unit. Add a lesson folder to get started.</p>
         )}
@@ -342,7 +342,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
   const renderItems = () => {
     if (!nav.unit || !nav.folder) return null;
     const itemsInFolder = getItemsForFolder(nav.unit, nav.folder);
-    
+
     return (
       <>
         <div className="flex items-center justify-between mb-4">
@@ -404,7 +404,7 @@ export const LibraryVariantCards: React.FC<LibraryVariantCardsProps> = ({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm min-h-[500px]">
       {renderBreadcrumbs()}
-      
+
       {nav.level === 'collections' && renderCollections()}
       {nav.level === 'units' && renderUnits()}
       {nav.level === 'folders' && renderFolders()}

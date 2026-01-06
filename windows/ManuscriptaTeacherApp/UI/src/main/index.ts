@@ -32,7 +32,7 @@ const createWindow = (): void => {
           "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
           "font-src 'self' https://fonts.gstatic.com data:; " +
           "img-src 'self' data: blob:; " +
-          "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;"
+          "connect-src 'self' http://localhost:5910 ws://localhost:5910 https://fonts.googleapis.com https://fonts.gstatic.com;"
         ]
       }
     });
