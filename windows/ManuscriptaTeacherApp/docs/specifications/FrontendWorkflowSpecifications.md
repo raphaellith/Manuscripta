@@ -153,9 +153,9 @@ For a list of all server method and client handlers to be implemented for commun
     
     (b1) only enable the button specified in subsection (b) when -
 
-        (a) in the case of editing an existing question, there has been a change; and
+        (i) in the case of editing an existing question, there has been a change; and
 
-        (b) all mandatory fields of the question, as defined in the Validation Rules, have been filled.
+        (ii) all mandatory fields of the question, as defined in the Validation Rules, have been filled.
     
     (c) provide a delete button for embedded questions. When it is clicked -
 
