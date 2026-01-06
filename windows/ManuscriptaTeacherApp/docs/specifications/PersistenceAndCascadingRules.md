@@ -35,6 +35,8 @@ This document is effective for the Windows app only.
 
 (3) The deletion of a unit collection C must delete any units associated with C.
 
+(3A) The deletion of a unit collection C must delete any source documents associated with C.
+
 (4) The deletion of a unit U must delete any lessons associated with U.
 
 (5) The deletion of a lesson L must delete any materials associated with L.
