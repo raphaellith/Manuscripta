@@ -41,6 +41,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (c) [Deleted.]
 
+    (d) `SourceDocumentTranscripts` (List<String>): A list of transcripts, each read from a source document imported for this unit.
+
 
 ### Section 2C - Lesson
 

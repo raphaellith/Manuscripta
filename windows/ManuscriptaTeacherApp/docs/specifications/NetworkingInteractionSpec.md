@@ -61,8 +61,6 @@ For a list of all server method and client handlers to be implemented, see `Netw
 
         (iv) `Task<List<MaterialEntity>> GetAllMaterials()`
 
-        (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
-
 
 ## Section 4 - Functionalities for the "Library" tab
 
