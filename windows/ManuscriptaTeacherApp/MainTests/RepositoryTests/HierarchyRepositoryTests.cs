@@ -413,8 +413,8 @@ public class HierarchyRepositoryTests
             await mRepo.AddAsync(new WorksheetMaterialEntity(materialId, lessonId, "Material", "Content"));
             
             var qRepo = new EfQuestionRepository(ctx);
-            await qRepo.AddAsync(new Main.Models.Entities.Questions.TrueFalseQuestionEntity(
-                questionId, materialId, "Is this a test?", true));
+            await qRepo.AddAsync(new Main.Models.Entities.Questions.MultipleChoiceQuestionEntity(
+                questionId, materialId, "Is this a test?", new List<string> { "Yes", "No" }, 0));
         }
 
         using (var ctx = new MainDbContext(options))

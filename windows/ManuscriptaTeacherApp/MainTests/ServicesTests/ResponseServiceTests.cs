@@ -15,13 +15,15 @@ public class ResponseServiceTests
 {
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
+    private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
     private readonly ResponseService _service;
 
     public ResponseServiceTests()
     {
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
-        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object);
+        _mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object, _mockFeedbackRepo.Object);
     }
 
     [Fact]
@@ -70,11 +72,11 @@ public class ResponseServiceTests
     {
         // Arrange - Rule 2C(3)(a): Responses must reference a Question
         var questionId = Guid.NewGuid();
-        var response = new TrueFalseResponseEntity(
+        var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
             Guid.NewGuid(),
-            true
+            0
         );
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
@@ -175,21 +177,22 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_TrueFalseResponse_Success()
+    public async Task CreateResponseAsync_MultipleChoiceWithTrueFalseOptions_Success()
     {
-        // Arrange
+        // Arrange - Now uses multiple choice with True/False options
         var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             questionId,
             Guid.NewGuid(),
             "Question",
-            true
+            new List<string> { "True", "False" },
+            0
         );
-        var response = new TrueFalseResponseEntity(
+        var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
             Guid.NewGuid(),
-            false
+            1
         );
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
@@ -237,36 +240,9 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    public async Task CreateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
-        // Arrange - Multiple choice response for true/false question
-        var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            true
-        );
-        var response = new MultipleChoiceResponseEntity(
-            Guid.NewGuid(),
-            questionId,
-            Guid.NewGuid(),
-            0
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateResponseAsync(response));
-        Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task CreateResponseAsync_TrueFalseResponseForMultipleChoice_ThrowsInvalidOperationException()
-    {
-        // Arrange
+        // Arrange - Written response for multiple choice question
         var questionId = Guid.NewGuid();
         var question = new MultipleChoiceQuestionEntity(
             questionId,
@@ -274,33 +250,6 @@ public class ResponseServiceTests
             "Question",
             new List<string> { "A", "B" },
             0
-        );
-        var response = new TrueFalseResponseEntity(
-            Guid.NewGuid(),
-            questionId,
-            Guid.NewGuid(),
-            true
-        );
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
-            .ReturnsAsync(question);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateResponseAsync(response));
-        Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task CreateResponseAsync_WrittenResponseForTrueFalse_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
-            questionId,
-            Guid.NewGuid(),
-            "Question",
-            true
         );
         var response = new WrittenAnswerResponseEntity(
             Guid.NewGuid(),
@@ -319,21 +268,50 @@ public class ResponseServiceTests
     }
 
     [Fact]
+    public async Task CreateResponseAsync_IndexOutOfBounds_ThrowsInvalidOperationException()
+    {
+        // Arrange - Response index out of bounds
+        var questionId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            new List<string> { "A", "B" },
+            0
+        );
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(),
+            questionId,
+            Guid.NewGuid(),
+            5  // Invalid index
+        );
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseAsync(response));
+        Assert.Contains("out of range", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task UpdateResponseAsync_ValidResponse_Success()
     {
         // Arrange
         var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             questionId,
             Guid.NewGuid(),
             "Question",
-            true
+            new List<string> { "True", "False" },
+            0
         );
-        var response = new TrueFalseResponseEntity(
+        var response = new MultipleChoiceResponseEntity(
             Guid.NewGuid(),
             questionId,
             Guid.NewGuid(),
-            false
+            1
         );
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
@@ -365,8 +343,8 @@ public class ResponseServiceTests
     {
         // Arrange
         var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(questionId, Guid.NewGuid(), "Q", true);
-        var response = new TrueFalseResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), true);
+        var question = new MultipleChoiceQuestionEntity(questionId, Guid.NewGuid(), "Q", new List<string> { "T", "F" }, 0);
+        var response = new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), 0);
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
             .ReturnsAsync(question);
@@ -409,21 +387,22 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task UpdateResponseAsync_ResponseTypeMismatch_ThrowsInvalidOperationException()
+    public async Task UpdateResponseAsync_WrittenResponseForMultipleChoiceQuestion_ThrowsInvalidOperationException()
     {
-        // Arrange - Multiple choice response for true/false question
+        // Arrange - Written response for multiple choice question
         var questionId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             questionId,
             Guid.NewGuid(),
             "Question",
-            true
+            new List<string> { "A", "B" },
+            0
         );
-        var response = new MultipleChoiceResponseEntity(
+        var response = new WrittenAnswerResponseEntity(
             Guid.NewGuid(),
             questionId,
             Guid.NewGuid(),
-            0
+            "Some answer"
         );
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
@@ -435,5 +414,24 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateResponseAsync(response));
         Assert.Contains("does not match", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DeleteResponseAsync_CascadesDeleteToFeedback()
+    {
+        // Arrange
+        var responseId = Guid.NewGuid();
+        
+        _mockFeedbackRepo.Setup(r => r.DeleteByResponseIdAsync(responseId))
+            .Returns(Task.CompletedTask);
+        _mockResponseRepo.Setup(r => r.DeleteAsync(responseId))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.DeleteResponseAsync(responseId);
+
+        // Assert - Per §2(2A): Feedback must be deleted before response
+        _mockFeedbackRepo.Verify(r => r.DeleteByResponseIdAsync(responseId), Times.Once);
+        _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 }

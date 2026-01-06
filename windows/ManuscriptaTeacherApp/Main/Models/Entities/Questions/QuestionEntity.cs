@@ -23,13 +23,20 @@ public abstract class QuestionEntity
     [Required]
     public QuestionType QuestionType { get; set; }
 
+    /// <summary>
+    /// The maximum number of marks available for this question.
+    /// Per Validation Rules §2B(2)(c).
+    /// </summary>
+    public int? MaxScore { get; set; }
+
     protected QuestionEntity() { }
 
-    protected QuestionEntity(Guid id, Guid materialId, string questionText, QuestionType questionType)
+    protected QuestionEntity(Guid id, Guid materialId, string questionText, QuestionType questionType, int? maxScore = null)
     {
         Id = id;
         MaterialId = materialId;
         QuestionText = questionText;
         QuestionType = questionType;
+        MaxScore = maxScore;
     }
 }

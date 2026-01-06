@@ -75,11 +75,12 @@ public class QuestionServiceTests
         // Arrange
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "   ",
-            true
+            new List<string> { "True", "False" },
+            0
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -95,11 +96,12 @@ public class QuestionServiceTests
     {
         // Arrange
         var materialId = Guid.NewGuid();
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "Question",
-            true
+            new List<string> { "True", "False" },
+            0
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -164,33 +166,6 @@ public class QuestionServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateQuestionAsync(question));
         Assert.Contains("poll", exception.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task CreateQuestionAsync_WrittenQuestionInQuiz_ThrowsInvalidOperationException()
-    {
-        // Arrange - Rule 2B(3)(b): Written questions cannot be in quizzes
-        var materialId = Guid.NewGuid();
-        var material = new QuizMaterialEntity(
-            materialId,
-            _testLessonId,
-            "Quiz",
-            "Content"
-        );
-        var question = new WrittenAnswerQuestionEntity(
-            Guid.NewGuid(),
-            materialId,
-            "Written Question",
-            "Answer"
-        );
-
-        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
-            .ReturnsAsync(material);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateQuestionAsync(question));
-        Assert.Contains("quiz", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -259,9 +234,9 @@ public class QuestionServiceTests
     [Fact]
     public async Task CreateQuestionAsync_MultipleChoiceInQuiz_Success()
     {
-        // Arrange - Multiple choice questions ARE allowed in quizzes
+        // Arrange
         var materialId = Guid.NewGuid();
-        var material = new QuizMaterialEntity(
+        var material = new WorksheetMaterialEntity(
             materialId,
             _testLessonId,
             "Quiz",
@@ -294,11 +269,12 @@ public class QuestionServiceTests
         // Arrange
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "Updated Question",
-            false
+            new List<string> { "True", "False" },
+            1
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -331,11 +307,12 @@ public class QuestionServiceTests
         // Arrange
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "Question",
-            true
+            new List<string> { "True", "False" },
+            0
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -355,11 +332,12 @@ public class QuestionServiceTests
         // Arrange
         var materialId = Guid.NewGuid();
         var material = new ReadingMaterialEntity(materialId, _testLessonId, "Reading", "Content");
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "Question",
-            true
+            new List<string> { "True", "False" },
+            0
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -378,11 +356,12 @@ public class QuestionServiceTests
         // Arrange
         var materialId = Guid.NewGuid();
         var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Material", "Content");
-        var question = new TrueFalseQuestionEntity(
+        var question = new MultipleChoiceQuestionEntity(
             Guid.NewGuid(),
             materialId,
             "   ",
-            true
+            new List<string> { "True", "False" },
+            0
         );
 
         _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
@@ -404,34 +383,6 @@ public class QuestionServiceTests
             materialId,
             _testLessonId,
             "Poll",
-            "Content"
-        );
-        var question = new WrittenAnswerQuestionEntity(
-            Guid.NewGuid(),
-            materialId,
-            "Written Question",
-            "Answer"
-        );
-
-        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
-            .ReturnsAsync(material);
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(question.Id))
-            .ReturnsAsync(question);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.UpdateQuestionAsync(question));
-    }
-
-    [Fact]
-    public async Task UpdateQuestionAsync_WrittenQuestionInQuiz_ThrowsInvalidOperationException()
-    {
-        // Arrange - Rule 2B(3)(b): Written question cannot be in a quiz
-        var materialId = Guid.NewGuid();
-        var material = new QuizMaterialEntity(
-            materialId,
-            _testLessonId,
-            "Quiz",
             "Content"
         );
         var question = new WrittenAnswerQuestionEntity(

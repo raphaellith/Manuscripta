@@ -28,15 +28,6 @@ public static class QuestionEntityMapper
                 Options = mc.Options,
                 CorrectAnswer = mc.CorrectAnswerIndex.ToString()
             },
-            TrueFalseQuestionEntity tf => new QuestionDataEntity
-            {
-                Id = tf.Id,
-                MaterialId = tf.MaterialId,
-                QuestionText = tf.QuestionText,
-                QuestionType = QuestionType.TRUE_FALSE,
-                Options = null,
-                CorrectAnswer = tf.CorrectAnswer.ToString()
-            },
             WrittenAnswerQuestionEntity wa => new QuestionDataEntity
             {
                 Id = wa.Id,
@@ -67,12 +58,6 @@ public static class QuestionEntityMapper
                 options: dataEntity.Options ?? new List<string>(),
                 correctAnswerIndex: ParseInt(dataEntity.CorrectAnswer)
             ),
-            QuestionType.TRUE_FALSE => new TrueFalseQuestionEntity(
-                id: dataEntity.Id,
-                materialId: dataEntity.MaterialId,
-                questionText: dataEntity.QuestionText ?? string.Empty,
-                correctAnswer: ParseBool(dataEntity.CorrectAnswer)
-            ),
             QuestionType.WRITTEN_ANSWER => new WrittenAnswerQuestionEntity(
                 id: dataEntity.Id,
                 materialId: dataEntity.MaterialId,
@@ -87,13 +72,6 @@ public static class QuestionEntityMapper
     {
         if (string.IsNullOrEmpty(value) || !int.TryParse(value, out int result))
             throw new InvalidOperationException($"Invalid integer value for correct answer: {value}");
-        return result;
-    }
-
-    private static bool ParseBool(string? value)
-    {
-        if (string.IsNullOrEmpty(value) || !bool.TryParse(value, out bool result))
-            throw new InvalidOperationException($"Invalid boolean value for correct answer: {value}");
         return result;
     }
 }

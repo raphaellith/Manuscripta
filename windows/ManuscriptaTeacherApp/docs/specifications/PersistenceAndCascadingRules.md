@@ -31,7 +31,11 @@ This document is effective for the Windows app only.
 
 (2) The deletion of a question Q must delete any responses associated with Q.
 
+(2A) The deletion of a response R must delete any feedback associated with R.
+
 (3) The deletion of a unit collection C must delete any units associated with C.
+
+(3A) The deletion of a unit collection C must delete any source documents associated with C.
 
 (4) The deletion of a unit U must delete any lessons associated with U.
 

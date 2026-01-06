@@ -61,19 +61,6 @@ public class MaterialEntityMapperTests
     }
 
     [Fact]
-    public void ToDataEntity_WithQuiz_MapsCorrectly()
-    {
-        // Arrange
-        var entity = new QuizMaterialEntity(Guid.NewGuid(), _testLessonId, "Quiz", "Content");
-
-        // Act
-        var dataEntity = MaterialEntityMapper.ToDataEntity(entity);
-
-        // Assert
-        Assert.Equal(MaterialType.QUIZ, dataEntity.MaterialType);
-    }
-
-    [Fact]
     public void ToDataEntity_WithMetadataAndVocabulary_MapsCorrectly()
     {
         // Arrange
@@ -174,28 +161,6 @@ public class MaterialEntityMapperTests
     }
 
     [Fact]
-    public void ToEntity_WithQuizDataEntity_MapsCorrectly()
-    {
-        // Arrange
-        var dataEntity = new MaterialDataEntity
-        {
-            Id = Guid.NewGuid(),
-            LessonId = Guid.NewGuid(),
-            MaterialType = MaterialType.QUIZ,
-            Title = "Quiz",
-            Content = "Content",
-            Timestamp = DateTime.UtcNow
-        };
-
-        // Act
-        var entity = MaterialEntityMapper.ToEntity(dataEntity);
-
-        // Assert
-        Assert.IsType<QuizMaterialEntity>(entity);
-        Assert.Equal(MaterialType.QUIZ, entity.MaterialType);
-    }
-
-    [Fact]
     public void ToEntity_WithNull_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -214,11 +179,11 @@ public class MaterialEntityMapperTests
         var metadata = "{\"test\":true}";
         var vocabularyTerms = new System.Text.Json.Nodes.JsonArray();
 
-        var original = new QuizMaterialEntity(id, lessonId, title, content, timestamp, metadata, vocabularyTerms);
+        var original = new WorksheetMaterialEntity(id, lessonId, title, content, timestamp, metadata, vocabularyTerms);
 
         // Act
         var dataEntity = MaterialEntityMapper.ToDataEntity(original);
-        var roundTripped = MaterialEntityMapper.ToEntity(dataEntity) as QuizMaterialEntity;
+        var roundTripped = MaterialEntityMapper.ToEntity(dataEntity) as WorksheetMaterialEntity;
 
         // Assert
         Assert.NotNull(roundTripped);

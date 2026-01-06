@@ -61,6 +61,8 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) `Task<List<MaterialEntity>> GetAllMaterials()`
 
+        (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
+
 
 ## Section 4 - Functionalities for the "Library" tab
 

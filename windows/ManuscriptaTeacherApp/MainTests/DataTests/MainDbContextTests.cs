@@ -84,8 +84,8 @@ public class MainDbContextTests
             var material = new MaterialDataEntity
             {
                 Id = materialId,
-                MaterialType = MaterialType.QUIZ,
-                Title = "Quiz",
+                MaterialType = MaterialType.WORKSHEET,
+                Title = "Worksheet",
                 Content = "Content",
                 Timestamp = DateTime.UtcNow
             };
@@ -97,9 +97,10 @@ public class MainDbContextTests
                 {
                     Id = Guid.NewGuid(),
                     QuestionText = $"Question {i}",
-                    QuestionType = QuestionType.TRUE_FALSE,
+                    QuestionType = QuestionType.MULTIPLE_CHOICE,
                     MaterialId = materialId,
-                    CorrectAnswer = "True"
+                    Options = new System.Collections.Generic.List<string> { "A", "B" },
+                    CorrectAnswer = "0"
                 });
             }
             ctx.SaveChanges();

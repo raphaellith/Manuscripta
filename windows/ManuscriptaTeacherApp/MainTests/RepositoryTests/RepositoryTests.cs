@@ -158,7 +158,7 @@ public class RepositoryTests
             var qRepo = new EfQuestionRepository(ctx);
 
             // Add material
-            var material = new QuizMaterialEntity(
+            var material = new WorksheetMaterialEntity(
                 materialId,
                 lessonId,
                 "Original Title",
@@ -167,7 +167,7 @@ public class RepositoryTests
             await mRepo.AddAsync(material);
 
             // Add question
-            var question = new TrueFalseQuestionEntity(questionId, materialId, "Original?", true);
+            var question = new MultipleChoiceQuestionEntity(questionId, materialId, "Original?", new List<string> { "True", "False" }, 0);
             await qRepo.AddAsync(question);
         }
 
@@ -179,9 +179,9 @@ public class RepositoryTests
             // Update material
             var material = await mRepo.GetByIdAsync(materialId);
             Assert.NotNull(material);
-            Assert.IsType<QuizMaterialEntity>(material);
+            Assert.IsType<WorksheetMaterialEntity>(material);
             
-            var updatedMaterial = new QuizMaterialEntity(
+            var updatedMaterial = new WorksheetMaterialEntity(
                 materialId,
                 material!.LessonId,
                 "Updated Title",
@@ -191,7 +191,7 @@ public class RepositoryTests
             await mRepo.UpdateAsync(updatedMaterial);
 
             // Update question
-            var updatedQuestion = new TrueFalseQuestionEntity(questionId, materialId, "Updated?", false);
+            var updatedQuestion = new MultipleChoiceQuestionEntity(questionId, materialId, "Updated?", new List<string> { "True", "False" }, 1);
             await qRepo.UpdateAsync(updatedQuestion);
         }
 
@@ -204,10 +204,10 @@ public class RepositoryTests
             Assert.NotNull(material);
             Assert.Equal("Updated Title", material!.Title);
 
-            var question = await qRepo.GetByIdAsync(questionId) as TrueFalseQuestionEntity;
+            var question = await qRepo.GetByIdAsync(questionId) as MultipleChoiceQuestionEntity;
             Assert.NotNull(question);
             Assert.Equal("Updated?", question!.QuestionText);
-            Assert.False(question.CorrectAnswer);
+            Assert.Equal(1, question.CorrectAnswerIndex);
         }
     }
 
@@ -393,7 +393,7 @@ public class RepositoryTests
         // Add responses to the question
         await rRepo.AddAsync(new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), 1, null, true));
         await rRepo.AddAsync(new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), 2, null, false));
-        await rRepo.AddAsync(new TrueFalseResponseEntity(Guid.NewGuid(), otherQuestionId, Guid.NewGuid(), true, null, true));
+        await rRepo.AddAsync(new MultipleChoiceResponseEntity(Guid.NewGuid(), otherQuestionId, Guid.NewGuid(), 0, null, true));
 
         // Delete responses by question ID
         await rRepo.DeleteByQuestionIdAsync(questionId);

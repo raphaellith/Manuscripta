@@ -1,8 +1,8 @@
 {
-  "name": "manuscripta-teacher-portal-prototype",
-  "productName": "manuscripta-teacher-portal-prototype",
+  "name": "manuscripta-teacher-portal",
+  "productName": "Manuscripta Teacher Portal",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "The Teacher Portal for Manuscripta",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -48,6 +48,7 @@
     "typescript": "~4.5.4"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

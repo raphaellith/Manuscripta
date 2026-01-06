@@ -71,8 +71,7 @@ public class MaterialService : IMaterialService
         if (string.IsNullOrWhiteSpace(material.Title))
             throw new ArgumentException("Material title cannot be empty.", nameof(material));
 
-        if (string.IsNullOrWhiteSpace(material.Content))
-            throw new ArgumentException("Material content cannot be empty.", nameof(material));
+        // Content is allowed to be empty at creation - will be filled in via editor
 
         // Validate LessonId references a valid Lesson
         // Per AdditionalValidationRules.md §2D(1)(a)

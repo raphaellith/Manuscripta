@@ -112,9 +112,38 @@ public class BinaryOpcodesTests
         Assert.InRange(BinaryOpcodes.StatusUpdate, 0x10, 0x1F);
         Assert.InRange(BinaryOpcodes.HandRaised, 0x10, 0x1F);
         Assert.InRange(BinaryOpcodes.DistributeAck, 0x10, 0x1F);
+        Assert.InRange(BinaryOpcodes.FeedbackAck, 0x10, 0x1F);
 
         // 0x20-0x2F: Pairing (TCP)
         Assert.InRange(BinaryOpcodes.PairingRequest, 0x20, 0x2F);
         Assert.InRange(BinaryOpcodes.PairingAck, 0x20, 0x2F);
+    }
+
+    [Fact]
+    public void ReturnFeedback_HasCorrectValue()
+    {
+        // Per API Contract §3.4: RETURN_FEEDBACK = 0x07
+        Assert.Equal(0x07, BinaryOpcodes.ReturnFeedback);
+    }
+
+    [Fact]
+    public void FeedbackAck_HasCorrectValue()
+    {
+        // Per API Contract §3.6: FEEDBACK_ACK = 0x13
+        Assert.Equal(0x13, BinaryOpcodes.FeedbackAck);
+    }
+
+    [Fact]
+    public void ReturnFeedback_IsInServerToClientRange()
+    {
+        // Per API Contract §3.2: 0x01-0x0F = Server → Client Control (TCP)
+        Assert.InRange(BinaryOpcodes.ReturnFeedback, 0x01, 0x0F);
+    }
+
+    [Fact]
+    public void FeedbackAck_IsInClientToServerRange()
+    {
+        // Per API Contract §3.2: 0x10-0x1F = Client → Server Status (TCP)
+        Assert.InRange(BinaryOpcodes.FeedbackAck, 0x10, 0x1F);
     }
 }
