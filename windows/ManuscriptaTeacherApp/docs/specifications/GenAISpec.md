@@ -1,4 +1,4 @@
-# Generative API Component Specifications (Windows)
+# Generative AI Component Specifications (Windows)
 
 ## Explanatory Note
 
