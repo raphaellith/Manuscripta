@@ -81,17 +81,13 @@ turndownService.addRule('centeredText', {
     }
 });
 
-// Handle images - convert to attachment syntax
+// Handle images - convert to standard markdown image syntax
 turndownService.addRule('images', {
     filter: 'img',
     replacement: function (_content, node) {
         const img = node as HTMLImageElement;
         const alt = img.alt || '';
         const src = img.src || '';
-        // If it's an attachment URL, use as-is; otherwise wrap
-        if (src.includes('/attachments/')) {
-            return `![${alt}](${src})`;
-        }
         return `![${alt}](${src})`;
     }
 });
