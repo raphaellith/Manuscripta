@@ -224,7 +224,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return htmlToMarkdown(html);
     }, [editor]);
 
-    // Auto-save with 5-second debounce
+    // Auto-save with 1-second debounce
     const saveContent = useCallback(async () => {
         if (!isDirty || !editor) return;
 
