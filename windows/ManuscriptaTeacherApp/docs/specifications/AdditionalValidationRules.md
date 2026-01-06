@@ -41,8 +41,6 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (c) [Deleted.]
 
-    (d) `SourceDocumentTranscripts` (List<String>): A list of transcripts, each read from a source document imported for this unit.
-
 
 ### Section 2C - Lesson
 
@@ -68,3 +66,15 @@ This document defines the hierarchical system for grouping and organising Materi
     (b) `ActualAge` (int).
 
 (3) Additional fields defined in this Section do not apply to the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
+
+
+
+## Section 3 - Entity classes Not Belonging to the Material Hierarchy
+
+## Section 3A - Source Document
+
+(1) A source document is represented by a `SourceDocumentEntity` class. This class must contain the following attributes.
+
+    (a) `UnitCollectionId` (UUID): References the unit collection to which this source document is imported.
+
+    (b) `Transcript` (string): A textual transcript of the source document contents.

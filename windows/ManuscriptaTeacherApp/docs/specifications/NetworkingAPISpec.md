@@ -83,6 +83,14 @@ For a description of how these server methods and client handlers are expected t
 
     (j) Methods for updating app settings. **To be confirmed.**
 
+    (k) Creation, retrieval and deletion methods for source documents.
+
+        (i) `Task CreateSourceDocument(SourceDocumentEntity newSourceDocumentEntity)`: Receives data for a new source document entity (without an assigned UUID), and creates the entity with an assigned UUID.
+
+        (ii) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`: Retrieves all source document entities.
+
+        (iii) `Task DeleteSourceDocument(Guid id)`: Deletes a source document entity, identified by its UUID.
+
 
 
 
