@@ -23,21 +23,26 @@ turndownService.addRule('table', {
     filter: 'table',
     replacement: function (_content, node) {
         const table = node as HTMLTableElement;
-        const rows: string[][] = [];
+        const rows: { cells: string[]; isHeader: boolean }[] = [];
 
         table.querySelectorAll('tr').forEach((tr) => {
             const cells: string[] = [];
             tr.querySelectorAll('th, td').forEach((cell) => {
                 cells.push(cell.textContent?.trim() || '');
             });
-            rows.push(cells);
+            const hasHeaderCells = tr.querySelectorAll('th').length > 0;
+            rows.push({ cells, isHeader: hasHeaderCells });
         });
 
         if (rows.length === 0) return '';
 
-        const headerRow = rows[0];
+        const headerIndex = rows.findIndex(row => row.isHeader);
+        const headerRow = (headerIndex !== -1 ? rows[headerIndex] : rows[0]).cells;
+        const dataRows = rows
+            .filter((_, index) => index !== (headerIndex !== -1 ? headerIndex : 0))
+            .map(row => row.cells);
+
         const separator = headerRow.map(() => '---');
-        const dataRows = rows.slice(1);
 
         let markdown = '| ' + headerRow.join(' | ') + ' |\n';
         markdown += '| ' + separator.join(' | ') + ' |\n';
