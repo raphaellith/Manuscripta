@@ -15,6 +15,7 @@ This document is effective for the Windows app only.
     (c) `UnitCollectionDataEntity`.
     (d) `UnitDataEntity`.
     (e) `LessonDataEntity`.
+    (f) `SourceDocumentDataEntity`.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
