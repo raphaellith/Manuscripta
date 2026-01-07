@@ -78,3 +78,7 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) `UnitCollectionId` (UUID): References the unit collection to which this source document is imported.
 
     (b) `Transcript` (string): A textual transcript of the source document contents.
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.

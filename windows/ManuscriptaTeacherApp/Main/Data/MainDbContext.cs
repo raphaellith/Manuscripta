@@ -25,6 +25,12 @@ public class MainDbContext : DbContext
     /// </summary>
     public DbSet<PairedDeviceEntity> PairedDevices { get; set; }
     
+    /// <summary>
+    /// Source documents imported into unit collections.
+    /// Per PersistenceAndCascadingRules.md §1(1)(f).
+    /// </summary>
+    public DbSet<SourceDocumentEntity> SourceDocuments { get; set; }
+    
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
     // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
@@ -103,6 +109,19 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<PairedDeviceEntity>(entity =>
         {
             entity.HasKey(e => e.DeviceId);
+        });
+
+        // Configure SourceDocumentEntity with cascade delete from UnitCollection
+        // Per PersistenceAndCascadingRules.md §2(3A)
+        modelBuilder.Entity<SourceDocumentEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UnitCollectionId);
+            
+            entity.HasOne(sd => sd.UnitCollection)
+                .WithMany()
+                .HasForeignKey(sd => sd.UnitCollectionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
