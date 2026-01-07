@@ -52,6 +52,16 @@ For a description of how these server methods and client handlers are expected t
         (iii) `Task UpdateMaterial(MaterialEntity updated)`: Updates a material entity, identified by its UUID.
 
         (iv) `Task DeleteMaterial(Guid id)`: Deletes a Material entity, identified by its UUID.
+    
+    (d1) CRUD methods for questions.
+
+        (i) `Task<Guid> CreateQuestion(QuestionEntity newQuestionEntity)`: Receives data for a new material entity (without an assigned UUID), and creates the entity with an assigned UUID, which is returned to the client 
+
+        (ii) `Task<List<QuestionEntity>> GetQuestionsUnderMaterial(Guid materialId)`: Retrieves all questions associated with the material with the materialId.
+
+        (iii) `Task UpdateQuestion(QuestionEntity updated)`: Updates a question entity, identified by its UUID.
+
+        (iv) `Task DeleteQuestion(Guid id)`: Deletes a Question entity, identified by its UUID.
 
     (e) Method for retrieving devices, device statuses and sessions.
 
