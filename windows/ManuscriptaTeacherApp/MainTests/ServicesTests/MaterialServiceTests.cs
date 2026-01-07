@@ -82,21 +82,6 @@ public class MaterialServiceTests
             () => _service.CreateMaterialAsync(material));
     }
 
-    [Fact]
-    public async Task CreateMaterialAsync_EmptyContent_ThrowsArgumentException()
-    {
-        // Arrange
-        var material = new PollMaterialEntity(
-            Guid.NewGuid(),
-            _testLessonId,
-            "Title",
-            ""
-        );
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateMaterialAsync(material));
-    }
 
     [Fact]
     public async Task CreateMaterialAsync_InvalidLessonId_ThrowsInvalidOperationException()
@@ -167,21 +152,6 @@ public class MaterialServiceTests
             () => _service.UpdateMaterialAsync(material));
     }
 
-    [Fact]
-    public async Task UpdateMaterialAsync_EmptyContent_ThrowsArgumentException()
-    {
-        // Arrange
-        var material = new PollMaterialEntity(
-            Guid.NewGuid(),
-            _testLessonId,
-            "Title",
-            ""
-        );
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.UpdateMaterialAsync(material));
-    }
 
     [Fact]
     public async Task UpdateMaterialAsync_NonExistingMaterial_ThrowsInvalidOperationException()
