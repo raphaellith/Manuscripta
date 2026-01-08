@@ -97,7 +97,7 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) The `MaterialId` specified in (1)(a) must associate with a valid `MaterialEntity`.
 
-    (b) The `FileName` specified in (1)(b) must refer to an existing file (F) in the directory `windows/ManuscriptaTeacherApp/Attachments`. The `FileName` must contain the file's base name, a full stop character `.` and the file's extension in that order.
+    (b) The `FileName` specified in (1)(b) must refer to an existing file (F) in the directory `%AppData%\ManuscriptaTeacherApp\Attachments`. The `FileName` must contain the file's base name, a full stop character `.` and the file's extension in that order.
 
     (c) The file F must have one of the following extensions.
 
