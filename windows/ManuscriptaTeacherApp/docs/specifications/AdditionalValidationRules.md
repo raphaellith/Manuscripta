@@ -82,3 +82,25 @@ This document defines the hierarchical system for grouping and organising Materi
 (2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
+
+
+## Section 3B - Attachment
+
+(1) An attachment is represented by an `AttachmentEntity` class. This class must contain the following attributes.
+
+    (a) `MaterialId` (UUID): References the material to which this attachment belongs.
+
+    (b) `FileName` (string): The name and extension of the attachment file.
+
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `MaterialId` specified in (1)(a) must associate with a valid `MaterialEntity`.
+
+    (b) The `FileName` specified in (1)(b) must refer to an existing file (F) in the directory `windows/ManuscriptaTeacherApp/Attachments`. The `FileName` must contain the file's base name, a full stop character `.` and the file's extension in that order.
+
+    (c) The file F must have one of the following extensions.
+
+        (i) `png` for images.
+
+        (ii) `pdf` for portable documents.

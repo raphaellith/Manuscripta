@@ -63,6 +63,8 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+        (vi) `Task<List<AttachmentEntity>> GetAllAttachments()`
+
 
 ## Section 4 - Functionalities for the "Library" tab
 

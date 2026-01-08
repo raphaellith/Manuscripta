@@ -16,6 +16,7 @@ This document is effective for the Windows app only.
     (d) `UnitDataEntity`.
     (e) `LessonDataEntity`.
     (f) `SourceDocumentEntity`.
+    (g) `AttachmentEntity`.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
@@ -29,6 +30,8 @@ This document is effective for the Windows app only.
 ## Section 2 - Requirements for Orphan Removal
 
 (1) The deletion of a material M must delete any questions associated with M.
+
+(1A) The deletion of a material M must delete any attachments associated with M
 
 (2) The deletion of a question Q must delete any responses associated with Q.
 

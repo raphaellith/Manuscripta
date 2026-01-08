@@ -18,6 +18,10 @@ This document defines the structure of the Windows app, and the directories and 
 
     (a) `MainTests` (placed under `windows/ManuscriptaTeacherApp/MainTests`). This is a test project which tests the Main component.
 
+    (b) `Attachments` (placed under `windows/ManuscriptaTeacherApp/Attachments`). This stores the attachment files referenced by `AttachmentEntity` objects in the `Main` component, as defined in S3B in `AdditionalValidationRules.md`.
+
+
+
 ## Section 2A - Directory Structure of `Main`
 
 (1) **Directory Structure**
