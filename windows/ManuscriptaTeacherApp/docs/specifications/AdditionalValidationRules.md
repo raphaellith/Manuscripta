@@ -101,6 +101,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (c) The file F must have one of the following extensions.
 
-        (i) `png` for images.
+        (i) `png`.
 
-        (ii) `pdf` for portable documents.
+        (ii) `jpeg`.
+
+        (iii) `pdf`.
