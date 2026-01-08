@@ -31,8 +31,6 @@ This document is effective for the Windows app only.
 
 (1) The deletion of a material M must delete any questions associated with M.
 
-(1A) The deletion of a material M must delete any attachments associated with M
-
 (2) The deletion of a question Q must delete any responses associated with Q.
 
 (2A) The deletion of a response R must delete any feedback associated with R.
@@ -44,6 +42,10 @@ This document is effective for the Windows app only.
 (4) The deletion of a unit U must delete any lessons associated with U.
 
 (5) The deletion of a lesson L must delete any materials associated with L.
+
+(6) The deletion of a material M must delete any attachments associated with M.
+
+(7) The deletion of an attachment A must delete the attachment file named by A's `FileName` attribute.
 
 
 ## Appendix 1 - Using this Document (Instruction to AI Agents)
