@@ -63,6 +63,8 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+        (vi) `Task<List<AttachmentEntity>> GetAllAttachments()`
+
 
 ## Section 4 - Functionalities for the "Library" tab
 
@@ -78,7 +80,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) When creating a material, the front end shall -
 
-    (a) prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of this document with empty content.
+    (a) prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of `NetworkingAPISpec.md` with empty content.
 
     (b) prompt the user to select the method of creation, through one of the following initial means:
 
@@ -129,7 +131,11 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) rendering and editing of all language features specified in the Material Encoding Specification. 
 
-    (b) rendering, insertion, editing, relocation and deletion of embedded questions, as well as pictures and PDFs.
+    (b) [Deleted.]
+
+    (c) rendering, insertion, editing, relocation and deletion of embedded questions.
+
+    (d) rendering, insertion, relocation and deletion of PDF, PNG and JPEG attachments.
 
 (2) **Additional Functionalities**
 
@@ -165,6 +171,25 @@ For a list of all server method and client handlers to be implemented for commun
 
     However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
 
+(4) **Handling attachments**
+
+    The editor modal shall -
+
+    (a) provide an "attach" button adding attachments to the material. When it is clicked -
+
+        (i) prompt the user to upload an attachment file.
+
+        (ii) create an attachment entity using the uploaded file's base name and extension, by calling `Task CreateAttachment(AttachmentEntity newAttachmentEntity)`, as defined in S1(1)(l)(i) of the Networking API Specification.
+
+        (iii) create and save a copy of the uploaded attachment file to the directory `%AppData%\ManuscriptaTeacherApp\Attachments`. This copy's file base name must match the UUID of the attachment entity created in (ii). Its file extension must match that of the attachment file originally uploaded in (i).
+
+        (iv) insert the attachment into the material at the point indicated by the caret's current position.
+
+    (b) provide a "delete" button for attachments. When it is clicked -
+
+        (i) delete the attachment using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+
+        (ii) remove the attachment reference in the material.
 
 
 ## Section 5 - Functionalities for the "Classroom" tab
