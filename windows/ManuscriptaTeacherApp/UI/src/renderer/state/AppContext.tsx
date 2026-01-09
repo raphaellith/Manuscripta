@@ -228,6 +228,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 }));
             } catch (err) {
                 console.error('Failed to create default poll question:', err);
+                // Roll back material creation to avoid inconsistent poll state
+                try {
+                    await signalRService.deleteMaterial(created.id);
+                } catch (deleteErr) {
+                    console.error('Failed to roll back material after poll question failure:', deleteErr);
+                }
+                setState(prev => ({
+                    ...prev,
+                    materials: prev.materials.filter(m => m.id !== created.id),
+                }));
+                throw err;
             }
         }
 
