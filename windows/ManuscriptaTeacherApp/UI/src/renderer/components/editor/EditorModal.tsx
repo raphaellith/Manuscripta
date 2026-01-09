@@ -560,14 +560,24 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
         // Remove question reference from content - per s4C(3)(c)(ii)
         if (editor) {
-            const html = editor.getHTML();
-            const updatedHtml = html.replace(
-                new RegExp(`<div[^>]*data-question-id="${questionId}"[^>]*>.*?</div>`, 'gs'),
-                ''
-            );
-            const doc = editor.getHTML();
-            if (doc !== updatedHtml) {
-                editor.commands.setContent(updatedHtml);
+            const { doc, tr } = editor.state;
+
+            // Collect ranges of all matching questionRef nodes
+            const ranges: { from: number; to: number }[] = [];
+            doc.descendants((node, pos) => {
+                if (node.type.name === 'questionRef' && node.attrs.id === questionId) {
+                    ranges.push({ from: pos, to: pos + node.nodeSize });
+                }
+            });
+
+            if (ranges.length > 0) {
+                // Delete from the end to avoid position shifts
+                for (let i = ranges.length - 1; i >= 0; i--) {
+                    const { from, to } = ranges[i];
+                    tr.delete(from, to);
+                }
+
+                editor.view.dispatch(tr);
                 setIsDirty(true);
             }
         }
