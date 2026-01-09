@@ -4,10 +4,13 @@ import type {
     UnitEntity,
     LessonEntity,
     MaterialEntity,
+    QuestionEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
     InternalCreateMaterialDto,
+    InternalCreateQuestionDto,
+    InternalUpdateQuestionDto,
 } from "../../models";
 
 /**
@@ -152,6 +155,42 @@ class SignalRService {
 
     public async deleteMaterial(id: string): Promise<void> {
         await this.connection.invoke("DeleteMaterial", id);
+    }
+
+    // ==========================================
+    // Question CRUD - NetworkingAPISpec §1(1)(d1)
+    // ==========================================
+
+    /**
+     * Creates a new question and returns its assigned ID.
+     * Per NetworkingAPISpec §1(1)(d1)(i).
+     */
+    public async createQuestion(dto: InternalCreateQuestionDto): Promise<string> {
+        return await this.connection.invoke<string>("CreateQuestion", dto);
+    }
+
+    /**
+     * Retrieves all questions under a material.
+     * Per NetworkingAPISpec §1(1)(d1)(ii).
+     */
+    public async getQuestionsUnderMaterial(materialId: string): Promise<QuestionEntity[]> {
+        return await this.connection.invoke<QuestionEntity[]>("GetQuestionsUnderMaterial", materialId);
+    }
+
+    /**
+     * Updates a question entity.
+     * Per NetworkingAPISpec §1(1)(d1)(iii).
+     */
+    public async updateQuestion(dto: InternalUpdateQuestionDto): Promise<void> {
+        await this.connection.invoke("UpdateQuestion", dto);
+    }
+
+    /**
+     * Deletes a question by ID.
+     * Per NetworkingAPISpec §1(1)(d1)(iv).
+     */
+    public async deleteQuestion(id: string): Promise<void> {
+        await this.connection.invoke("DeleteQuestion", id);
     }
 
     // ==========================================

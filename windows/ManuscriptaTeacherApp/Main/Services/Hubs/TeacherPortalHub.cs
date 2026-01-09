@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Main.Models.Dtos;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
+using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services.Repositories;
 
@@ -17,29 +18,35 @@ public class TeacherPortalHub : Hub
     private readonly IUnitService _unitService;
     private readonly ILessonService _lessonService;
     private readonly IMaterialService _materialService;
+    private readonly IQuestionService _questionService;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
     private readonly IUnitRepository _unitRepository;
     private readonly ILessonRepository _lessonRepository;
     private readonly IMaterialRepository _materialRepository;
+    private readonly IQuestionRepository _questionRepository;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
         IUnitService unitService,
         ILessonService lessonService,
         IMaterialService materialService,
+        IQuestionService questionService,
         IUnitCollectionRepository unitCollectionRepository,
         IUnitRepository unitRepository,
         ILessonRepository lessonRepository,
-        IMaterialRepository materialRepository)
+        IMaterialRepository materialRepository,
+        IQuestionRepository questionRepository)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
         _lessonService = lessonService ?? throw new ArgumentNullException(nameof(lessonService));
         _materialService = materialService ?? throw new ArgumentNullException(nameof(materialService));
+        _questionService = questionService ?? throw new ArgumentNullException(nameof(questionService));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
         _unitRepository = unitRepository ?? throw new ArgumentNullException(nameof(unitRepository));
         _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
+        _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -237,6 +244,111 @@ public class TeacherPortalHub : Hub
             MaterialType.POLL => new PollMaterialEntity(
                 id, dto.LessonId, dto.Title, dto.Content, null, dto.Metadata, dto.VocabularyTerms, dto.ReadingAge, dto.ActualAge),
             _ => throw new ArgumentException($"Unknown material type: {dto.MaterialType}", nameof(dto))
+        };
+    }
+
+    #endregion
+
+    #region Question CRUD - NetworkingAPISpec §1(1)(d1)
+
+    /// <summary>
+    /// Creates a new question entity with an assigned UUID.
+    /// Per NetworkingAPISpec §1(1)(d1)(i).
+    /// </summary>
+    public async Task<Guid> CreateQuestion(InternalCreateQuestionDto dto)
+    {
+        var id = Guid.NewGuid();
+        var entity = CreateQuestionEntity(id, dto);
+        var created = await _questionService.CreateQuestionAsync(entity);
+        return created.Id;
+    }
+
+    /// <summary>
+    /// Retrieves all questions associated with a material.
+    /// Per NetworkingAPISpec §1(1)(d1)(ii).
+    /// </summary>
+    public async Task<List<InternalQuestionResponseDto>> GetQuestionsUnderMaterial(Guid materialId)
+    {
+        var questions = await _questionRepository.GetByMaterialIdAsync(materialId);
+        return questions.Select(InternalQuestionResponseDto.FromEntity).ToList();
+    }
+
+    /// <summary>
+    /// Updates a question entity.
+    /// Per NetworkingAPISpec §1(1)(d1)(iii).
+    /// </summary>
+    public async Task UpdateQuestion(InternalUpdateQuestionDto dto)
+    {
+        var existing = await _questionRepository.GetByIdAsync(dto.Id);
+        if (existing == null)
+            throw new HubException($"Question with ID {dto.Id} not found.");
+
+        // Check if the question type is changing - this requires delete/recreate
+        if (existing.QuestionType != dto.QuestionType)
+        {
+            // Delete old question and create new one with same ID
+            await _questionService.DeleteQuestionAsync(dto.Id);
+            var newEntity = CreateQuestionEntity(dto.Id, new InternalCreateQuestionDto(
+                dto.MaterialId,
+                dto.QuestionType,
+                dto.QuestionText,
+                dto.Options,
+                dto.CorrectAnswerIndex,
+                dto.SampleAnswer,
+                dto.MaxScore));
+            await _questionService.CreateQuestionAsync(newEntity);
+            return;
+        }
+
+        // Update properties on existing entity
+        existing.MaterialId = dto.MaterialId;
+        existing.QuestionText = dto.QuestionText;
+        existing.MaxScore = dto.MaxScore;
+        
+        // Update type-specific properties
+        if (existing is MultipleChoiceQuestionEntity mcq && dto.QuestionType == QuestionType.MULTIPLE_CHOICE)
+        {
+            mcq.Options = dto.Options ?? new List<string>();
+            mcq.CorrectAnswerIndex = dto.CorrectAnswerIndex;  // null = no correct answer
+        }
+        else if (existing is WrittenAnswerQuestionEntity waq && dto.QuestionType == QuestionType.WRITTEN_ANSWER)
+        {
+            waq.CorrectAnswer = dto.SampleAnswer ?? string.Empty;
+        }
+        
+        await _questionService.UpdateQuestionAsync(existing);
+    }
+
+    /// <summary>
+    /// Deletes a question entity by ID.
+    /// Per NetworkingAPISpec §1(1)(d1)(iv).
+    /// </summary>
+    public async Task DeleteQuestion(Guid id)
+    {
+        await _questionService.DeleteQuestionAsync(id);
+    }
+
+    /// <summary>
+    /// Factory method to create concrete QuestionEntity based on type.
+    /// </summary>
+    private static QuestionEntity CreateQuestionEntity(Guid id, InternalCreateQuestionDto dto)
+    {
+        return dto.QuestionType switch
+        {
+            QuestionType.MULTIPLE_CHOICE => new MultipleChoiceQuestionEntity(
+                id,
+                dto.MaterialId,
+                dto.QuestionText,
+                dto.Options ?? new List<string>(),
+                dto.CorrectAnswerIndex,  // null = no correct answer (auto-marking disabled)
+                dto.MaxScore),
+            QuestionType.WRITTEN_ANSWER => new WrittenAnswerQuestionEntity(
+                id,
+                dto.MaterialId,
+                dto.QuestionText,
+                dto.SampleAnswer ?? string.Empty,  // Provide default if null
+                dto.MaxScore),
+            _ => throw new ArgumentException($"Unknown question type: {dto.QuestionType}", nameof(dto))
         };
     }
 

@@ -48,8 +48,20 @@ public class EfQuestionRepository : IQuestionRepository
 
     public async Task UpdateAsync(QuestionEntity entity)
     {
-        var dataEntity = QuestionEntityMapper.ToDataEntity(entity);
-        _ctx.Questions.Update(dataEntity);
+        // Fetch existing data entity to avoid tracking conflicts
+        var existingDataEntity = await _ctx.Questions.FindAsync(entity.Id);
+        if (existingDataEntity == null)
+            throw new InvalidOperationException($"Question with ID {entity.Id} not found.");
+
+        // Update properties from the domain entity
+        var updatedDataEntity = QuestionEntityMapper.ToDataEntity(entity);
+        existingDataEntity.MaterialId = updatedDataEntity.MaterialId;
+        existingDataEntity.QuestionText = updatedDataEntity.QuestionText;
+        existingDataEntity.QuestionType = updatedDataEntity.QuestionType;
+        existingDataEntity.Options = updatedDataEntity.Options;
+        existingDataEntity.CorrectAnswer = updatedDataEntity.CorrectAnswer;
+        existingDataEntity.MaxScore = updatedDataEntity.MaxScore;
+        
         await _ctx.SaveChangesAsync();
     }
 

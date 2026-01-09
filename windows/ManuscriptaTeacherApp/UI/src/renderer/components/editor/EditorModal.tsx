@@ -20,9 +20,11 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed } from './extensions';
+import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
-import type { MaterialEntity } from '../../models';
+import type { MaterialEntity, QuestionEntity } from '../../models';
 import { useAppContext } from '../../state/AppContext';
+import signalRService from '../../services/signalr/SignalRService';
 import 'katex/dist/katex.min.css';
 
 interface EditorModalProps {
@@ -161,6 +163,12 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         onConfirm: () => void;
     }>({ isOpen: false, onConfirm: () => { } });
 
+    // Question editor dialog state - per s4C(3)
+    const [questionDialog, setQuestionDialog] = useState<{
+        isOpen: boolean;
+        question?: QuestionEntity;
+    }>({ isOpen: false });
+
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Convert stored markdown to HTML for editor
@@ -261,6 +269,107 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         };
     }, [isDirty, saveContent]);
+
+    // Load question data for existing question references on mount
+    useEffect(() => {
+        const loadQuestionData = async () => {
+            if (!editor) return;
+
+            try {
+                // Fetch all questions for this material
+                const questions = await signalRService.getQuestionsUnderMaterial(material.id);
+                if (questions.length === 0) return;
+
+                // Create a map for quick lookup
+                const questionMap = new Map(questions.map(q => [q.id, q]));
+
+                // Find all questionRef nodes and update them with full data
+                const { doc, tr } = editor.state;
+                let modified = false;
+
+                doc.descendants((node, pos) => {
+                    if (node.type.name === 'questionRef') {
+                        const questionId = node.attrs.id;
+                        const questionData = questionMap.get(questionId);
+
+                        if (questionData && !node.attrs.questionText) {
+                            console.log('[DEBUG] questionData from backend:', JSON.stringify(questionData, null, 2));
+                            // Update node attrs with full question data
+                            const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
+                            const waq = questionData as { sampleAnswer?: string };
+
+                            tr.setNodeMarkup(pos, undefined, {
+                                ...node.attrs,
+                                questionText: questionData.questionText,
+                                questionType: questionData.questionType,
+                                options: mcq.options || [],
+                                correctAnswer: mcq.correctAnswerIndex ?? waq.sampleAnswer,
+                                maxScore: questionData.maxScore || 1,
+                                materialType: material.materialType,
+                            });
+                            modified = true;
+                        }
+                    }
+                });
+
+                if (modified) {
+                    editor.view.dispatch(tr);
+                }
+            } catch (err) {
+                console.error('Failed to load question data:', err);
+            }
+        };
+
+        // Load after a short delay to ensure editor is ready
+        const timeoutId = setTimeout(loadQuestionData, 100);
+        return () => clearTimeout(timeoutId);
+    }, [editor, material.id, material.materialType]);
+
+    // Listen for question edit/delete events from QuestionRefComponent
+    useEffect(() => {
+        const handleEditEvent = async (e: CustomEvent<{ questionId: string }>) => {
+            const questionId = e.detail.questionId;
+            // Fetch question data from backend
+            try {
+                const questions = await signalRService.getQuestionsUnderMaterial(material.id);
+                const question = questions.find(q => q.id === questionId);
+                if (question) {
+                    // Convert backend entity to dialog format
+                    const dialogQuestion: QuestionEntity = {
+                        id: question.id,
+                        materialId: question.materialId,
+                        questionType: question.questionType,
+                        questionText: question.questionText,
+                        options: (question as { options?: string[] }).options,
+                        correctAnswer: (question as { correctAnswerIndex?: number }).correctAnswerIndex ??
+                            (question as { sampleAnswer?: string }).sampleAnswer,
+                        maxScore: question.maxScore,
+                    };
+                    setQuestionDialog({ isOpen: true, question: dialogQuestion });
+                }
+            } catch (err) {
+                console.error('Failed to load question for editing:', err);
+            }
+        };
+
+        const handleDeleteEvent = async (e: CustomEvent<{ questionId: string }>) => {
+            const questionId = e.detail.questionId;
+            try {
+                await signalRService.deleteQuestion(questionId);
+                setIsDirty(true);
+            } catch (err) {
+                console.error('Failed to delete question:', err);
+            }
+        };
+
+        window.addEventListener('question-edit', handleEditEvent as EventListener);
+        window.addEventListener('question-delete', handleDeleteEvent as EventListener);
+
+        return () => {
+            window.removeEventListener('question-edit', handleEditEvent as EventListener);
+            window.removeEventListener('question-delete', handleDeleteEvent as EventListener);
+        };
+    }, [material.id]);
 
     // Mark dirty on metadata change
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,22 +473,107 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         });
     };
 
-    // Insert question reference
+    // Insert question reference - opens QuestionEditorDialog per s4C(3)
     const insertQuestion = () => {
-        setInputDialog({
-            isOpen: true,
-            title: 'Insert Question Reference',
-            placeholder: 'Enter Question UUID',
-            onSubmit: (id) => {
-                closeInputDialog();
-                if (editor) {
-                    editor.chain().focus().insertContent({
-                        type: 'questionRef',
-                        attrs: { id },
-                    }).run();
-                }
-            },
-        });
+        setQuestionDialog({ isOpen: true, question: undefined });
+    };
+
+    // Handle question save - creates or updates via SignalR per s4C(3)(b)
+    const handleQuestionSave = async (question: QuestionEntity): Promise<string> => {
+        const isNew = !question.id || question.id.startsWith('temp-');
+
+        if (isNew) {
+            // Create new question - per s4C(3)(b)(ii)
+            // Convert QuestionEntity to InternalCreateQuestionDto
+            const createDto = {
+                materialId: question.materialId,
+                questionType: question.questionType,
+                questionText: question.questionText,
+                options: question.options,
+                correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
+                sampleAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                maxScore: question.maxScore,
+            };
+
+            const newId = await signalRService.createQuestion(createDto);
+
+            // Insert question reference into editor with full data for WYSIWYG
+            if (editor) {
+                editor.chain().focus().insertContent({
+                    type: 'questionRef',
+                    attrs: {
+                        id: newId,
+                        questionText: question.questionText,
+                        questionType: question.questionType,
+                        options: question.options || [],
+                        correctAnswer: question.correctAnswer,
+                        maxScore: question.maxScore || 1,
+                        materialType: material.materialType,
+                    },
+                }).run();
+            }
+
+            setQuestionDialog({ isOpen: false });
+            return newId;
+        } else {
+            // Update existing question - per s4C(3)(b)(i)
+            // Convert QuestionEntity to InternalUpdateQuestionDto
+            const updateDto = {
+                id: question.id,
+                materialId: question.materialId,
+                questionType: question.questionType,
+                questionText: question.questionText,
+                options: question.options,
+                correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
+                sampleAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                maxScore: question.maxScore,
+            };
+
+            await signalRService.updateQuestion(updateDto);
+
+            // Update the node in the editor with new data
+            if (editor) {
+                const { doc, tr } = editor.state;
+                doc.descendants((node, pos) => {
+                    if (node.type.name === 'questionRef' && node.attrs.id === question.id) {
+                        tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            questionText: question.questionText,
+                            questionType: question.questionType,
+                            options: question.options || [],
+                            correctAnswer: question.correctAnswer,
+                            maxScore: question.maxScore || 1,
+                        });
+                    }
+                });
+                editor.view.dispatch(tr);
+            }
+
+            setQuestionDialog({ isOpen: false });
+            return question.id;
+        }
+    };
+
+    // Handle question delete - per s4C(3)(c)
+    const handleQuestionDelete = async (questionId: string): Promise<void> => {
+        // Delete via SignalR - per s4C(3)(c)(i)
+        await signalRService.deleteQuestion(questionId);
+
+        // Remove question reference from content - per s4C(3)(c)(ii)
+        if (editor) {
+            const html = editor.getHTML();
+            const updatedHtml = html.replace(
+                new RegExp(`<div[^>]*data-question-id="${questionId}"[^>]*>.*?</div>`, 'gs'),
+                ''
+            );
+            const doc = editor.getHTML();
+            if (doc !== updatedHtml) {
+                editor.commands.setContent(updatedHtml);
+                setIsDirty(true);
+            }
+        }
+
+        setQuestionDialog({ isOpen: false });
     };
 
     // Check if adding a question is allowed
@@ -388,7 +582,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         if (material.materialType === 'READING') {
             return false;
         }
-        
+
         // POLL materials can only contain one question
         if (material.materialType === 'POLL') {
             // Count existing question references in the content
@@ -396,7 +590,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             const questionCount = (content.match(/class="question-embed"/g) || []).length;
             return questionCount === 0;
         }
-        
+
         // WORKSHEET can have multiple questions
         return true;
     };
@@ -660,14 +854,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     <ToolbarDivider />
 
                     {/* Custom markers */}
-                    <ToolbarButton 
-                        onClick={insertQuestion} 
+                    <ToolbarButton
+                        onClick={insertQuestion}
                         disabled={!canAddQuestion()}
-                        title={material.materialType === 'READING' 
+                        title={material.materialType === 'READING'
                             ? 'Questions not allowed in Reading materials'
                             : material.materialType === 'POLL' && !canAddQuestion()
-                            ? 'Poll materials can only contain one question'
-                            : 'Insert Question Reference'}
+                                ? 'Poll materials can only contain one question'
+                                : 'Insert Question Reference'}
                     >
                         📝
                     </ToolbarButton>
@@ -864,6 +1058,17 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     setConfirmDialog({ isOpen: false, onConfirm: () => { } });
                     onClose();
                 }}
+            />
+
+            {/* Question Editor Dialog - per s4C(3) */}
+            <QuestionEditorDialog
+                isOpen={questionDialog.isOpen}
+                materialId={material.id}
+                materialType={material.materialType}
+                question={questionDialog.question}
+                onSave={handleQuestionSave}
+                onDelete={questionDialog.question?.id ? handleQuestionDelete : undefined}
+                onCancel={() => setQuestionDialog({ isOpen: false })}
             />
         </div>,
         document.body

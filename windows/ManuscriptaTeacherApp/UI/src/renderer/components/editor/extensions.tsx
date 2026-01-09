@@ -22,7 +22,7 @@ export const CodeBlockWithLanguage = CodeBlockExt.extend({
                     // Parse from data-language attribute or class="language-xxx"
                     const dataLang = element.getAttribute('data-language');
                     if (dataLang) return dataLang;
-                    
+
                     const classMatch = element.className?.match(/language-(\w+)/);
                     return classMatch?.[1] || null;
                 },
@@ -151,18 +151,139 @@ export const BlockLatex = Node.create({
 
 // ============ Question Reference Extension ============
 
-const QuestionRefComponent: React.FC<NodeViewProps> = ({ node }) => {
-    const questionId = node.attrs.id as string;
+// Custom event types for question actions
+export interface QuestionEditEvent {
+    questionId: string;
+}
+export interface QuestionDeleteEvent {
+    questionId: string;
+}
+
+// Declare custom events
+declare global {
+    interface WindowEventMap {
+        'question-edit': CustomEvent<QuestionEditEvent>;
+        'question-delete': CustomEvent<QuestionDeleteEvent>;
+    }
+}
+
+interface QuestionRefAttrs {
+    id: string;
+    questionText?: string;
+    questionType?: 'MULTIPLE_CHOICE' | 'WRITTEN_ANSWER';
+    options?: string[];
+    correctAnswer?: number | string;
+    maxScore?: number;
+    materialType?: 'READING' | 'WORKSHEET' | 'POLL';
+}
+
+const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
+    const attrs = node.attrs as QuestionRefAttrs;
+    const { id, questionText, questionType, options, correctAnswer, maxScore, materialType } = attrs;
+
+    const handleEdit = () => {
+        window.dispatchEvent(new CustomEvent('question-edit', {
+            detail: { questionId: id }
+        }));
+    };
+
+    const handleDelete = () => {
+        // Confirm before delete
+        if (window.confirm('Delete this question?')) {
+            window.dispatchEvent(new CustomEvent('question-delete', {
+                detail: { questionId: id }
+            }));
+            deleteNode();
+        }
+    };
+
+    // If no question data yet, show loading state
+    if (!questionText) {
+        return (
+            <NodeViewWrapper className="question-ref my-4 p-4 border-2 border-brand-orange rounded-lg bg-orange-50">
+                <div className="flex items-center gap-2">
+                    <span className="text-brand-orange font-semibold">📝 Question</span>
+                    <span className="text-xs text-gray-500 font-mono">{id?.slice(0, 8)}...</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-2 italic">Loading question data...</p>
+            </NodeViewWrapper>
+        );
+    }
+
+    // Hide delete for POLL materials per s4C(3)(c)
+    const showDelete = materialType !== 'POLL';
 
     return (
         <NodeViewWrapper className="question-ref my-4 p-4 border-2 border-brand-orange rounded-lg bg-orange-50">
-            <div className="flex items-center gap-2">
-                <span className="text-brand-orange font-semibold">📝 Question</span>
-                <span className="text-xs text-gray-500 font-mono">{questionId.slice(0, 8)}...</span>
+            {/* Header with edit/delete actions */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-brand-orange font-semibold">📝 Question</span>
+                    <span className="px-2 py-0.5 text-xs bg-orange-200 text-orange-700 rounded">
+                        {questionType === 'MULTIPLE_CHOICE' ? 'Multiple Choice' : 'Written Answer'}
+                    </span>
+                    {maxScore && (
+                        <span className="text-xs text-gray-500">{maxScore} {maxScore === 1 ? 'mark' : 'marks'}</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={handleEdit}
+                        className="p-1.5 text-gray-500 hover:text-brand-orange hover:bg-orange-100 rounded transition-colors"
+                        title="Edit question"
+                    >
+                        ✏️
+                    </button>
+                    {showDelete && (
+                        <button
+                            onClick={handleDelete}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Delete question"
+                        >
+                            🗑️
+                        </button>
+                    )}
+                </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-                [Question will be rendered here based on QuestionEntity]
-            </p>
+
+            {/* Question text */}
+            <p className="text-gray-800 font-medium mb-3">{questionText}</p>
+
+            {/* Multiple choice options */}
+            {questionType === 'MULTIPLE_CHOICE' && options && options.length > 0 && (
+                <div className="space-y-2 ml-2">
+                    {options.map((option, index) => (
+                        <div
+                            key={index}
+                            className={`flex items-center gap-2 p-2 rounded ${correctAnswer === index
+                                ? 'bg-green-100 border border-green-300'
+                                : 'bg-white border border-gray-200'
+                                }`}
+                        >
+                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium ${correctAnswer === index
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                {String.fromCharCode(65 + index)}
+                            </span>
+                            <span className={correctAnswer === index ? 'text-green-800' : 'text-gray-700'}>
+                                {option}
+                            </span>
+                            {correctAnswer === index && (
+                                <span className="ml-auto text-green-600 text-xs">✓ Correct</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Written answer sample */}
+            {questionType === 'WRITTEN_ANSWER' && correctAnswer && typeof correctAnswer === 'string' && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-xs text-blue-600 font-medium mb-1">Correct Answer:</p>
+                    <p className="text-sm text-blue-800">{correctAnswer}</p>
+                </div>
+            )}
         </NodeViewWrapper>
     );
 };
@@ -174,9 +295,13 @@ export const QuestionRef = Node.create({
 
     addAttributes() {
         return {
-            id: {
-                default: '',
-            },
+            id: { default: '' },
+            questionText: { default: '' },
+            questionType: { default: 'MULTIPLE_CHOICE' },
+            options: { default: [] },
+            correctAnswer: { default: null },
+            maxScore: { default: 1 },
+            materialType: { default: 'WORKSHEET' },
         };
     },
 
@@ -186,6 +311,7 @@ export const QuestionRef = Node.create({
                 tag: 'div[data-question-id]',
                 getAttrs: (node: HTMLElement) => ({
                     id: node.getAttribute('data-question-id'),
+                    // Other attrs are loaded dynamically
                 }),
             },
         ];
@@ -195,7 +321,7 @@ export const QuestionRef = Node.create({
         return ['div', mergeAttributes(HTMLAttributes, {
             'data-question-id': HTMLAttributes.id,
             class: 'question-embed'
-        }), 0];
+        })];
     },
 
     addNodeView() {
@@ -249,7 +375,7 @@ export const PdfEmbed = Node.create({
         return ['div', mergeAttributes(HTMLAttributes, {
             'data-pdf-id': HTMLAttributes.id,
             class: 'pdf-embed'
-        }), 0];
+        })];
     },
 
     addNodeView() {

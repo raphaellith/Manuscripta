@@ -26,7 +26,8 @@ public static class QuestionEntityMapper
                 QuestionText = mc.QuestionText,
                 QuestionType = QuestionType.MULTIPLE_CHOICE,
                 Options = mc.Options,
-                CorrectAnswer = mc.CorrectAnswerIndex.ToString()
+                CorrectAnswer = mc.CorrectAnswerIndex?.ToString(),  // null if no correct answer
+                MaxScore = mc.MaxScore
             },
             WrittenAnswerQuestionEntity wa => new QuestionDataEntity
             {
@@ -35,7 +36,8 @@ public static class QuestionEntityMapper
                 QuestionText = wa.QuestionText,
                 QuestionType = QuestionType.WRITTEN_ANSWER,
                 Options = null,
-                CorrectAnswer = wa.CorrectAnswer
+                CorrectAnswer = wa.CorrectAnswer,
+                MaxScore = wa.MaxScore
             },
             _ => throw new InvalidOperationException($"Unknown question entity type: {entity.GetType().Name}")
         };
@@ -56,22 +58,31 @@ public static class QuestionEntityMapper
                 materialId: dataEntity.MaterialId,
                 questionText: dataEntity.QuestionText ?? string.Empty,
                 options: dataEntity.Options ?? new List<string>(),
-                correctAnswerIndex: ParseInt(dataEntity.CorrectAnswer)
+                correctAnswerIndex: ParseIntOrNull(dataEntity.CorrectAnswer),  // null if no correct answer
+                maxScore: dataEntity.MaxScore
             ),
             QuestionType.WRITTEN_ANSWER => new WrittenAnswerQuestionEntity(
                 id: dataEntity.Id,
                 materialId: dataEntity.MaterialId,
                 questionText: dataEntity.QuestionText ?? string.Empty,
-                correctAnswer: dataEntity.CorrectAnswer ?? string.Empty
+                correctAnswer: dataEntity.CorrectAnswer ?? string.Empty,
+                maxScore: dataEntity.MaxScore
             ),
             _ => throw new InvalidOperationException($"Unknown question type: {dataEntity.QuestionType}")
         };
     }
 
-    private static int ParseInt(string? value)
+    /// <summary>
+    /// Parses a string to int, returning null if the string is null/empty or not a valid integer.
+    /// </summary>
+    private static int? ParseIntOrNull(string? value)
     {
-        if (string.IsNullOrEmpty(value) || !int.TryParse(value, out int result))
-            throw new InvalidOperationException($"Invalid integer value for correct answer: {value}");
-        return result;
+        if (string.IsNullOrEmpty(value))
+            return null;
+        
+        if (int.TryParse(value, out int result))
+            return result;
+        
+        return null;
     }
 }
