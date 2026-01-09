@@ -309,8 +309,11 @@ public class TeacherPortalHub : Hub
             return;
         }
 
+        // Prevent changing the owning material for an existing question
+        if (dto.MaterialId != existing.MaterialId)
+            throw new HubException("MaterialId cannot be changed for an existing question. Create a new question for a different material.");
+
         // Update properties on existing entity
-        existing.MaterialId = dto.MaterialId;
         existing.QuestionText = dto.QuestionText;
         existing.MaxScore = dto.MaxScore;
         
