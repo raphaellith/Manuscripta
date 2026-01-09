@@ -147,13 +147,18 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
         setError(null);
 
         try {
-            const nonEmptyOptions = options.filter(o => o.trim());
+            // Keep track of original indices when filtering out empty options
+            const indexedOptions = options.map((text, index) => ({ text, index }));
+            const nonEmptyOptionEntries = indexedOptions.filter(o => o.text.trim());
+            const nonEmptyOptions = nonEmptyOptionEntries.map(o => o.text);
+
             // Remap correctAnswerIndex to the filtered array (or undefined if -1)
             let mappedCorrectIndex: number | undefined = undefined;
             if (correctAnswerIndex >= 0) {
-                const selectedOptionText = options[correctAnswerIndex];
-                mappedCorrectIndex = nonEmptyOptions.findIndex(o => o === selectedOptionText);
-                if (mappedCorrectIndex < 0) mappedCorrectIndex = undefined; // Not found in filtered
+                const entryIndex = nonEmptyOptionEntries.findIndex(
+                    entry => entry.index === correctAnswerIndex,
+                );
+                mappedCorrectIndex = entryIndex >= 0 ? entryIndex : undefined;
             }
 
             // For written answer, only include correctAnswer if autoMarking is enabled
