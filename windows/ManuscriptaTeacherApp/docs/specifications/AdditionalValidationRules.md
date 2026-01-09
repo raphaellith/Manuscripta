@@ -90,19 +90,21 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `MaterialId` (UUID): References the material to which this attachment belongs.
 
-    (b) `FileName` (string): The name and extension of the attachment file.
+    (b) `FileBaseName` (string): The base name of the attachment file, as inputted by the user.
+
+    (c) `FileExtension` (string): The extension of the attachment file.
 
 
 (2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `MaterialId` specified in (1)(a) must associate with a valid `MaterialEntity`.
 
-    (b) The `FileName` specified in (1)(b) must refer to an existing file (F) in the directory `%AppData%\ManuscriptaTeacherApp\Attachments`. The `FileName` must contain the file's base name, a full stop character `.` and the file's extension in that order.
-
-    (c) The file F must have one of the following extensions.
+    (b) The `FileExtension` specified in 1(c) must be one of the following.
 
         (i) `png`.
 
         (ii) `jpeg`.
 
         (iii) `pdf`.
+
+    (c) There must exist a file in the directory `%AppData%\ManuscriptaTeacherApp\Attachments` whose file base name matches the UUID of the `AttachmentEntity` and whose file extension matches the `FileExtension` specified in 1(c).
