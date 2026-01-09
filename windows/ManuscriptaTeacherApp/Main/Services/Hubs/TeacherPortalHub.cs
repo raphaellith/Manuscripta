@@ -287,16 +287,25 @@ public class TeacherPortalHub : Hub
         if (existing.QuestionType != dto.QuestionType)
         {
             // Delete old question and create new one with same ID
-            await _questionService.DeleteQuestionAsync(dto.Id);
-            var newEntity = CreateQuestionEntity(dto.Id, new InternalCreateQuestionDto(
-                dto.MaterialId,
-                dto.QuestionType,
-                dto.QuestionText,
-                dto.Options,
-                dto.CorrectAnswerIndex,
-                dto.SampleAnswer,
-                dto.MaxScore));
-            await _questionService.CreateQuestionAsync(newEntity);
+            try
+            {
+                await _questionService.DeleteQuestionAsync(dto.Id);
+                var newEntity = CreateQuestionEntity(dto.Id, new InternalCreateQuestionDto(
+                    dto.MaterialId,
+                    dto.QuestionType,
+                    dto.QuestionText,
+                    dto.Options,
+                    dto.CorrectAnswerIndex,
+                    dto.SampleAnswer,
+                    dto.MaxScore));
+                await _questionService.CreateQuestionAsync(newEntity);
+            }
+            catch
+            {
+                // Attempt to restore original question to avoid leaving the system in an inconsistent state
+                await _questionService.CreateQuestionAsync(existing);
+                throw;
+            }
             return;
         }
 
