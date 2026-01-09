@@ -65,7 +65,7 @@ public static class QuestionEntityMapper
                 id: dataEntity.Id,
                 materialId: dataEntity.MaterialId,
                 questionText: dataEntity.QuestionText ?? string.Empty,
-                correctAnswer: dataEntity.CorrectAnswer ?? string.Empty,
+                correctAnswer: dataEntity.CorrectAnswer,  // null = auto-marking disabled
                 maxScore: dataEntity.MaxScore
             ),
             _ => throw new InvalidOperationException($"Unknown question type: {dataEntity.QuestionType}")

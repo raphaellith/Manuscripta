@@ -38,8 +38,8 @@ export interface InternalCreateQuestionDto {
     questionType: QuestionType;
     questionText: string;
     options?: string[];           // Required for MULTIPLE_CHOICE
-    correctAnswerIndex?: number;  // For MULTIPLE_CHOICE
-    sampleAnswer?: string;        // For WRITTEN_ANSWER
+    correctAnswerIndex?: number;  // For MULTIPLE_CHOICE (null = auto-marking disabled)
+    correctAnswer?: string;       // For WRITTEN_ANSWER (null = auto-marking disabled)
     maxScore?: number;
 }
 
@@ -49,7 +49,7 @@ export interface InternalUpdateQuestionDto {
     questionType: QuestionType;
     questionText: string;
     options?: string[];
-    correctAnswerIndex?: number;
-    sampleAnswer?: string;
+    correctAnswerIndex?: number;  // For MULTIPLE_CHOICE (null = auto-marking disabled)
+    correctAnswer?: string;       // For WRITTEN_ANSWER (null = auto-marking disabled)
     maxScore?: number;
 }

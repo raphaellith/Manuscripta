@@ -295,14 +295,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         if (questionData && !node.attrs.questionText) {
                             // Update node attrs with full question data
                             const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
-                            const waq = questionData as { sampleAnswer?: string };
+                            const waq = questionData as { correctAnswer?: string };
 
                             tr.setNodeMarkup(pos, undefined, {
                                 ...node.attrs,
                                 questionText: questionData.questionText,
                                 questionType: questionData.questionType,
                                 options: mcq.options || [],
-                                correctAnswer: mcq.correctAnswerIndex ?? waq.sampleAnswer,
+                                correctAnswer: mcq.correctAnswerIndex ?? waq.correctAnswer,
                                 maxScore: questionData.maxScore || 1,
                                 materialType: material.materialType,
                             });
@@ -341,7 +341,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         questionText: question.questionText,
                         options: (question as { options?: string[] }).options,
                         correctAnswer: (question as { correctAnswerIndex?: number }).correctAnswerIndex ??
-                            (question as { sampleAnswer?: string }).sampleAnswer,
+                            (question as { correctAnswer?: string }).correctAnswer,
                         maxScore: question.maxScore,
                     };
                     setQuestionDialog({ isOpen: true, question: dialogQuestion });
@@ -490,7 +490,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 questionText: question.questionText,
                 options: question.options,
                 correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
-                sampleAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
                 maxScore: question.maxScore,
             };
 
@@ -524,7 +524,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 questionText: question.questionText,
                 options: question.options,
                 correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
-                sampleAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
                 maxScore: question.maxScore,
             };
 

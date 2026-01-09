@@ -13,9 +13,9 @@ public record InternalQuestionResponseDto(
     QuestionType QuestionType,
     string QuestionText,
     int? MaxScore,
-    List<string>? Options = null,        // For MULTIPLE_CHOICE
-    int? CorrectAnswerIndex = null,      // For MULTIPLE_CHOICE  
-    string? SampleAnswer = null)         // For WRITTEN_ANSWER
+    List<string>? Options = null,           // For MULTIPLE_CHOICE
+    int? CorrectAnswerIndex = null,         // For MULTIPLE_CHOICE (null = auto-marking disabled)
+    string? CorrectAnswer = null)           // For WRITTEN_ANSWER (null = auto-marking disabled)
 {
     /// <summary>
     /// Creates a DTO from a QuestionEntity, extracting type-specific properties.

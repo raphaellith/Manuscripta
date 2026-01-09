@@ -296,7 +296,7 @@ public class TeacherPortalHub : Hub
                     dto.QuestionText,
                     dto.Options,
                     dto.CorrectAnswerIndex,
-                    dto.SampleAnswer,
+                    dto.CorrectAnswer,
                     dto.MaxScore));
                 await _questionService.CreateQuestionAsync(newEntity);
             }
@@ -325,7 +325,7 @@ public class TeacherPortalHub : Hub
         }
         else if (existing is WrittenAnswerQuestionEntity waq && dto.QuestionType == QuestionType.WRITTEN_ANSWER)
         {
-            waq.CorrectAnswer = dto.SampleAnswer ?? string.Empty;
+            waq.CorrectAnswer = dto.CorrectAnswer;  // null = auto-marking disabled
         }
         
         await _questionService.UpdateQuestionAsync(existing);
@@ -358,7 +358,7 @@ public class TeacherPortalHub : Hub
                 id,
                 dto.MaterialId,
                 dto.QuestionText,
-                dto.SampleAnswer ?? string.Empty,  // Provide default if null
+                dto.CorrectAnswer,  // null = auto-marking disabled
                 dto.MaxScore),
             _ => throw new ArgumentException($"Unknown question type: {dto.QuestionType}", nameof(dto))
         };

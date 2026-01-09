@@ -10,9 +10,9 @@ public record InternalCreateQuestionDto(
     Guid MaterialId,
     QuestionType QuestionType,
     string QuestionText,
-    List<string>? Options = null,      // Required for MULTIPLE_CHOICE
-    int? CorrectAnswerIndex = null,    // For MULTIPLE_CHOICE
-    string? SampleAnswer = null,       // For WRITTEN_ANSWER
+    List<string>? Options = null,           // Required for MULTIPLE_CHOICE
+    int? CorrectAnswerIndex = null,         // For MULTIPLE_CHOICE (null = auto-marking disabled)
+    string? CorrectAnswer = null,           // For WRITTEN_ANSWER (null = auto-marking disabled)
     int? MaxScore = null);
 
 /// <summary>
@@ -25,6 +25,6 @@ public record InternalUpdateQuestionDto(
     QuestionType QuestionType,
     string QuestionText,
     List<string>? Options = null,
-    int? CorrectAnswerIndex = null,
-    string? SampleAnswer = null,
+    int? CorrectAnswerIndex = null,         // For MULTIPLE_CHOICE (null = auto-marking disabled)
+    string? CorrectAnswer = null,           // For WRITTEN_ANSWER (null = auto-marking disabled)
     int? MaxScore = null);
