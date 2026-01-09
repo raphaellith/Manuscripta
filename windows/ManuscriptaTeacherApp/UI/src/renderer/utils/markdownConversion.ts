@@ -112,12 +112,10 @@ turndownService.addRule('questionRef', {
         const element = node as HTMLElement;
         const isDiv = element.nodeName === 'DIV';
         const hasAttr = element.hasAttribute('data-question-id');
-        console.log('[DEBUG] questionRef filter:', { nodeName: element.nodeName, isDiv, hasAttr, id: element.getAttribute('data-question-id') });
         return isDiv && hasAttr;
     },
     replacement: function (_content, node) {
         const questionId = (node as HTMLElement).getAttribute('data-question-id');
-        console.log('[DEBUG] questionRef replacement called for id:', questionId);
         return `\n!!! question id="${questionId}"\n`;
     }
 });
@@ -146,10 +144,7 @@ turndownService.keep(function (node) {
  */
 export function htmlToMarkdown(html: string): string {
     if (!html || html.trim() === '') return '';
-    console.log('[DEBUG] htmlToMarkdown input:', html);
-    const markdown = turndownService.turndown(html);
-    console.log('[DEBUG] htmlToMarkdown output:', markdown);
-    return markdown;
+    return turndownService.turndown(html);
 }
 
 /**

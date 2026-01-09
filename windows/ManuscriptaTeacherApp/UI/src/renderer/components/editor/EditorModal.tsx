@@ -293,7 +293,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         const questionData = questionMap.get(questionId);
 
                         if (questionData && !node.attrs.questionText) {
-                            console.log('[DEBUG] questionData from backend:', JSON.stringify(questionData, null, 2));
                             // Update node attrs with full question data
                             const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
                             const waq = questionData as { sampleAnswer?: string };
