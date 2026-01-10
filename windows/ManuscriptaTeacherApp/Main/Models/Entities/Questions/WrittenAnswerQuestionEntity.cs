@@ -8,15 +8,19 @@ namespace Main.Models.Entities.Questions;
 /// </summary>
 public class WrittenAnswerQuestionEntity : QuestionEntity
 {
-    [Required]
+    /// <summary>
+    /// The expected correct answer for auto-marking.
+    /// Null means no correct answer is set (auto-marking disabled).
+    /// Per Session Interaction Spec §4(2).
+    /// </summary>
     [MaxLength(500)]
-    public string CorrectAnswer { get; set; } = string.Empty;
+    public string? CorrectAnswer { get; set; }
 
     private WrittenAnswerQuestionEntity() : base() { }
 
-    public WrittenAnswerQuestionEntity(Guid id, Guid materialId, string questionText, string correctAnswer, int? maxScore = null)
+    public WrittenAnswerQuestionEntity(Guid id, Guid materialId, string questionText, string? correctAnswer, int? maxScore = null)
         : base(id, materialId, questionText, QuestionType.WRITTEN_ANSWER, maxScore)
     {
-        CorrectAnswer = correctAnswer ?? throw new ArgumentNullException(nameof(correctAnswer));
+        CorrectAnswer = correctAnswer;
     }
 }

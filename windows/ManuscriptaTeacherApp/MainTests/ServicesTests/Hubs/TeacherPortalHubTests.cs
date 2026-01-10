@@ -6,6 +6,7 @@ using Xunit;
 using Main.Models.Dtos;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
+using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services;
 using Main.Services.Hubs;
@@ -24,10 +25,12 @@ public class TeacherPortalHubTests
     private readonly Mock<IUnitService> _mockUnitService;
     private readonly Mock<ILessonService> _mockLessonService;
     private readonly Mock<IMaterialService> _mockMaterialService;
+    private readonly Mock<IQuestionService> _mockQuestionService;
     private readonly Mock<IUnitCollectionRepository> _mockUnitCollectionRepository;
     private readonly Mock<IUnitRepository> _mockUnitRepository;
     private readonly Mock<ILessonRepository> _mockLessonRepository;
     private readonly Mock<IMaterialRepository> _mockMaterialRepository;
+    private readonly Mock<IQuestionRepository> _mockQuestionRepository;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -36,20 +39,24 @@ public class TeacherPortalHubTests
         _mockUnitService = new Mock<IUnitService>();
         _mockLessonService = new Mock<ILessonService>();
         _mockMaterialService = new Mock<IMaterialService>();
+        _mockQuestionService = new Mock<IQuestionService>();
         _mockUnitCollectionRepository = new Mock<IUnitCollectionRepository>();
         _mockUnitRepository = new Mock<IUnitRepository>();
         _mockLessonRepository = new Mock<ILessonRepository>();
         _mockMaterialRepository = new Mock<IMaterialRepository>();
+        _mockQuestionRepository = new Mock<IQuestionRepository>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object);
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object);
     }
 
     #region Constructor Tests
@@ -62,10 +69,12 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -76,10 +85,12 @@ public class TeacherPortalHubTests
             null!,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -90,10 +101,12 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             null!,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -104,10 +117,28 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             null!,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullQuestionService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            null!,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -118,10 +149,12 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             null!,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -132,10 +165,12 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             null!,
             _mockLessonRepository.Object,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -146,10 +181,12 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             null!,
-            _mockMaterialRepository.Object));
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object));
     }
 
     [Fact]
@@ -160,9 +197,27 @@ public class TeacherPortalHubTests
             _mockUnitService.Object,
             _mockLessonService.Object,
             _mockMaterialService.Object,
+            _mockQuestionService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
+            null!,
+            _mockQuestionRepository.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
             null!));
     }
 
@@ -480,6 +535,99 @@ public class TeacherPortalHubTests
 
         // Assert
         _mockMaterialService.Verify(s => s.DeleteMaterialAsync(id), Times.Once);
+    }
+
+    #endregion
+
+    #region Question CRUD Tests - NetworkingAPISpec §1(1)(d1)
+
+    [Fact]
+    public async Task CreateQuestion_CallsServiceAndReturnsId()
+    {
+        // Arrange
+        var materialId = Guid.NewGuid();
+        var dto = new InternalCreateQuestionDto(
+            materialId,
+            QuestionType.MULTIPLE_CHOICE,
+            "What is 2+2?",
+            new List<string> { "3", "4", "5" },
+            1);
+        
+        _mockQuestionService.Setup(s => s.CreateQuestionAsync(It.IsAny<QuestionEntity>()))
+            .ReturnsAsync((QuestionEntity e) => e);
+
+        // Act
+        var result = await _hub.CreateQuestion(dto);
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, result);
+        _mockQuestionService.Verify(s => s.CreateQuestionAsync(It.Is<QuestionEntity>(e => 
+            e.QuestionText == dto.QuestionText && e.MaterialId == materialId)), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetQuestionsUnderMaterial_ReturnsFromRepository()
+    {
+        // Arrange
+        var materialId = Guid.NewGuid();
+        var questions = new List<QuestionEntity>
+        {
+            new MultipleChoiceQuestionEntity(Guid.NewGuid(), materialId, "Q1", new List<string> { "A", "B" }, 0),
+            new MultipleChoiceQuestionEntity(Guid.NewGuid(), materialId, "Q2", new List<string> { "X", "Y" }, 1)
+        };
+        _mockQuestionRepository.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(questions);
+
+        // Act
+        var result = await _hub.GetQuestionsUnderMaterial(materialId);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        _mockQuestionRepository.Verify(r => r.GetByMaterialIdAsync(materialId), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateQuestion_CallsService()
+    {
+        // Arrange
+        var questionId = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var dto = new InternalUpdateQuestionDto(
+            questionId,
+            materialId,
+            QuestionType.MULTIPLE_CHOICE,
+            "Updated Question",
+            new List<string> { "A", "B", "C" },
+            2);
+        
+        var existingQuestion = new MultipleChoiceQuestionEntity(
+            questionId, materialId, "Original", new List<string> { "A", "B" }, 0);
+        
+        _mockQuestionRepository.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(existingQuestion);
+        _mockQuestionService.Setup(s => s.UpdateQuestionAsync(It.IsAny<QuestionEntity>()))
+            .ReturnsAsync((QuestionEntity e) => e);
+
+        // Act
+        await _hub.UpdateQuestion(dto);
+
+        // Assert
+        _mockQuestionRepository.Verify(r => r.GetByIdAsync(questionId), Times.Once);
+        _mockQuestionService.Verify(s => s.UpdateQuestionAsync(It.Is<QuestionEntity>(e => 
+            e.QuestionText == dto.QuestionText)), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteQuestion_CallsService()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+
+        // Act
+        await _hub.DeleteQuestion(id);
+
+        // Assert
+        _mockQuestionService.Verify(s => s.DeleteQuestionAsync(id), Times.Once);
     }
 
     #endregion
