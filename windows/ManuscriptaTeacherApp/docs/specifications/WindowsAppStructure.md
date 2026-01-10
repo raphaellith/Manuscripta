@@ -12,7 +12,7 @@ This document defines the structure of the Windows app, and the directories and 
 
     (a) `Main` (placed under `windows/ManuscriptaTeacherApp/Main`). This is an ASP.NET Core Web Application, which handles material models and networking.
     (b) `UI` (placed under `windows/ManuscriptaTeacherApp/UI`). This is a light-weight front-end component which provides the teacher user interface, written in React and TypeScript as a Electron application.
-    (c) `GenAI` (placed under `windows/ManuscriptaTeacherApp/GenAI`). This is a light-weight component which provides the GenAI functionality. 
+    (c) [Deleted.]
 
 (3) In addition to the above components, the app also includes the following:
 
