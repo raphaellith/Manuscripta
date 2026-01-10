@@ -38,7 +38,7 @@ public class TeacherPortalHub : Hub
         IUnitRepository unitRepository,
         ILessonRepository lessonRepository,
         IMaterialRepository materialRepository,
-        IQuestionRepository questionRepository)
+        IQuestionRepository questionRepository,
         ISourceDocumentRepository sourceDocumentRepository)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
@@ -368,6 +368,10 @@ public class TeacherPortalHub : Hub
                 dto.MaxScore),
             _ => throw new ArgumentException($"Unknown question type: {dto.QuestionType}", nameof(dto))
         };
+    }
+
+    #endregion
+
     #region SourceDocument CRUD - NetworkingAPISpec §1(1)(k)
 
     /// <summary>
