@@ -10,15 +10,13 @@ This document defines the specifications for classes enabling the `Main` compone
 
 (1) All GenAI functionalities of the Windows application must be provided by the large language model (LLM) Granite 4.0, which must be locally hosted and run via Ollama.
 
-(2) The Windows application must locally store a copy of `ollama-granite.exe`, the Windows installer executable file officially provided by Ollama.
+(2) Ollama is assumed to have been installed silently during the installation of the Windows application.
 
 (3) On startup, the Windows application must
 
-    (a) detect whether Ollama is installed by running `ollama --version`. If not, it must run `ollama-granite.exe`, allowing the user to set up Ollama and add its executable to the user's PATH environment variable.
+    (a) detect whether Granite 4.0 (named `granite4`) is locally available via Ollama by running `ollama list`. If not, it must run `ollama pull granite4` to install the model locally.
 
-    (b) detect whether Granite 4.0 (named `granite4`) is locally available via Ollama by running `ollama list`. If not, it must run `ollama pull granite4` to install the model locally.
-
-    (c) run the command `ollama serve` to start the core daemon server for Ollama.
+    (b) run the command `ollama serve` to start the core daemon server for Ollama.
 
 (4) Any call to Granite must be performed by calling a method belonging to one of the following classes. All classes listed below must inherit the superclass `AiWorkflowService`.
 
