@@ -36,3 +36,16 @@ export interface MaterialEntity {
     readingAge?: number;
     actualAge?: number;
 }
+
+// Per Validation Rules §2B
+export type QuestionType = 'MULTIPLE_CHOICE' | 'WRITTEN_ANSWER';
+
+export interface QuestionEntity {
+    id: string;
+    materialId: string;
+    questionType: QuestionType;
+    questionText: string;
+    options?: string[];         // Required for MULTIPLE_CHOICE
+    correctAnswer?: string | number;  // Index for MC, string for WRITTEN
+    maxScore?: number;
+}
