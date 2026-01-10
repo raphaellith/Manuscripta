@@ -26,11 +26,13 @@ public class TeacherPortalHubTests
     private readonly Mock<ILessonService> _mockLessonService;
     private readonly Mock<IMaterialService> _mockMaterialService;
     private readonly Mock<IQuestionService> _mockQuestionService;
+    private readonly Mock<ISourceDocumentService> _mockSourceDocumentService;
     private readonly Mock<IUnitCollectionRepository> _mockUnitCollectionRepository;
     private readonly Mock<IUnitRepository> _mockUnitRepository;
     private readonly Mock<ILessonRepository> _mockLessonRepository;
     private readonly Mock<IMaterialRepository> _mockMaterialRepository;
     private readonly Mock<IQuestionRepository> _mockQuestionRepository;
+    private readonly Mock<ISourceDocumentRepository> _mockSourceDocumentRepository;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -40,11 +42,13 @@ public class TeacherPortalHubTests
         _mockLessonService = new Mock<ILessonService>();
         _mockMaterialService = new Mock<IMaterialService>();
         _mockQuestionService = new Mock<IQuestionService>();
+        _mockSourceDocumentService = new Mock<ISourceDocumentService>();
         _mockUnitCollectionRepository = new Mock<IUnitCollectionRepository>();
         _mockUnitRepository = new Mock<IUnitRepository>();
         _mockLessonRepository = new Mock<ILessonRepository>();
         _mockMaterialRepository = new Mock<IMaterialRepository>();
         _mockQuestionRepository = new Mock<IQuestionRepository>();
+        _mockSourceDocumentRepository = new Mock<ISourceDocumentRepository>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -52,11 +56,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object);
+            _mockSourceDocumentRepository.Object);
     }
 
     #region Constructor Tests
@@ -70,11 +76,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -86,11 +94,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -102,11 +112,13 @@ public class TeacherPortalHubTests
             null!,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -118,6 +130,7 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             null!,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
@@ -127,6 +140,11 @@ public class TeacherPortalHubTests
 
     [Fact]
     public void Constructor_NullQuestionService_ThrowsArgumentNullException()
+            _mockSourceDocumentRepository.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullSourceDocumentService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -139,6 +157,7 @@ public class TeacherPortalHubTests
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -150,11 +169,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             null!,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -166,11 +187,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             null!,
             _mockLessonRepository.Object,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -182,11 +205,13 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             null!,
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object));
+            _mockSourceDocumentRepository.Object));
     }
 
     [Fact]
@@ -198,6 +223,7 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
@@ -207,6 +233,11 @@ public class TeacherPortalHubTests
 
     [Fact]
     public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
+            _mockSourceDocumentRepository.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullSourceDocumentRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -214,6 +245,7 @@ public class TeacherPortalHubTests
             _mockLessonService.Object,
             _mockMaterialService.Object,
             _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
             _mockUnitCollectionRepository.Object,
             _mockUnitRepository.Object,
             _mockLessonRepository.Object,
@@ -619,6 +651,51 @@ public class TeacherPortalHubTests
 
     [Fact]
     public async Task DeleteQuestion_CallsService()
+    #region SourceDocument CRUD Tests - NetworkingAPISpec §1(1)(k)
+
+    [Fact]
+    public async Task CreateSourceDocument_CallsServiceWithAssignedId()
+    {
+        // Arrange
+        var collectionId = Guid.NewGuid();
+        var dto = new InternalCreateSourceDocumentDto { UnitCollectionId = collectionId, Transcript = "Sample transcript" };
+        _mockSourceDocumentService.Setup(s => s.CreateAsync(It.IsAny<SourceDocumentEntity>()))
+            .ReturnsAsync((SourceDocumentEntity e) => e);
+
+        // Act
+        var result = await _hub.CreateSourceDocument(dto);
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.Equal(dto.UnitCollectionId, result.UnitCollectionId);
+        Assert.Equal(dto.Transcript, result.Transcript);
+        _mockSourceDocumentService.Verify(s => s.CreateAsync(It.Is<SourceDocumentEntity>(e => 
+            e.Transcript == dto.Transcript && e.Id != Guid.Empty)), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllSourceDocuments_ReturnsFromRepository()
+    {
+        // Arrange
+        var collectionId = Guid.NewGuid();
+        var entities = new List<SourceDocumentEntity>
+        {
+            new(Guid.NewGuid(), collectionId, "Transcript 1"),
+            new(Guid.NewGuid(), collectionId, "Transcript 2")
+        };
+        _mockSourceDocumentRepository.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(entities);
+
+        // Act
+        var result = await _hub.GetAllSourceDocuments();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        _mockSourceDocumentRepository.Verify(r => r.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteSourceDocument_CallsService()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -628,6 +705,10 @@ public class TeacherPortalHubTests
 
         // Assert
         _mockQuestionService.Verify(s => s.DeleteQuestionAsync(id), Times.Once);
+        await _hub.DeleteSourceDocument(id);
+
+        // Assert
+        _mockSourceDocumentService.Verify(s => s.DeleteAsync(id), Times.Once);
     }
 
     #endregion

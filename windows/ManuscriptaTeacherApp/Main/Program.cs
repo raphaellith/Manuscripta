@@ -26,6 +26,7 @@ builder.Services.AddScoped<Main.Services.Repositories.ILessonRepository, Main.Se
 builder.Services.AddScoped<Main.Services.Repositories.IMaterialRepository, Main.Services.Repositories.EfMaterialRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IQuestionRepository, Main.Services.Repositories.EfQuestionRepository>();
 builder.Services.AddSingleton<Main.Services.Repositories.IResponseRepository, Main.Services.Repositories.InMemoryResponseRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 
 // Register CRUD services for hub
 builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
@@ -33,6 +34,7 @@ builder.Services.AddScoped<IUnitService, UnitService>();
 builder.Services.AddScoped<ILessonService, LessonService>();
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();

@@ -18,6 +18,8 @@ This document defines the structure of the Windows app, and the directories and 
 
     (a) `MainTests` (placed under `windows/ManuscriptaTeacherApp/MainTests`). This is a test project which tests the Main component.
 
+
+
 ## Section 2A - Directory Structure of `Main`
 
 (1) **Directory Structure**

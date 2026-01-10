@@ -63,6 +63,8 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+        (vi) `Task<List<AttachmentEntity>> GetAllAttachments()`
+
 
 ## Section 4 - Functionalities for the "Library" tab
 
@@ -76,18 +78,23 @@ For a list of all server method and client handlers to be implemented for commun
 
 (1) The front end shall prompt the user to enter a title when creating a unit collection, unit or lesson. There is no requirement for that title to be distinct.
 
-(2) When creating a material, the front-end should -
+(2) When creating a material, the front end shall -
 
-    (a) prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of this document with empty content.
+    (a) prompt the user to enter a title for the material, and create a material entity through the CRUD method specified in S1(1)(d) of `NetworkingAPISpec.md` with empty content.
 
     (b) prompt the user to select the method of creation, through one of the following initial means:
 
         (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method.
 
-        (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll.
+        (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll. When the material type selected is poll, the material should be initialised as a material containing one multiple choice question. For any other material type, the material should be initially empty.
     
     (c) inform the user that they will still be able to make manual edits, or invoke the AI assistant, after the initial creation.
 
+(3) The front end shall also provide means for the user to -
+
+    (a) attach source documents to a unit collection.
+
+    (b) search for a material based on its title and contents.
 
 
 ## Section 4B - AI Generation
@@ -108,30 +115,81 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) Once information in subsection (1) have been collected -
 
-    (i) the AI module shall be called to generate a draft of the material. [Subject to further specification of the AI module] 
+    (a) the AI module shall be called to generate a draft of the material. [Subject to further specification of the AI module] 
 
-    (ii) the draft shall be displayed to the user in the editor modal, as specified in Section 4C. 
+    (b) the draft shall be displayed to the user in the editor modal, as specified in Section 4C. 
 
-    (iii) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
+    (c) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
 
 
 
 ## Section 4C - Editor Modal
 
-(1) The front end shall provide a uniform editor modal for editing all types of materials on a what-you-see-is-what-you-get basis. It shall support -
+(1) **Core Functionalities**
 
-    (i) rendering and editing of all language features specified in the Material Encoding Specification. 
+    The front end shall provide a uniform editor modal for editing all types of materials on a what-you-see-is-what-you-get basis. It shall support -
 
-    (ii) rendering, insertion, relocation and deletion of embedded questions, as well as pictures and PDFs.
+    (a) rendering and editing of all language features specified in the Material Encoding Specification. 
 
-(2) The editor modal shall provide means through which the user can -
+    (b) [Deleted.]
 
-    (i) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make.
+    (c) rendering, insertion, editing, relocation and deletion of embedded questions.
 
-    (ii) modify the reading age and actual age metadata of the material.
+    (d) rendering, insertion, relocation and deletion of PDF, PNG and JPEG attachments.
 
-(3) The editor modal shall auto-save its contents at regular intervals, using the appropriate update methods.
+(2) **Additional Functionalities**
 
+    The editor modal shall provide means through which the user can -
+
+    (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make.
+
+    (b) modify the reading age and actual age metadata of the material.
+
+(3) **Saving Content**
+
+    The editor modal shall -
+
+    (a) automatically save any changes to the material (not including embedded questions) by calling the appropriate update endpoint, as specified in s1(1)(d)(ii) of the Networking API Specification, at most one second after each change.
+
+    (b) provide a "save" button when creating or editing an embedded question. When it is clicked -
+
+        (i) in the case of a question whose ID is known by a question reference defined in S4(4) of the Material Encoding Specification, update the question entity by calling the appropriate update endpoint in s1(1)(d1)(ii) of the Networking API Specification.
+
+        (ii) in the case of a question whose ID has not been assigned, create the question entity using the appropriate create endpoint in s1(1)(d1)(i) of the Networking API Specification, obtain the Guid generated, and create an appropriate question reference using that Guid.
+    
+    (b1) only enable the button specified in subsection (b) when -
+
+        (i) in the case of editing an existing question, there has been a change; and
+
+        (ii) all mandatory fields of the question, as defined in the Validation Rules, have been filled.
+    
+    (c) provide a delete button for embedded questions. When it is clicked -
+
+        (i) delete the question using the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification.
+
+        (ii) remove the question reference in the material.
+
+    However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
+
+(4) **Handling attachments**
+
+    The editor modal shall -
+
+    (a) provide an "attach" button adding attachments to the material. When it is clicked -
+
+        (i) prompt the user to upload an attachment file.
+
+        (ii) create an attachment entity using the uploaded file's base name and extension, by calling `Task CreateAttachment(AttachmentEntity newAttachmentEntity)`, as defined in S1(1)(l)(i) of the Networking API Specification.
+
+        (iii) create and save a copy of the uploaded attachment file to the directory `%AppData%\ManuscriptaTeacherApp\Attachments`. This copy's file base name must match the UUID of the attachment entity created in (ii). Its file extension must match that of the attachment file originally uploaded in (i).
+
+        (iv) insert the attachment into the material at the point indicated by the caret's current position.
+
+    (b) provide a "delete" button for attachments. When it is clicked -
+
+        (i) delete the attachment using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+
+        (ii) remove the attachment reference in the material.
 
 
 ## Section 5 - Functionalities for the "Classroom" tab

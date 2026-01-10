@@ -19,11 +19,13 @@ public class TeacherPortalHub : Hub
     private readonly ILessonService _lessonService;
     private readonly IMaterialService _materialService;
     private readonly IQuestionService _questionService;
+    private readonly ISourceDocumentService _sourceDocumentService;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
     private readonly IUnitRepository _unitRepository;
     private readonly ILessonRepository _lessonRepository;
     private readonly IMaterialRepository _materialRepository;
     private readonly IQuestionRepository _questionRepository;
+    private readonly ISourceDocumentRepository _sourceDocumentRepository;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -31,22 +33,26 @@ public class TeacherPortalHub : Hub
         ILessonService lessonService,
         IMaterialService materialService,
         IQuestionService questionService,
+        ISourceDocumentService sourceDocumentService,
         IUnitCollectionRepository unitCollectionRepository,
         IUnitRepository unitRepository,
         ILessonRepository lessonRepository,
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository)
+        ISourceDocumentRepository sourceDocumentRepository)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
         _lessonService = lessonService ?? throw new ArgumentNullException(nameof(lessonService));
         _materialService = materialService ?? throw new ArgumentNullException(nameof(materialService));
         _questionService = questionService ?? throw new ArgumentNullException(nameof(questionService));
+        _sourceDocumentService = sourceDocumentService ?? throw new ArgumentNullException(nameof(sourceDocumentService));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
         _unitRepository = unitRepository ?? throw new ArgumentNullException(nameof(unitRepository));
         _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -362,6 +368,35 @@ public class TeacherPortalHub : Hub
                 dto.MaxScore),
             _ => throw new ArgumentException($"Unknown question type: {dto.QuestionType}", nameof(dto))
         };
+    #region SourceDocument CRUD - NetworkingAPISpec §1(1)(k)
+
+    /// <summary>
+    /// Creates a new source document entity with an assigned UUID.
+    /// Per NetworkingAPISpec §1(1)(k)(i).
+    /// </summary>
+    public async Task<SourceDocumentEntity> CreateSourceDocument(InternalCreateSourceDocumentDto dto)
+    {
+        var entity = new SourceDocumentEntity(Guid.NewGuid(), dto.UnitCollectionId, dto.Transcript);
+        return await _sourceDocumentService.CreateAsync(entity);
+    }
+
+    /// <summary>
+    /// Retrieves all source document entities.
+    /// Per NetworkingAPISpec §1(1)(k)(ii).
+    /// </summary>
+    public async Task<List<SourceDocumentEntity>> GetAllSourceDocuments()
+    {
+        var entities = await _sourceDocumentRepository.GetAllAsync();
+        return entities.ToList();
+    }
+
+    /// <summary>
+    /// Deletes a source document entity by ID.
+    /// Per NetworkingAPISpec §1(1)(k)(iii).
+    /// </summary>
+    public async Task DeleteSourceDocument(Guid id)
+    {
+        await _sourceDocumentService.DeleteAsync(id);
     }
 
     #endregion

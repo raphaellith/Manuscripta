@@ -78,3 +78,33 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) `UnitCollectionId` (UUID): References the unit collection to which this source document is imported.
 
     (b) `Transcript` (string): A textual transcript of the source document contents.
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
+
+
+## Section 3B - Attachment
+
+(1) An attachment is represented by an `AttachmentEntity` class. This class must contain the following attributes.
+
+    (a) `MaterialId` (UUID): References the material to which this attachment belongs.
+
+    (b) `FileBaseName` (string): The base name of the attachment file, as inputted by the user.
+
+    (c) `FileExtension` (string): The extension of the attachment file.
+
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `MaterialId` specified in (1)(a) must associate with a valid `MaterialEntity`.
+
+    (b) The `FileExtension` specified in 1(c) must be one of the following.
+
+        (i) `png`.
+
+        (ii) `jpeg`.
+
+        (iii) `pdf`.
+
+    (c) There must exist a file in the directory `%AppData%\ManuscriptaTeacherApp\Attachments` whose file base name matches the UUID of the `AttachmentEntity` and whose file extension matches the `FileExtension` specified in 1(c).
