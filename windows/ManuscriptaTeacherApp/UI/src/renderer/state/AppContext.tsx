@@ -204,6 +204,44 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const createMaterial = async (dto: InternalCreateMaterialDto) => {
         const created = await signalRService.createMaterial(dto);
         setState(prev => ({ ...prev, materials: [...prev.materials, created] }));
+
+        // Per FrontendWorkflowSpec §4A(2)(b)(ii): When material type is poll,
+        // create a default multiple choice question
+        if (dto.materialType === 'POLL') {
+            try {
+                const questionId = await signalRService.createQuestion({
+                    materialId: created.id,
+                    questionType: 'MULTIPLE_CHOICE',
+                    questionText: 'Poll Question',
+                    options: ['Option 1', 'Option 2'],
+                    maxScore: 1,
+                });
+                // Update material content to include the question reference
+                const updatedMaterial = {
+                    ...created,
+                    content: `!!! question id="${questionId}"\n`,
+                };
+                await signalRService.updateMaterial(updatedMaterial);
+                setState(prev => ({
+                    ...prev,
+                    materials: prev.materials.map(m => m.id === created.id ? updatedMaterial : m),
+                }));
+            } catch (err) {
+                console.error('Failed to create default poll question:', err);
+                // Roll back material creation to avoid inconsistent poll state
+                try {
+                    await signalRService.deleteMaterial(created.id);
+                } catch (deleteErr) {
+                    console.error('Failed to roll back material after poll question failure:', deleteErr);
+                }
+                setState(prev => ({
+                    ...prev,
+                    materials: prev.materials.filter(m => m.id !== created.id),
+                }));
+                throw err;
+            }
+        }
+
         return created;
     };
 

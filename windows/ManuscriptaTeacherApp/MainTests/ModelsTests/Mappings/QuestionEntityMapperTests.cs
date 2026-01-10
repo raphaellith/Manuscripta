@@ -123,9 +123,9 @@ public class QuestionEntityMapperTests
     }
 
     [Fact]
-    public void ToEntity_WithInvalidCorrectAnswerForMultipleChoice_ThrowsInvalidOperationException()
+    public void ToEntity_WithInvalidCorrectAnswerForMultipleChoice_ReturnsNullCorrectAnswerIndex()
     {
-        // Arrange
+        // Arrange - an invalid string for CorrectAnswer should be treated as null (no correct answer)
         var dataEntity = new QuestionDataEntity
         {
             Id = Guid.NewGuid(),
@@ -136,8 +136,12 @@ public class QuestionEntityMapperTests
             CorrectAnswer = "not a number"
         };
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => QuestionEntityMapper.ToEntity(dataEntity));
+        // Act
+        var entity = QuestionEntityMapper.ToEntity(dataEntity);
+
+        // Assert - invalid values become null (auto-marking disabled)
+        var mcEntity = Assert.IsType<MultipleChoiceQuestionEntity>(entity);
+        Assert.Null(mcEntity.CorrectAnswerIndex);
     }
 
     [Fact]

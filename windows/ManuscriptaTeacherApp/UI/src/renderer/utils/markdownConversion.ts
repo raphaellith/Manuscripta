@@ -14,6 +14,20 @@ const turndownService = new TurndownService({
     bulletListMarker: '-',
     emDelimiter: '*',
     strongDelimiter: '**',
+    // Handle empty/blank elements - needed for question refs and pdf embeds
+    blankReplacement: function (content, node) {
+        const element = node as HTMLElement;
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-question-id')) {
+            const questionId = element.getAttribute('data-question-id');
+            return `\n!!! question id="${questionId}"\n`;
+        }
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-pdf-id')) {
+            const pdfId = element.getAttribute('data-pdf-id');
+            return `\n!!! pdf id="${pdfId}"\n`;
+        }
+        // Default behavior for other blank elements
+        return node.nodeName === 'DIV' || node.nodeName === 'P' ? '\n\n' : '';
+    }
 });
 
 // Custom rules for Material Encoding compliance
@@ -66,12 +80,12 @@ turndownService.addRule('centeredText', {
         const element = node as HTMLElement;
         const nodeName = element.nodeName;
         const textAlign = element.style.textAlign;
-        
+
         // Match DIV, P, or heading elements with center alignment
-        return (nodeName === 'DIV' || nodeName === 'P' || 
-                nodeName === 'H1' || nodeName === 'H2' || nodeName === 'H3' ||
-                nodeName === 'H4' || nodeName === 'H5' || nodeName === 'H6') &&
-               textAlign === 'center';
+        return (nodeName === 'DIV' || nodeName === 'P' ||
+            nodeName === 'H1' || nodeName === 'H2' || nodeName === 'H3' ||
+            nodeName === 'H4' || nodeName === 'H5' || nodeName === 'H6') &&
+            textAlign === 'center';
     },
     replacement: function (content) {
         // Indent each line by 4 spaces as per Material Encoding Spec §4(3)
@@ -90,6 +104,39 @@ turndownService.addRule('images', {
         const src = img.src || '';
         return `![${alt}](${src})`;
     }
+});
+
+// Handle question references - convert back to !!! question marker per Material Encoding Spec §4(4)
+turndownService.addRule('questionRef', {
+    filter: function (node) {
+        const element = node as HTMLElement;
+        const isDiv = element.nodeName === 'DIV';
+        const hasAttr = element.hasAttribute('data-question-id');
+        return isDiv && hasAttr;
+    },
+    replacement: function (_content, node) {
+        const questionId = (node as HTMLElement).getAttribute('data-question-id');
+        return `\n!!! question id="${questionId}"\n`;
+    }
+});
+
+// Handle PDF embeds - convert back to !!! pdf marker per Material Encoding Spec §4(2)
+turndownService.addRule('pdfEmbed', {
+    filter: function (node) {
+        const element = node as HTMLElement;
+        return element.nodeName === 'DIV' && element.hasAttribute('data-pdf-id');
+    },
+    replacement: function (_content, node) {
+        const pdfId = (node as HTMLElement).getAttribute('data-pdf-id');
+        return `\n!!! pdf id="${pdfId}"\n`;
+    }
+});
+
+// Prevent Turndown from stripping these custom divs (they have no visible content)
+turndownService.keep(function (node) {
+    const element = node as HTMLElement;
+    return element.nodeName === 'DIV' &&
+        (element.hasAttribute('data-question-id') || element.hasAttribute('data-pdf-id'));
 });
 
 /**
@@ -113,9 +160,9 @@ export function markdownToHtml(markdown: string): string {
     // Use a unique placeholder that won't be affected by marked
     const centerBlocks: string[] = [];
     processed = processed.replace(
-        /^!!! center\n((?:    .*\n?)*)/gm,
+        /^!!! center\n((?:[ ]{4}.*\n?)*)/gm,
         (_match, content) => {
-            const unindented = content.replace(/^    /gm, '');
+            const unindented = content.replace(/^[ ]{4}/gm, '');
             centerBlocks.push(unindented.trim());
             return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->`;
         }
