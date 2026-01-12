@@ -184,6 +184,8 @@ For a list of all server method and client handlers to be implemented for commun
         (iii) create and save a copy of the uploaded attachment file to the directory `%AppData%\ManuscriptaTeacherApp\Attachments`. This copy's file base name must match the UUID of the attachment entity created in (ii). Its file extension must match that of the attachment file originally uploaded in (i).
 
         (iv) insert the attachment into the material at the point indicated by the caret's current position.
+    
+    (a1) when the attachment entity is successfully created by the virtue of subparagraph (a)(ii), but the copy of the file cannot be saved as suggested by subparagraph (a)(iii), remove the attachment entity created in (ii) by calling the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
     (b) provide a "delete" button for attachments. When it is clicked -
 
