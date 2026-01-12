@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, dialog, protocol, net } from 'electron';
+import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
 import * as fsSync from 'fs';
 import * as pathModule from 'path';
 
