@@ -189,7 +189,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) provide a "delete" button for attachments. When it is clicked -
 
-        (i) delete the attachment using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+        (i) delete the attachment file, and the entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
         (ii) remove the attachment reference in the material.
     

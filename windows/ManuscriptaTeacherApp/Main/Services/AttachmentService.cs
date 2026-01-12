@@ -11,7 +11,6 @@ public class AttachmentService : IAttachmentService
 {
     private readonly IAttachmentRepository _repository;
     private readonly IMaterialRepository _materialRepo;
-    private readonly IFileService _fileService;
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -20,12 +19,10 @@ public class AttachmentService : IAttachmentService
 
     public AttachmentService(
         IAttachmentRepository repository,
-        IMaterialRepository materialRepo,
-        IFileService fileService)
+        IMaterialRepository materialRepo)
     {
         _repository = repository;
         _materialRepo = materialRepo;
-        _fileService = fileService;
     }
 
     public async Task<AttachmentEntity> CreateAsync(AttachmentEntity entity)
@@ -56,25 +53,8 @@ public class AttachmentService : IAttachmentService
 
     public async Task DeleteAsync(Guid id)
     {
-        // Get attachment to find file path
-        var entity = await _repository.GetByIdAsync(id);
-        if (entity != null)
-        {
-            // Delete the file from Attachments directory
-            var attachmentsDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ManuscriptaTeacherApp",
-                "Attachments"
-            );
-            var filePath = Path.Combine(attachmentsDir, $"{entity.Id}.{entity.FileExtension}");
-            
-            if (_fileService.FileExists(filePath))
-            {
-                _fileService.DeleteFile(filePath);
-            }
-
-            // Delete the entity
-            await _repository.DeleteAsync(id);
-        }
+        // Per NetworkingAPISpec §1(1)(l)(iii): only delete the entity
+        // File deletion is handled by the frontend via IPC
+        await _repository.DeleteAsync(id);
     }
 }

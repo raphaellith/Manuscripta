@@ -484,12 +484,37 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         };
 
+        // Handle attachment deletion per §4(4)(b)
+        const handleAttachmentDeleteEvent = async (e: CustomEvent<{ attachmentId: string; fileExtension: string }>) => {
+            const { attachmentId, fileExtension } = e.detail;
+            if (!attachmentId) return;
+            try {
+                // For images, we need to find the actual extension from attachments
+                let ext = fileExtension;
+                if (fileExtension === 'image') {
+                    // Get all attachments to find the correct extension
+                    const attachments = await signalRService.getAttachmentsUnderMaterial(material.id);
+                    const att = attachments.find(a => a.id === attachmentId);
+                    ext = att?.fileExtension || 'png'; // Fallback to png
+                }
+                // Delete entity
+                await signalRService.deleteAttachment(attachmentId);
+                // Delete file
+                await window.electronAPI.deleteAttachmentFile(attachmentId, ext);
+                setIsDirty(true);
+            } catch (err) {
+                console.error('Failed to delete attachment:', err);
+            }
+        };
+
         window.addEventListener('question-edit', handleEditEvent as EventListener);
         window.addEventListener('question-delete', handleDeleteEvent as EventListener);
+        window.addEventListener('attachment-delete', handleAttachmentDeleteEvent as EventListener);
 
         return () => {
             window.removeEventListener('question-edit', handleEditEvent as EventListener);
             window.removeEventListener('question-delete', handleDeleteEvent as EventListener);
+            window.removeEventListener('attachment-delete', handleAttachmentDeleteEvent as EventListener);
         };
     }, [material.id]);
 

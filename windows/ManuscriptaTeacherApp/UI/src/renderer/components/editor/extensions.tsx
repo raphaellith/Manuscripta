@@ -15,9 +15,14 @@ import 'katex/dist/katex.min.css';
 
 const AttachmentImageComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
     const { src, alt, title } = node.attrs as { src: string; alt: string; title: string };
+    // title contains the attachment UUID
 
     const handleDelete = () => {
         if (window.confirm('Delete this image attachment?')) {
+            // Dispatch event for EditorModal to handle entity+file deletion per §4(4)(b)
+            window.dispatchEvent(new CustomEvent('attachment-delete', {
+                detail: { attachmentId: title, fileExtension: 'image' }
+            }));
             deleteNode();
         }
     };
@@ -533,6 +538,10 @@ const PdfEmbedComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
 
     const handleDelete = () => {
         if (window.confirm('Delete this PDF attachment?')) {
+            // Dispatch event for EditorModal to handle entity+file deletion per §4(4)(b)
+            window.dispatchEvent(new CustomEvent('attachment-delete', {
+                detail: { attachmentId: pdfId, fileExtension: 'pdf' }
+            }));
             deleteNode();
         }
     };
