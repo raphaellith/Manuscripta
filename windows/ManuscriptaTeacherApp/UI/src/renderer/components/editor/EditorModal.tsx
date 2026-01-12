@@ -15,14 +15,13 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed } from './extensions';
+import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
-import type { MaterialEntity, QuestionEntity } from '../../models';
+import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
 import 'katex/dist/katex.min.css';
@@ -196,7 +195,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             TableCell,
             TableHeader,
             // Standard extensions
-            Image.configure({
+            AttachmentImage.configure({
                 inline: true,
             }),
             Link.configure({
@@ -270,6 +269,66 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         };
     }, [isDirty, saveContent]);
 
+    // Resolve attachment image paths to data URLs for WYSIWYG display
+    useEffect(() => {
+        const resolveAttachmentImages = async () => {
+            if (!editor) return;
+
+            try {
+                // Find all image nodes with /attachments/ paths
+                const { doc, tr } = editor.state;
+                let modified = false;
+
+                const promises: Promise<void>[] = [];
+
+                doc.descendants((node, pos) => {
+                    if (node.type.name === 'image') {
+                        const src = node.attrs.src || '';
+                        // Match /attachments/{uuid} pattern
+                        const match = src.match(/^\/attachments\/([a-f0-9-]+)$/i);
+                        if (match) {
+                            const attachmentId = match[1];
+                            // Get attachment from backend to get file extension
+                            promises.push(
+                                signalRService.getAttachmentsUnderMaterial(material.id)
+                                    .then(async (attachments) => {
+                                        const attachment = attachments.find(a => a.id === attachmentId);
+                                        if (attachment) {
+                                            const dataUrl = await window.electronAPI.getAttachmentDataUrl(
+                                                attachmentId,
+                                                attachment.fileExtension
+                                            );
+                                            if (dataUrl) {
+                                                tr.setNodeMarkup(pos, undefined, {
+                                                    ...node.attrs,
+                                                    src: dataUrl,
+                                                    title: attachmentId, // Store ID for markdown conversion
+                                                });
+                                                modified = true;
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error('Failed to resolve attachment:', err))
+                            );
+                        }
+                    }
+                });
+
+                await Promise.all(promises);
+
+                if (modified) {
+                    editor.view.dispatch(tr);
+                }
+            } catch (err) {
+                console.error('Failed to resolve attachment images:', err);
+            }
+        };
+
+        // Resolve after a short delay to ensure editor is ready
+        const timeoutId = setTimeout(resolveAttachmentImages, 150);
+        return () => clearTimeout(timeoutId);
+    }, [editor, material.id]);
+
     // Load question data for existing question references on mount
     useEffect(() => {
         const loadQuestionData = async () => {
@@ -323,6 +382,70 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         const timeoutId = setTimeout(loadQuestionData, 100);
         return () => clearTimeout(timeoutId);
     }, [editor, material.id, material.materialType]);
+
+    // Orphan removal on editor load per §4(5)
+    // Delete attachments and questions not referenced in the material content
+    useEffect(() => {
+        const removeOrphans = async () => {
+            if (!editor) return;
+
+            try {
+                // Fetch all attachments and questions for this material
+                const [attachments, questions] = await Promise.all([
+                    signalRService.getAttachmentsUnderMaterial(material.id),
+                    signalRService.getQuestionsUnderMaterial(material.id),
+                ]);
+
+                if (attachments.length === 0 && questions.length === 0) return;
+
+                // Parse content for referenced IDs
+                const content = material.content || '';
+
+                // Find referenced attachment IDs from markdown: ![...](/attachments/{uuid})
+                const attachmentRefs = new Set<string>();
+                const attachmentMatches = content.matchAll(/!\[.*?\]\(\/attachments\/([a-f0-9-]+)\)/gi);
+                for (const match of attachmentMatches) {
+                    attachmentRefs.add(match[1]);
+                }
+                // Also check for PDF embeds: !!! pdf id="{uuid}"
+                const pdfMatches = content.matchAll(/!!! pdf id="([a-f0-9-]+)"/gi);
+                for (const match of pdfMatches) {
+                    attachmentRefs.add(match[1]);
+                }
+
+                // Find referenced question IDs: !!! question id="{uuid}"
+                const questionRefs = new Set<string>();
+                const questionMatches = content.matchAll(/!!! question id="([a-f0-9-]+)"/gi);
+                for (const match of questionMatches) {
+                    questionRefs.add(match[1]);
+                }
+
+                // Delete orphan attachments
+                for (const att of attachments) {
+                    if (!attachmentRefs.has(att.id)) {
+                        console.log('Deleting orphan attachment:', att.id);
+                        await signalRService.deleteAttachment(att.id);
+                        // Also delete the file
+                        await window.electronAPI.deleteAttachmentFile(att.id, att.fileExtension);
+                    }
+                }
+
+                // Delete orphan questions
+                for (const q of questions) {
+                    if (!questionRefs.has(q.id)) {
+                        console.log('Deleting orphan question:', q.id);
+                        await signalRService.deleteQuestion(q.id);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to remove orphans:', err);
+            }
+        };
+
+        // Run after a short delay to ensure content is loaded
+        const timeoutId = setTimeout(removeOrphans, 200);
+        return () => clearTimeout(timeoutId);
+    }, [editor, material.id, material.content]);
 
     // Listen for question edit/delete events from QuestionRefComponent
     useEffect(() => {
@@ -386,37 +509,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
     const closeInputDialog = () => {
         setInputDialog({ isOpen: false, title: '', onSubmit: () => { } });
-    };
-
-    // Insert image URL
-    const insertImage = () => {
-        setInputDialog({
-            isOpen: true,
-            title: 'Insert Image',
-            placeholder: 'Enter image URL or attachment ID',
-            onSubmit: (url) => {
-                closeInputDialog();
-                if (editor) {
-                    const src = url.includes('/') ? url : `/attachments/${url}`;
-                    editor.chain().focus().setImage({ src }).run();
-                }
-            },
-        });
-    };
-
-    // Insert link
-    const insertLink = () => {
-        setInputDialog({
-            isOpen: true,
-            title: 'Insert Link',
-            placeholder: 'Enter link URL',
-            onSubmit: (url) => {
-                closeInputDialog();
-                if (editor) {
-                    editor.chain().focus().setLink({ href: url }).run();
-                }
-            },
-        });
     };
 
     // Insert table
@@ -620,6 +712,81 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 }
             },
         });
+    };
+
+    // Insert attachment via file picker - per FrontendWorkflowSpecifications §4C(4)
+    const insertAttachment = async () => {
+        try {
+            // Show file picker for allowed types
+            const result = await window.electronAPI.showOpenDialog({
+                properties: ['openFile'],
+                filters: [
+                    { name: 'Attachments', extensions: ['png', 'jpeg', 'jpg', 'pdf'] }
+                ]
+            });
+
+            if (result.canceled || result.filePaths.length === 0) return;
+
+            const filePath = result.filePaths[0];
+            const fileName = filePath.split(/[/\\]/).pop() || '';
+            const lastDotIndex = fileName.lastIndexOf('.');
+            const fileBaseName = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+            let fileExtension = lastDotIndex > 0 ? fileName.substring(lastDotIndex + 1).toLowerCase() : '';
+
+            // Normalize jpg to jpeg
+            if (fileExtension === 'jpg') fileExtension = 'jpeg';
+
+            // Validate extension
+            if (!['png', 'jpeg', 'pdf'].includes(fileExtension)) {
+                console.error('Invalid file extension:', fileExtension);
+                return;
+            }
+
+            // Create attachment entity via SignalR
+            const dto: InternalCreateAttachmentDto = {
+                materialId: material.id,
+                fileBaseName,
+                fileExtension
+            };
+            const attachmentId = await signalRService.createAttachment(dto);
+
+            // Copy file to AppData with UUID filename
+            // Per §4(4)(a1): if file save fails, rollback by deleting entity
+            try {
+                await window.electronAPI.saveAttachmentFile(filePath, attachmentId, fileExtension);
+            } catch (fileSaveError) {
+                console.error('File save failed, rolling back entity:', fileSaveError);
+                await signalRService.deleteAttachment(attachmentId);
+                throw fileSaveError;
+            }
+
+            // Get data URL for WYSIWYG display
+            const dataUrl = await window.electronAPI.getAttachmentDataUrl(attachmentId, fileExtension);
+
+            // Insert into editor based on type
+            if (editor && dataUrl) {
+                if (fileExtension === 'pdf') {
+                    // Insert PDF embed
+                    editor.chain().focus().insertContent({
+                        type: 'pdfEmbed',
+                        attrs: { id: attachmentId },
+                    }).run();
+                } else {
+                    // Insert image with data URL for display
+                    // The src will be converted to /attachments/{id} when saved to markdown
+                    editor.chain().focus().insertContent({
+                        type: 'image',
+                        attrs: {
+                            src: dataUrl,
+                            alt: fileBaseName,
+                            title: attachmentId, // Store ID for markdown conversion
+                        },
+                    }).run();
+                }
+            }
+        } catch (error) {
+            console.error('Error attaching file:', error);
+        }
     };
 
     if (!editor) {
@@ -839,17 +1006,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         </>
                     )}
 
-                    <ToolbarButton onClick={insertImage} title="Insert Image">
-                        🖼
-                    </ToolbarButton>
-                    <ToolbarButton
-                        onClick={insertLink}
-                        isActive={editor.isActive('link')}
-                        title="Insert Link"
-                    >
-                        🔗
-                    </ToolbarButton>
-
                     <ToolbarDivider />
 
                     {/* LaTeX */}
@@ -876,6 +1032,9 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     </ToolbarButton>
                     <ToolbarButton onClick={insertPdf} title="Insert PDF Embed">
                         📄
+                    </ToolbarButton>
+                    <ToolbarButton onClick={insertAttachment} title="Attach File (PNG, JPEG, PDF)">
+                        📎
                     </ToolbarButton>
 
                     <ToolbarDivider />

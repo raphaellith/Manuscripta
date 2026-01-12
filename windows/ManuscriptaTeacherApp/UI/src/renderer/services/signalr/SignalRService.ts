@@ -5,12 +5,14 @@ import type {
     LessonEntity,
     MaterialEntity,
     QuestionEntity,
+    AttachmentEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
     InternalCreateMaterialDto,
     InternalCreateQuestionDto,
     InternalUpdateQuestionDto,
+    InternalCreateAttachmentDto,
 } from "../../models";
 
 /**
@@ -238,6 +240,34 @@ class SignalRService {
         // TODO: Implement when backend is available
         console.warn('finishMaterial: Not yet implemented');
         await this.connection.invoke("FinishMaterial", materialId);
+    }
+
+    // ==========================================
+    // Attachment CRUD - NetworkingAPISpec §1(1)(l)
+    // ==========================================
+
+    /**
+     * Creates a new attachment and returns its assigned ID.
+     * Per NetworkingAPISpec §1(1)(l)(i).
+     */
+    public async createAttachment(dto: InternalCreateAttachmentDto): Promise<string> {
+        return await this.connection.invoke<string>("CreateAttachment", dto);
+    }
+
+    /**
+     * Retrieves all attachments under a material.
+     * Per NetworkingAPISpec §1(1)(l)(ii).
+     */
+    public async getAttachmentsUnderMaterial(materialId: string): Promise<AttachmentEntity[]> {
+        return await this.connection.invoke<AttachmentEntity[]>("GetAttachmentsUnderMaterial", materialId);
+    }
+
+    /**
+     * Deletes an attachment by ID.
+     * Per NetworkingAPISpec §1(1)(l)(iii).
+     */
+    public async deleteAttachment(id: string): Promise<void> {
+        await this.connection.invoke("DeleteAttachment", id);
     }
 }
 

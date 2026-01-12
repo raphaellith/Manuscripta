@@ -69,6 +69,7 @@
     "marked": "^17.0.1",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "react-pdf": "^10.3.0",
     "recharts": "^3.3.0",
     "turndown": "^7.2.2"
   }
