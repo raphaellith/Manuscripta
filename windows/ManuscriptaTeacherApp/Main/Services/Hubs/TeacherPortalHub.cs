@@ -20,12 +20,14 @@ public class TeacherPortalHub : Hub
     private readonly IMaterialService _materialService;
     private readonly IQuestionService _questionService;
     private readonly ISourceDocumentService _sourceDocumentService;
+    private readonly IAttachmentService _attachmentService;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
     private readonly IUnitRepository _unitRepository;
     private readonly ILessonRepository _lessonRepository;
     private readonly IMaterialRepository _materialRepository;
     private readonly IQuestionRepository _questionRepository;
     private readonly ISourceDocumentRepository _sourceDocumentRepository;
+    private readonly IAttachmentRepository _attachmentRepository;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -34,12 +36,14 @@ public class TeacherPortalHub : Hub
         IMaterialService materialService,
         IQuestionService questionService,
         ISourceDocumentService sourceDocumentService,
+        IAttachmentService attachmentService,
         IUnitCollectionRepository unitCollectionRepository,
         IUnitRepository unitRepository,
         ILessonRepository lessonRepository,
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository,
-        ISourceDocumentRepository sourceDocumentRepository)
+        ISourceDocumentRepository sourceDocumentRepository,
+        IAttachmentRepository attachmentRepository)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -47,12 +51,14 @@ public class TeacherPortalHub : Hub
         _materialService = materialService ?? throw new ArgumentNullException(nameof(materialService));
         _questionService = questionService ?? throw new ArgumentNullException(nameof(questionService));
         _sourceDocumentService = sourceDocumentService ?? throw new ArgumentNullException(nameof(sourceDocumentService));
+        _attachmentService = attachmentService ?? throw new ArgumentNullException(nameof(attachmentService));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
         _unitRepository = unitRepository ?? throw new ArgumentNullException(nameof(unitRepository));
         _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
+        _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -401,6 +407,40 @@ public class TeacherPortalHub : Hub
     public async Task DeleteSourceDocument(Guid id)
     {
         await _sourceDocumentService.DeleteAsync(id);
+    }
+
+    #endregion
+
+    #region Attachment CRUD - NetworkingAPISpec §1(1)(l)
+
+    /// <summary>
+    /// Creates a new attachment entity with an assigned UUID.
+    /// Per NetworkingAPISpec §1(1)(l)(i).
+    /// </summary>
+    public async Task<Guid> CreateAttachment(InternalCreateAttachmentDto dto)
+    {
+        var entity = new AttachmentEntity(Guid.NewGuid(), dto.MaterialId, dto.FileBaseName, dto.FileExtension);
+        var created = await _attachmentService.CreateAsync(entity);
+        return created.Id;
+    }
+
+    /// <summary>
+    /// Retrieves all attachments associated with a material.
+    /// Per NetworkingAPISpec §1(1)(l)(ii).
+    /// </summary>
+    public async Task<List<AttachmentEntity>> GetAttachmentsUnderMaterial(Guid materialId)
+    {
+        var attachments = await _attachmentRepository.GetByMaterialIdAsync(materialId);
+        return attachments.ToList();
+    }
+
+    /// <summary>
+    /// Deletes an attachment entity by ID.
+    /// Per NetworkingAPISpec §1(1)(l)(iii).
+    /// </summary>
+    public async Task DeleteAttachment(Guid id)
+    {
+        await _attachmentService.DeleteAsync(id);
     }
 
     #endregion

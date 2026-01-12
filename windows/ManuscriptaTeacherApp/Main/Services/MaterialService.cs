@@ -14,14 +14,10 @@ namespace Main.Services;
 public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _materialRepository;
-    private readonly ILessonRepository _lessonRepository;
 
-    public MaterialService(
-        IMaterialRepository materialRepository, 
-        ILessonRepository lessonRepository)
+    public MaterialService(IMaterialRepository materialRepository)
     {
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
-        _lessonRepository = lessonRepository ?? throw new ArgumentNullException(nameof(lessonRepository));
     }
 
     #region Material Operations
@@ -32,7 +28,7 @@ public class MaterialService : IMaterialService
             throw new ArgumentNullException(nameof(material));
 
         // Validate material
-        await ValidateMaterialAsync(material);
+        ValidateMaterial(material);
 
         await _materialRepository.AddAsync(material);
         return material;
@@ -44,7 +40,7 @@ public class MaterialService : IMaterialService
             throw new ArgumentNullException(nameof(material));
 
         // Validate material
-        await ValidateMaterialAsync(material);
+        ValidateMaterial(material);
 
         // Ensure material exists
         var existing = await _materialRepository.GetByIdAsync(material.Id);
@@ -66,18 +62,10 @@ public class MaterialService : IMaterialService
 
     #region Validation
 
-    private async Task ValidateMaterialAsync(MaterialEntity material)
+    private void ValidateMaterial(MaterialEntity material)
     {
         if (string.IsNullOrWhiteSpace(material.Title))
             throw new ArgumentException("Material title cannot be empty.", nameof(material));
-
-        // Content is allowed to be empty at creation - will be filled in via editor
-
-        // Validate LessonId references a valid Lesson
-        // Per AdditionalValidationRules.md §2D(1)(a)
-        var lesson = await _lessonRepository.GetByIdAsync(material.LessonId);
-        if (lesson == null)
-            throw new InvalidOperationException($"Lesson with ID {material.LessonId} not found.");
     }
     #endregion
 }

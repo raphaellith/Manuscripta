@@ -27,6 +27,7 @@ builder.Services.AddScoped<Main.Services.Repositories.IMaterialRepository, Main.
 builder.Services.AddScoped<Main.Services.Repositories.IQuestionRepository, Main.Services.Repositories.EfQuestionRepository>();
 builder.Services.AddSingleton<Main.Services.Repositories.IResponseRepository, Main.Services.Repositories.InMemoryResponseRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
 
 // Register CRUD services for hub
 builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
@@ -35,6 +36,8 @@ builder.Services.AddScoped<ILessonService, LessonService>();
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
+builder.Services.AddSingleton<IFileService, FileService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
@@ -84,6 +87,43 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<MainDbContext>();
     context.Database.EnsureCreated();
     // DbInitializer.Initialize(context);
+
+    // Orphan file removal per PersistenceAndCascadingRules §3
+    // Delete attachment files not linked to any entity
+    var fileService = services.GetRequiredService<IFileService>();
+    var attachmentRepo = services.GetRequiredService<Main.Services.Repositories.IAttachmentRepository>();
+    
+    var attachmentsDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ManuscriptaTeacherApp",
+        "Attachments"
+    );
+    
+    if (Directory.Exists(attachmentsDir))
+    {
+        // Get all attachment entity IDs
+        var allAttachments = await attachmentRepo.GetAllAsync();
+        var validIds = new HashSet<string>(allAttachments.Select(a => a.Id.ToString().ToLowerInvariant()));
+        
+        // Scan directory for orphan files
+        foreach (var filePath in Directory.GetFiles(attachmentsDir))
+        {
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            // File should be named as UUID
+            if (!validIds.Contains(fileName.ToLowerInvariant()))
+            {
+                try
+                {
+                    fileService.DeleteFile(filePath);
+                    Console.WriteLine($"Deleted orphan attachment file: {fileName}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to delete orphan file {fileName}: {ex.Message}");
+                }
+            }
+        }
+    }
 }
 
 // Minimal default endpoint to confirm the app is running.
