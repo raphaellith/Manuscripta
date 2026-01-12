@@ -66,6 +66,12 @@ public class MaterialService : IMaterialService
     {
         if (string.IsNullOrWhiteSpace(material.Title))
             throw new ArgumentException("Material title cannot be empty.", nameof(material));
+
+        // Ensure the material is associated with a lesson.
+        // Existence of the referenced lesson is enforced by database foreign key constraints;
+        // this check prevents obviously invalid IDs and yields clearer validation errors.
+        if (material.LessonId == Guid.Empty)
+            throw new ArgumentException("Material must reference a valid lesson.", nameof(material));
     }
     #endregion
 }
