@@ -103,9 +103,9 @@ For a description of how these server methods and client handlers are expected t
     
     (l) Creation, retrieval and deletion methods for attachments.
 
-        (i) `Task CreateAttachment(AttachmentEntity newAttachmentEntity)`: Receives data for a new attachment entity (without an assigned UUID), and creates the entity with an assigned UUID.
+        (i) `Task<Guid> CreateAttachment(AttachmentEntity newAttachmentEntity)`: Receives data for a new attachment entity (without an assigned UUID), and creates the entity with an assigned UUID. The assigned UUID is then returned to the client.
 
-        (ii) `Task<List<AttachmentEntity>> GetAllAttachments()`: Retrieves all attachment entities.
+        (ii) `Task<List<AttachmentEntity>> GetAttachmentsUnderMaterial(Guid materialId)`: Retrieves all attachments associated with the material with the materialId.
 
         (iii) `Task DeleteAttachment(Guid id)`: Deletes an attachment entity, identified by its UUID.
 

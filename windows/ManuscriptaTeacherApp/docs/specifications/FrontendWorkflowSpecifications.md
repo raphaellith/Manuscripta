@@ -63,8 +63,6 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
-        (vi) `Task<List<AttachmentEntity>> GetAllAttachments()`
-
 
 ## Section 4 - Functionalities for the "Library" tab
 
@@ -169,7 +167,9 @@ For a list of all server method and client handlers to be implemented for commun
 
         (ii) remove the question reference in the material.
 
-    However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
+        However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
+
+    (d) not allow the user to delete questions through any other means than the delete button specified in paragraph (c).
 
 (4) **Handling attachments**
 
@@ -190,6 +190,20 @@ For a list of all server method and client handlers to be implemented for commun
         (i) delete the attachment using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
         (ii) remove the attachment reference in the material.
+    
+    (c) not allow the user to delete attachments through any other means than the delete button specified in paragraph (b).
+
+(5) **Initiation of Orphan Removal**
+
+    The frontend shall, when the editor modal is loaded -
+
+    (a) retrieve all attachments and questions associated with the material, by calling `Task<List<AttachmentEntity>> GetAttachmentsUnderMaterial(Guid materialId)` and `Task<List<QuestionEntity>> GetQuestionsUnderMaterial(Guid materialId)`, as defined in S1(1)(l)(ii) and S1(1)(d)(ii) of the Networking API Specification.
+
+    (b) identify all attachments and questions that are not referenced in the material, and -
+
+        (i) delete such attachment(s) using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+
+        (ii) delete such question(s) using the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification.
 
 
 ## Section 5 - Functionalities for the "Classroom" tab

@@ -47,12 +47,12 @@ This document is effective for the Windows app only.
 
 (7) The deletion of an attachment A must delete the attachment file named by A's `FileName` attribute.
 
+## Section 3 - Proactive Orphan Removal
 
-## Appendix 1 - Using this Document (Instruction to AI Agents)
+(1) **Removal of orphaned attachment files**
 
-(1) This document shall have effect on the Windows application only. No AI agent shall refer to this document if they intend to work on development beyond the Windows App.
+    The backend shall, on startup -
 
-(2) When instructed to use this document, an AI agent shall —
-
-    (a) Check the compliance of the current implementation presented to the agent.
-    (b) In the case of any discompliance found, report and propose a fix for those discompliance.
+    (a) Retrieve all attachment entities from the database.
+    (b) For each file placed under the `Attachments` directory, check if it is associated with an attachment entity.
+    (c) If a file is not associated with an attachment entity, delete the file.
