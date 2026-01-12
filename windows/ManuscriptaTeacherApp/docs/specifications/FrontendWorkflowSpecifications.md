@@ -169,7 +169,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
 
-    (d) delete the question by calling the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification when the question reference is removed from the material.
+    (d) not allow the user to delete questions through any other means than the delete button specified in paragraph (c).
 
 (4) **Handling attachments**
 
@@ -191,7 +191,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (ii) remove the attachment reference in the material.
     
-    (c) delete the attachment by calling the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification when the attachment reference is removed from the material.
+    (c) not allow the user to delete attachments through any other means than the delete button specified in paragraph (b).
 
 (5) **Initiation of Orphan Removal**
 
