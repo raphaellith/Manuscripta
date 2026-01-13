@@ -222,6 +222,21 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         onTransaction: () => {
             setForceUpdate(n => n + 1);
         },
+        // Disable undo/redo keyboard shortcuts temporarily
+        editorProps: {
+            handleKeyDown: (_view, event) => {
+                // Block Ctrl/Cmd+Z (undo) and Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo)
+                if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+                    event.preventDefault();
+                    return true;
+                }
+                if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+                    event.preventDefault();
+                    return true;
+                }
+                return false;
+            },
+        },
     });
 
     // Get content as Markdown for storage
@@ -1062,23 +1077,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         📎
                     </ToolbarButton>
 
-                    <ToolbarDivider />
-
-                    {/* Undo/Redo */}
-                    <ToolbarButton
-                        onClick={() => editor.chain().focus().undo().run()}
-                        disabled={!editor.can().undo()}
-                        title="Undo (Ctrl+Z)"
-                    >
-                        ↩
-                    </ToolbarButton>
-                    <ToolbarButton
-                        onClick={() => editor.chain().focus().redo().run()}
-                        disabled={!editor.can().redo()}
-                        title="Redo (Ctrl+Y)"
-                    >
-                        ↪
-                    </ToolbarButton>
+                    {/* Undo/Redo - temporarily disabled, to be reintroduced later */}
                 </div>
 
                 {/* Editor Area */}
