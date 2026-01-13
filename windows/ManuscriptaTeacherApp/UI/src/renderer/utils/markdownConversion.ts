@@ -173,7 +173,8 @@ export function markdownToHtml(markdown: string): string {
         (_match, content) => {
             const unindented = content.replace(/^[ ]{4}/gm, '');
             centerBlocks.push(unindented.trim());
-            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->`;
+            // Add newline after placeholder to ensure following content is at line start
+            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->\n`;
         }
     );
 
