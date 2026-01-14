@@ -53,3 +53,10 @@ export interface InternalUpdateQuestionDto {
     correctAnswer?: string;       // For WRITTEN_ANSWER (null = auto-marking disabled)
     maxScore?: number;
 }
+
+// Per NetworkingAPISpec §1(1)(l)
+export interface InternalCreateAttachmentDto {
+    materialId: string;
+    fileBaseName: string;
+    fileExtension: string;
+}

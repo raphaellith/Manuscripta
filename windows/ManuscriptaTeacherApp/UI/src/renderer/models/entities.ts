@@ -49,3 +49,11 @@ export interface QuestionEntity {
     correctAnswer?: string | number;  // Index for MC, string for WRITTEN
     maxScore?: number;
 }
+
+// Per AdditionalValidationRules §3B
+export interface AttachmentEntity {
+    id: string;
+    materialId: string;
+    fileBaseName: string;
+    fileExtension: string;
+}

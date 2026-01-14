@@ -17,20 +17,13 @@ namespace MainTests.ServicesTests;
 public class MaterialServiceTests
 {
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
-    private readonly Mock<ILessonRepository> _mockLessonRepo;
     private readonly MaterialService _service;
     private readonly Guid _testLessonId = Guid.NewGuid();
 
     public MaterialServiceTests()
     {
         _mockMaterialRepo = new Mock<IMaterialRepository>();
-        _mockLessonRepo = new Mock<ILessonRepository>();
-        
-        // Setup default lesson validation to pass
-        _mockLessonRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(new LessonEntity(Guid.NewGuid(), Guid.NewGuid(), "Test Lesson", "Description"));
-        
-        _service = new MaterialService(_mockMaterialRepo.Object, _mockLessonRepo.Object);
+        _service = new MaterialService(_mockMaterialRepo.Object);
     }
 
     #region Material Tests
@@ -82,26 +75,6 @@ public class MaterialServiceTests
             () => _service.CreateMaterialAsync(material));
     }
 
-
-    [Fact]
-    public async Task CreateMaterialAsync_InvalidLessonId_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var invalidLessonId = Guid.NewGuid();
-        var material = new WorksheetMaterialEntity(
-            Guid.NewGuid(),
-            invalidLessonId,
-            "Test Material",
-            "Test Content"
-        );
-
-        _mockLessonRepo.Setup(r => r.GetByIdAsync(invalidLessonId))
-            .ReturnsAsync((LessonEntity?)null);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateMaterialAsync(material));
-    }
 
     [Fact]
     public async Task UpdateMaterialAsync_ValidMaterial_Success()

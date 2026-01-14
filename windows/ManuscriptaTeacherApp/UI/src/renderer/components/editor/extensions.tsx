@@ -10,6 +10,104 @@ import katex from 'katex';
 import CodeBlockExt from '@tiptap/extension-code-block';
 import 'katex/dist/katex.min.css';
 
+// ============ Attachment Image Extension ============
+// Custom image extension with delete button and keyboard deletion prevention per §4(4)(c)
+
+const AttachmentImageComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
+    const { src, alt, title } = node.attrs as { src: string; alt: string; title: string };
+    // title contains the attachment UUID
+
+    const handleDelete = () => {
+        if (window.confirm('Delete this image attachment?')) {
+            // Dispatch event for EditorModal to handle entity+file deletion per §4(4)(b)
+            window.dispatchEvent(new CustomEvent('attachment-delete', {
+                detail: { attachmentId: title, fileExtension: 'image' }
+            }));
+            deleteNode();
+        }
+    };
+
+    return (
+        <NodeViewWrapper className="attachment-image my-2 inline-block relative group">
+            <div className="relative inline-block">
+                <img
+                    src={src}
+                    alt={alt || 'Attachment'}
+                    className="max-w-full h-auto rounded border border-gray-300"
+                    style={{ maxHeight: '400px' }}
+                />
+                {/* Delete button - visible on hover */}
+                <button
+                    onClick={handleDelete}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    title="Delete image"
+                >
+                    🗑️
+                </button>
+            </div>
+        </NodeViewWrapper>
+    );
+};
+
+export const AttachmentImage = Node.create({
+    name: 'image',
+    group: 'inline',
+    inline: true,
+    atom: true,
+    // Prevent selection and dragging to block keyboard deletion
+    selectable: false,
+    draggable: false,
+
+    addAttributes() {
+        return {
+            src: { default: null },
+            alt: { default: null },
+            title: { default: null },
+        };
+    },
+
+    parseHTML() {
+        return [
+            {
+                tag: 'img[src]',
+            },
+        ];
+    },
+
+    renderHTML({ HTMLAttributes }) {
+        return ['img', mergeAttributes(HTMLAttributes)];
+    },
+
+    addNodeView() {
+        return ReactNodeViewRenderer(AttachmentImageComponent);
+    },
+
+    // Prevent deletion via keyboard shortcuts
+    addKeyboardShortcuts() {
+        return {
+            Backspace: () => {
+                // Check if selection is at/near an image node
+                const { state } = this.editor;
+                const { selection } = state;
+                const node = state.doc.nodeAt(selection.from - 1);
+                if (node?.type.name === 'image') {
+                    return true; // Prevent default behavior
+                }
+                return false;
+            },
+            Delete: () => {
+                const { state } = this.editor;
+                const { selection } = state;
+                const node = state.doc.nodeAt(selection.from);
+                if (node?.type.name === 'image') {
+                    return true; // Prevent default behavior
+                }
+                return false;
+            },
+        };
+    },
+});
+
 // ============ Code Block with Language Support ============
 
 export const CodeBlockWithLanguage = CodeBlockExt.extend({
@@ -292,6 +390,9 @@ export const QuestionRef = Node.create({
     name: 'questionRef',
     group: 'block',
     atom: true,
+    // Prevent selection to block keyboard deletion
+    selectable: false,
+    draggable: false,
 
     addAttributes() {
         return {
@@ -327,22 +428,206 @@ export const QuestionRef = Node.create({
     addNodeView() {
         return ReactNodeViewRenderer(QuestionRefComponent);
     },
+
+    // Prevent deletion via keyboard shortcuts per §4(3)(d)
+    addKeyboardShortcuts() {
+        return {
+            Backspace: () => {
+                const { state } = this.editor;
+                const { selection } = state;
+                // Check positions around selection for questionRef nodes
+                for (let i = -2; i <= 1; i++) {
+                    const pos = selection.from + i;
+                    if (pos >= 0 && pos < state.doc.content.size) {
+                        const node = state.doc.nodeAt(pos);
+                        if (node?.type.name === 'questionRef') {
+                            return true; // Prevent default behavior
+                        }
+                    }
+                }
+                // Also check if we're inside or right after a questionRef
+                const $from = state.doc.resolve(selection.from);
+                for (let d = $from.depth; d >= 0; d--) {
+                    if ($from.node(d).type.name === 'questionRef') {
+                        return true;
+                    }
+                }
+                return false;
+            },
+            Delete: () => {
+                const { state } = this.editor;
+                const { selection } = state;
+                // Check positions around selection for questionRef nodes
+                for (let i = 0; i <= 2; i++) {
+                    const pos = selection.from + i;
+                    if (pos >= 0 && pos < state.doc.content.size) {
+                        const node = state.doc.nodeAt(pos);
+                        if (node?.type.name === 'questionRef') {
+                            return true; // Prevent default behavior
+                        }
+                    }
+                }
+                // Also check if we're inside a questionRef
+                const $from = state.doc.resolve(selection.from);
+                for (let d = $from.depth; d >= 0; d--) {
+                    if ($from.node(d).type.name === 'questionRef') {
+                        return true;
+                    }
+                }
+                return false;
+            },
+        };
+    },
 });
 
 // ============ PDF Embed Extension ============
 
-const PdfEmbedComponent: React.FC<NodeViewProps> = ({ node }) => {
+const PdfEmbedComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
     const pdfId = node.attrs.id as string;
+    const [pdfDataUrl, setPdfDataUrl] = React.useState<string | null>(null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+    const [numPages, setNumPages] = React.useState<number>(0);
+    const [pageNumber, setPageNumber] = React.useState<number>(1);
+
+    // Dynamically import react-pdf to avoid SSR issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [PdfComponents, setPdfComponents] = React.useState<{
+        Document: React.ComponentType<React.PropsWithChildren<{ file: string; onLoadSuccess: (data: { numPages: number }) => void; onLoadError: (error: Error) => void; loading: React.ReactNode }>>;
+        Page: React.ComponentType<{ pageNumber: number; width: number; renderTextLayer: boolean; renderAnnotationLayer: boolean }>;
+    } | null>(null);
+
+    React.useEffect(() => {
+        // Import react-pdf dynamically
+        import('react-pdf').then((pdfjs) => {
+            // Configure worker from CDN with https protocol
+            pdfjs.pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.pdfjs.version}/build/pdf.worker.min.mjs`;
+            setPdfComponents({
+                Document: pdfjs.Document,
+                Page: pdfjs.Page,
+            });
+        }).catch(err => {
+            console.error('Failed to load react-pdf:', err);
+            setError('Failed to load PDF viewer');
+        });
+    }, []);
+
+    // Load PDF data URL on mount
+    React.useEffect(() => {
+        const loadPdf = async () => {
+            try {
+                setLoading(true);
+                const dataUrl = await window.electronAPI.getAttachmentDataUrl(pdfId, 'pdf');
+                if (dataUrl) {
+                    setPdfDataUrl(dataUrl);
+                } else {
+                    setError('PDF file not found');
+                }
+            } catch (err) {
+                console.error('Failed to load PDF:', err);
+                setError('Failed to load PDF');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (pdfId) {
+            loadPdf();
+        }
+    }, [pdfId]);
+
+    const handleDelete = () => {
+        if (window.confirm('Delete this PDF attachment?')) {
+            // Dispatch event for EditorModal to handle entity+file deletion per §4(4)(b)
+            window.dispatchEvent(new CustomEvent('attachment-delete', {
+                detail: { attachmentId: pdfId, fileExtension: 'pdf' }
+            }));
+            deleteNode();
+        }
+    };
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+        setNumPages(numPages);
+        setPageNumber(1);
+    };
+
+    const onDocumentLoadError = (err: Error) => {
+        console.error('PDF load error:', err);
+        setError('Failed to render PDF');
+    };
+
+    const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
+    const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages));
 
     return (
-        <NodeViewWrapper className="pdf-embed my-4 p-4 border-2 border-blue-400 rounded-lg bg-blue-50">
-            <div className="flex items-center gap-2">
-                <span className="text-blue-600 font-semibold">📄 PDF Document</span>
-                <span className="text-xs text-gray-500 font-mono">{pdfId.slice(0, 8)}...</span>
+        <NodeViewWrapper className="pdf-embed my-4 border-2 border-blue-400 rounded-lg bg-blue-50 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 bg-blue-100 border-b border-blue-300">
+                <div className="flex items-center gap-2">
+                    <span className="text-blue-600 font-semibold">📄 PDF Document</span>
+                    {numPages > 0 && (
+                        <span className="text-xs text-gray-600">
+                            Page {pageNumber} of {numPages}
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {numPages > 1 && (
+                        <>
+                            <button
+                                onClick={goToPrevPage}
+                                disabled={pageNumber <= 1}
+                                className="px-2 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                ←
+                            </button>
+                            <button
+                                onClick={goToNextPage}
+                                disabled={pageNumber >= numPages}
+                                className="px-2 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                →
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={handleDelete}
+                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete PDF"
+                    >
+                        🗑️
+                    </button>
+                </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-                [PDF viewer will load from /attachments/{pdfId}]
-            </p>
+
+            {/* PDF Viewer */}
+            <div className="p-2 flex justify-center bg-gray-100">
+                {loading && (
+                    <div className="h-96 flex items-center justify-center text-gray-500">
+                        <span className="animate-pulse">Loading PDF...</span>
+                    </div>
+                )}
+                {error && (
+                    <div className="h-32 flex items-center justify-center text-red-500">
+                        {error}
+                    </div>
+                )}
+                {!loading && !error && pdfDataUrl && PdfComponents && (
+                    <PdfComponents.Document
+                        file={pdfDataUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={onDocumentLoadError}
+                        loading={<div className="h-96 flex items-center justify-center"><span className="animate-pulse">Rendering PDF...</span></div>}
+                    >
+                        <PdfComponents.Page
+                            pageNumber={pageNumber}
+                            width={600}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                        />
+                    </PdfComponents.Document>
+                )}
+            </div>
         </NodeViewWrapper>
     );
 };
@@ -351,6 +636,9 @@ export const PdfEmbed = Node.create({
     name: 'pdfEmbed',
     group: 'block',
     atom: true,
+    // Prevent selection to block keyboard deletion
+    selectable: false,
+    draggable: false,
 
     addAttributes() {
         return {
@@ -380,6 +668,30 @@ export const PdfEmbed = Node.create({
 
     addNodeView() {
         return ReactNodeViewRenderer(PdfEmbedComponent);
+    },
+
+    // Prevent deletion via keyboard shortcuts per §4(4)(c)
+    addKeyboardShortcuts() {
+        return {
+            Backspace: () => {
+                const { state } = this.editor;
+                const { selection } = state;
+                const node = state.doc.nodeAt(selection.from - 1);
+                if (node?.type.name === 'pdfEmbed') {
+                    return true; // Prevent default behavior
+                }
+                return false;
+            },
+            Delete: () => {
+                const { state } = this.editor;
+                const { selection } = state;
+                const node = state.doc.nodeAt(selection.from);
+                if (node?.type.name === 'pdfEmbed') {
+                    return true; // Prevent default behavior
+                }
+                return false;
+            },
+        };
     },
 });
 

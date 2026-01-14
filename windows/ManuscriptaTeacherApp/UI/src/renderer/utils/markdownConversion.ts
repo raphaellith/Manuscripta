@@ -96,12 +96,21 @@ turndownService.addRule('centeredText', {
 });
 
 // Handle images - convert to standard markdown image syntax
+// If the image has an attachment ID in the title attribute (set during insert),
+// use /attachments/{id} instead of the data URL for proper storage
 turndownService.addRule('images', {
     filter: 'img',
     replacement: function (_content, node) {
         const img = node as HTMLImageElement;
         const alt = img.alt || '';
-        const src = img.src || '';
+        const title = img.title || '';
+        let src = img.src || '';
+
+        // If title contains an attachment ID and src is a data URL, use attachment path
+        if (title && src.startsWith('data:')) {
+            src = `/attachments/${title}`;
+        }
+
         return `![${alt}](${src})`;
     }
 });
@@ -164,7 +173,8 @@ export function markdownToHtml(markdown: string): string {
         (_match, content) => {
             const unindented = content.replace(/^[ ]{4}/gm, '');
             centerBlocks.push(unindented.trim());
-            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->`;
+            // Add newline after placeholder to ensure following content is at line start
+            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->\n`;
         }
     );
 
