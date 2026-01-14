@@ -31,6 +31,12 @@ public class MainDbContext : DbContext
     /// </summary>
     public DbSet<SourceDocumentEntity> SourceDocuments { get; set; }
     
+    /// <summary>
+    /// Attachments associated with materials.
+    /// Per PersistenceAndCascadingRules.md §1(1)(g).
+    /// </summary>
+    public DbSet<AttachmentEntity> Attachments { get; set; }
+    
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
     // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
@@ -121,6 +127,19 @@ public class MainDbContext : DbContext
             entity.HasOne(sd => sd.UnitCollection)
                 .WithMany()
                 .HasForeignKey(sd => sd.UnitCollectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure AttachmentEntity with cascade delete from Material
+        // Per PersistenceAndCascadingRules.md §2(6)
+        modelBuilder.Entity<AttachmentEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.MaterialId);
+            
+            entity.HasOne(a => a.Material)
+                .WithMany()
+                .HasForeignKey(a => a.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

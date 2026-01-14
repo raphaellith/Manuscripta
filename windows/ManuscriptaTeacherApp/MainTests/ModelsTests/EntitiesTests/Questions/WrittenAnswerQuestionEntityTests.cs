@@ -28,15 +28,18 @@ public class WrittenAnswerQuestionEntityTests
     }
 
     [Fact]
-    public void Constructor_WithNullCorrectAnswer_ThrowsArgumentNullException()
+    public void Constructor_WithNullCorrectAnswer_CreatesEntity()
     {
+        // Per Validation Rules refactor: null CorrectAnswer = auto-marking disabled
         // Arrange
         var id = Guid.NewGuid();
         var materialId = Guid.NewGuid();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new WrittenAnswerQuestionEntity(id, materialId, "Question?", null!));
+        // Act
+        var entity = new WrittenAnswerQuestionEntity(id, materialId, "Question?", null);
+
+        // Assert
+        Assert.Null(entity.CorrectAnswer);
     }
 
     [Fact]
