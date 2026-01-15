@@ -197,7 +197,7 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) not allow the user to delete attachments through any other means than the delete button specified in paragraph (b).
 
-(5) **Initiation of Orphan Removal**
+(5) **Initiation of Orphan Removal on Entry or Exit**
 
     The frontend shall, when the editor modal is entered or exited -
 
@@ -205,9 +205,17 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) identify all attachments and questions that are not referenced in the material, and -
 
-        (i) delete the copy(ies) of such attachment file(s) from the directory `%AppData%\ManuscriptaTeacherApp\Attachments`, and the corresponding attachment entity(ies) using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+        (i) delete such attachment entity(ies) using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification, and delete the copy(ies) of corresponding attachment file(s) from the data directory.
 
         (ii) delete such question(s) using the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification.
+
+(6) **Initiation of Orphan Removal on Discovery of Orphaned Attachment Entities**
+
+    The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory -
+
+        (i) remove any attachment references which references such attachment entity.
+
+        (ii) delete such attachment entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
 
 ## Section 5 - Functionalities for the "Classroom" tab
