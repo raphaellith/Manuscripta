@@ -270,6 +270,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     }, [isDirty, saveContent]);
 
     // Resolve attachment image paths to data URLs for WYSIWYG display
+    // Also handles orphaned attachment entities per §4C(6)
     useEffect(() => {
         const resolveAttachmentImages = async () => {
             if (!editor) return;
@@ -278,6 +279,10 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 // Find all image nodes with /attachments/ paths
                 const { doc, tr } = editor.state;
                 let modified = false;
+
+                // Track positions to delete (orphaned attachments with missing files per §4C(6))
+                const positionsToDelete: number[] = [];
+                const entitiesToDelete: string[] = [];
 
                 const promises: Promise<void>[] = [];
 
@@ -305,6 +310,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                                                     title: attachmentId, // Store ID for markdown conversion
                                                 });
                                                 modified = true;
+                                            } else {
+                                                // §4C(6): File doesn't exist - track for removal
+                                                console.log('Orphaned attachment entity (missing file):', attachmentId);
+                                                positionsToDelete.push(pos);
+                                                entitiesToDelete.push(attachmentId);
                                             }
                                         }
                                     })
@@ -316,9 +326,31 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
                 await Promise.all(promises);
 
+                // §4C(6)(a): Remove attachment references for missing files
+                // Delete from end to avoid position shifts
+                positionsToDelete.sort((a, b) => b - a);
+                for (const pos of positionsToDelete) {
+                    // Get node size at this position
+                    const node = doc.nodeAt(pos);
+                    if (node) {
+                        tr.delete(pos, pos + node.nodeSize);
+                        modified = true;
+                    }
+                }
+
                 if (modified) {
                     tr.setMeta('addToHistory', false);
                     editor.view.dispatch(tr);
+                }
+
+                // §4C(6)(b): Delete orphaned attachment entities
+                for (const id of entitiesToDelete) {
+                    try {
+                        await signalRService.deleteAttachment(id);
+                        console.log('Deleted orphaned attachment entity:', id);
+                    } catch (err) {
+                        console.error('Failed to delete orphaned attachment entity:', err);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to resolve attachment images:', err);
@@ -421,12 +453,12 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 questionRefs.add(match[1]);
             }
 
-            // Delete orphan attachments (file + entity per §4C(5)(b)(i))
+            // Delete orphan attachments (entity + file per §4C(5)(b)(i))
             for (const att of attachments) {
                 if (!attachmentRefs.has(att.id)) {
                     console.log('Deleting orphan attachment:', att.id);
-                    await window.electronAPI.deleteAttachmentFile(att.id, att.fileExtension);
                     await signalRService.deleteAttachment(att.id);
+                    await window.electronAPI.deleteAttachmentFile(att.id, att.fileExtension);
                 }
             }
 
