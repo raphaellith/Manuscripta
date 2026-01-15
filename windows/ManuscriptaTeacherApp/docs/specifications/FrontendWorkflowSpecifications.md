@@ -213,7 +213,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory -
 
-    (a) remove any attachment references which references such attachment entity.
+    (a) remove any attachment reference which references such attachment entity.
 
     (b) delete such attachment entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
