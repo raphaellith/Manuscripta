@@ -222,21 +222,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         onTransaction: () => {
             setForceUpdate(n => n + 1);
         },
-        // Disable undo/redo keyboard shortcuts temporarily
-        editorProps: {
-            handleKeyDown: (_view, event) => {
-                // Block Ctrl/Cmd+Z (undo) and Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo)
-                if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
-                    event.preventDefault();
-                    return true;
-                }
-                if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
-                    event.preventDefault();
-                    return true;
-                }
-                return false;
-            },
-        },
     });
 
     // Get content as Markdown for storage
@@ -332,6 +317,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 await Promise.all(promises);
 
                 if (modified) {
+                    tr.setMeta('addToHistory', false);
                     editor.view.dispatch(tr);
                 }
             } catch (err) {
@@ -386,6 +372,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 });
 
                 if (modified) {
+                    tr.setMeta('addToHistory', false);
                     editor.view.dispatch(tr);
                 }
             } catch (err) {
@@ -398,69 +385,69 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return () => clearTimeout(timeoutId);
     }, [editor, material.id, material.materialType]);
 
-    // Orphan removal on editor load per §4(5)
+    // Orphan removal per §4C(5) - runs on editor enter and exit
     // Delete attachments and questions not referenced in the material content
-    useEffect(() => {
-        const removeOrphans = async () => {
-            if (!editor) return;
+    const removeOrphans = useCallback(async () => {
+        if (!editor) return;
 
-            try {
-                // Fetch all attachments and questions for this material
-                const [attachments, questions] = await Promise.all([
-                    signalRService.getAttachmentsUnderMaterial(material.id),
-                    signalRService.getQuestionsUnderMaterial(material.id),
-                ]);
+        try {
+            // Fetch all attachments and questions for this material
+            const [attachments, questions] = await Promise.all([
+                signalRService.getAttachmentsUnderMaterial(material.id),
+                signalRService.getQuestionsUnderMaterial(material.id),
+            ]);
 
-                if (attachments.length === 0 && questions.length === 0) return;
+            if (attachments.length === 0 && questions.length === 0) return;
 
-                // Parse content for referenced IDs
-                const content = material.content || '';
+            // Parse current editor content (not stored content) for referenced IDs
+            const content = getMarkdownContent();
 
-                // Find referenced attachment IDs from markdown: ![...](/attachments/{uuid})
-                const attachmentRefs = new Set<string>();
-                const attachmentMatches = content.matchAll(/!\[.*?\]\(\/attachments\/([a-f0-9-]+)\)/gi);
-                for (const match of attachmentMatches) {
-                    attachmentRefs.add(match[1]);
-                }
-                // Also check for PDF embeds: !!! pdf id="{uuid}"
-                const pdfMatches = content.matchAll(/!!! pdf id="([a-f0-9-]+)"/gi);
-                for (const match of pdfMatches) {
-                    attachmentRefs.add(match[1]);
-                }
-
-                // Find referenced question IDs: !!! question id="{uuid}"
-                const questionRefs = new Set<string>();
-                const questionMatches = content.matchAll(/!!! question id="([a-f0-9-]+)"/gi);
-                for (const match of questionMatches) {
-                    questionRefs.add(match[1]);
-                }
-
-                // Delete orphan attachments
-                for (const att of attachments) {
-                    if (!attachmentRefs.has(att.id)) {
-                        console.log('Deleting orphan attachment:', att.id);
-                        await signalRService.deleteAttachment(att.id);
-                        // Also delete the file
-                        await window.electronAPI.deleteAttachmentFile(att.id, att.fileExtension);
-                    }
-                }
-
-                // Delete orphan questions
-                for (const q of questions) {
-                    if (!questionRefs.has(q.id)) {
-                        console.log('Deleting orphan question:', q.id);
-                        await signalRService.deleteQuestion(q.id);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to remove orphans:', err);
+            // Find referenced attachment IDs from markdown: ![...](/attachments/{uuid})
+            const attachmentRefs = new Set<string>();
+            const attachmentMatches = content.matchAll(/!\[.*?\]\(\/attachments\/([a-f0-9-]+)\)/gi);
+            for (const match of attachmentMatches) {
+                attachmentRefs.add(match[1]);
             }
-        };
+            // Also check for PDF embeds: !!! pdf id="{uuid}"
+            const pdfMatches = content.matchAll(/!!! pdf id="([a-f0-9-]+)"/gi);
+            for (const match of pdfMatches) {
+                attachmentRefs.add(match[1]);
+            }
 
+            // Find referenced question IDs: !!! question id="{uuid}"
+            const questionRefs = new Set<string>();
+            const questionMatches = content.matchAll(/!!! question id="([a-f0-9-]+)"/gi);
+            for (const match of questionMatches) {
+                questionRefs.add(match[1]);
+            }
+
+            // Delete orphan attachments (file + entity per §4C(5)(b)(i))
+            for (const att of attachments) {
+                if (!attachmentRefs.has(att.id)) {
+                    console.log('Deleting orphan attachment:', att.id);
+                    await window.electronAPI.deleteAttachmentFile(att.id, att.fileExtension);
+                    await signalRService.deleteAttachment(att.id);
+                }
+            }
+
+            // Delete orphan questions per §4C(5)(b)(ii)
+            for (const q of questions) {
+                if (!questionRefs.has(q.id)) {
+                    console.log('Deleting orphan question:', q.id);
+                    await signalRService.deleteQuestion(q.id);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to remove orphans:', err);
+        }
+    }, [editor, material.id, getMarkdownContent]);
+
+    // Run orphan removal on editor mount per §4C(5)
+    useEffect(() => {
         // Run after a short delay to ensure content is loaded
         const timeoutId = setTimeout(removeOrphans, 200);
         return () => clearTimeout(timeoutId);
-    }, [editor, material.id, material.content]);
+    }, [removeOrphans]);
 
     // Listen for question edit/delete events from QuestionRefComponent
     useEffect(() => {
@@ -489,37 +476,18 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         };
 
-        const handleDeleteEvent = async (e: CustomEvent<{ questionId: string }>) => {
-            const questionId = e.detail.questionId;
-            try {
-                await signalRService.deleteQuestion(questionId);
-                setIsDirty(true);
-            } catch (err) {
-                console.error('Failed to delete question:', err);
-            }
+        // Question deletion deferred per §4C(3)(c)(i) [DELETED]
+        // The question reference is removed from editor content; actual deletion happens on orphan removal
+        const handleDeleteEvent = (_e: CustomEvent<{ questionId: string }>) => {
+            // Deletion is deferred to orphan removal on exit per §4C(5)
+            setIsDirty(true);
         };
 
-        // Handle attachment deletion per §4(4)(b)
-        const handleAttachmentDeleteEvent = async (e: CustomEvent<{ attachmentId: string; fileExtension: string }>) => {
-            const { attachmentId, fileExtension } = e.detail;
-            if (!attachmentId) return;
-            try {
-                // For images, we need to find the actual extension from attachments
-                let ext = fileExtension;
-                if (fileExtension === 'image') {
-                    // Get all attachments to find the correct extension
-                    const attachments = await signalRService.getAttachmentsUnderMaterial(material.id);
-                    const att = attachments.find(a => a.id === attachmentId);
-                    ext = att?.fileExtension || 'png'; // Fallback to png
-                }
-                // Delete entity
-                await signalRService.deleteAttachment(attachmentId);
-                // Delete file
-                await window.electronAPI.deleteAttachmentFile(attachmentId, ext);
-                setIsDirty(true);
-            } catch (err) {
-                console.error('Failed to delete attachment:', err);
-            }
+        // Attachment deletion deferred per §4C(4)(b)(i) [DELETED]
+        // The attachment reference is removed from editor content; actual deletion happens on orphan removal
+        const handleAttachmentDeleteEvent = (_e: CustomEvent<{ attachmentId: string; fileExtension: string }>) => {
+            // Deletion is deferred to orphan removal on exit per §4C(5)
+            setIsDirty(true);
         };
 
         window.addEventListener('question-edit', handleEditEvent as EventListener);
@@ -539,11 +507,13 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         setIsDirty(true);
     };
 
-    // Close and save any pending changes
+    // Close and save any pending changes, run orphan removal per §4C(5)
     const handleClose = async () => {
         if (isDirty) {
             await saveContent();
         }
+        // Run orphan removal on exit per §4C(5)
+        await removeOrphans();
         onClose();
     };
 
@@ -685,12 +655,10 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         }
     };
 
-    // Handle question delete - per s4C(3)(c)
+    // Handle question delete - per §4C(3)(c)
+    // Deletion is deferred per §4C(3)(c)(i) [DELETED] - actual deletion happens in orphan removal on exit
     const handleQuestionDelete = async (questionId: string): Promise<void> => {
-        // Delete via SignalR - per s4C(3)(c)(i)
-        await signalRService.deleteQuestion(questionId);
-
-        // Remove question reference from content - per s4C(3)(c)(ii)
+        // Remove question reference from content - per §4C(3)(c)(ii)
         if (editor) {
             const { doc, tr } = editor.state;
 
@@ -1077,7 +1045,29 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         📎
                     </ToolbarButton>
 
-                    {/* Undo/Redo - temporarily disabled, to be reintroduced later */}
+                    <ToolbarDivider />
+
+                    {/* Undo/Redo - per §4C(2)(c) */}
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().undo().run()}
+                        disabled={!editor.can().undo()}
+                        title="Undo (Ctrl+Z)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 7v6h6" />
+                            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+                        </svg>
+                    </ToolbarButton>
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().redo().run()}
+                        disabled={!editor.can().redo()}
+                        title="Redo (Ctrl+Y)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 7v6h-6" />
+                            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+                        </svg>
+                    </ToolbarButton>
                 </div>
 
                 {/* Editor Area */}
