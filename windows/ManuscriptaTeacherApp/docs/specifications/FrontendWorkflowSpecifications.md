@@ -143,6 +143,8 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) modify the reading age and actual age metadata of the material.
 
+    (c) undo and redo changes to the material.
+
 (3) **Saving Content**
 
     The editor modal shall -
@@ -163,7 +165,7 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) provide a delete button for embedded questions. When it is clicked -
 
-        (i) delete the question using the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification.
+        (i) [DELETED]
 
         (ii) remove the question reference in the material.
 
@@ -189,7 +191,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) provide a "delete" button for attachments. When it is clicked -
 
-        (i) delete the attachment file, and the entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+        (i) [DELETED]
 
         (ii) remove the attachment reference in the material.
     
@@ -197,13 +199,13 @@ For a list of all server method and client handlers to be implemented for commun
 
 (5) **Initiation of Orphan Removal**
 
-    The frontend shall, when the editor modal is loaded -
+    The frontend shall, when the editor modal is entered or exited -
 
     (a) retrieve all attachments and questions associated with the material, by calling `Task<List<AttachmentEntity>> GetAttachmentsUnderMaterial(Guid materialId)` and `Task<List<QuestionEntity>> GetQuestionsUnderMaterial(Guid materialId)`, as defined in S1(1)(l)(ii) and S1(1)(d)(ii) of the Networking API Specification.
 
     (b) identify all attachments and questions that are not referenced in the material, and -
 
-        (i) delete such attachment(s) using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+        (i) delete the copy(ies) of such attachment file(s) from the directory `%AppData%\ManuscriptaTeacherApp\Attachments`, and the corresponding attachment entity(ies) using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
         (ii) delete such question(s) using the deletion endpoint specified in s1(1)(d1)(iv) of the Networking API Specification.
 
