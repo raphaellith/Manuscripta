@@ -545,7 +545,12 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             await saveContent();
         }
         // Run orphan removal on exit per §4C(5)
-        await removeOrphans();
+        // Wrapped in try-catch to ensure modal closes even if orphan removal fails
+        try {
+            await removeOrphans();
+        } catch (err) {
+            console.error('Orphan removal failed on close:', err);
+        }
         onClose();
     };
 
