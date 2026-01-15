@@ -169,6 +169,8 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     }>({ isOpen: false });
 
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Guard to prevent concurrent orphan removal executions
+    const isRemovingOrphansRef = useRef(false);
 
     // Convert stored markdown to HTML for editor
     const initialContent = markdownToHtml(material.content || '');
@@ -420,7 +422,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     // Orphan removal per §4C(5) - runs on editor enter and exit
     // Delete attachments and questions not referenced in the material content
     const removeOrphans = useCallback(async () => {
+        // Guard against concurrent executions (race condition prevention)
+        if (isRemovingOrphansRef.current) {
+            console.log('Orphan removal already in progress, skipping');
+            return;
+        }
         if (!editor) return;
+
+        isRemovingOrphansRef.current = true;
 
         try {
             // Fetch all attachments and questions for this material
@@ -471,6 +480,8 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         } catch (err) {
             console.error('Failed to remove orphans:', err);
+        } finally {
+            isRemovingOrphansRef.current = false;
         }
     }, [editor, material.id, getMarkdownContent]);
 
