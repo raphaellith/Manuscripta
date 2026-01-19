@@ -22,6 +22,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (5) The applicability of this document, as well as Sections 2A to 2C (`MaterialEntity`, `QuestionEntity`, `ResponseEntity`) of `Validation Rules.md`, shall extend to the corresponding Data Entities, enforced implicitly by the polymorphic domain entity classes, and explicitly by the appropriate services.
 
+(6) For the purpose of this document, "contain" in relation to a data field means "contain a non-null value for".
+
 ## Section 2 - Entity classes for Each Hierarchical Level
 
 ### Section 2A - Unit Collection
@@ -65,8 +67,22 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
 
-(3) Additional fields defined in this Section do not apply to the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
+(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
+
+### Section 2E - Question
+
+(1) A question is represented by a `QuestionEntity` class. In addition to those specified by Section 2B of `Validation Rules.md`, this class may contain the following optional fields:
+
+    (a) `MarkScheme` (string). The mark scheme for the question, for the purpose of AI-marking.
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) A `QuestionEntity` object of type `MULTIPLE_CHOICE` must not have a `MarkScheme` defined in (1)(a).
+
+    (b) A `QuestionEntity` object may not simultaneously contain `MarkScheme` and `CorrectAnswer` fields.
+
+(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
 ## Section 3 - Entity classes Not Belonging to the Material Hierarchy
