@@ -95,13 +95,56 @@ For a list of all server method and client handlers to be implemented for commun
     (b) search for a material based on its title and contents.
 
 
+## Section 4AA - Source Document Management
+
+(1) The frontend shall provide the user with the ability to manage source documents within a unit collection.
+
+(2) When the user uploads a source document —
+
+    (a) the frontend shall prompt the user to select a file (e.g., PDF, DOCX, or plain text).
+
+    (b) the frontend shall extract or prompt for a textual transcript of the document.
+
+    (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
+
+    (d) the backend shall index the document as specified in GenAISpec §3A(2).
+
+    (e) the frontend may poll `GetEmbeddingStatus` (NetworkingAPISpec §1(1)(i)(v)) to display indexing progress.
+
+(3) When the user edits the transcript of a source document —
+
+    (a) the frontend shall invoke `UpdateSourceDocument` (NetworkingAPISpec §1(1)(k)(iii)) via `TeacherPortalHub` with the updated `Transcript`.
+
+    (b) the backend shall re-index the document as specified in GenAISpec §3A(3).
+
+(4) When the user deletes a source document —
+
+    (a) the frontend shall invoke `DeleteSourceDocument` (NetworkingAPISpec §1(1)(k)(iv)) via `TeacherPortalHub`.
+
+    (b) the backend shall remove associated embeddings as specified in GenAISpec §3A(4).
+
+(5) When a source document has `EmbeddingStatus` of `FAILED` —
+
+    (a) the frontend shall display an error indicator on the document.
+
+    (b) the frontend shall provide a "Retry Indexing" option invoking `RetryEmbedding` (NetworkingAPISpec §1(1)(i)(vii)).
+
+    (c) the frontend shall provide a "Delete" option.
+
+(6) Upon receipt of `OnEmbeddingFailed` (NetworkingAPISpec §2(1)(d)(i)) —
+
+    (a) the frontend shall display an error notification indicating which document failed.
+
+    (b) the frontend shall update the document's status indicator.
+
+
 ## Section 4B - AI Generation
 
 (1) When the user selects AI generation, the frontend should collect the following information:
 
     (a) A description of the material, and any other requirements regarding the material to be generated.
 
-    (b) Any source documents, as specified in S2B(1)(c) of the Additional Validation Rules, that the AI should be made aware of, such as a syllabus or learning objectives.
+    (b) Optionally, specific source documents to use for context. If no documents are selected, all indexed documents in the unit collection are searched automatically.
 
     (c) The type of the material from reading and worksheet.
 
@@ -113,9 +156,9 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) Once information in subsection (1) have been collected -
 
-    (a) the AI module shall be called to generate a draft of the material. [Subject to further specification of the AI module] 
+    (a) the frontend shall invoke `GenerateReading` (NetworkingAPISpec §1(1)(i)(i)) or `GenerateWorksheet` (NetworkingAPISpec §1(1)(i)(ii)) via `TeacherPortalHub` to generate a draft of the material.
 
-    (b) the draft shall be displayed to the user in the editor modal, as specified in Section 4C. 
+    (b) on receiving the generation result, the frontend shall display the content in the editor modal as specified in Section 4C. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
     (c) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
 
@@ -140,6 +183,14 @@ For a list of all server method and client handlers to be implemented for commun
     The editor modal shall provide means through which the user can -
 
     (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make.
+
+    (a1) When invoking the AI assistant —
+
+        (i) the frontend shall capture the selected content and the user's instruction.
+
+        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`.
+
+        (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
     (b) modify the reading age and actual age metadata of the material.
 
@@ -242,6 +293,53 @@ For a list of all server method and client handlers to be implemented for commun
     (a) remove any attachment reference which references such attachment entity.
 
     (b) delete such attachment entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+
+(7) **Displaying Validation Warnings**
+
+    When the editor modal receives content with validation warnings (per GenAISpec §3G) —
+
+    (a) the frontend shall display a warning banner indicating issues require attention.
+
+    (b) the frontend shall highlight or annotate the affected lines where line numbers are available.
+
+    (c) the frontend shall provide a list view of all warnings with descriptions.
+
+
+## Section 4D — Response Review and Feedback Workflow
+
+(1) When the teacher selects a response for review, the frontend shall —
+
+    (a) if a `FeedbackEntity` exists with status `PROVISIONAL` —
+
+        (i) display the feedback content for review and editing.
+
+        (ii) provide a "Release Feedback" button.
+
+    (b) if no `FeedbackEntity` exists and the question satisfies GenAISpec §3D(1) —
+
+        (i) if the response is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator.
+
+        (ii) provide a "Write Manually" option. Upon saving manual feedback, the response shall be removed from the queue per GenAISpec §3D(6).
+
+        (iii) provide a "Prioritise" option if the response is queued.
+
+    (c) if the question does not have a `MarkScheme`, provide a manual feedback entry interface.
+
+(2) When the teacher clicks "Release Feedback", the frontend shall invoke `ApproveFeedback(feedbackId)` (NetworkingAPISpec §1(1)(h)(ii)).
+
+(3) Upon receipt of `OnFeedbackGenerationFailed` (NetworkingAPISpec §2(1)(c)(i)) —
+
+    (a) the frontend shall display an error message indicating that AI feedback generation has failed.
+
+    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration`.
+
+    (c) the frontend shall provide a "Write Manually" option.
+
+(4) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
+
+    (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
+
+    (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
 
 
 ## Section 5 - Functionalities for the "Classroom" tab
