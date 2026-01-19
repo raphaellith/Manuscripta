@@ -143,7 +143,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) modify the reading age and actual age metadata of the material.
 
-    (c) undo and redo changes to the material.
+    (c) undo and redo changes to the material.  
 
 (3) **Saving Content**
 
@@ -172,6 +172,32 @@ For a list of all server method and client handlers to be implemented for commun
         However, this button shall not be provided when the material is a poll. [Explanatory note: this is because polls must have exactly one multiple choice question]
 
     (d) not allow the user to delete questions through any other means than the delete button specified in paragraph (c).
+
+(3A) **Editing Questions**
+
+    The frontend shall -
+
+    (a) collect the following information regarding the question the user wishes to edit:
+
+        (i) the question type, per s2B(1)(b) of the Validation Rules;
+
+        (ii) the question text, per s2B(1)(c) of the Validation Rules; and
+
+        (iii) an optional maximum score, per s2B(2)(c) of the Validation Rules.
+    
+    (b) in the case of a multiple choice question, collect the following additional information:
+
+        (i) the options, per s2B(2)(a) of the Validation Rules;
+
+        (ii) the correct option, per s2B(2)(b) of the Validation Rules;
+
+        and clearly indicate that the correct field is optional, and by selecting an option, the user indicates that automarking should be enabled for that question.
+    
+    (c) in the case of a short answer question, collect whether the user wishes to enable automarking for that question, and if so, collect the means by which the answer should be marked -
+
+        (i) in the case of exact match, collect the expected answer, and subsequently store that as `CorrectAnswer` per s2B(2)(b) of the Validation Rules when saved; or
+
+        (ii) in the case of AI-marking, collect a mark scheme, and subsequently store that as `MarkScheme` per s2E(1)(a) of the Additional Validation Rules when saved. 
 
 (4) **Handling attachments**
 
