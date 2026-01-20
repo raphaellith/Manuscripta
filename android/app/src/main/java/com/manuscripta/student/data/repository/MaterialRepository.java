@@ -45,8 +45,7 @@ public interface MaterialRepository {
     /**
      * Gets all materials from local storage.
      *
-     * @return List of all materials. The ordering is defined by the underlying data source
-     *         (e.g., DAO query) and is typically by timestamp (newest first).
+     * @return List of all materials, ordered as specified in Validation Rules §2A(3)
      */
     @NonNull
     List<Material> getAllMaterials();
