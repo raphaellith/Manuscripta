@@ -1,12 +1,8 @@
 package com.manuscripta.student.di;
 
 import com.manuscripta.student.network.udp.UdpDiscoveryManager;
-import com.manuscripta.student.utils.MulticastLockManager;
-
-import javax.inject.Singleton;
 
 import dagger.Module;
-import dagger.Provides;
 import dagger.hilt.InstallIn;
 import dagger.hilt.components.SingletonComponent;
 
@@ -23,15 +19,5 @@ import dagger.hilt.components.SingletonComponent;
 @Module
 @InstallIn(SingletonComponent.class)
 public class SocketModule {
-
-    /**
-     * Provides a singleton MulticastLockManager for UDP broadcast reception.
-     *
-     * @return MulticastLockManager instance
-     */
-    @Provides
-    @Singleton
-    public MulticastLockManager provideMulticastLockManager() {
-        return new MulticastLockManager();
-    }
+    // Future TCP socket providers will be added here
 }
