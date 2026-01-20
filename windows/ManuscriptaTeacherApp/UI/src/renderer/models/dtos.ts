@@ -40,6 +40,7 @@ export interface InternalCreateQuestionDto {
     options?: string[];           // Required for MULTIPLE_CHOICE
     correctAnswerIndex?: number;  // For MULTIPLE_CHOICE (null = auto-marking disabled)
     correctAnswer?: string;       // For WRITTEN_ANSWER (null = auto-marking disabled)
+    markScheme?: string;          // Per §2E(1)(a) - for AI-marking
     maxScore?: number;
 }
 
@@ -51,6 +52,7 @@ export interface InternalUpdateQuestionDto {
     options?: string[];
     correctAnswerIndex?: number;  // For MULTIPLE_CHOICE (null = auto-marking disabled)
     correctAnswer?: string;       // For WRITTEN_ANSWER (null = auto-marking disabled)
+    markScheme?: string;          // Per §2E(1)(a) - for AI-marking
     maxScore?: number;
 }
 
