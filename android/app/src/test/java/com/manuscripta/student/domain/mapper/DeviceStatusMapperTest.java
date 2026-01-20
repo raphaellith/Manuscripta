@@ -45,7 +45,7 @@ public class DeviceStatusMapperTest {
         // Given
         DeviceStatus domain = new DeviceStatus(
                 "device-id-789",
-                com.manuscripta.student.data.model.DeviceStatus.HAND_RAISED,
+                com.manuscripta.student.data.model.DeviceStatus.IDLE,
                 50,
                 "material-id-012",
                 "AnotherView",
@@ -145,11 +145,6 @@ public class DeviceStatusMapperTest {
         DeviceStatus onTaskDomain = DeviceStatusMapper.toDomain(onTaskEntity);
         assertEquals(com.manuscripta.student.data.model.DeviceStatus.ON_TASK, onTaskDomain.getStatus());
 
-        // Test HAND_RAISED
-        DeviceStatusEntity handRaisedEntity = new DeviceStatusEntity("id2", com.manuscripta.student.data.model.DeviceStatus.HAND_RAISED,
-                50, null, null, 2000L);
-        DeviceStatus handRaisedDomain = DeviceStatusMapper.toDomain(handRaisedEntity);
-        assertEquals(com.manuscripta.student.data.model.DeviceStatus.HAND_RAISED, handRaisedDomain.getStatus());
 
         // Test DISCONNECTED
         DeviceStatusEntity disconnectedEntity = new DeviceStatusEntity("id3", com.manuscripta.student.data.model.DeviceStatus.DISCONNECTED,

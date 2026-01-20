@@ -88,6 +88,8 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ## 2. HTTP Endpoints (Content & Config)
 
+**General Validation:** All HTTP endpoints accepting request bodies must validate incoming DTOs against `Validation Rules.md`. If validation fails, the endpoint shall return HTTP Status **400 (Bad Request)** per `Validation Rules.md` §1A(3).
+
 ### 2.1. Lesson Materials (Server -> Client)
 
 **DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
@@ -107,7 +109,7 @@ Downloads specific attachment files referenced within material content.
 Tablet configuration is an object associated with lesson materials but handled separately to allow dynamic updates.
 
 #### Get Configuration
--   **Endpoint:** `GET /config`
+-   **Endpoint:** `GET /config/{deviceId}`
 -   **Response:** `200 OK`
     ```json
     {
@@ -195,7 +197,22 @@ Retrieves materials and questions assigned to a specific device.
     ```
 -   **Error Response:** `404 Not Found` (if no materials available for deviceId)
 
----
+
+### 2.6. Returning Feedback (Server -> Client via TCP trigger)
+
+Retrieves all available feedback for responses previously submitted by a specific student device.
+
+-   **Endpoint:** `GET /feedback/{deviceId}`
+-   **Response:** `200 OK`
+    ```json
+    {
+      "feedback": [
+        // Array of FeedbackEntity objects as defined in Validation Rules.md §2F
+      ],
+    }
+    ```
+-   **Error Response:** `404 Not Found` (if no feedback available for deviceId)
+
 
 ## 3. Binary Protocol (TCP & UDP)
 
@@ -238,6 +255,7 @@ See §1.1 for detailed format.
 | `0x04` | UNPAIR | None | Unpairs the device |
 | `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
 | `0x06` | HAND_ACK | Device ID (UTF-8 string) | Acknowledges receipt of HAND_RAISED message |
+| `0x07` | RETURN_FEEDBACK | None | Instructs device to retrieve feedback for a response |
 
 ### 3.5. TCP Pairing Messages
 
@@ -273,6 +291,7 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
 | `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{deviceId}` |
+| `0x13` | FEEDBACK_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of feedback via HTTP `GET /feedback/{deviceId}` |
 
 **Example: Status Update Message**
 ```
@@ -309,6 +328,7 @@ This section documents explicit and implicit acknowledgement mechanisms for TCP 
 | `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
 | `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
 | `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
+| `RETURN_FEEDBACK (0x06)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
 
 #### Implicit ACKs
 

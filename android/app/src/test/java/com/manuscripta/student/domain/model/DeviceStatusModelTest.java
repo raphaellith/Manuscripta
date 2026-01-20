@@ -42,7 +42,7 @@ public class DeviceStatusModelTest {
     public void testCreateFactoryMethod() {
         DeviceStatus newModel = DeviceStatus.create(
                 "new-device",
-                com.manuscripta.student.data.model.DeviceStatus.HAND_RAISED,
+                com.manuscripta.student.data.model.DeviceStatus.IDLE,
                 100,
                 null,
                 null
@@ -50,7 +50,7 @@ public class DeviceStatusModelTest {
 
         assertNotNull(newModel);
         assertEquals("new-device", newModel.getDeviceId());
-        assertEquals(com.manuscripta.student.data.model.DeviceStatus.HAND_RAISED, newModel.getStatus());
+        assertEquals(com.manuscripta.student.data.model.DeviceStatus.IDLE, newModel.getStatus());
         assertEquals(100, newModel.getBatteryLevel());
         assertNull(newModel.getCurrentMaterialId());
         assertNull(newModel.getStudentView());
