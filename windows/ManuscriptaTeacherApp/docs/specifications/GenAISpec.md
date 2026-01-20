@@ -16,7 +16,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 | Purpose | Model | Ollama Name | Rationale |
 |---------|-------|-------------|----------|
-| Material generation | Qwen3 14B | `qwen3:14b` | Better instruction adherence for structured output |
+| Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
 | Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
 | Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
 | Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
@@ -31,7 +31,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:14b`) for material generation is unavailable or insufficient resources are detected —
+(6) If the primary model (`qwen3:8b`) for material generation is unavailable or insufficient resources are detected —
 
     (a) the backend may fall back to a smaller model (`granite4`).
 
@@ -178,7 +178,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) for worksheets, instructions to include question references as specified in Material Encoding Specification §4(4).
 
-    (d) invoke `qwen3:14b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
+    (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
 
     (e) validate the generated content and apply refinement as specified in §3F.
 
@@ -317,7 +317,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (d) valid question references (per Material Encoding Specification §4(4)).
 
-(3) If validation fails and the generation used `qwen3:14b` —
+(3) If validation fails and the generation used `qwen3:8b` —
 
     (a) the backend shall apply deterministic post-processing fixes for common errors, as specified in (5).
 
@@ -389,7 +389,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
-| `PRIMARY_GENERATION_MODEL` | `qwen3:14b` | Primary model for material generation |
+| `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
 | `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
 | `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
 | `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
