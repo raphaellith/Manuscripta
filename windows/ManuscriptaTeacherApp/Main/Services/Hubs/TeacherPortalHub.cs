@@ -309,6 +309,7 @@ public class TeacherPortalHub : Hub
                     dto.Options,
                     dto.CorrectAnswerIndex,
                     dto.CorrectAnswer,
+                    dto.MarkScheme,
                     dto.MaxScore));
                 await _questionService.CreateQuestionAsync(newEntity);
             }
@@ -338,6 +339,7 @@ public class TeacherPortalHub : Hub
         else if (existing is WrittenAnswerQuestionEntity waq && dto.QuestionType == QuestionType.WRITTEN_ANSWER)
         {
             waq.CorrectAnswer = dto.CorrectAnswer;  // null = auto-marking disabled
+            waq.MarkScheme = dto.MarkScheme;  // null = no AI-marking
         }
         
         await _questionService.UpdateQuestionAsync(existing);
@@ -371,6 +373,7 @@ public class TeacherPortalHub : Hub
                 dto.MaterialId,
                 dto.QuestionText,
                 dto.CorrectAnswer,  // null = auto-marking disabled
+                dto.MarkScheme,     // Per §2E(1)(a) - for AI-marking
                 dto.MaxScore),
             _ => throw new ArgumentException($"Unknown question type: {dto.QuestionType}", nameof(dto))
         };

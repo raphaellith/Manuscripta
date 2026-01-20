@@ -169,4 +169,67 @@ public class QuestionEntityMapperTests
         Assert.Equal(original.Options, roundTripped.Options);
         Assert.Equal(original.CorrectAnswerIndex, roundTripped.CorrectAnswerIndex);
     }
+
+    [Fact]
+    public void ToDataEntity_WithWrittenAnswerAndMarkScheme_MapsCorrectly()
+    {
+        // Per AdditionalValidationRules §2E(1)(a): MarkScheme for AI-marking
+        // Arrange
+        var id = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var markScheme = "Award 1 mark for correct answer.";
+        var question = new WrittenAnswerQuestionEntity(id, materialId, "Question?", null, markScheme, 5);
+
+        // Act
+        var dataEntity = QuestionEntityMapper.ToDataEntity(question);
+
+        // Assert
+        Assert.Equal(markScheme, dataEntity.MarkScheme);
+        Assert.Null(dataEntity.CorrectAnswer);
+        Assert.Equal(5, dataEntity.MaxScore);
+    }
+
+    [Fact]
+    public void ToEntity_WithMarkScheme_MapsCorrectly()
+    {
+        // Per AdditionalValidationRules §2E(1)(a): MarkScheme for AI-marking
+        // Arrange
+        var dataEntity = new QuestionDataEntity
+        {
+            Id = Guid.NewGuid(),
+            MaterialId = Guid.NewGuid(),
+            QuestionText = "Question?",
+            QuestionType = QuestionType.WRITTEN_ANSWER,
+            CorrectAnswer = null,
+            MarkScheme = "Full marks for comprehensive answer."
+        };
+
+        // Act
+        var entity = QuestionEntityMapper.ToEntity(dataEntity);
+
+        // Assert
+        var waEntity = Assert.IsType<WrittenAnswerQuestionEntity>(entity);
+        Assert.Equal("Full marks for comprehensive answer.", waEntity.MarkScheme);
+        Assert.Null(waEntity.CorrectAnswer);
+    }
+
+    [Fact]
+    public void RoundTrip_WithMarkScheme_PreservesData()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var markScheme = "Award marks based on reasoning quality.";
+        var original = new WrittenAnswerQuestionEntity(id, materialId, "Question?", null, markScheme, 10);
+
+        // Act
+        var dataEntity = QuestionEntityMapper.ToDataEntity(original);
+        var roundTripped = QuestionEntityMapper.ToEntity(dataEntity) as WrittenAnswerQuestionEntity;
+
+        // Assert
+        Assert.NotNull(roundTripped);
+        Assert.Equal(markScheme, roundTripped!.MarkScheme);
+        Assert.Null(roundTripped.CorrectAnswer);
+        Assert.Equal(10, roundTripped.MaxScore);
+    }
 }

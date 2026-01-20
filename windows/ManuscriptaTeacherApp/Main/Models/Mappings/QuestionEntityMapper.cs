@@ -27,6 +27,7 @@ public static class QuestionEntityMapper
                 QuestionType = QuestionType.MULTIPLE_CHOICE,
                 Options = mc.Options,
                 CorrectAnswer = mc.CorrectAnswerIndex?.ToString(),  // null if no correct answer
+                MarkScheme = null,  // MULTIPLE_CHOICE cannot have MarkScheme per §2E(2)(a)
                 MaxScore = mc.MaxScore
             },
             WrittenAnswerQuestionEntity wa => new QuestionDataEntity
@@ -37,6 +38,7 @@ public static class QuestionEntityMapper
                 QuestionType = QuestionType.WRITTEN_ANSWER,
                 Options = null,
                 CorrectAnswer = wa.CorrectAnswer,
+                MarkScheme = wa.MarkScheme,
                 MaxScore = wa.MaxScore
             },
             _ => throw new InvalidOperationException($"Unknown question entity type: {entity.GetType().Name}")
@@ -66,6 +68,7 @@ public static class QuestionEntityMapper
                 materialId: dataEntity.MaterialId,
                 questionText: dataEntity.QuestionText ?? string.Empty,
                 correctAnswer: dataEntity.CorrectAnswer,  // null = auto-marking disabled
+                markScheme: dataEntity.MarkScheme,
                 maxScore: dataEntity.MaxScore
             ),
             _ => throw new InvalidOperationException($"Unknown question type: {dataEntity.QuestionType}")
