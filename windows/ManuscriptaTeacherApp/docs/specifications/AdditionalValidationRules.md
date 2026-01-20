@@ -107,7 +107,7 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
 
-(3) A source document with unset `EmbeddingStatus` shall be treated as not available for semantic retrieval. The frontend may offer an option to initiate indexing.
+(3) A source document which does not contain the `EmbeddingStatus` field shall be treated as not available for semantic retrieval. The frontend may offer an option to initiate indexing.
 
 
 ### Section 3AB - Generation Request
