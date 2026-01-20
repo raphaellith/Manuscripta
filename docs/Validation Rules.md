@@ -52,7 +52,7 @@ If validation rules in API Contract are in contradiction to this document, this 
         (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
         (iv) [DELETED]
     (b) `Title` (String). Maximum Length = 500 Characters.
-    (c) `Content` (String).
+    (c) `Content` (String). Refer to Material Encoding Specification for encoding rules.
     (d) `Timestamp` (Long). The unix timestamp of the previous modification.
 
 (2) In addition to the mandatory fields in (1), a `MaterialEntity` object may have the following fields:
@@ -75,6 +75,7 @@ If validation rules in API Contract are in contradiction to this document, this 
 
     (a) `Options` (List<String>): The list of the options available, for multiple choice questions.
     (b) `CorrectAnswer` (Generic / Optional): The expected correct answer.
+    (c) `MaxScore` (int): The maximum number of marks available for this question.
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
@@ -100,11 +101,13 @@ If validation rules in API Contract are in contradiction to this document, this 
 
 (3) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
-    (a) The `QuestionId` specified in 1(a) must associate with a `QuestionMaterial` (Q).
+    (a) The `QuestionId` specified in 1(a) must associate with a `QuestionEntity` (Q).
     (b) If Q's `QuestionType` is `MULTIPLE_CHOICE`, the `Answer`, specified in 2(a), must be a valid index in Q's `Options`.
     (c) [DELETED]
     (d) If Q's `QuestionType` is `WRITTEN_ANSWER`, the `Answer` should be a valid String.
     (e) A `DeviceId`, as specified in (1)(d), must correspond to a valid device.
+    (f) There must not already exist a previously created `ResponseEntity` object with an identical `QuestionId` and `DeviceId` combination.
+
 
 ### Section 2D - Data Validation Rules for `SessionEntity`
 
@@ -151,6 +154,30 @@ If validation rules in API Contract are in contradiction to this document, this 
     (a) The `DeviceId` specified in (1)(a) must reference a valid Device, which is deemed paired as defined in Pairing Process Specification.
     (b) The `BatteryLevel` specified in (1)(c) must be between 0 and 100.
     (c) The `CurrentMaterialId` specified in (1)(d) must reference a valid material.
+
+
+### Section 2F - Data Validation Rules for `FeedbackEntity`
+
+(1) A `FeedbackEntity` object must have the following data fields to be considered valid:
+
+    (a) `ResponseId` (UUID). The response targeted by this feedback.
+
+    (b) At least one of the following.
+        
+        (i) `Text` (String): Textual feedback.
+
+        (ii) `Marks` (int): Number of marks awarded.
+
+    
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The `ResponseId` specified in 1(a) must associate with a `ResponseEntity` (R).
+
+    (b) The `QuestionEntity` (Q) with which R is associated must not have a `CorrectAnswer` field.
+
+    (c) If the `Marks` field is present, then Q must have a `MaxScore` field, and the `Marks` value must not exceed the value of `MaxScore` given by Q.
+
+
 
 ### Section 3 - ID Generation Policy
 
