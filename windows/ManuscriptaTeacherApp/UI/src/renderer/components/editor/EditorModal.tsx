@@ -224,6 +224,180 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         onTransaction: () => {
             setForceUpdate(n => n + 1);
         },
+        // Per §4C(4)(d): Support drag-and-drop of attachments and copy-paste of images
+        editorProps: {
+            handleDrop: (view, event, _slice, moved) => {
+                // Ignore if this is a moved node within the editor
+                if (moved) return false;
+
+                const files = event.dataTransfer?.files;
+                if (!files || files.length === 0) return false;
+
+                const file = files[0];
+                const fileName = file.name;
+                const lastDotIndex = fileName.lastIndexOf('.');
+                let fileExtension = lastDotIndex > 0 ? fileName.substring(lastDotIndex + 1).toLowerCase() : '';
+
+                // Normalize jpg to jpeg
+                if (fileExtension === 'jpg') fileExtension = 'jpeg';
+
+                // Only handle supported file types
+                if (!['png', 'jpeg', 'pdf'].includes(fileExtension)) {
+                    return false;
+                }
+
+                // Prevent default handling
+                event.preventDefault();
+
+                // Get drop position coordinates and resolve to editor position
+                const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                const insertPos = coordinates?.pos ?? view.state.selection.from;
+
+                // Process the file asynchronously
+                (async () => {
+                    try {
+                        const fileBaseName = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+
+                        // Read file as base64 (file.path is not available in sandboxed Electron)
+                        const arrayBuffer = await file.arrayBuffer();
+                        const base64 = btoa(
+                            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                        );
+
+                        // Create attachment entity via SignalR per §4C(4)(a)(ii)
+                        const dto: InternalCreateAttachmentDto = {
+                            materialId: material.id,
+                            fileBaseName,
+                            fileExtension
+                        };
+                        const attachmentId = await signalRService.createAttachment(dto);
+
+                        // Save file from base64 data per §4C(4)(a)(iii)
+                        // Per §4C(4)(a1): if file save fails, rollback by deleting entity
+                        try {
+                            await window.electronAPI.saveAttachmentFromBase64(base64, attachmentId, fileExtension);
+                        } catch (fileSaveError) {
+                            console.error('File save failed, rolling back entity:', fileSaveError);
+                            await signalRService.deleteAttachment(attachmentId);
+                            throw fileSaveError;
+                        }
+
+                        // Get data URL for WYSIWYG display
+                        const dataUrl = await window.electronAPI.getAttachmentDataUrl(attachmentId, fileExtension);
+                        if (!dataUrl) return;
+
+                        // Insert at drop position per §4C(4)(a)(iv)
+                        const { tr } = view.state;
+                        if (fileExtension === 'pdf') {
+                            const pdfNode = view.state.schema.nodes.pdfEmbed.create({ id: attachmentId });
+                            tr.insert(insertPos, pdfNode);
+                        } else {
+                            const imageNode = view.state.schema.nodes.image.create({
+                                src: dataUrl,
+                                alt: fileBaseName,
+                                title: attachmentId,
+                            });
+                            tr.insert(insertPos, imageNode);
+                        }
+                        view.dispatch(tr);
+                        setIsDirty(true);
+                    } catch (error) {
+                        console.error('Error processing dropped attachment:', error);
+                    }
+                })();
+
+                return true;
+            },
+            handlePaste: (view, event, _slice) => {
+                const clipboardData = event.clipboardData;
+                if (!clipboardData) return false;
+
+                const items = clipboardData.items;
+
+                // Check if HTML content is available - if so, prefer HTML over standalone image
+                // This handles paste from Microsoft Word, Apple Notes, etc. that provide both
+                const hasHtmlContent = clipboardData.getData('text/html')?.length > 0;
+
+                // CASE 1: Standalone image in clipboard (e.g., screenshot, copied image)
+                // Only process if no HTML content is available (to prefer HTML from Word, Notes, etc.)
+                let imageItem: DataTransferItem | null = null;
+                if (!hasHtmlContent) {
+                    for (const item of items) {
+                        if (item.type.startsWith('image/') && item.kind === 'file') {
+                            imageItem = item;
+                            break;
+                        }
+                    }
+                }
+
+                if (imageItem) {
+                    // Determine extension from MIME type
+                    const mimeType = imageItem.type;
+                    let fileExtension = 'png';
+                    if (mimeType === 'image/jpeg') {
+                        fileExtension = 'jpeg';
+                    } else if (mimeType === 'image/png') {
+                        fileExtension = 'png';
+                    } else {
+                        return false;
+                    }
+
+                    const blob = imageItem.getAsFile();
+                    if (!blob) return false;
+
+                    event.preventDefault();
+                    const insertPos = view.state.selection.from;
+
+                    (async () => {
+                        try {
+                            const arrayBuffer = await blob.arrayBuffer();
+                            const base64 = btoa(
+                                new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                            );
+
+                            const dto: InternalCreateAttachmentDto = {
+                                materialId: material.id,
+                                fileBaseName: 'pasted-image',
+                                fileExtension
+                            };
+                            const attachmentId = await signalRService.createAttachment(dto);
+
+                            try {
+                                await window.electronAPI.saveAttachmentFromBase64(base64, attachmentId, fileExtension);
+                            } catch (fileSaveError) {
+                                console.error('File save failed, rolling back entity:', fileSaveError);
+                                await signalRService.deleteAttachment(attachmentId);
+                                throw fileSaveError;
+                            }
+
+                            const dataUrl = await window.electronAPI.getAttachmentDataUrl(attachmentId, fileExtension);
+                            if (!dataUrl) return;
+
+                            const { tr } = view.state;
+                            const imageNode = view.state.schema.nodes.image.create({
+                                src: dataUrl,
+                                alt: 'pasted-image',
+                                title: attachmentId,
+                            });
+                            tr.insert(insertPos, imageNode);
+                            view.dispatch(tr);
+                            setIsDirty(true);
+                        } catch (error) {
+                            console.error('Error processing pasted image:', error);
+                        }
+                    })();
+
+                    return true;
+                }
+
+                // CASE 2: HTML content with embedded images - let TipTap handle paste normally.
+                // External images (blob:/http:/data:) will be converted to attachments on save
+                // per §4C(4)(d). This approach is more reliable than intercepting paste events.
+
+                // CASE 3: No special handling needed - let TipTap handle normally
+                return false;
+            },
+        },
     });
 
     // Get content as Markdown for storage
@@ -233,12 +407,144 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return htmlToMarkdown(html);
     }, [editor]);
 
+    // Convert external images (blob:/http:/https:/data:) to attachments per §4C(4)(d)
+    // Called before save to ensure all pasted/dropped images are properly stored
+    const convertExternalImagesToAttachments = useCallback(async (): Promise<void> => {
+        if (!editor) return;
+
+        const { state } = editor;
+        let tr = state.tr;
+        let hasChanges = false;
+        const nodesToProcess: { pos: number; node: typeof state.doc.firstChild; }[] = [];
+
+        // First pass: collect all image nodes with external sources
+        state.doc.descendants((node, pos) => {
+            if (node.type.name === 'image') {
+                const src = node.attrs.src as string;
+                const title = node.attrs.title as string;
+
+                // Skip if already an attachment (title contains UUID and src is data URL from our storage)
+                if (title && src?.startsWith('data:') && !src.startsWith('data:image/')) {
+                    return true;
+                }
+
+                // Check if this is an external image that needs conversion
+                if (src && (
+                    src.startsWith('blob:') ||
+                    src.startsWith('http://') ||
+                    src.startsWith('https://') ||
+                    (src.startsWith('data:image/') && !title) // data URL without attachment ID
+                )) {
+                    nodesToProcess.push({ pos, node });
+                }
+            }
+            return true;
+        });
+
+        if (nodesToProcess.length === 0) return;
+
+        console.log(`Converting ${nodesToProcess.length} external images to attachments...`);
+
+        // Second pass: process each image (in reverse order to maintain positions)
+        for (const { pos, node } of nodesToProcess.reverse()) {
+            const src = node.attrs.src as string;
+            const alt = node.attrs.alt as string || 'pasted-image';
+
+            try {
+                let base64Data: string | null = null;
+                let fileExtension = 'png';
+
+                if (src.startsWith('data:image/')) {
+                    // Extract data URL
+                    const match = src.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/i);
+                    if (match) {
+                        const ext = match[1].toLowerCase();
+                        fileExtension = (ext === 'jpg') ? 'jpeg' : (ext === 'gif' || ext === 'webp') ? 'png' : ext;
+                        base64Data = match[2];
+                    }
+                } else if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+                    // Fetch the image
+                    try {
+                        const response = await fetch(src);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const contentType = blob.type || 'image/png';
+                            if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+                                fileExtension = 'jpeg';
+                            } else if (contentType.includes('png')) {
+                                fileExtension = 'png';
+                            }
+                            const arrayBuffer = await blob.arrayBuffer();
+                            base64Data = btoa(
+                                new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                            );
+                        }
+                    } catch (fetchError) {
+                        console.warn('Failed to fetch image for conversion:', src.substring(0, 50), fetchError);
+                    }
+                }
+
+                if (!base64Data) {
+                    console.warn('Could not convert image, removing:', src.substring(0, 50));
+                    // Remove the image node since we can't process it
+                    tr = tr.delete(pos, pos + node.nodeSize);
+                    hasChanges = true;
+                    continue;
+                }
+
+                // Create attachment entity
+                const dto: InternalCreateAttachmentDto = {
+                    materialId: material.id,
+                    fileBaseName: alt || 'pasted-image',
+                    fileExtension
+                };
+                const attachmentId = await signalRService.createAttachment(dto);
+
+                // Save the file
+                try {
+                    await window.electronAPI.saveAttachmentFromBase64(base64Data, attachmentId, fileExtension);
+                } catch (fileSaveError) {
+                    console.error('File save failed, rolling back entity:', fileSaveError);
+                    await signalRService.deleteAttachment(attachmentId);
+                    tr = tr.delete(pos, pos + node.nodeSize);
+                    hasChanges = true;
+                    continue;
+                }
+
+                // Get data URL for display
+                const dataUrl = await window.electronAPI.getAttachmentDataUrl(attachmentId, fileExtension);
+                if (dataUrl) {
+                    // Update the node with new attributes
+                    tr = tr.setNodeMarkup(pos, undefined, {
+                        ...node.attrs,
+                        src: dataUrl,
+                        title: attachmentId, // Store attachment ID for markdown conversion
+                    });
+                    hasChanges = true;
+                    console.log('Converted image to attachment:', attachmentId);
+                }
+            } catch (error) {
+                console.error('Error converting image to attachment:', error);
+                tr = tr.delete(pos, pos + node.nodeSize);
+                hasChanges = true;
+            }
+        }
+
+        // Apply all changes at once
+        if (hasChanges) {
+            editor.view.dispatch(tr);
+        }
+    }, [editor, material.id, signalRService]);
+
     // Auto-save with 1-second debounce
     const saveContent = useCallback(async () => {
         if (!isDirty || !editor) return;
 
         setIsSaving(true);
         try {
+            // Convert any external images to attachments before saving per §4C(4)(d)
+            await convertExternalImagesToAttachments();
+
             await updateMaterial({
                 ...material,
                 title,
@@ -254,7 +560,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         } finally {
             setIsSaving(false);
         }
-    }, [isDirty, editor, material, title, readingAge, actualAge, updateMaterial, getMarkdownContent]);
+    }, [isDirty, editor, material, title, readingAge, actualAge, updateMaterial, getMarkdownContent, convertExternalImagesToAttachments]);
 
     // Setup auto-save
     useEffect(() => {

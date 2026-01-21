@@ -89,9 +89,13 @@ export const AttachmentImage = Node.create({
                 // Check if selection is at/near an image node
                 const { state } = this.editor;
                 const { selection } = state;
-                const node = state.doc.nodeAt(selection.from - 1);
-                if (node?.type.name === 'image') {
-                    return true; // Prevent default behavior
+                const pos = selection.from - 1;
+                // Bounds check to prevent Position -1 error
+                if (pos >= 0) {
+                    const node = state.doc.nodeAt(pos);
+                    if (node?.type.name === 'image') {
+                        return true; // Prevent default behavior
+                    }
                 }
                 return false;
             },
@@ -676,9 +680,13 @@ export const PdfEmbed = Node.create({
             Backspace: () => {
                 const { state } = this.editor;
                 const { selection } = state;
-                const node = state.doc.nodeAt(selection.from - 1);
-                if (node?.type.name === 'pdfEmbed') {
-                    return true; // Prevent default behavior
+                const pos = selection.from - 1;
+                // Bounds check to prevent Position -1 error
+                if (pos >= 0) {
+                    const node = state.doc.nodeAt(pos);
+                    if (node?.type.name === 'pdfEmbed') {
+                        return true; // Prevent default behavior
+                    }
                 }
                 return false;
             },
