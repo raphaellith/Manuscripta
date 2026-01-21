@@ -1,12 +1,44 @@
 /**
  * Main App component.
  * Per WindowsAppStructureSpec §2B(1)(d).
+ * 
+ * This version combines the production LessonLibraryPage with prototype pages
+ * for views that haven't been fully implemented yet.
  */
 
 import React, { useState } from 'react';
 import { AppProvider, useAppContext } from './state/AppContext';
 import { Header } from './components/layout/Header';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
+
+// Import prototype pages for unimplemented views (disposable prototype)
+import { ClassDashboard } from '../components/ClassDashboard';
+import { ClassroomControl } from '../components/ClassroomControl';
+import { ResponsesView } from '../components/ResponsesView';
+import { AiAssistant } from '../components/AiAssistant';
+import { Settings } from '../components/Settings';
+
+// Import prototype types for mock data
+import type { Unit, LessonFolder, ContentItem } from '../types';
+
+// Mock data for prototype components
+const mockUnits: Unit[] = [
+    { id: 'u1', title: 'Norman Conquest', subject: 'History', ageRange: '11-12', description: 'The Battle of Hastings and Norman invasion' },
+    { id: 'u2', title: 'Medieval Life', subject: 'History', ageRange: '11-12', description: 'Daily life in medieval England' },
+];
+
+const mockLessonFolders: LessonFolder[] = [
+    { id: 'f1', unit: 'Norman Conquest', number: 1, title: 'The Battle of Hastings' },
+    { id: 'f2', unit: 'Norman Conquest', number: 2, title: 'William the Conqueror' },
+    { id: 'f3', unit: 'Medieval Life', number: 1, title: 'Lords and Peasants' },
+];
+
+const mockContentItems: ContentItem[] = [
+    { id: '1a', title: 'The Battle of Hastings', subject: 'History', created: '2025-12-01', status: 'Deployed', unit: 'Norman Conquest', type: 'Reading', lessonNumber: 1 },
+    { id: '1b', title: 'Battle of Hastings Quiz', subject: 'History', created: '2025-12-01', status: 'Deployed', unit: 'Norman Conquest', type: 'Quiz', lessonNumber: 1 },
+    { id: '2a', title: 'William the Conqueror', subject: 'History', created: '2025-12-02', status: 'Deployed', unit: 'Norman Conquest', type: 'Reading', lessonNumber: 2 },
+    { id: '3a', title: 'Lords and Peasants', subject: 'History', created: '2025-12-03', status: 'Draft', unit: 'Medieval Life', type: 'Reading', lessonNumber: 1 },
+];
 
 type View = 'dashboard' | 'lesson-library' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
 
@@ -45,6 +77,16 @@ const AppContent: React.FC = () => {
         switch (activeView) {
             case 'lesson-library':
                 return <LessonLibraryPage />;
+            case 'dashboard':
+                return <ClassDashboard />;
+            case 'classroom-control':
+                return <ClassroomControl units={mockUnits} lessonFolders={mockLessonFolders} contentItems={mockContentItems} />;
+            case 'responses':
+                return <ResponsesView contentItems={mockContentItems} />;
+            case 'ai-assistant':
+                return <AiAssistant />;
+            case 'settings':
+                return <Settings />;
             default:
                 return (
                     <div className="text-center py-12">
