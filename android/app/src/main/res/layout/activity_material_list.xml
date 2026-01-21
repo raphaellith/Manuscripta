@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    tools:context=".ui.materials.MaterialListActivity">
+
+    <!-- Tab Layout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tabReading"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Reading"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/tab_selected"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/black" />
+
+        <TextView
+            android:id="@+id/tabQuiz"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Quiz"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:background="@drawable/tab_unselected"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/black" />
+
+        <TextView
+            android:id="@+id/tabWorksheet"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Worksheet"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:background="@drawable/tab_unselected"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <!-- Separator Line -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@android:color/black" />
+
+    <!-- Material Title -->
+    <TextView
+        android:id="@+id/materialTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:textColor="@android:color/black"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        tools:text="The Battle of Hastings" />
+
+    <!-- Content Separator -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@android:color/black" />
+
+    <!-- Content Area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ScrollView
+            android:id="@+id/contentScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/materialContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="20dp"
+                android:lineSpacingMultiplier="1.5"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                tools:text="Material content goes here..." />
+
+        </ScrollView>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="visible" />
+
+        <TextView
+            android:id="@+id/emptyView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="No materials available"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- Bottom Bar Separator -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@android:color/black" />
+
+    <!-- Bottom Bar with Mascot and Audio Button -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="@android:color/white">
+
+        <!-- Mascot with Speech Bubble -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical">
+
+            <ImageView
+                android:id="@+id/mascotIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/char_swirlok"
+                android:contentDescription="Swirlock help mascot"
+                android:clickable="true"
+                android:focusable="true"
+                android:scaleType="fitCenter" />
+
+            <TextView
+                android:id="@+id/helpText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Need help?"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:padding="8dp"
+                android:background="@drawable/speech_bubble"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
+        <!-- Audio Button -->
+        <ImageButton
+            android:id="@+id/audioButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_speaker"
+            android:background="@drawable/button_circle"
+            android:contentDescription="Read aloud"
+            android:scaleType="centerInside" />
+
+    </LinearLayout>
+
+</LinearLayout>
