@@ -240,10 +240,12 @@ public class UdpDiscoveryManager {
                 Log.w(TAG, "Failed to acquire multicast lock, discovery may not work");
             }
             
+            // Schedule timeout before starting listener to avoid race condition
+            // where listener fails fast and tries to cancel a not-yet-scheduled timeout
+            scheduleTimeout();
+            
             executorService = Executors.newSingleThreadExecutor();
             executorService.submit(this::listenForDiscovery);
-            
-            scheduleTimeout();
         } else {
             Log.d(TAG, "Discovery already running, ignoring start request");
         }
@@ -426,6 +428,7 @@ public class UdpDiscoveryManager {
             // Cancel timeout and update state
             cancelTimeout();
             updateState(DiscoveryState.FOUND);
+            multicastLockManager.release();
             
             // Notify listeners
             notifyListeners(message);
