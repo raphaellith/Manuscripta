@@ -182,9 +182,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     The editor modal shall provide means through which the user can -
 
-    (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make.
-
-    (a1) When invoking the AI assistant —
+    (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make. When invoking the AI assistant —
 
         (i) the frontend shall capture the selected content and the user's instruction.
 
@@ -305,7 +303,39 @@ For a list of all server method and client handlers to be implemented for commun
     (c) the frontend shall provide a list view of all warnings with descriptions.
 
 
-## Section 4D — Response Review and Feedback Workflow
+## Section 5 - Functionalities for the "Classroom" tab
+
+(1) When prompted by the user, the frontend client must call `Task PairDevices()` to initiate device pairing.
+
+(2) Once pairing is complete, the frontend client must call the following methods to retrieve all devices, device statuses and sessions. All retrieved entities must be stored on the frontend.
+        
+    (i) `Task<List<PairedDeviceEntity>> GetAllPairedDevices()`.
+
+    (ii) `Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()`
+
+    (iii) `Task<List<SessionEntity>> GetAllSessions()`.
+
+
+(3) When the backend updates a device status or session, it must call the appropriate client handler, as defined in S2(1)(a) of `NetworkingAPISpec.md`, to update the frontend data.
+
+(4) When one or more tablets are locked on the frontend, it must call the server method `Task LockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
+
+(5) When one or more tablets are unlocked on the frontend, it must call the server method `Task UnlockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
+
+(6) When a material is deployed on the frontend, it must call the server method `Task DeployMaterial(Guid Id)` with the corresponding material UUID.
+
+(7) When a material deployment is ended on the frontend, it must call the server method `Task FinishMaterial(Guid Id)` with the corresponding material UUID.
+
+
+
+## Section 6 - Functionalities for the "Responses" tab
+
+(1) When the backend creates a response entity, it must call the frontend handler `CreateResponse` with the newly created `ResponseEntity` as the argument.
+
+(2) When the frontend creates a new feedback entity, it must call the server method `Task CreateFeedback(FeedbackEntity newFeedbackEntity)` with the newly created feedback entity as the argument.
+
+
+## Section 6A — Response Review and Feedback Workflow
 
 (1) When the teacher selects a response for review, the frontend shall —
 
@@ -340,39 +370,6 @@ For a list of all server method and client handlers to be implemented for commun
     (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
 
     (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
-
-
-## Section 5 - Functionalities for the "Classroom" tab
-
-(1) When prompted by the user, the frontend client must call `Task PairDevices()` to initiate device pairing.
-
-(2) Once pairing is complete, the frontend client must call the following methods to retrieve all devices, device statuses and sessions. All retrieved entities must be stored on the frontend.
-        
-    (i) `Task<List<PairedDeviceEntity>> GetAllPairedDevices()`.
-
-    (ii) `Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()`
-
-    (iii) `Task<List<SessionEntity>> GetAllSessions()`.
-
-
-(3) When the backend updates a device status or session, it must call the appropriate client handler, as defined in S2(1)(a) of `NetworkingAPISpec.md`, to update the frontend data.
-
-(4) When one or more tablets are locked on the frontend, it must call the server method `Task LockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
-
-(5) When one or more tablets are unlocked on the frontend, it must call the server method `Task UnlockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
-
-(6) When a material is deployed on the frontend, it must call the server method `Task DeployMaterial(Guid Id)` with the corresponding material UUID.
-
-(7) When a material deployment is ended on the frontend, it must call the server method `Task FinishMaterial(Guid Id)` with the corresponding material UUID.
-
-
-
-## Section 6 - Functionalities for the "Responses" tab
-
-(1) When the backend creates a response entity, it must call the frontend handler `CreateResponse` with the newly created `ResponseEntity` as the argument.
-
-(2) When the frontend creates a new feedback entity, it must call the server method `Task CreateFeedback(FeedbackEntity newFeedbackEntity)` with the newly created feedback entity as the argument.
-
 
 
 ## Section 7 - Functionalities for the "AI Assistant" tab
