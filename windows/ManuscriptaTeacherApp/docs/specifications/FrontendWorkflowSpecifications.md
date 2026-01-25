@@ -397,6 +397,10 @@ For a list of all server method and client handlers to be implemented for commun
 
     The frontend shall display an alert when the backend invokes the `ConfigRefreshFailed` client handler, as defined in s2(1)(d)(iv) of the Networking API Specification.
 
+(7) **Feedback Delivery Failure Alerts**
+
+    The frontend shall display an alert when the backend invokes the `FeedbackDeliveryFailed` client handler, as defined in s2(1)(d)(v) of the Networking API Specification. The alert shall identify the specific device(s) for which feedback delivery has failed.
+
 
 
 ## Section 6 - Functionalities for the "Responses" tab

@@ -83,7 +83,7 @@ For a description of how these server methods and client handlers are expected t
     
     (g) Methods for starting and ending material deployment.
 
-        (i) `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified devices.
+        (i) `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified devices, by adding the material and all its embedded questions to the distribution bundle related to all related devices, and sending a TCP `DISTRIBUTE_MATERIAL` message to all related devices.
 
         (ii) [DELETED]
         
@@ -132,10 +132,12 @@ For a description of how these server methods and client handlers are expected t
 
     (d) Handlers for alerts.
 
-        (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand.
+        (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand. The backend shall invoke this handler on receipt of a TCP `HAND_RAISED` message from the device.
 
-        (ii) `DistributionFailed`, with parameter `deviceId` (Guid): Notifies the frontend that material distribution to a device has failed.
+        (ii) `DistributionFailed`, with parameter `deviceId` (Guid): Notifies the frontend that material distribution to a device has failed. The backend shall invoke this handler if material distribution times out by the virtue of Session Interaction Specification s3(6).
 
-        (iii) `RemoteControlFailed`, with parameters `deviceId` (Guid) and `command` (string): Notifies the frontend that a remote control command has failed.
+        (iii) `RemoteControlFailed`, with parameters `deviceId` (Guid) and `command` (string): Notifies the frontend that a remote control command has failed. The backend shall invoke this handler in case of a timeout under s6(2)(c) of the Session Interaction Specification.
 
-        (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed.
+        (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
+
+        (v) `FeedbackDeliveryFailed`, with parameter `deviceId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification.
