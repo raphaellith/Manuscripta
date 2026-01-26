@@ -286,7 +286,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     When a device is deemed paired by virtue of Pairing Process Specification s2(4) —
 
-    (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity` [see note];
+    (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity`;
 
     (b) the frontend shall display the newly paired device in the device grid.
 
