@@ -32,6 +32,12 @@ public class QuestionDataEntity
     public string? CorrectAnswer { get; set; }
 
     /// <summary>
+    /// Mark scheme for AI-marking. Per AdditionalValidationRules §2E(1)(a).
+    /// </summary>
+    [MaxLength(2000)]
+    public string? MarkScheme { get; set; }
+
+    /// <summary>
     /// The maximum number of marks available for this question.
     /// Per Validation Rules §2B(2)(c).
     /// </summary>
