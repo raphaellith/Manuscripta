@@ -423,7 +423,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 const src = node.attrs.src as string;
                 const title = node.attrs.title as string;
 
-                // Skip if already an attachment (title contains UUID and src is data URL from our storage)
+                // Skip non-image data URL attachments (have title/UUID and non-image data: URL)
                 if (title && src?.startsWith('data:') && !src.startsWith('data:image/')) {
                     return true;
                 }
