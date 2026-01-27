@@ -76,10 +76,17 @@ public class DeviceRegistryService : IDeviceRegistryService
 
         if (_devices.TryGetValue(entity.DeviceId, out var existingDevice))
         {
-            // Update properties
-            existingDevice.Name = entity.Name;
-            _logger.LogInformation("Device {DeviceId} updated (name: {Name})", entity.DeviceId, entity.Name);
-            return Task.CompletedTask;
+            // Create a new instance with updated properties and attempt an atomic update
+            var updatedDevice = new PairedDeviceEntity(existingDevice.DeviceId, entity.Name);
+
+            if (_devices.TryUpdate(entity.DeviceId, updatedDevice, existingDevice))
+            {
+                _logger.LogInformation("Device {DeviceId} updated (name: {Name})", entity.DeviceId, entity.Name);
+                return Task.CompletedTask;
+            }
+
+            _logger.LogWarning("Device {DeviceId} update failed due to concurrent modification", entity.DeviceId);
+            throw new InvalidOperationException($"Device {entity.DeviceId} update conflict due to concurrent modification");
         }
 
         _logger.LogWarning("Device {DeviceId} not found for update", entity.DeviceId);
