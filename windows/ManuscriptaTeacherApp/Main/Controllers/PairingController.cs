@@ -59,8 +59,8 @@ public class PairingController : ControllerBase
         try
         {
             // Register the device - per Pairing Process §2(4)
-            // RegisterDeviceAsync handles the check-and-register atomically at the database level
-            // using a try-catch for DbUpdateException to handle race conditions
+            // RegisterDeviceAsync performs the check-and-register atomically using thread-safe
+            // in-memory storage (e.g., ConcurrentDictionary) to handle concurrent registration requests
             var pairedDevice = await _deviceRegistry.RegisterDeviceAsync(deviceId, request.Name);
             
             if (pairedDevice == null)
