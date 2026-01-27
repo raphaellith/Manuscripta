@@ -246,8 +246,6 @@ public class UdpDiscoveryManager {
             
             executorService = Executors.newSingleThreadExecutor();
             executorService.submit(this::listenForDiscovery);
-            
-            scheduleTimeout();
         } else {
             Log.d(TAG, "Discovery already running, ignoring start request");
         }
@@ -263,10 +261,7 @@ public class UdpDiscoveryManager {
         if (running.compareAndSet(true, false)) {
             Log.d(TAG, "Stopping UDP discovery");
             cancelTimeout();
-            cancelTimeout();
             shutdownExecutor();
-            multicastLockManager.release();
-            updateState(DiscoveryState.IDLE);
             multicastLockManager.release();
             updateState(DiscoveryState.IDLE);
         } else {
@@ -300,65 +295,6 @@ public class UdpDiscoveryManager {
     public void clearDiscoveredServer() {
         discoveredServer.set(null);
         Log.d(TAG, "Cleared discovered server");
-    }
-
-    /**
-     * Returns the number of registered listeners for testing purposes.
-     *
-     * @return The number of registered listeners.
-     */
-    @VisibleForTesting
-    int getListenerCount() {
-        return listeners.size();
-    }
-
-    /**
-     * Schedules the timeout task.
-     */
-    private void scheduleTimeout() {
-        scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-        timeoutFuture = scheduledExecutor.schedule(
-                this::handleTimeout,
-                timeoutMs,
-                TimeUnit.MILLISECONDS
-        );
-    }
-
-    /**
-     * Cancels the timeout task and shuts down the scheduled executor.
-     */
-    private void cancelTimeout() {
-        ScheduledFuture<?> future = timeoutFuture;
-        if (future != null) {
-            future.cancel(false);
-            timeoutFuture = null;
-        }
-        
-        ScheduledExecutorService executor = scheduledExecutor;
-        if (executor != null && !executor.isShutdown()) {
-            executor.shutdownNow();
-            scheduledExecutor = null;
-        }
-    }
-
-    /**
-     * Handles the timeout event.
-     * 
-     * <p>Only transitions to TIMEOUT state if currently SEARCHING. This prevents
-     * a race condition where the timeout could override FOUND state if both events
-     * occur near-simultaneously.</p>
-     */
-    private void handleTimeout() {
-        if (running.compareAndSet(true, false)) {
-            // Only set TIMEOUT if we're still SEARCHING - avoid overriding FOUND state
-            DiscoveryState currentState = discoveryState.getValue();
-            if (currentState == DiscoveryState.SEARCHING) {
-                Log.d(TAG, "Discovery timeout after " + timeoutMs + "ms");
-                updateState(DiscoveryState.TIMEOUT);
-            }
-            shutdownExecutor();
-            multicastLockManager.release();
-        }
     }
 
     /**
@@ -473,19 +409,6 @@ public class UdpDiscoveryManager {
     }
 
     /**
-     * Handles socket errors by setting error state.
-     *
-     * @param e The socket exception that occurred.
-     */
-    private void handleSocketError(@NonNull SocketException e) {
-        running.set(false);
-        cancelTimeout();
-        multicastLockManager.release();
-        lastError.set(e.getMessage());
-        updateState(DiscoveryState.ERROR);
-    }
-
-    /**
      * Processes a received UDP packet.
      *
      * @param packet The received datagram packet
@@ -530,21 +453,6 @@ public class UdpDiscoveryManager {
     }
 
     /**
-     * Notifies all registered listeners of a discovered server.
-     *
-     * @param message The discovery message.
-     */
-    private void notifyListeners(@NonNull DiscoveryMessage message) {
-        for (OnServerDiscoveredListener listener : listeners) {
-            try {
-                listener.onServerDiscovered(message);
-            } catch (Exception e) {
-                Log.e(TAG, "Exception in listener onServerDiscovered", e);
-            }
-        }
-    }
-
-    /**
      * Extracts the actual data from a datagram packet.
      *
      * @param packet The datagram packet to extract data from
@@ -567,15 +475,6 @@ public class UdpDiscoveryManager {
      */
     DatagramSocket createSocket() throws SocketException {
         return new DatagramSocket(UDP_PORT);
-    }
-
-    /**
-     * Updates the discovery state using thread-safe postValue.
-     *
-     * @param state The new discovery state.
-     */
-    private void updateState(@NonNull DiscoveryState state) {
-        discoveryState.postValue(state);
     }
 
     /**
