@@ -100,7 +100,6 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             _ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
 
             // Return immediately once listener is active
-            // Return immediately once listener is active
         }
         catch (OperationCanceledException)
         {
