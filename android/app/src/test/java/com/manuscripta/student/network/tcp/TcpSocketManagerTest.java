@@ -249,11 +249,16 @@ public class TcpSocketManagerTest {
         TcpSocketManager spyManager = spy(new TcpSocketManager(mockEncoder, mockDecoder));
         doThrow(new IOException("Test")).when(spyManager).createSocket(any(), anyInt());
 
+        CountDownLatch latch = new CountDownLatch(1);
+        spyManager.getConnectionState().observeForever(state -> {
+            if (state == ConnectionState.CONNECTING || state == ConnectionState.RECONNECTING) {
+                latch.countDown();
+            }
+        });
+
         spyManager.connect("192.168.1.1", 8080);
 
-        // Give async operation time to start
-        Thread.sleep(100);
-
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
         assertTrue(spyManager.getShouldReconnect());
     }
 
@@ -262,11 +267,17 @@ public class TcpSocketManagerTest {
         TcpSocketManager spyManager = spy(new TcpSocketManager(mockEncoder, mockDecoder));
         doThrow(new IOException("Test")).when(spyManager).createSocket(any(), anyInt());
 
+        CountDownLatch latch = new CountDownLatch(1);
+        spyManager.getConnectionState().observeForever(state -> {
+            if (state == ConnectionState.CONNECTING || state == ConnectionState.RECONNECTING) {
+                latch.countDown();
+            }
+        });
+
         spyManager.connect("192.168.1.1", 8080);
 
         // Connection state should transition through CONNECTING
-        // Give async operation time to start
-        Thread.sleep(50);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
 
         ConnectionState state = spyManager.getConnectionState().getValue();
         assertTrue(state == ConnectionState.CONNECTING
@@ -323,11 +334,17 @@ public class TcpSocketManagerTest {
         TcpSocketManager spyManager = spy(new TcpSocketManager(mockEncoder, mockDecoder));
         doThrow(new IOException("Test connection refused")).when(spyManager).createSocket(any(), anyInt());
 
-        // Disable reconnection to avoid state changes after CONNECTING
+        CountDownLatch latch = new CountDownLatch(1);
+        spyManager.getConnectionState().observeForever(state -> {
+            if (state == ConnectionState.CONNECTING || state == ConnectionState.RECONNECTING) {
+                latch.countDown();
+            }
+        });
+
         spyManager.connect("192.168.1.1", 8080);
 
-        // State should transition to CONNECTING immediately
-        Thread.sleep(50);
+        // State should transition to CONNECTING
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
 
         // State will be either CONNECTING or RECONNECTING (if connection attempt completed)
         ConnectionState state = spyManager.getConnectionState().getValue();
@@ -357,8 +374,15 @@ public class TcpSocketManagerTest {
         TcpSocketManager spyManager = spy(new TcpSocketManager(mockEncoder, mockDecoder));
         doThrow(new IOException("Test")).when(spyManager).createSocket(any(), anyInt());
 
+        CountDownLatch connectLatch = new CountDownLatch(1);
+        spyManager.getConnectionState().observeForever(state -> {
+            if (state == ConnectionState.CONNECTING || state == ConnectionState.RECONNECTING) {
+                connectLatch.countDown();
+            }
+        });
+
         spyManager.connect("192.168.1.1", 8080);
-        Thread.sleep(50);
+        assertTrue(connectLatch.await(1, TimeUnit.SECONDS));
 
         spyManager.disconnect();
 
