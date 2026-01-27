@@ -15,9 +15,8 @@ namespace MainTests.ControllersTests;
 /// Unit tests for PairingController.
 /// Verifies HTTP POST /pair endpoint per API Contract.md §2.4 and Pairing Process.md §2(3)(b).
 /// </summary>
-public class PairingControllerTests : IDisposable
+public class PairingControllerTests
 {
-    private readonly MainDbContext _context;
     private readonly DeviceRegistryService _deviceRegistry;
     private readonly PairingController _controller;
     private readonly Mock<ILogger<DeviceRegistryService>> _mockRegistryLogger;
@@ -25,22 +24,11 @@ public class PairingControllerTests : IDisposable
 
     public PairingControllerTests()
     {
-        var options = new DbContextOptionsBuilder<MainDbContext>()
-            .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
-            .Options;
-
-        _context = new MainDbContext(options);
         _mockRegistryLogger = new Mock<ILogger<DeviceRegistryService>>();
         _mockControllerLogger = new Mock<ILogger<PairingController>>();
         
-        _deviceRegistry = new DeviceRegistryService(_context, _mockRegistryLogger.Object);
+        _deviceRegistry = new DeviceRegistryService(_mockRegistryLogger.Object);
         _controller = new PairingController(_deviceRegistry, _mockControllerLogger.Object);
-    }
-
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
     }
 
     #region POST /api/v1/pair Tests
@@ -50,7 +38,7 @@ public class PairingControllerTests : IDisposable
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        var request = new PairRequest { DeviceId = deviceId.ToString() };
+        var request = new PairRequest { DeviceId = deviceId.ToString(), Name = "Test Device" };
 
         // Act
         var result = await _controller.Pair(request);
@@ -65,15 +53,18 @@ public class PairingControllerTests : IDisposable
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        var request = new PairRequest { DeviceId = deviceId.ToString() };
+        var deviceName = "Test Device";
+        var request = new PairRequest { DeviceId = deviceId.ToString(), Name = deviceName };
 
         // Act
         await _controller.Pair(request);
 
         // Assert
-        var device = await _context.PairedDevices.FindAsync(deviceId);
+        Assert.True(await _deviceRegistry.IsDevicePairedAsync(deviceId));
+        var devices = await _deviceRegistry.GetAllAsync();
+        var device = devices.FirstOrDefault(d => d.DeviceId == deviceId);
         Assert.NotNull(device);
-        Assert.Equal(deviceId, device.DeviceId);
+        Assert.Equal(deviceName, device.Name);
     }
 
     [Fact]
@@ -81,7 +72,7 @@ public class PairingControllerTests : IDisposable
     {
         // Arrange - First, pair the device
         var deviceId = Guid.NewGuid();
-        var request = new PairRequest { DeviceId = deviceId.ToString() };
+        var request = new PairRequest { DeviceId = deviceId.ToString(), Name = "Test Device" };
         await _controller.Pair(request);
 
         // Act - Try to pair again
@@ -96,7 +87,7 @@ public class PairingControllerTests : IDisposable
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        var request = new PairRequest { DeviceId = deviceId.ToString() };
+        var request = new PairRequest { DeviceId = deviceId.ToString(), Name = "Test Device" };
         await _controller.Pair(request);
 
         // Act
@@ -151,7 +142,7 @@ public class PairingControllerTests : IDisposable
     public async Task Pair_InvalidGuidFormat_Returns400BadRequest()
     {
         // Arrange
-        var request = new PairRequest { DeviceId = "not-a-valid-guid" };
+        var request = new PairRequest { DeviceId = "not-a-valid-guid", Name = "Test Device" };
 
         // Act
         var result = await _controller.Pair(request);
@@ -164,7 +155,7 @@ public class PairingControllerTests : IDisposable
     public async Task Pair_InvalidGuidFormat_ReturnsErrorMessage()
     {
         // Arrange
-        var request = new PairRequest { DeviceId = "invalid-guid-format" };
+        var request = new PairRequest { DeviceId = "invalid-guid-format", Name = "Test Device" };
 
         // Act
         var result = await _controller.Pair(request) as BadRequestObjectResult;
@@ -184,17 +175,17 @@ public class PairingControllerTests : IDisposable
         var deviceId3 = Guid.NewGuid();
 
         // Act
-        var result1 = await _controller.Pair(new PairRequest { DeviceId = deviceId1.ToString() });
-        var result2 = await _controller.Pair(new PairRequest { DeviceId = deviceId2.ToString() });
-        var result3 = await _controller.Pair(new PairRequest { DeviceId = deviceId3.ToString() });
+        var result1 = await _controller.Pair(new PairRequest { DeviceId = deviceId1.ToString(), Name = "Device 1" });
+        var result2 = await _controller.Pair(new PairRequest { DeviceId = deviceId2.ToString(), Name = "Device 2" });
+        var result3 = await _controller.Pair(new PairRequest { DeviceId = deviceId3.ToString(), Name = "Device 3" });
 
         // Assert
         Assert.IsType<ObjectResult>(result1);
         Assert.IsType<ObjectResult>(result2);
         Assert.IsType<ObjectResult>(result3);
 
-        var count = await _context.PairedDevices.CountAsync();
-        Assert.Equal(3, count);
+        var devices = await _deviceRegistry.GetAllAsync();
+        Assert.Equal(3, devices.Count());
     }
 
     [Fact]
@@ -204,8 +195,8 @@ public class PairingControllerTests : IDisposable
         var deviceId = Guid.NewGuid();
 
         // Act
-        var result1 = await _controller.Pair(new PairRequest { DeviceId = deviceId.ToString() });
-        var result2 = await _controller.Pair(new PairRequest { DeviceId = deviceId.ToString() });
+        var result1 = await _controller.Pair(new PairRequest { DeviceId = deviceId.ToString(), Name = "Device" });
+        var result2 = await _controller.Pair(new PairRequest { DeviceId = deviceId.ToString(), Name = "Device" });
 
         // Assert
         var objectResult1 = Assert.IsType<ObjectResult>(result1);
