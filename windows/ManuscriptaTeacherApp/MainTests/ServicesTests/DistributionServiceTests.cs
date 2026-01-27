@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
@@ -17,6 +18,9 @@ public class DistributionServiceTests
     private readonly Mock<IMaterialRepository> _mockMaterialRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
+    private readonly Mock<IServiceProvider> _mockServiceProvider;
+    private readonly Mock<IServiceScope> _mockScope;
+    private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
     private readonly DistributionService _service;
 
     private readonly Guid _testDeviceId = Guid.NewGuid();
@@ -28,34 +32,42 @@ public class DistributionServiceTests
         _mockMaterialRepo = new Mock<IMaterialRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
+        
+        // Set up scoped service provider pattern
+        _mockScope = new Mock<IServiceScope>();
+        _mockScopeFactory = new Mock<IServiceScopeFactory>();
+        _mockServiceProvider = new Mock<IServiceProvider>();
+        
+        var scopeServiceProvider = new Mock<IServiceProvider>();
+        scopeServiceProvider.Setup(x => x.GetService(typeof(IMaterialRepository)))
+            .Returns(_mockMaterialRepo.Object);
+        scopeServiceProvider.Setup(x => x.GetService(typeof(IQuestionRepository)))
+            .Returns(_mockQuestionRepo.Object);
+        
+        _mockScope.Setup(x => x.ServiceProvider).Returns(scopeServiceProvider.Object);
+        _mockScopeFactory.Setup(x => x.CreateScope()).Returns(_mockScope.Object);
+        _mockServiceProvider.Setup(x => x.GetService(typeof(IServiceScopeFactory)))
+            .Returns(_mockScopeFactory.Object);
 
         _service = new DistributionService(
-            _mockMaterialRepo.Object,
-            _mockQuestionRepo.Object,
+            _mockServiceProvider.Object,
             _mockDeviceRegistry.Object);
     }
 
     #region Constructor Tests
 
     [Fact]
-    public void Constructor_NullMaterialRepository_ThrowsArgumentNullException()
+    public void Constructor_NullServiceProvider_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new DistributionService(null!, _mockQuestionRepo.Object, _mockDeviceRegistry.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            new DistributionService(_mockMaterialRepo.Object, null!, _mockDeviceRegistry.Object));
+            new DistributionService(null!, _mockDeviceRegistry.Object));
     }
 
     [Fact]
     public void Constructor_NullDeviceRegistry_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new DistributionService(_mockMaterialRepo.Object, _mockQuestionRepo.Object, null!));
+            new DistributionService(_mockServiceProvider.Object, null!));
     }
 
     #endregion
@@ -222,3 +234,4 @@ public class DistributionServiceTests
 
     #endregion
 }
+
