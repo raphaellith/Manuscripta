@@ -2,7 +2,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ContentHeader } from './ContentHeader';
-import { Card } from './Card';
+import { Card } from '../renderer/components/common/Card';
 
 const pollData = [
   { name: 'Option A', votes: 12, color: '#FF6106' }, // Orange
