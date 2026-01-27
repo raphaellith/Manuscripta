@@ -20,5 +20,6 @@ public class PairRequest
     /// Per Pairing Process Specification s2(2)(c).
     /// </summary>
     [Required]
+    [RegularExpression(@"^(?!\s*$).+", ErrorMessage = "Name must contain non-whitespace characters.")]
     public string Name { get; set; } = string.Empty;
 }
