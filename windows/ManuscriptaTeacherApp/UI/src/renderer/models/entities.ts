@@ -37,7 +37,7 @@ export interface MaterialEntity {
     actualAge?: number;
 }
 
-// Per Validation Rules §2B
+// Per Validation Rules §2B and AdditionalValidationRules §2E
 export type QuestionType = 'MULTIPLE_CHOICE' | 'WRITTEN_ANSWER';
 
 export interface QuestionEntity {
@@ -46,8 +46,9 @@ export interface QuestionEntity {
     questionType: QuestionType;
     questionText: string;
     options?: string[];         // Required for MULTIPLE_CHOICE
-    correctAnswer?: string | number;  // Index for MC, string for WRITTEN
+    correctAnswer?: string | number;  // Index for MC, string for WRITTEN (exact match)
     maxScore?: number;
+    markScheme?: string;        // Per s2E(1)(a) - for AI-marking of WRITTEN_ANSWER
 }
 
 // Per AdditionalValidationRules §3B

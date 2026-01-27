@@ -272,6 +272,14 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) not allow the user to delete attachments through any other means than the delete button specified in paragraph (b).
 
+    (d) support - 
+        
+        (i) drag-and-drop of attachments, of all supported types, into the editor modal.
+
+        (ii) copy-paste of images into the editor modal. These images may be introduced along with text.
+
+        Attachments added in a manner specified in this paragraph shall be handled in the same manner as attachments added through the "attach" button, as specified in paragraphs (a)(ii-iv) and (a1).
+
 (5) **Initiation of Orphan Removal on Entry or Exit**
 
     The frontend shall, when the editor modal is entered or exited -
@@ -286,7 +294,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (6) **Initiation of Orphan Removal on Discovery of Orphaned Attachment Entities**
 
-    The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory -
+    The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory when attempting to render the attachment -
 
     (a) remove any attachment reference which references such attachment entity.
 
@@ -305,26 +313,160 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 5 - Functionalities for the "Classroom" tab
 
-(1) When prompted by the user, the frontend client must call `Task PairDevices()` to initiate device pairing.
+(1) [DELETED]
 
-(2) Once pairing is complete, the frontend client must call the following methods to retrieve all devices, device statuses and sessions. All retrieved entities must be stored on the frontend.
-        
+(2) On entry to the Classroom page, the frontend client must call the following methods to retrieve all devices and device statuses. All retrieved entities must be stored on the frontend.
+
     (i) `Task<List<PairedDeviceEntity>> GetAllPairedDevices()`.
 
     (ii) `Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()`
 
-    (iii) `Task<List<SessionEntity>> GetAllSessions()`.
+    (iii) [DELETED]
+
+(3) [DELETED]
+
+(4) [DELETED]
+
+(5) [DELETED]
+
+(6) [DELETED]
+
+(7) [DELETED]
+
+*Explanatory note: See Sections 5A-5D for detailed specifications regarding the Classroom tab.*
+
+## Section 5A — Device Pairing
+
+(1) **Initiating Pairing**
+
+    The frontend shall provide a button or other control to initiate device pairing.
+
+(2) **Calling the Pairing Endpoint**
+
+    When the user initiates pairing —
+
+    (a) the frontend shall call `Task PairDevices()`, as defined in s1(1)(e)(i) of the Networking API Specification;
+
+    (b) the frontend shall indicate to the user that pairing is in progress.
+
+(3) **Notification of Newly Paired Devices**
+
+    When a device is deemed paired by virtue of Pairing Process Specification s2(4) —
+
+    (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity`;
+
+    (b) the frontend shall display the newly paired device in the device grid.
+
+(4) **Terminating the Pairing Process**
+
+    The frontend shall provide a button or other control to terminate the pairing process. When activated —
+
+    (a) the frontend shall call `Task StopPairing()`, as defined in s1(1)(e)(v) of the Networking API Specification;
+
+    (b) the frontend shall remove the pairing-in-progress indicator.
+
+(5) **Unpairing Devices**
+
+    The frontend shall provide a means for the user to unpair one or more selected devices by calling `Task UnpairDevices(List<Guid> deviceIds)`.
 
 
-(3) When the backend updates a device status or session, it must call the appropriate client handler, as defined in S2(1)(a) of `NetworkingAPISpec.md`, to update the frontend data.
+## Section 5B — Device Display and Status
 
-(4) When one or more tablets are locked on the frontend, it must call the server method `Task LockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
+(1) The frontend shall display all paired devices in a grid layout.
 
-(5) When one or more tablets are unlocked on the frontend, it must call the server method `Task UnlockDevices(List<Guid> deviceIds)` with the corresponding tablet UUIDs.
+(2) For each device, the frontend shall display —
 
-(6) When a material is deployed on the frontend, it must call the server method `Task DeployMaterial(Guid Id)` with the corresponding material UUID.
+    (a) the user-friendly device name, as provided during pairing per Pairing Process Specification s2(2)(c);
 
-(7) When a material deployment is ended on the frontend, it must call the server method `Task FinishMaterial(Guid Id)` with the corresponding material UUID.
+    (b) the current status of the device, using distinct visual treatments for each `DeviceStatus` value defined in s2E(1)(b) of the Validation Rules;
+
+    (c) a distinct visual indicator in the grid, when the device has an unacknowledged help request. For the purpose of this paragraph —
+
+        (i) a help request shall be considered pending from the time the backend receives a `HAND_RAISED` (0x11) message from the device, per Session Interaction Specification s4A(1).
+
+        (ii) a help request shall be considered acknowledged by the user when the user triggers acknowledgement by dismissing the relevant alert per s5D(2)(c) of this specification.
+
+        (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
+
+(3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
+
+
+## Section 5C — Device Control
+
+(1) **Device Selection**
+
+    The frontend shall provide a means for the user to select one or more devices —
+
+    (a) by clicking on individual device cards to toggle selection;
+
+    (b) by using a "Select All" button to select all devices;
+
+    (c) by using a "Deselect All" button to clear selection.
+
+    (d) The frontend shall display the current selection count (e.g., "X / Y devices selected").
+
+(2) **Locking and Unlocking Devices**
+
+    The frontend shall provide controls to lock and unlock devices. These actions shall apply only to the currently selected devices.
+
+    The action shall call `Task LockDevices(List<Guid> deviceIds)` or `Task UnlockDevices(List<Guid> deviceIds)` as defined in s1(1)(f) of the Networking API Specification.
+
+(3) **Material Deployment**
+
+    The frontend shall provide a means for the user to deploy materials to the currently selected devices by —
+
+    (a) selecting a material from the lesson library, using cascading selection controls for unit collection, unit, lesson, and material;
+
+    (b) calling `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)` as defined in s1(1)(g)(i) of the Networking API Specification;
+
+    (c) indicating to the user when deployment is in progress, and when it completes. For this purpose, deployment to a device shall be considered complete when a `DISTRIBUTE_ACK` (0x12) message is received from that device, per Session Interaction Specification s3(5).
+
+(4) **Unpairing Devices**
+
+    The frontend shall provide a means for the user to unpair the currently selected devices. When activated —
+
+    (a) the frontend shall call `Task UnpairDevices(List<Guid> deviceIds)` as defined in s5A(5) of this specification;
+
+    (b) the unpairing shall proceed per Pairing Process Specification s3.
+
+
+## Section 5D — Alerts
+
+(1) **Definition**
+
+    For the purpose of this section, an "alert" shall be displayed as an appropriate banner.
+
+(2) **Help Request Alerts**
+
+    The frontend shall —
+
+    (a) display an alert when the backend invokes the `HandRaised` client handler, as defined in s2(1)(e)(i) of the Networking API Specification;
+
+    (b) display a persistent alert when one or more devices have unacknowledged help requests, showing the count of such requests;
+
+    (c) provide an "Acknowledge" button for each help request. Activating this button shall dismiss the alert on the frontend.
+
+    (d) automatically update the alert if help requests are acknowledged through other means than those defined in this subsection.
+
+(3) **Device Disconnection Alerts**
+
+    The frontend shall display an alert when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a)(i) of the Networking API Specification, with a `Status` of `DISCONNECTED`. The frontend shall also visually distinguish disconnected devices in the device grid.
+
+(4) **Distribution Failure Alerts**
+
+    The frontend shall display an alert when the backend invokes the `DistributionFailed` client handler, as defined in s2(1)(e)(ii) of the Networking API Specification. The alert shall identify the specific device(s) for which distribution has failed.
+
+(5) **Remote Control Failure Alerts**
+
+    The frontend shall display an alert when the backend invokes the `RemoteControlFailed` client handler, as defined in s2(1)(e)(iii) of the Networking API Specification.
+
+(6) **Configuration Refresh Failure Alerts**
+
+    The frontend shall display an alert when the backend invokes the `ConfigRefreshFailed` client handler, as defined in s2(1)(e)(iv) of the Networking API Specification.
+
+(7) **Feedback Delivery Failure Alerts**
+
+    The frontend shall display an alert when the backend invokes the `FeedbackDeliveryFailed` client handler, as defined in s2(1)(e)(v) of the Networking API Specification. The alert shall identify the specific device(s) for which feedback delivery has failed.
 
 
 

@@ -60,6 +60,7 @@ public class EfQuestionRepository : IQuestionRepository
         existingDataEntity.QuestionType = updatedDataEntity.QuestionType;
         existingDataEntity.Options = updatedDataEntity.Options;
         existingDataEntity.CorrectAnswer = updatedDataEntity.CorrectAnswer;
+        existingDataEntity.MarkScheme = updatedDataEntity.MarkScheme;
         existingDataEntity.MaxScore = updatedDataEntity.MaxScore;
         
         await _ctx.SaveChangesAsync();

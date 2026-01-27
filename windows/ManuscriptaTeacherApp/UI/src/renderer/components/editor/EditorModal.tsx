@@ -389,7 +389,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         if (questionData && !node.attrs.questionText) {
                             // Update node attrs with full question data
                             const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
-                            const waq = questionData as { correctAnswer?: string };
+                            const waq = questionData as { correctAnswer?: string; markScheme?: string };
 
                             tr.setNodeMarkup(pos, undefined, {
                                 ...node.attrs,
@@ -397,6 +397,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                                 questionType: questionData.questionType,
                                 options: mcq.options || [],
                                 correctAnswer: mcq.correctAnswerIndex ?? waq.correctAnswer,
+                                markScheme: waq.markScheme,
                                 maxScore: questionData.maxScore || 1,
                                 materialType: material.materialType,
                             });
@@ -511,6 +512,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         correctAnswer: (question as { correctAnswerIndex?: number }).correctAnswerIndex ??
                             (question as { correctAnswer?: string }).correctAnswer,
                         maxScore: question.maxScore,
+                        markScheme: (question as { markScheme?: string }).markScheme,
                     };
                     setQuestionDialog({ isOpen: true, question: dialogQuestion });
                 }
@@ -641,6 +643,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 options: question.options,
                 correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
                 correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                markScheme: question.markScheme,
                 maxScore: question.maxScore,
             };
 
@@ -656,6 +659,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         questionType: question.questionType,
                         options: question.options || [],
                         correctAnswer: question.correctAnswer,
+                        markScheme: question.markScheme,
                         maxScore: question.maxScore || 1,
                         materialType: material.materialType,
                     },
@@ -675,6 +679,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 options: question.options,
                 correctAnswerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
                 correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+                markScheme: question.markScheme,
                 maxScore: question.maxScore,
             };
 
@@ -691,6 +696,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                             questionType: question.questionType,
                             options: question.options || [],
                             correctAnswer: question.correctAnswer,
+                            markScheme: question.markScheme,
                             maxScore: question.maxScore || 1,
                         });
                     }
