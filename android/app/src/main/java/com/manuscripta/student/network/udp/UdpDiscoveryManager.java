@@ -328,7 +328,16 @@ public class UdpDiscoveryManager {
             future.cancel(false);
             timeoutFuture = null;
         }
-        
+        cleanupScheduler();
+    }
+
+    /**
+     * Shuts down the scheduled executor and clears references.
+     *
+     * <p>This is called both when cancelling a pending timeout and when
+     * the timeout fires to ensure the executor is properly cleaned up.</p>
+     */
+    private void cleanupScheduler() {
         ScheduledExecutorService executor = scheduledExecutor;
         if (executor != null && !executor.isShutdown()) {
             executor.shutdownNow();
@@ -353,6 +362,9 @@ public class UdpDiscoveryManager {
             }
             shutdownExecutor();
             multicastLockManager.release();
+            // Clean up the scheduler (task already completed, just need to shutdown executor)
+            timeoutFuture = null;
+            cleanupScheduler();
         }
     }
 
