@@ -1,4 +1,5 @@
 using ChromaDB.Client;
+using ChromaDB.Client.Models;
 using Main.Models.Entities;
 using Main.Models.Enums;
 
@@ -11,15 +12,23 @@ namespace Main.Services.GenAI;
 public class DocumentEmbeddingService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly IChromaClient _chromaClient;
+    private readonly ChromaClient _chromaClient;
+    private readonly ChromaConfigurationOptions _chromaOptions;
+    private readonly HttpClient _httpClient;
     private const int ChunkSizeTokens = 512;
     private const int ChunkOverlapTokens = 64;
     private const int MaxEmbeddingRetries = 3;
 
-    public DocumentEmbeddingService(OllamaClientService ollamaClient, IChromaClient chromaClient)
+    public DocumentEmbeddingService(
+        OllamaClientService ollamaClient,
+        ChromaClient chromaClient,
+        ChromaConfigurationOptions chromaOptions,
+        HttpClient httpClient)
     {
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
+        _chromaOptions = chromaOptions;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -43,24 +52,32 @@ public class DocumentEmbeddingService
 
                 // Generate embeddings for each chunk
                 var collection = await GetOrCreateCollectionAsync();
+                var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
+                
+                var ids = new List<string>();
+                var embeddings = new List<ReadOnlyMemory<float>>();
+                var metadatas = new List<Dictionary<string, object>>();
+                var documents = new List<string>();
                 
                 foreach (var (chunk, index) in chunks.Select((c, i) => (c, i)))
                 {
                     var embedding = await _ollamaClient.GenerateEmbeddingAsync(chunk);
                     
-                    var metadata = new Dictionary<string, object>
+                    ids.Add($"{document.Id}_{index}");
+                    embeddings.Add(new ReadOnlyMemory<float>(embedding));
+                    metadatas.Add(new Dictionary<string, object>
                     {
                         { "SourceDocumentId", document.Id.ToString() },
                         { "UnitCollectionId", document.UnitCollectionId.ToString() },
                         { "ChunkIndex", index }
-                    };
-
-                    await collection.AddAsync(
-                        ids: new[] { $"{document.Id}_{index}" },
-                        embeddings: new[] { embedding },
-                        metadatas: new[] { metadata },
-                        documents: new[] { chunk }
-                    );
+                    });
+                    documents.Add(chunk);
+                }
+                
+                // Add all chunks in a single batch operation
+                if (ids.Count > 0)
+                {
+                    await collectionClient.Add(ids, embeddings, metadatas, documents);
                 }
 
                 document.EmbeddingStatus = EmbeddingStatus.INDEXED;
@@ -100,15 +117,22 @@ public class DocumentEmbeddingService
         try
         {
             var collection = await GetOrCreateCollectionAsync();
+            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
             
             // Query for all chunks belonging to this document
-            var where = new Dictionary<string, object>
-            {
-                { "SourceDocumentId", sourceDocumentId.ToString() }
-            };
+            var where = ChromaWhereOperator.Equal("SourceDocumentId", sourceDocumentId.ToString());
 
-            // Delete all matching chunks
-            await collection.DeleteAsync(where: where);
+            // Get all matching IDs first
+            var entries = await collectionClient.Get(
+                where: where,
+                include: ChromaGetInclude.Metadatas
+            );
+            
+            if (entries.Count > 0)
+            {
+                var idsToDelete = entries.Select(e => e.Id).ToList();
+                await collectionClient.Delete(idsToDelete);
+            }
         }
         catch (Exception ex)
         {
@@ -171,15 +195,8 @@ public class DocumentEmbeddingService
     /// Gets or creates the ChromaDB collection for source documents.
     /// See GenAISpec.md §2(3).
     /// </summary>
-    private async Task<IChromaCollection> GetOrCreateCollectionAsync()
+    private async Task<ChromaCollection> GetOrCreateCollectionAsync()
     {
-        try
-        {
-            return await _chromaClient.GetCollectionAsync("source_documents");
-        }
-        catch
-        {
-            return await _chromaClient.CreateCollectionAsync("source_documents");
-        }
+        return await _chromaClient.GetOrCreateCollection("source_documents");
     }
 }

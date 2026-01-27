@@ -1,4 +1,6 @@
 using Main.Models.Entities;
+using Main.Models.Entities.Questions;
+using Main.Models.Entities.Responses;
 using Main.Models.Enums;
 
 namespace Main.Services.GenAI;

@@ -10,7 +10,9 @@ namespace Main.Services.GenAI;
 public class MaterialGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly IChromaClient _chromaClient;
+    private readonly ChromaClient _chromaClient;
+    private readonly ChromaConfigurationOptions _chromaOptions;
+    private readonly HttpClient _httpClient;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string PrimaryModel = "qwen3:8b";
@@ -18,11 +20,15 @@ public class MaterialGenerationService
 
     public MaterialGenerationService(
         OllamaClientService ollamaClient,
-        IChromaClient chromaClient,
+        ChromaClient chromaClient,
+        ChromaConfigurationOptions chromaOptions,
+        HttpClient httpClient,
         OutputValidationService validationService)
     {
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
+        _chromaOptions = chromaOptions;
+        _httpClient = httpClient;
         _validationService = validationService;
     }
 
@@ -107,29 +113,29 @@ public class MaterialGenerationService
     {
         try
         {
-            var collection = await _chromaClient.GetCollectionAsync("source_documents");
+            var collection = await _chromaClient.GetCollection("source_documents");
+            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
 
-            var where = new Dictionary<string, object>
-            {
-                { "UnitCollectionId", unitCollectionId.ToString() }
-            };
+            ChromaWhereOperator? where = ChromaWhereOperator.Equal("UnitCollectionId", unitCollectionId.ToString());
 
             // If specific documents are requested, add them to filter
             if (sourceDocumentIds != null && sourceDocumentIds.Count > 0)
             {
-                where["SourceDocumentId"] = new Dictionary<string, object>
-                {
-                    { "$in", sourceDocumentIds.Select(id => id.ToString()).ToArray() }
-                };
+                var sourceDocWhere = sourceDocumentIds
+                    .Select(id => ChromaWhereOperator.Equal("SourceDocumentId", id.ToString()))
+                    .Aggregate((a, b) => a || b);
+                
+                where = where && sourceDocWhere;
             }
 
-            var results = await collection.QueryAsync(
-                queryEmbeddings: new[] { queryEmbedding },
+            var results = await collectionClient.Query(
+                queryEmbeddings: new ReadOnlyMemory<float>(queryEmbedding),
                 nResults: topK,
-                where: where
+                where: where,
+                include: ChromaQueryInclude.Documents
             );
 
-            return results.Documents?.FirstOrDefault()?.ToList() ?? new List<string>();
+            return results.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
         }
         catch
         {

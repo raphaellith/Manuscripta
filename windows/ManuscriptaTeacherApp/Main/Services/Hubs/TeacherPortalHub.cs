@@ -111,7 +111,7 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<UnitEntity> CreateUnit(InternalCreateUnitDto dto)
     {
-        var entity = new UnitEntity(Guid.NewGuid(), dto.UnitCollectionId, dto.Title, dto.SourceDocuments);
+        var entity = new UnitEntity(Guid.NewGuid(), dto.UnitCollectionId, dto.Title);
         return await _unitService.CreateAsync(entity);
     }
 
