@@ -129,7 +129,7 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 ## Section 7: Returning Feedback
 
-(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x06`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
+(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x07`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
 
 (2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
 
