@@ -71,7 +71,9 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()`: Retrieves all device statuses.
 
-        (iv) `Task<List<SessionEntity>> GetAllSessions()`: Retrieves all sessions.
+        (iv) [DELETED]
+
+        (v) `Task StopPairing()`: Terminates the pairing process.
 
     (f) Methods for locking and unlocking devices.
 
@@ -81,9 +83,9 @@ For a description of how these server methods and client handlers are expected t
     
     (g) Methods for starting and ending material deployment.
 
-        (i) `Task DeployMaterial(Guid Id)`: Deploys a material, identified by its UUID.
+        (i) `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified devices, by adding the material and all its embedded questions to the distribution bundle related to all related devices, and sending a TCP `DISTRIBUTE_MATERIAL` message to all related devices.
 
-        (ii) `Task FinishMaterial(Guid Id)`: Stops deploying a material, identified by its UUID.
+        (ii) [DELETED]
         
     (h) Methods for creating feedback.
 
@@ -110,7 +112,6 @@ For a description of how these server methods and client handlers are expected t
         (iii) `Task DeleteAttachment(Guid id)`: Deletes an attachment entity, identified by its UUID.
 
 
-
 ### Section 2 - Frontend handlers
 
 (1) The frontend JavaScript client must include the following handlers.
@@ -121,8 +122,22 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `UpdateSession`, with parameter `sessionEntity` (SessionEntity): Updates a session entity, identified by its `deviceId` and `materialId`.
 
+        (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired.
+
     (b) Handlers for creating responses.
         
         (i) `CreateResponse`, with parameter `ResponseEntity` (ResponseEntity): Creates a response entity.
 
     (c) Handlers for retrieving AI assistant responses. **To be confirmed.**
+
+    (d) Handlers for alerts.
+
+        (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand. The backend shall invoke this handler on receipt of a TCP `HAND_RAISED` message from the device.
+
+        (ii) `DistributionFailed`, with parameter `deviceId` (Guid): Notifies the frontend that material distribution to a device has failed. The backend shall invoke this handler if material distribution times out by the virtue of Session Interaction Specification s3(6).
+
+        (iii) `RemoteControlFailed`, with parameters `deviceId` (Guid) and `command` (string): Notifies the frontend that a remote control command has failed. The backend shall invoke this handler in case of a timeout under s6(2)(c) of the Session Interaction Specification.
+
+        (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
+
+        (v) `FeedbackDeliveryFailed`, with parameter `deviceId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification.
