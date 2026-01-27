@@ -223,6 +223,14 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) not allow the user to delete attachments through any other means than the delete button specified in paragraph (b).
 
+    (d) support - 
+        
+        (i) drag-and-drop of attachments, of all supported types, into the editor modal.
+
+        (ii) copy-paste of images into the editor modal. These images may be introduced along with text.
+
+        Attachments added in a manner specified in this paragraph shall be handled in the same manner as attachments added through the "attach" button, as specified in paragraphs (a)(ii-iv) and (a1).
+
 (5) **Initiation of Orphan Removal on Entry or Exit**
 
     The frontend shall, when the editor modal is entered or exited -
@@ -237,7 +245,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (6) **Initiation of Orphan Removal on Discovery of Orphaned Attachment Entities**
 
-    The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory -
+    The frontend shall, on discovery of an attachment entity whose corresponding attachment file does not exist in the data directory when attempting to render the attachment -
 
     (a) remove any attachment reference which references such attachment entity.
 
