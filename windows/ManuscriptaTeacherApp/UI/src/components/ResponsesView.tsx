@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Card } from './Card';
+import { Card } from '../renderer/components/common/Card';
 import type { ContentItem, Question, StudentResponse } from '../types';
 
 interface ResponsesViewProps {

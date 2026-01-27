@@ -20,10 +20,8 @@ public class MainDbContext : DbContext
     public DbSet<MaterialDataEntity> Materials { get; set; }
     public DbSet<QuestionDataEntity> Questions { get; set; }
     
-    /// <summary>
-    /// Paired Android devices. See Pairing Process.md §2(4).
-    /// </summary>
-    public DbSet<PairedDeviceEntity> PairedDevices { get; set; }
+    // PairedDevices removed from persistent context per PersistenceAndCascadingRules §1(2)
+    // Managed by in-memory DeviceRegistryService
     
     /// <summary>
     /// Source documents imported into unit collections.
@@ -111,11 +109,7 @@ public class MainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure PairedDeviceEntity
-        modelBuilder.Entity<PairedDeviceEntity>(entity =>
-        {
-            entity.HasKey(e => e.DeviceId);
-        });
+        // PairedDeviceEntity configuration removed (non-persistent)
 
         // Configure SourceDocumentEntity with cascade delete from UnitCollection
         // Per PersistenceAndCascadingRules.md §2(3A)

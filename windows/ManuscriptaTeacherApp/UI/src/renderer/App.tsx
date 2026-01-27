@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { AppProvider, useAppContext } from './state/AppContext';
 import { Header } from './components/layout/Header';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
+import { ClassroomPage } from './components/pages/ClassroomPage';
 
 type View = 'dashboard' | 'lesson-library' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
 
@@ -45,6 +46,8 @@ const AppContent: React.FC = () => {
         switch (activeView) {
             case 'lesson-library':
                 return <LessonLibraryPage />;
+            case 'classroom-control':
+                return <ClassroomPage />;
             default:
                 return (
                     <div className="text-center py-12">

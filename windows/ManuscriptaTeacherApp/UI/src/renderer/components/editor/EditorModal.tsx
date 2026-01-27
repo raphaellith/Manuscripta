@@ -156,11 +156,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         title: string;
         placeholder?: string;
         onSubmit: (value: string) => void;
-    }>({ isOpen: false, title: '', onSubmit: () => { } });
+    }>({ isOpen: false, title: '', onSubmit: () => { /* no-op */ } });
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
         onConfirm: () => void;
-    }>({ isOpen: false, onConfirm: () => { } });
+    }>({ isOpen: false, onConfirm: () => { /* no-op */ } });
 
     // Question editor dialog state - per s4C(3)
     const [questionDialog, setQuestionDialog] = useState<{
@@ -568,7 +568,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     };
 
     const closeInputDialog = () => {
-        setInputDialog({ isOpen: false, title: '', onSubmit: () => { } });
+        setInputDialog({ isOpen: false, title: '', onSubmit: () => { /* no-op */ } });
     };
 
     // Insert table
@@ -1291,7 +1291,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 message="You have unsaved changes. Save before closing?"
                 onConfirm={confirmDialog.onConfirm}
                 onCancel={() => {
-                    setConfirmDialog({ isOpen: false, onConfirm: () => { } });
+                    setConfirmDialog({ isOpen: false, onConfirm: () => { /* no-op */ } });
                     onClose();
                 }}
             />
