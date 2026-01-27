@@ -104,7 +104,15 @@ public class OllamaClientService
             {
                 embeddings.Add(value.GetSingle());
             }
-            return embeddings.ToArray();
+            
+            // §2(2): Validate embedding dimensions match specification (768)
+            var embeddingArray = embeddings.ToArray();
+            if (embeddingArray.Length != 768)
+            {
+                throw new InvalidOperationException($"Invalid embedding dimension: expected 768, got {embeddingArray.Length}");
+            }
+            
+            return embeddingArray;
         }
 
         throw new InvalidOperationException("Failed to extract embedding from response");

@@ -66,6 +66,8 @@ public class MaterialGenerationService
         }
 
         // §3B(3)(a): Embed the description
+        // Ensure embedding model is ready per GenAISpec §2(2)
+        await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
         var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(request.Description);
 
         // §3B(3)(b): Query ChromaDB for relevant chunks

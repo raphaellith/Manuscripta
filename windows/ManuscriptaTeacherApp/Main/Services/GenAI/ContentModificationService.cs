@@ -42,6 +42,8 @@ public class ContentModificationService
         // §3C(2)(a): Retrieve relevant chunks if unitCollectionId is provided
         if (unitCollectionId.HasValue)
         {
+            // Ensure embedding model is ready per GenAISpec §2(2)
+            await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
             var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(instruction);
             relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
                 queryEmbedding,
