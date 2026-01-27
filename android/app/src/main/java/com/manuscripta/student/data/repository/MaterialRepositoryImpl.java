@@ -12,8 +12,12 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.mapper.MaterialMapper;
 import com.manuscripta.student.domain.model.Material;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.FileStorageManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +53,10 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** The file storage manager for attachments. */
     private final FileStorageManager fileStorageManager;
 
+    /** The TCP socket manager for sending acknowledgements. */
+    @Nullable
+    private final TcpSocketManager tcpSocketManager;
+
     /** Lock object for thread-safe operations. */
     private final Object lock = new Object();
 
@@ -75,11 +83,13 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      *
      * @param materialDao        The DAO for material persistence
      * @param fileStorageManager The file storage manager for attachments
+     * @param tcpSocketManager   The TCP socket manager for sending ACKs (nullable)
      * @throws IllegalArgumentException if materialDao or fileStorageManager is null
      */
     @Inject
     public MaterialRepositoryImpl(@NonNull MaterialDao materialDao,
-                                  @NonNull FileStorageManager fileStorageManager) {
+                                  @NonNull FileStorageManager fileStorageManager,
+                                  @Nullable TcpSocketManager tcpSocketManager) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
         }
@@ -88,6 +98,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         }
         this.materialDao = materialDao;
         this.fileStorageManager = fileStorageManager;
+        this.tcpSocketManager = tcpSocketManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
         // Initialize LiveData with existing materials from database.
@@ -244,11 +255,16 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             // 3. Download each attachment via HTTP
             // 4. Save attachment bytes via FileStorageManager
             // 5. Save materials to database
-            // 6. Send DISTRIBUTE_ACK via TcpSocketManager
+            // 6. Send DISTRIBUTE_ACK via TcpSocketManager after successful completion
 
             // For now, just log that sync was requested
             Log.i(TAG, "Material sync requested for device " + deviceId
                     + " - HTTP fetch not yet implemented");
+
+            // NOTE: DISTRIBUTE_ACK is intentionally NOT sent here per API Contract §3.6.1.
+            // The ACK should only be sent after successfully fetching and storing materials
+            // via HTTP GET /distribution/{deviceId}. Once steps 1-5 above are implemented
+            // and succeed, call sendDistributeAck(deviceId) at that point.
 
         } finally {
             syncing.set(false);
@@ -262,6 +278,41 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             notifyMaterialsAvailable();
         } catch (RuntimeException e) {
             Log.e(TAG, "Error while notifying materials availability callback", e);
+        }
+    }
+
+    /**
+     * Sends a DISTRIBUTE_ACK message to the server.
+     *
+     * <p>Per API Contract §3.6.1, this should only be called after successfully
+     * fetching and storing materials via HTTP GET /distribution/{deviceId}.</p>
+     *
+     * <p>Failures are logged but do not propagate exceptions, allowing the caller
+     * to continue processing even if the ACK fails to send.</p>
+     *
+     * <p>Package-private to allow testing error handling. This method is not yet
+     * called from production code as HTTP fetch is not implemented.</p>
+     *
+     * @param deviceId The device ID to include in the ACK
+     */
+    void sendDistributeAck(@NonNull String deviceId) {
+        validateNotEmpty(deviceId, "Device ID");
+
+        if (tcpSocketManager == null) {
+            Log.w(TAG, "TcpSocketManager not available, cannot send DISTRIBUTE_ACK");
+            return;
+        }
+
+        try {
+            DistributeAckMessage ackMessage = new DistributeAckMessage(deviceId);
+            tcpSocketManager.send(ackMessage);
+            Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
+            // Failure does not block material storage per requirements
+        } catch (TcpProtocolException e) {
+            Log.e(TAG, "Protocol error sending DISTRIBUTE_ACK: " + e.getMessage(), e);
+            // Failure does not block material storage per requirements
         }
     }
 
