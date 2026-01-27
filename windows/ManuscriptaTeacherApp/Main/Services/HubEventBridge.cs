@@ -65,125 +65,105 @@ public class HubEventBridge : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private async void OnStatusUpdateReceived(object? sender, DeviceStatusEventArgs e)
+    private void OnStatusUpdateReceived(object? sender, DeviceStatusEventArgs e) 
+        => FireAndForget(() => HandleStatusUpdateReceivedAsync(e), "StatusUpdateReceived");
+
+    internal async Task HandleStatusUpdateReceivedAsync(DeviceStatusEventArgs e)
     {
-        try
+        // Per NetworkingAPISpec §2(1)(a)
+        await _hubContext.Clients.All.SendAsync("UpdateDeviceStatus", new
         {
-            // Per NetworkingAPISpec §2(1)(a)
-            // Backend maps StatusUpdateReceived -> UpdateDeviceStatus client handler
-            await _hubContext.Clients.All.SendAsync("UpdateDeviceStatus", new
-            {
-                deviceId = e.DeviceId,
-                status = e.Status,
-                batteryLevel = e.BatteryLevel,
-                currentMaterialId = e.CurrentMaterialId,
-                studentView = e.StudentView,
-                timestamp = e.Timestamp
+            deviceId = e.DeviceId,
+            status = e.Status,
+            batteryLevel = e.BatteryLevel,
+            currentMaterialId = e.CurrentMaterialId,
+            studentView = e.StudentView,
+            timestamp = e.Timestamp
+        });
+    }
+
+    private void OnDeviceDisconnected(object? sender, DeviceStatusEventArgs e) 
+        => FireAndForget(() => HandleDeviceDisconnectedAsync(e), "DeviceDisconnected");
+
+    internal async Task HandleDeviceDisconnectedAsync(DeviceStatusEventArgs e)
+    {
+        // Per NetworkingAPISpec §2(1)(a)(i)
+        await _hubContext.Clients.All.SendAsync("UpdateDeviceStatus", new
+        {
+            deviceId = e.DeviceId,
+            status = "DISCONNECTED",
+            batteryLevel = e.BatteryLevel,
+            currentMaterialId = e.CurrentMaterialId,
+            studentView = e.StudentView,
+            timestamp = e.Timestamp
+        });
+    }
+
+    private void OnHandRaisedReceived(object? sender, Guid deviceId) 
+        => FireAndForget(() => HandleHandRaisedReceivedAsync(deviceId), "HandRaisedReceived");
+
+    internal async Task HandleHandRaisedReceivedAsync(Guid deviceId)
+    {
+        // Per NetworkingAPISpec §2(1)(d)(i)
+        await _hubContext.Clients.All.SendAsync("HandRaised", deviceId.ToString());
+    }
+
+    private void OnDistributionTimedOut(object? sender, Guid deviceId) 
+        => FireAndForget(() => HandleDistributionTimedOutAsync(deviceId), "DistributionTimedOut");
+
+    internal async Task HandleDistributionTimedOutAsync(Guid deviceId)
+    {
+        // Per NetworkingAPISpec §2(1)(d)(ii)
+        await _hubContext.Clients.All.SendAsync("DistributionFailed", deviceId.ToString());
+    }
+
+    private void OnFeedbackDeliveryTimedOut(object? sender, Guid deviceId) 
+        => FireAndForget(() => HandleFeedbackDeliveryTimedOutAsync(deviceId), "FeedbackDeliveryTimedOut");
+
+    internal async Task HandleFeedbackDeliveryTimedOutAsync(Guid deviceId)
+    {
+        // Per NetworkingAPISpec §2(1)(d)(v)
+        await _hubContext.Clients.All.SendAsync("FeedbackDeliveryFailed", deviceId.ToString());
+    }
+
+    private void OnControlCommandTimedOut(object? sender, ControlTimeoutEventArgs e) 
+        => FireAndForget(() => HandleControlCommandTimedOutAsync(e), "ControlCommandTimedOut");
+
+    internal async Task HandleControlCommandTimedOutAsync(ControlTimeoutEventArgs e)
+    {
+        // Per NetworkingAPISpec §2(1)(d)(iii) and (iv)
+        if (e.CommandName == "REFRESH_CONFIG")
+        {
+            await _hubContext.Clients.All.SendAsync("ConfigRefreshFailed", e.DeviceId);
+        }
+        else
+        {
+            await _hubContext.Clients.All.SendAsync("RemoteControlFailed", new 
+            { 
+                deviceId = e.DeviceId, 
+                command = e.CommandName 
             });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging StatusUpdateReceived to SignalR");
-        }
     }
 
-    private async void OnDeviceDisconnected(object? sender, DeviceStatusEventArgs e)
+    private void OnDevicePaired(object? sender, PairedDeviceEntity e) 
+        => FireAndForget(() => HandleDevicePairedAsync(e), "DevicePaired");
+
+    internal async Task HandleDevicePairedAsync(PairedDeviceEntity e)
+    {
+        // Per FrontendWorkflowSpecifications §5A(3)(a)
+        await _hubContext.Clients.All.SendAsync("DevicePaired", e);
+    }
+
+    private async void FireAndForget(Func<Task> action, string context)
     {
         try
         {
-            // Per NetworkingAPISpec §2(1)(a)(i)
-            // Maps to UpdateDeviceStatus with DISCONNECTED
-            await _hubContext.Clients.All.SendAsync("UpdateDeviceStatus", new
-            {
-                deviceId = e.DeviceId,
-                status = "DISCONNECTED",
-                batteryLevel = e.BatteryLevel,
-                currentMaterialId = e.CurrentMaterialId,
-                studentView = e.StudentView,
-                timestamp = e.Timestamp
-            });
+            await action();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error bridging DeviceDisconnected to SignalR");
-        }
-    }
-
-    private async void OnHandRaisedReceived(object? sender, Guid deviceId)
-    {
-        try
-        {
-            // Per NetworkingAPISpec §2(1)(d)(i)
-            await _hubContext.Clients.All.SendAsync("HandRaised", deviceId.ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging HandRaisedReceived to SignalR");
-        }
-    }
-
-    private async void OnDistributionTimedOut(object? sender, Guid deviceId)
-    {
-        try
-        {
-            // Per NetworkingAPISpec §2(1)(d)(ii)
-            await _hubContext.Clients.All.SendAsync("DistributionFailed", deviceId.ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging DistributionTimedOut to SignalR");
-        }
-    }
-
-    private async void OnFeedbackDeliveryTimedOut(object? sender, Guid deviceId)
-    {
-        try
-        {
-            // Per NetworkingAPISpec §2(1)(d)(v)
-            await _hubContext.Clients.All.SendAsync("FeedbackDeliveryFailed", deviceId.ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging FeedbackDeliveryTimedOut to SignalR");
-        }
-    }
-
-    private async void OnControlCommandTimedOut(object? sender, ControlTimeoutEventArgs e)
-    {
-        try
-        {
-            // Per NetworkingAPISpec §2(1)(d)(iii) and (iv)
-            // Differentiate based on command type if needed, but spec maps generic failures
-            // Currently spec says "RemoteControlFailed" for lock/unlock
-            if (e.CommandName == "REFRESH_CONFIG")
-            {
-                await _hubContext.Clients.All.SendAsync("ConfigRefreshFailed", e.DeviceId);
-            }
-            else
-            {
-                await _hubContext.Clients.All.SendAsync("RemoteControlFailed", new 
-                { 
-                    deviceId = e.DeviceId, 
-                    command = e.CommandName 
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging ControlCommandTimedOut to SignalR");
-        }
-    }
-
-    private async void OnDevicePaired(object? sender, PairedDeviceEntity e)
-    {
-        try
-        {
-            // Per FrontendWorkflowSpecifications §5A(3)(a)
-            await _hubContext.Clients.All.SendAsync("DevicePaired", e);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error bridging DevicePaired to SignalR");
+            _logger.LogError(ex, "Error bridging {Context} to SignalR", context);
         }
     }
 
