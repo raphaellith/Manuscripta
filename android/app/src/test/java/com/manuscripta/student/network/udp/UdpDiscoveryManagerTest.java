@@ -20,6 +20,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
 import com.manuscripta.student.utils.MulticastLockManager;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,7 +69,7 @@ public class UdpDiscoveryManagerTest {
     /**
      * Ensures proper cleanup after each test to prevent executor state leakage.
      */
-    @org.junit.After
+    @After
     public void tearDown() throws Exception {
         if (manager != null && manager.isRunning()) {
             manager.stopDiscovery();
