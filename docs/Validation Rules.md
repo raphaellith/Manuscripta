@@ -49,7 +49,7 @@ If validation rules in API Contract are in contradiction to this document, this 
     (a) `MaterialType` (enum MaterialType). Possible values are:
         (i) READING - The material is a reading material without questions
         (ii) WORKSHEET - The material is a worksheet with a mix of question types
-        (iii) POLL - The material is a poll with a multiple choice question, whose response distribution is intended to be revealed.
+        (iii) POLL - The material is a poll with one multiple choice question, whose response distribution is intended to be revealed.
         (iv) [DELETED]
     (b) `Title` (String). Maximum Length = 500 Characters.
     (c) `Content` (String). Refer to Material Encoding Specification for encoding rules.
@@ -85,6 +85,7 @@ If validation rules in API Contract are in contradiction to this document, this 
     (d) When `QuestionType` specified in (1)(b) is `MULTIPLE_CHOICE`, its `CorrectAnswer`, as specified in (2)(b), must be a valid index in its `Options`.
     (e) [DELETED]
     (f) When `QuestionType` specified in (1)(b) is `WRITTEN_ANSWER`, its `CorrectAnswer`, as specified in (2)(b), must be a valid String.
+    (g) When M's MaterialType is `POLL`, there must not already exist a previously created `QuestionEntity` object whose `MaterialId` also associates with M.
 
 ### Section 2C - Data Validation Rules for `ResponseEntity` Objects
 
