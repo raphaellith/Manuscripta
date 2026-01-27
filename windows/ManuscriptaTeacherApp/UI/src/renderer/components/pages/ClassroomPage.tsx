@@ -160,8 +160,13 @@ export const ClassroomPage: React.FC = () => {
 
     // Device state - from SignalR backend
     const [devices, setDevices] = useState<PairedDeviceEntity[]>([]);
+    const devicesRef = React.useRef(devices); // Ref to hold latest devices without triggering re-effects
     const [deviceStatuses, setDeviceStatuses] = useState<Map<string, DeviceStatusEntity>>(new Map());
     const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        devicesRef.current = devices;
+    }, [devices]);
 
     // Pairing state
     const [isPairing, setIsPairing] = useState(false);
@@ -178,6 +183,19 @@ export const ClassroomPage: React.FC = () => {
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
+
+    // Helper to add alerts - uses Ref to avoid dependency cycles
+    const addAlert = useCallback((type: Alert['type'], deviceId: string | undefined, message: string) => {
+        const device = deviceId ? devicesRef.current.find(d => d.deviceId === deviceId) : undefined;
+        setAlerts(prev => [...prev, {
+            id: `${Date.now()}-${deviceId || 'global'}`,
+            type,
+            deviceId,
+            deviceName: device?.name,
+            message,
+            timestamp: Date.now()
+        }]);
+    }, []); // No dependencies needed thanks to ref
 
     // Load initial device data and register handlers
     useEffect(() => {
@@ -204,7 +222,7 @@ export const ClassroomPage: React.FC = () => {
             setDeviceStatuses(prev => new Map(prev).set(status.deviceId, status));
 
             if (status.status === 'DISCONNECTED') {
-                const device = devices.find(d => d.deviceId === status.deviceId);
+                const device = devicesRef.current.find(d => d.deviceId === status.deviceId);
                 addAlert('disconnection', status.deviceId, `${device?.name || 'Device'} disconnected`);
             }
         });
@@ -223,7 +241,7 @@ export const ClassroomPage: React.FC = () => {
 
         const unsubHandRaised = signalRService.onHandRaised((deviceId) => {
             setHandRaisedDeviceIds(prev => new Set(prev).add(deviceId));
-            const device = devices.find(d => d.deviceId === deviceId);
+            const device = devicesRef.current.find(d => d.deviceId === deviceId);
             addAlert('help', deviceId, `${device?.name || 'Device'} is requesting help`);
         });
 
@@ -233,13 +251,13 @@ export const ClassroomPage: React.FC = () => {
                 next.delete(deviceId);
                 return next;
             });
-            const device = devices.find(d => d.deviceId === deviceId);
+            const device = devicesRef.current.find(d => d.deviceId === deviceId);
             addAlert('distribution_failed', deviceId, `Failed to deploy material to ${device?.name || 'device'}`);
         });
 
         const unsubControlFailed = signalRService.onRemoteControlFailed((payload) => {
             if (payload && payload.deviceId) {
-                const device = devices.find(d => d.deviceId === payload.deviceId);
+                const device = devicesRef.current.find(d => d.deviceId === payload.deviceId);
                 const name = device ? device.name : payload.deviceId.substring(0, 8);
                 addAlert('control_failed', payload.deviceId, `Remote control command '${payload.command}' failed for ${name} (Timeout)`);
             } else {
@@ -248,7 +266,7 @@ export const ClassroomPage: React.FC = () => {
         });
 
         const unsubFeedbackFailed = signalRService.onFeedbackDeliveryFailed((deviceId) => {
-            const device = devices.find(d => d.deviceId === deviceId);
+            const device = devicesRef.current.find(d => d.deviceId === deviceId);
             addAlert('feedback_failed', deviceId, `Failed to deliver feedback to ${device?.name || 'device'}`);
         });
 
@@ -260,20 +278,7 @@ export const ClassroomPage: React.FC = () => {
             unsubControlFailed();
             unsubFeedbackFailed();
         };
-    }, [devices]); // re-bind if devices list changes (for name lookup)
-
-    // Helper to add alerts
-    const addAlert = useCallback((type: Alert['type'], deviceId: string | undefined, message: string) => {
-        const device = deviceId ? devices.find(d => d.deviceId === deviceId) : undefined;
-        setAlerts(prev => [...prev, {
-            id: `${Date.now()}-${deviceId || 'global'}`,
-            type,
-            deviceId,
-            deviceName: device?.name,
-            message,
-            timestamp: Date.now()
-        }]);
-    }, [devices]);
+    }, [addAlert]); // Only run once (addAlert is stable)
 
     // Get status for a device
     const getDeviceStatus = useCallback((deviceId: string): DeviceStatus => {
