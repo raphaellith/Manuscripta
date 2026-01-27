@@ -11,8 +11,15 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import android.content.Context;
+
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
+
+import com.manuscripta.student.utils.MulticastLockManager;
 
 import android.content.Context;
 
@@ -43,14 +50,25 @@ public class UdpDiscoveryManagerTest {
     @Rule
     public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
+    @Rule
+    public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
+
     private UdpDiscoveryManager manager;
     private DatagramSocket mockSocket;
+    private Context mockContext;
+    private MulticastLockManager mockLockManager;
     private Context mockContext;
     private MulticastLockManager mockLockManager;
 
     @Before
     public void setUp() throws Exception {
         mockSocket = mock(DatagramSocket.class);
+        mockContext = mock(Context.class);
+        mockLockManager = mock(MulticastLockManager.class);
+        
+        // Configure multicast lock manager to succeed by default
+        when(mockLockManager.acquire(any(Context.class))).thenReturn(true);
+        
         mockContext = mock(Context.class);
         mockLockManager = mock(MulticastLockManager.class);
         
@@ -151,6 +169,7 @@ public class UdpDiscoveryManagerTest {
     @Test
     public void testStopDiscovery_whenNotRunning_noOp() {
         // Given
+        manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         manager = new UdpDiscoveryManager(mockContext, mockLockManager);
         assertFalse(manager.isRunning());
 
