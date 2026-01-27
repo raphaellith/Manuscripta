@@ -141,6 +141,50 @@ public class DocumentEmbeddingService
     }
 
     /// <summary>
+    /// Retrieves relevant chunks from ChromaDB for semantic search.
+    /// See GenAISpec.md §2(4).
+    /// </summary>
+    public async Task<List<string>> RetrieveRelevantChunksAsync(
+        float[] queryEmbedding,
+        Guid unitCollectionId,
+        List<Guid>? sourceDocumentIds = null,
+        int topK = 5)
+    {
+        try
+        {
+            var collection = await GetOrCreateCollectionAsync();
+            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
+
+            // §2(4)(b)(ii): Filter by UnitCollectionId
+            ChromaWhereOperator? where = ChromaWhereOperator.Equal("UnitCollectionId", unitCollectionId.ToString());
+
+            // §2(4)(b)(i): If SourceDocumentIds are provided, filter by those specific document IDs
+            if (sourceDocumentIds != null && sourceDocumentIds.Count > 0)
+            {
+                var sourceDocWhere = sourceDocumentIds
+                    .Select(id => ChromaWhereOperator.Equal("SourceDocumentId", id.ToString()))
+                    .Aggregate((a, b) => a || b);
+                
+                where = where && sourceDocWhere;
+            }
+
+            // §2(4)(c): Default value of K shall be 5
+            var results = await collectionClient.Query(
+                queryEmbeddings: new ReadOnlyMemory<float>(queryEmbedding),
+                nResults: topK,
+                where: where,
+                include: ChromaQueryInclude.Documents
+            );
+
+            return results.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    /// <summary>
     /// Splits text into chunks respecting token limits and overlap.
     /// See GenAISpec.md §2(1).
     /// </summary>

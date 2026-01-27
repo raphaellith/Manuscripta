@@ -4,11 +4,56 @@ using Main.Models.Enums;
 namespace Main.Services.GenAI;
 
 /// <summary>
-/// Manages the feedback approval workflow and dispatch status.
-/// See GenAISpec.md §3DA.
+/// Manages the feedback approval workflow and dispatch status, as well as the generation queue.
+/// See GenAISpec.md §3DA and §3D.
 /// </summary>
 public class FeedbackQueueService
 {
+    private readonly Queue<Guid> _generationQueue = new();
+
+    /// <summary>
+    /// Checks if a response is currently queued for generation.
+    /// See GenAISpec.md §3D(3).
+    /// </summary>
+    public bool IsQueued(Guid responseId)
+    {
+        return _generationQueue.Contains(responseId);
+    }
+
+    /// <summary>
+    /// Adds a response to the generation queue.
+    /// See GenAISpec.md §3D(5).
+    /// </summary>
+    public void QueueForAiGeneration(Guid responseId)
+    {
+        if (!_generationQueue.Contains(responseId))
+        {
+            _generationQueue.Enqueue(responseId);
+        }
+    }
+
+    /// <summary>
+    /// Removes a response from the generation queue.
+    /// See GenAISpec.md §3D(6) and §3D(7).
+    /// </summary>
+    public void RemoveFromQueue(Guid responseId)
+    {
+        var tempQueue = new Queue<Guid>();
+        while (_generationQueue.Count > 0)
+        {
+            var id = _generationQueue.Dequeue();
+            if (id != responseId)
+            {
+                tempQueue.Enqueue(id);
+            }
+        }
+        
+        while (tempQueue.Count > 0)
+        {
+            _generationQueue.Enqueue(tempQueue.Dequeue());
+        }
+    }
+
     /// <summary>
     /// Checks if feedback should be dispatched to the student device.
     /// See GenAISpec.md §3DA(1).

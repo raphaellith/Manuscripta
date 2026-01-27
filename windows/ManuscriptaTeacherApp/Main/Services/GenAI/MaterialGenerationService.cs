@@ -10,9 +10,7 @@ namespace Main.Services.GenAI;
 public class MaterialGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly ChromaClient _chromaClient;
-    private readonly ChromaConfigurationOptions _chromaOptions;
-    private readonly HttpClient _httpClient;
+    private readonly DocumentEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string PrimaryModel = "qwen3:8b";
@@ -20,15 +18,11 @@ public class MaterialGenerationService
 
     public MaterialGenerationService(
         OllamaClientService ollamaClient,
-        ChromaClient chromaClient,
-        ChromaConfigurationOptions chromaOptions,
-        HttpClient httpClient,
+        DocumentEmbeddingService embeddingService,
         OutputValidationService validationService)
     {
         _ollamaClient = ollamaClient;
-        _chromaClient = chromaClient;
-        _chromaOptions = chromaOptions;
-        _httpClient = httpClient;
+        _embeddingService = embeddingService;
         _validationService = validationService;
     }
 
@@ -75,7 +69,7 @@ public class MaterialGenerationService
         var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(request.Description);
 
         // §3B(3)(b): Query ChromaDB for relevant chunks
-        var relevantChunks = await RetrieveRelevantChunksAsync(
+        var relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
             queryEmbedding,
             request.UnitCollectionId,
             request.SourceDocumentIds,
@@ -99,48 +93,6 @@ public class MaterialGenerationService
         var result = await _validationService.ValidateAndRefineAsync(generatedContent, modelToUse, useFallback);
 
         return result;
-    }
-
-    /// <summary>
-    /// Retrieves relevant chunks from ChromaDB.
-    /// See GenAISpec.md §2(4).
-    /// </summary>
-    private async Task<List<string>> RetrieveRelevantChunksAsync(
-        float[] queryEmbedding,
-        Guid unitCollectionId,
-        List<Guid>? sourceDocumentIds,
-        int topK)
-    {
-        try
-        {
-            var collection = await _chromaClient.GetCollection("source_documents");
-            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
-
-            ChromaWhereOperator? where = ChromaWhereOperator.Equal("UnitCollectionId", unitCollectionId.ToString());
-
-            // If specific documents are requested, add them to filter
-            if (sourceDocumentIds != null && sourceDocumentIds.Count > 0)
-            {
-                var sourceDocWhere = sourceDocumentIds
-                    .Select(id => ChromaWhereOperator.Equal("SourceDocumentId", id.ToString()))
-                    .Aggregate((a, b) => a || b);
-                
-                where = where && sourceDocWhere;
-            }
-
-            var results = await collectionClient.Query(
-                queryEmbeddings: new ReadOnlyMemory<float>(queryEmbedding),
-                nResults: topK,
-                where: where,
-                include: ChromaQueryInclude.Documents
-            );
-
-            return results.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
-        }
-        catch
-        {
-            return new List<string>();
-        }
     }
 
     /// <summary>

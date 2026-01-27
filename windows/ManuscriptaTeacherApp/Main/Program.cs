@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using ChromaDB.Client;
 
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+using Main.Services.GenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,26 @@ builder.Services.Configure<NetworkSettings>(
 
 builder.Services.AddDbContext<MainDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
+
+// Configure ChromaDB for embedded mode
+// See GenAISpec.md §2(3)
+var vectorStorePath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+    "ManuscriptaTeacherApp",
+    "VectorStore"
+);
+Directory.CreateDirectory(vectorStorePath);
+
+builder.Services.AddSingleton(new ChromaConfigurationOptions 
+{ 
+    BasePath = vectorStorePath 
+});
+builder.Services.AddSingleton<ChromaClient>(sp =>
+{
+    var options = sp.GetRequiredService<ChromaConfigurationOptions>();
+    return new ChromaClient(options);
+});
+builder.Services.AddSingleton<HttpClient>();
 
 // Register pairing and device services
 builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
@@ -38,6 +60,17 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+
+// Register GenAI services
+// See GenAISpec.md §3(1) and §3(2)
+builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddScoped<DocumentEmbeddingService>();
+builder.Services.AddScoped<MaterialGenerationService>();
+builder.Services.AddScoped<ContentModificationService>();
+builder.Services.AddScoped<FeedbackGenerationService>();
+builder.Services.AddSingleton<FeedbackQueueService>();
+builder.Services.AddScoped<EmbeddingStatusService>();
+builder.Services.AddScoped<OutputValidationService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
