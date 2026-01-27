@@ -20,6 +20,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
 import com.manuscripta.student.utils.MulticastLockManager;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,6 +64,19 @@ public class UdpDiscoveryManagerTest {
             closed.set(true);
             return null;
         }).when(mockSocket).close();
+    }
+
+    /**
+     * Ensures proper cleanup after each test to prevent executor state leakage.
+     */
+    @After
+    public void tearDown() throws Exception {
+        if (manager != null && manager.isRunning()) {
+            manager.stopDiscovery();
+            // Wait for manager to fully stop
+            awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop");
+        }
+        manager = null;
     }
 
     @Test
@@ -892,6 +906,23 @@ public class UdpDiscoveryManagerTest {
         manager.startDiscovery();
         awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.ERROR,
                 2000, "State should transition to ERROR");
+
+        // Then
+        verify(mockLockManager).release();
+    }
+
+    @Test
+    public void testDiscoverySuccess_releasesMulticastLock() throws Exception {
+        // Given
+        manager = createManagerWithMockSocket();
+        byte[] validPacketData = createValidDiscoveryMessage(
+                new byte[]{(byte) 192, (byte) 168, 1, 100}, 8080, 9090);
+        configureMockSocketToReceiveOnce(validPacketData);
+
+        // When
+        manager.startDiscovery();
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.FOUND,
+                2000, "State should transition to FOUND");
 
         // Then
         verify(mockLockManager).release();

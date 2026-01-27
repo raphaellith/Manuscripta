@@ -240,10 +240,12 @@ public class UdpDiscoveryManager {
                 Log.w(TAG, "Failed to acquire multicast lock, discovery may not work");
             }
             
+            // Schedule timeout before starting listener to avoid race condition
+            // where listener fails fast and tries to cancel a not-yet-scheduled timeout
+            scheduleTimeout();
+            
             executorService = Executors.newSingleThreadExecutor();
             executorService.submit(this::listenForDiscovery);
-            
-            scheduleTimeout();
         } else {
             Log.d(TAG, "Discovery already running, ignoring start request");
         }
@@ -326,7 +328,16 @@ public class UdpDiscoveryManager {
             future.cancel(false);
             timeoutFuture = null;
         }
-        
+        cleanupScheduler();
+    }
+
+    /**
+     * Shuts down the scheduled executor and clears references.
+     *
+     * <p>This is called both when cancelling a pending timeout and when
+     * the timeout fires to ensure the executor is properly cleaned up.</p>
+     */
+    private void cleanupScheduler() {
         ScheduledExecutorService executor = scheduledExecutor;
         if (executor != null && !executor.isShutdown()) {
             executor.shutdownNow();
@@ -351,6 +362,9 @@ public class UdpDiscoveryManager {
             }
             shutdownExecutor();
             multicastLockManager.release();
+            // Clean up the scheduler (task already completed, just need to shutdown executor)
+            timeoutFuture = null;
+            cleanupScheduler();
         }
     }
 
@@ -426,6 +440,7 @@ public class UdpDiscoveryManager {
             // Cancel timeout and update state
             cancelTimeout();
             updateState(DiscoveryState.FOUND);
+            multicastLockManager.release();
             
             // Notify listeners
             notifyListeners(message);
