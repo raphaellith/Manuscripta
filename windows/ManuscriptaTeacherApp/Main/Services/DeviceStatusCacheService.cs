@@ -60,7 +60,7 @@ public class DeviceStatusCacheService : IDeviceStatusCacheService
                 existingStatus.BatteryLevel,
                 existingStatus.CurrentMaterialId,
                 existingStatus.StudentView,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
             _statusCache[deviceId] = disconnectedStatus;
 
@@ -77,7 +77,7 @@ public class DeviceStatusCacheService : IDeviceStatusCacheService
                 0,
                 Guid.Empty,
                 string.Empty,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
             _statusCache.TryAdd(deviceId, disconnectedStatus);
 

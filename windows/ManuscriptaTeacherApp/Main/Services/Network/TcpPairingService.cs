@@ -702,7 +702,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                     deviceId,
                     "DISCONNECTED",
                     0, null, null,
-                    DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
                 DeviceDisconnected?.Invoke(this, eventArgs);
 
