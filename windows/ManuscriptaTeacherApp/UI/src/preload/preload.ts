@@ -46,7 +46,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
      * Save attachment file from base64 data (for clipboard paste per §4C(4)(d)(ii)).
      * @param base64Data - Base64-encoded file data
      * @param uuid - UUID for the attachment
-     * @param extension - File extension (png, jpeg)
+     * @param extension - File extension (png, jpeg, pdf)
      * @returns Destination path
      */
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) =>
