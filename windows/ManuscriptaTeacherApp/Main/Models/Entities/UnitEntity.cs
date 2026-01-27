@@ -30,23 +30,16 @@ public class UnitEntity
     [MaxLength(500)]
     public string Title { get; set; } = string.Empty;
 
-    /// <summary>
-    /// A list of file paths pointing to source documents.
-    /// Per §2B(1)(c).
-    /// </summary>
-    public List<string> SourceDocuments { get; set; } = new();
-
     // Foreign key navigation
     [ForeignKey("UnitCollectionId")]
     internal UnitCollectionEntity? UnitCollection { get; set; }
 
     public UnitEntity() { }
 
-    public UnitEntity(Guid id, Guid unitCollectionId, string title, List<string>? sourceDocuments = null)
+    public UnitEntity(Guid id, Guid unitCollectionId, string title)
     {
         Id = id;
         UnitCollectionId = unitCollectionId;
         Title = title ?? throw new ArgumentNullException(nameof(title));
-        SourceDocuments = sourceDocuments ?? new List<string>();
     }
 }
