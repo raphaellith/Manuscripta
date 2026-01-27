@@ -40,6 +40,7 @@ public class TeacherPortalHubTests
     private readonly Mock<ITcpPairingService> _mockTcpPairingService;
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistryService;
     private readonly Mock<IDeviceStatusCacheService> _mockDeviceStatusCacheService;
+    private readonly Mock<IDistributionService> _mockDistributionService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -62,6 +63,7 @@ public class TeacherPortalHubTests
         _mockTcpPairingService = new Mock<ITcpPairingService>();
         _mockDeviceRegistryService = new Mock<IDeviceRegistryService>();
         _mockDeviceStatusCacheService = new Mock<IDeviceStatusCacheService>();
+        _mockDistributionService = new Mock<IDistributionService>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -81,7 +83,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object);
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object);
     }
 
     #region Constructor Tests
@@ -107,7 +110,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -131,7 +135,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -155,7 +160,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -179,7 +185,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -203,7 +210,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -227,7 +235,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -251,7 +260,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -275,7 +285,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -299,7 +310,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -323,7 +335,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -347,7 +360,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -371,7 +385,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -395,7 +410,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -419,7 +435,8 @@ public class TeacherPortalHubTests
             _mockUdpBroadcastService.Object,
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object));
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     #endregion

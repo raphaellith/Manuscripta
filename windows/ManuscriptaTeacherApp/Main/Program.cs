@@ -44,6 +44,7 @@ builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
 builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
+builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
 // NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.

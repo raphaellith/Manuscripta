@@ -35,6 +35,7 @@ public class TeacherPortalHub : Hub
     private readonly ITcpPairingService _tcpPairingService;
     private readonly IDeviceRegistryService _deviceRegistryService;
     private readonly IDeviceStatusCacheService _deviceStatusCacheService;
+    private readonly IDistributionService _distributionService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -54,7 +55,8 @@ public class TeacherPortalHub : Hub
         IUdpBroadcastService udpBroadcastService,
         ITcpPairingService tcpPairingService,
         IDeviceRegistryService deviceRegistryService,
-        IDeviceStatusCacheService deviceStatusCacheService)
+        IDeviceStatusCacheService deviceStatusCacheService,
+        IDistributionService distributionService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -74,6 +76,7 @@ public class TeacherPortalHub : Hub
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
         _deviceStatusCacheService = deviceStatusCacheService ?? throw new ArgumentNullException(nameof(deviceStatusCacheService));
+        _distributionService = distributionService ?? throw new ArgumentNullException(nameof(distributionService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -539,7 +542,13 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task DeployMaterial(Guid materialId, List<Guid> deviceIds)
     {
-        // TODO: Add material and questions to distribution bundle before sending
+        // Step 1: Assign material to each target device per Session Interaction §3
+        foreach (var deviceId in deviceIds)
+        {
+            await _distributionService.AssignMaterialsToDeviceAsync(deviceId, new[] { materialId });
+        }
+
+        // Step 2: Send TCP trigger to each device
         foreach (var deviceId in deviceIds)
         {
             await _tcpPairingService.SendDistributeMaterialAsync(deviceId.ToString());
