@@ -95,9 +95,79 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (b) `Transcript` (string): A textual transcript of the source document contents.
 
+    (c) `EmbeddingStatus` (enum EmbeddingStatus, optional): Tracks the indexing state of the document for semantic retrieval. If not set, the document has not been submitted for indexing. Possible values are:
+
+        (i) `PENDING` — The document is queued for indexing or indexing is in progress.
+
+        (ii) `INDEXED` — The document has been successfully indexed and is available for semantic retrieval.
+
+        (iii) `FAILED` — The indexing process failed. The document is not available for semantic retrieval.
+
 (2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
+
+(3) A source document which does not contain the `EmbeddingStatus` field shall be treated as not available for semantic retrieval. The frontend may offer an option to initiate indexing.
+
+
+### Section 3AB - Generation Request
+
+(1) A generation request is represented by a `GenerationRequest` class. This class must contain the following attributes:
+
+    (a) `Description` (string) — The teacher's description of desired content.
+
+    (b) `ReadingAge` (int) — Target reading age.
+
+    (c) `ActualAge` (int) — Actual age of the audience.
+
+    (d) `DurationInMinutes` (int) — Approximate completion time.
+
+    (e) `UnitCollectionId` (Guid) — The unit collection containing source documents.
+
+(2) In addition to the mandatory fields in (1), a `GenerationRequest` object may have the following optional fields:
+
+    (a) `SourceDocumentIds` (List<Guid>) — If provided, limits semantic retrieval to the specified source documents. If null or empty, all indexed documents in the unit collection are searched.
+
+
+### Section 3AC - Generation Result
+
+(1) A generation result is represented by a `GenerationResult` class. This class must contain the following attributes:
+
+    (a) `Content` (string) — The generated or modified content.
+
+(2) In addition to the mandatory fields in (1), a `GenerationResult` object may have the following optional fields:
+
+    (a) `Warnings` (List<ValidationWarning>) — A list of validation issues that could not be automatically resolved. See §3AD.
+
+
+### Section 3AD - Validation Warning
+
+(1) A validation warning is represented by a `ValidationWarning` class. This class must contain the following attributes:
+
+    (a) `ErrorType` (string) — A code identifying the error type (e.g., `MALFORMED_MARKER`, `UNCLOSED_BLOCK`, `INVALID_REFERENCE`).
+
+    (b) `Description` (string) — A human-readable description of the issue.
+
+(2) In addition to the mandatory fields in (1), a `ValidationWarning` object may have the following optional fields:
+
+    (a) `LineNumber` (int) — The line number where the issue occurs.
+
+
+### Section 3AE — Feedback
+
+(1) A feedback is represented by a `FeedbackEntity` class. In addition to those specified by Section 2F of `Validation Rules.md`, this class shall contain the following field —
+
+    (a) `Status` (enum FeedbackStatus). Possible values are:
+
+        (i) `PROVISIONAL` — Feedback exists but has not been approved by the teacher. Feedback in this status shall not be dispatched.
+
+        (ii) `READY` — Feedback has been approved and is awaiting dispatch or acknowledgement.
+
+        (iii) `DELIVERED` — Feedback has been dispatched and acknowledged by the student device.
+
+    The default value is `PROVISIONAL`.
+
+(2) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
 ## Section 3B - Attachment

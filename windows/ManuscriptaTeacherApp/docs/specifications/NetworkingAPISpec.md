@@ -87,21 +87,41 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) [DELETED]
         
-    (h) Methods for creating feedback.
+    (h) Methods for feedback.
 
         (i) `Task CreateFeedback(FeedbackEntity newFeedbackEntity)`: Receives data for a new feedback entity (without an assigned UUID), and creates the entity with an assigned UUID.
 
-    (i) Methods for sending AI assistant prompts. **To be confirmed.**
+        (ii) `Task ApproveFeedback(Guid feedbackId)`: Approves the specified feedback and triggers dispatch to the student device. See GenAISpec §3DA(2).
+
+        (iii) `Task RetryFeedbackDispatch(Guid feedbackId)`: Retries dispatch of feedback in `READY` status.
+
+    (i) Methods for GenAI functionalities, as specified in GenAISpec.
+
+        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B.
+
+        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B.
+
+        (iii) `Task<string> GenerateFeedback(Guid questionId, Guid responseId)`: Generates feedback for a student response. See GenAISpec §3D(9).
+
+        (iv) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)`: Modifies selected content based on the instruction. Returns `GenerationResult`. See GenAISpec §3C.
+
+        (v) `Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)`: Returns the embedding status of a source document. See GenAISpec §3E.
+
+        (vi) `Task QueueForAiGeneration(Guid responseId)`: Adds or re-adds the specified response to the AI feedback generation queue. See GenAISpec §3D(5).
+
+        (vii) `Task RetryEmbedding(Guid sourceDocumentId)`: Re-queues a source document with `FAILED` status for indexing. See GenAISpec §3A(7).
 
     (j) Methods for updating app settings. **To be confirmed.**
 
-    (k) Creation, retrieval and deletion methods for source documents.
+    (k) CRUD methods for source documents.
 
-        (i) `Task CreateSourceDocument(SourceDocumentEntity newSourceDocumentEntity)`: Receives data for a new source document entity (without an assigned UUID), and creates the entity with an assigned UUID.
+        (i) `Task CreateSourceDocument(SourceDocumentEntity newSourceDocumentEntity)`: Receives data for a new source document entity (without an assigned UUID), and creates the entity with an assigned UUID. Triggers embedding indexing per GenAISpec §3A.
 
         (ii) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`: Retrieves all source document entities.
 
-        (iii) `Task DeleteSourceDocument(Guid id)`: Deletes a source document entity, identified by its UUID.
+        (iii) `Task UpdateSourceDocument(SourceDocumentEntity updated)`: Updates a source document entity, including its `Transcript` field. Triggers re-indexing per GenAISpec §3A(3).
+
+        (iv) `Task DeleteSourceDocument(Guid id)`: Deletes a source document entity, identified by its UUID. Removes associated embeddings per GenAISpec §3A(4).
     
     (l) Creation, retrieval and deletion methods for attachments.
 
@@ -128,9 +148,17 @@ For a description of how these server methods and client handlers are expected t
         
         (i) `CreateResponse`, with parameter `ResponseEntity` (ResponseEntity): Creates a response entity.
 
-    (c) Handlers for retrieving AI assistant responses. **To be confirmed.**
+    (c) Handlers for AI feedback notifications.
 
-    (d) Handlers for alerts.
+        (i) `OnFeedbackGenerationFailed`, with parameters `responseId` (Guid) and `error` (string): Notifies the frontend that AI feedback generation has failed for the specified response. See GenAISpec §3D(7)(b).
+
+        (ii) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
+
+    (d) Handlers for embedding notifications.
+
+        (i) `OnEmbeddingFailed`, with parameters `sourceDocumentId` (Guid) and `error` (string): Notifies the frontend that source document indexing has failed after all retries. See GenAISpec §3A(6)(b)(ii).
+
+    (e) Handlers for alerts.
 
         (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand. The backend shall invoke this handler on receipt of a TCP `HAND_RAISED` message from the device.
 
@@ -141,3 +169,5 @@ For a description of how these server methods and client handlers are expected t
         (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
 
         (v) `FeedbackDeliveryFailed`, with parameter `deviceId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification.
+
+    (f) Handlers for retrieving AI assistant responses. **To be confirmed.**
