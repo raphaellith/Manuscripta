@@ -332,6 +332,15 @@ For a list of all server method and client handlers to be implemented for commun
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
 
 
+(4) **Device Renaming**
+
+    The frontend shall provide a means for the user to rename a paired device —
+
+    (a) by calling `Task UpdatePairedDevice(PairedDeviceEntity entity)` as defined in the Networking API Specification;
+
+    (b) the new name shall be persisted on the Windows device and shall not affect the Android device.
+
+
 ## Section 5C — Device Control
 
 (1) **Device Selection**

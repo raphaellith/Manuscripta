@@ -42,22 +42,28 @@ public class PairingController : ControllerBase
             return BadRequest(new { error = "DeviceId is required" });
         }
 
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            _logger.LogWarning("Received pairing request with missing device name");
+            return BadRequest(new { error = "Name is required" });
+        }
+
         if (!Guid.TryParse(request.DeviceId, out var deviceId))
         {
             _logger.LogWarning("Received pairing request with invalid device ID format: {DeviceId}", request.DeviceId);
             return BadRequest(new { error = "DeviceId must be a valid GUID" });
         }
 
-        _logger.LogInformation("Received HTTP pairing request for device {DeviceId}", deviceId);
+        _logger.LogInformation("Received HTTP pairing request for device {DeviceId} ({Name})", deviceId, request.Name);
 
         try
         {
             // Register the device - per Pairing Process §2(4)
             // RegisterDeviceAsync handles the check-and-register atomically at the database level
             // using a try-catch for DbUpdateException to handle race conditions
-            var isNewDevice = await _deviceRegistry.RegisterDeviceAsync(deviceId);
+            var pairedDevice = await _deviceRegistry.RegisterDeviceAsync(deviceId, request.Name);
             
-            if (!isNewDevice)
+            if (pairedDevice == null)
             {
                 // Device already existed - per API Contract §2.4, return 409 Conflict
                 _logger.LogInformation("Device {DeviceId} is already paired", deviceId);

@@ -16,7 +16,7 @@ builder.Services.AddDbContext<MainDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
 
 // Register pairing and device services
-builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
+builder.Services.AddSingleton<IDeviceRegistryService, DeviceRegistryService>();
 builder.Services.AddScoped<DeviceIdValidator>();
 
 // Register repository services for hub
@@ -43,12 +43,14 @@ builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
 builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
+builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
 
 // NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
+builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();

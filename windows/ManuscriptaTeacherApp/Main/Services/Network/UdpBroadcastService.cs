@@ -64,20 +64,19 @@ public class UdpBroadcastService : IUdpBroadcastService, IDisposable
 
         try
         {
-            await BroadcastLoopAsync(_cts.Token);
+            // Run broadcast loop in background so we don't block the caller (Hub)
+            _ = Task.Run(() => BroadcastLoopAsync(_cts.Token), _cts.Token);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("UDP broadcasting stopped");
+            _isBroadcasting = false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during UDP broadcasting");
-            throw;
-        }
-        finally
-        {
             _isBroadcasting = false;
+            throw;
         }
     }
 

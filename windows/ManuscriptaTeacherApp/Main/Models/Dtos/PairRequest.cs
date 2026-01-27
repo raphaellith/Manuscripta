@@ -14,4 +14,11 @@ public class PairRequest
     /// </summary>
     [Required]
     public string DeviceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The user-friendly name of the device, provided by the user.
+    /// Per Pairing Process Specification s2(2)(c).
+    /// </summary>
+    [Required]
+    public string Name { get; set; } = string.Empty;
 }

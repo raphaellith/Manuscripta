@@ -5,6 +5,7 @@ using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services.Repositories;
+using Main.Services.Network;
 
 namespace Main.Services.Hubs;
 
@@ -28,6 +29,12 @@ public class TeacherPortalHub : Hub
     private readonly IQuestionRepository _questionRepository;
     private readonly ISourceDocumentRepository _sourceDocumentRepository;
     private readonly IAttachmentRepository _attachmentRepository;
+    
+    // Classroom dependencies - NetworkingAPISpec §1(1)(e)-(g)
+    private readonly IUdpBroadcastService _udpBroadcastService;
+    private readonly ITcpPairingService _tcpPairingService;
+    private readonly IDeviceRegistryService _deviceRegistryService;
+    private readonly IDeviceStatusCacheService _deviceStatusCacheService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -43,7 +50,11 @@ public class TeacherPortalHub : Hub
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository,
         ISourceDocumentRepository sourceDocumentRepository,
-        IAttachmentRepository attachmentRepository)
+        IAttachmentRepository attachmentRepository,
+        IUdpBroadcastService udpBroadcastService,
+        ITcpPairingService tcpPairingService,
+        IDeviceRegistryService deviceRegistryService,
+        IDeviceStatusCacheService deviceStatusCacheService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -59,6 +70,10 @@ public class TeacherPortalHub : Hub
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
+        _udpBroadcastService = udpBroadcastService ?? throw new ArgumentNullException(nameof(udpBroadcastService));
+        _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
+        _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
+        _deviceStatusCacheService = deviceStatusCacheService ?? throw new ArgumentNullException(nameof(deviceStatusCacheService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -444,6 +459,114 @@ public class TeacherPortalHub : Hub
     public async Task DeleteAttachment(Guid id)
     {
         await _attachmentService.DeleteAsync(id);
+    }
+
+    #endregion
+
+    #region Classroom Methods - NetworkingAPISpec §1(1)(e)-(g)
+
+    /// <summary>
+    /// Initiates device pairing by starting UDP broadcast and TCP listener.
+    /// Per Pairing Process §2(1): Windows broadcasts UDP discovery message.
+    /// Per Pairing Process §2(2)(b): Android responds via TCP PAIRING_REQUEST.
+    /// </summary>
+    public async Task PairDevices()
+    {
+        // 1. Start UDP broadcast per Pairing Process §2(1)
+        await _udpBroadcastService.StartBroadcastingAsync(CancellationToken.None);
+        
+        // 2. Start TCP listener for PAIRING_REQUEST per Pairing Process §2(2)(b)
+        await _tcpPairingService.StartListeningAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Stops the pairing process by stopping both UDP broadcast and TCP listener.
+    /// </summary>
+    public Task StopPairing()
+    {
+        _udpBroadcastService.StopBroadcasting();
+        _tcpPairingService.StopListening();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Retrieves all paired devices.
+    /// Per NetworkingAPISpec §1(1)(e)(ii).
+    /// </summary>
+    public async Task<List<PairedDeviceEntity>> GetAllPairedDevices()
+    {
+        var devices = await _deviceRegistryService.GetAllAsync();
+        return devices.ToList();
+    }
+
+    /// <summary>
+    /// Retrieves all device statuses.
+    /// Per NetworkingAPISpec §1(1)(e)(iii).
+    /// </summary>
+    public Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()
+    {
+        var statuses = _deviceStatusCacheService.GetAllStatuses();
+        return Task.FromResult(statuses.ToList());
+    }
+
+    /// <summary>
+    /// Locks the specified devices.
+    /// Per NetworkingAPISpec §1(1)(f)(i).
+    /// </summary>
+    public async Task LockDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendLockScreenAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Unlocks the specified devices.
+    /// Per NetworkingAPISpec §1(1)(f)(ii).
+    /// </summary>
+    public async Task UnlockDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendUnlockScreenAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Deploys a material to the specified devices.
+    /// Per NetworkingAPISpec §1(1)(g)(i).
+    /// </summary>
+    public async Task DeployMaterial(Guid materialId, List<Guid> deviceIds)
+    {
+        // TODO: Add material and questions to distribution bundle before sending
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendDistributeMaterialAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Unpairs the specified devices.
+    /// Per FrontendWorkflowSpecifications §5A(5).
+    /// </summary>
+    public async Task UnpairDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendUnpairAsync(deviceId.ToString());
+            // Registry removal is handled by TcpPairingService.SendUnpairAsync per Pairing Process §3(2)
+            _deviceStatusCacheService.RemoveDevice(deviceId);
+        }
+    }
+
+    /// <summary>
+    /// Updates a paired device entity (e.g., for renaming).
+    /// Per FrontendWorkflowSpec §5B(4).
+    /// </summary>
+    public async Task UpdatePairedDevice(PairedDeviceEntity entity)
+    {
+        await _deviceRegistryService.UpdateAsync(entity);
     }
 
     #endregion
