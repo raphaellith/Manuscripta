@@ -42,7 +42,7 @@ const createWindow = (): void => {
           "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
           "font-src 'self' https://fonts.gstatic.com data:; " +
           "img-src 'self' data: blob:; " +
-          "connect-src 'self' http://localhost:5910 ws://localhost:5910 https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com;"
+          "connect-src 'self' http://localhost:5910 ws://localhost:5910 https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https: http: blob:;"
         ]
       }
     });
@@ -133,6 +133,15 @@ ipcMain.handle('delete-attachment-file', async (_event, uuid: string, extension:
     fsSync.unlinkSync(filePath);
   }
   return true;
+});
+
+// Save attachment from base64 data (for clipboard paste per §4C(4)(d)(ii))
+ipcMain.handle('save-attachment-from-base64', async (_event, base64Data: string, uuid: string, extension: string) => {
+  ensureAttachmentsDir();
+  const destPath = pathModule.join(getAttachmentsDir(), `${uuid}.${extension}`);
+  const buffer = Buffer.from(base64Data, 'base64');
+  fsSync.writeFileSync(destPath, buffer);
+  return destPath;
 });
 
 // In this file you can include the rest of your app's specific main process
