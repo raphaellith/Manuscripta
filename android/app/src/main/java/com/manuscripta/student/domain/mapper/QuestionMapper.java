@@ -191,7 +191,9 @@ public final class QuestionMapper {
         }
         try {
             String[] options = GSON.fromJson(json, String[].class);
-            return options != null ? Arrays.asList(options) : Collections.emptyList();
+            return options != null
+                    ? new java.util.ArrayList<>(Arrays.asList(options))
+                    : Collections.emptyList();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
             return Collections.emptyList();

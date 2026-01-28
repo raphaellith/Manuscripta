@@ -192,7 +192,9 @@ public final class MaterialMapper {
         }
         try {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
-            return terms != null ? java.util.Arrays.asList(terms) : java.util.Collections.emptyList();
+            return terms != null
+                    ? new java.util.ArrayList<>(java.util.Arrays.asList(terms))
+                    : java.util.Collections.emptyList();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
             return java.util.Collections.emptyList();
