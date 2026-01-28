@@ -1,0 +1,117 @@
+using Main.Models.Entities;
+using Main.Models.Entities.Questions;
+using Main.Models.Entities.Responses;
+using Main.Models.Enums;
+using Main.Services.Hubs;
+using Microsoft.AspNetCore.SignalR;
+
+namespace Main.Services.GenAI;
+
+/// <summary>
+/// Handles AI-powered feedback generation for student responses.
+/// See GenAISpec.md §3D.
+/// </summary>
+public class FeedbackGenerationService
+{
+    private readonly OllamaClientService _ollamaClient;
+    private readonly FeedbackQueueService _queueService;
+    private readonly IHubContext<TeacherPortalHub> _hubContext;
+    private const string FeedbackModel = "granite4";
+
+    public FeedbackGenerationService(
+        OllamaClientService ollamaClient,
+        FeedbackQueueService queueService,
+        IHubContext<TeacherPortalHub> hubContext)
+    {
+        _ollamaClient = ollamaClient;
+        _queueService = queueService;
+        _hubContext = hubContext;
+    }
+
+    /// <summary>
+    /// Checks if a response should be queued for AI feedback generation.
+    /// See GenAISpec.md §3D(1).
+    /// </summary>
+    public bool ShouldGenerateFeedback(QuestionEntity question)
+    {
+        return question.QuestionType == QuestionType.WRITTEN_ANSWER &&
+               !string.IsNullOrEmpty(question.MarkScheme);
+    }
+
+    /// <summary>
+    /// Generates AI feedback for a student response.
+    /// See GenAISpec.md §3D(9).
+    /// </summary>
+    public async Task<FeedbackEntity> GenerateFeedbackAsync(
+        QuestionEntity question,
+        ResponseEntity response)
+    {
+        try
+        {
+            // Ensure model is ready
+            await _ollamaClient.EnsureModelReadyAsync(FeedbackModel);
+
+            // §3D(9)(b): Construct prompt
+            var prompt = ConstructFeedbackPrompt(question, response);
+
+            // §3D(9)(c): Invoke model
+            var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
+
+            // §3D(9)(d): Create feedback entity with PROVISIONAL status
+            var feedback = new FeedbackEntity
+            {
+                Id = Guid.NewGuid(),
+                ResponseId = response.Id,
+                FeedbackText = feedbackText,
+                Status = FeedbackStatus.PROVISIONAL,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Remove from queue on success
+            _queueService.RemoveFromQueue(response.Id);
+
+            return feedback;
+        }
+        catch (Exception ex)
+        {
+            // §3D(7): Remove from queue on failure
+            _queueService.RemoveFromQueue(response.Id);
+            
+            // §3D(7)(b): Notify frontend via SignalR OnFeedbackGenerationFailed
+            _ = _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", response.Id, ex.Message);
+            throw new InvalidOperationException($"Failed to generate feedback for response {response.Id}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Constructs the feedback generation prompt.
+    /// See GenAISpec.md §3D(9)(b).
+    /// </summary>
+    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
+    {
+        // §3D(9)(b)(iii): Include maximum score if present
+        var maxScoreSection = question.MaxScore.HasValue
+            ? $"Maximum Score: {question.MaxScore.Value}\n\n"
+            : "";
+
+        return $@"Generate constructive feedback for a student's response to the following question.
+
+Question:
+{question.QuestionText}
+
+Mark Scheme:
+{question.MarkScheme}
+
+{maxScoreSection}Student's Response:
+{response.ResponseText}
+
+Provide feedback that includes:
+1. A score justification explaining how well the response meets the mark scheme
+2. Specific strengths in the response
+3. Improvement suggestions for areas that could be enhanced
+
+Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
+
+Feedback:";
+    }
+}

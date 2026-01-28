@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using ChromaDB.Client;
 
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+using Main.Services.GenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,23 @@ builder.Services.Configure<NetworkSettings>(
 
 builder.Services.AddDbContext<MainDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
+
+// Configure ChromaDB for embedded mode
+// See GenAISpec.md §2(3)
+var vectorStorePath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+    "ManuscriptaTeacherApp",
+    "VectorStore"
+);
+Directory.CreateDirectory(vectorStorePath);
+
+builder.Services.AddSingleton(new ChromaConfigurationOptions());
+builder.Services.AddSingleton<HttpClient>();
+builder.Services.AddSingleton<ChromaClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new ChromaClient(new ChromaConfigurationOptions(), httpClient);
+});
 
 // Register pairing and device services
 builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
@@ -38,6 +57,17 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+
+// Register GenAI services
+// See GenAISpec.md §3(1) and §3(2)
+builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddScoped<DocumentEmbeddingService>();
+builder.Services.AddScoped<MaterialGenerationService>();
+builder.Services.AddScoped<ContentModificationService>();
+builder.Services.AddScoped<FeedbackGenerationService>();
+builder.Services.AddSingleton<FeedbackQueueService>();
+builder.Services.AddScoped<EmbeddingStatusService>();
+builder.Services.AddScoped<OutputValidationService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
@@ -87,6 +117,10 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<MainDbContext>();
     context.Database.EnsureCreated();
     // DbInitializer.Initialize(context);
+
+    // Initialize embedding startup handler per GenAISpec.md §3A(8)
+    var embeddingService = services.GetRequiredService<Main.Services.GenAI.DocumentEmbeddingService>();
+    await embeddingService.InitializeFailedEmbeddingsAsync();
 
     // Orphan file removal per PersistenceAndCascadingRules §3
     // Delete attachment files not linked to any entity

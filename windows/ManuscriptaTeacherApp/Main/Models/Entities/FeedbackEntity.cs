@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
@@ -32,6 +33,27 @@ public class FeedbackEntity
     /// </summary>
     public int? Marks { get; set; }
 
+    /// <summary>
+    /// Status of the feedback (PROVISIONAL, READY, DELIVERED).
+    /// Per AdditionalValidationRules §3AE(1)(a).
+    /// </summary>
+    [Required]
+    public FeedbackStatus Status { get; set; } = FeedbackStatus.PROVISIONAL;
+
+    /// <summary>
+    /// Timestamp when feedback was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Convenience property for the feedback text.
+    /// </summary>
+    public string? FeedbackText
+    {
+        get => Text;
+        set => Text = value;
+    }
+
     public FeedbackEntity() { }
 
     public FeedbackEntity(Guid id, Guid responseId, string? text = null, int? marks = null)
@@ -44,5 +66,7 @@ public class FeedbackEntity
         ResponseId = responseId;
         Text = text;
         Marks = marks;
+        Status = FeedbackStatus.PROVISIONAL;
+        CreatedAt = DateTime.UtcNow;
     }
 }
