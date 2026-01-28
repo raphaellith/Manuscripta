@@ -1,9 +1,12 @@
 package com.manuscripta.student.network.dto;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,12 +35,13 @@ public final class ContentParser {
 
     /**
      * Extracts all attachment references from the given content string.
+     * Accepts null or empty content and returns an empty list in such cases.
      *
-     * @param content The content string to parse (may contain attachment references)
+     * @param content The content string to parse (may be null or contain attachment references)
      * @return A list of attachment IDs found in the content (never null, may be empty)
      */
     @NonNull
-    public static List<String> extractAttachmentReferences(@NonNull String content) {
+    public static List<String> extractAttachmentReferences(@Nullable String content) {
         List<String> attachmentIds = new ArrayList<>();
 
         if (content == null || content.isEmpty()) {
@@ -57,11 +61,12 @@ public final class ContentParser {
 
     /**
      * Checks if the content contains any attachment references.
+     * Accepts null or empty content and returns false in such cases.
      *
-     * @param content The content string to check
+     * @param content The content string to check (may be null)
      * @return true if the content contains at least one attachment reference
      */
-    public static boolean hasAttachmentReferences(@NonNull String content) {
+    public static boolean hasAttachmentReferences(@Nullable String content) {
         if (content == null || content.isEmpty()) {
             return false;
         }
@@ -70,23 +75,25 @@ public final class ContentParser {
 
     /**
      * Counts the number of attachment references in the content.
+     * Accepts null or empty content and returns 0 in such cases.
      *
-     * @param content The content string to parse
+     * @param content The content string to parse (may be null)
      * @return The count of attachment references found
      */
-    public static int countAttachmentReferences(@NonNull String content) {
+    public static int countAttachmentReferences(@Nullable String content) {
         return extractAttachmentReferences(content).size();
     }
 
     /**
      * Builds a full attachment URL from an attachment ID and base URL.
+     * If baseUrl is null or empty, returns a relative path.
      *
-     * @param baseUrl      The base URL of the server (e.g., "http://192.168.1.100:8080")
+     * @param baseUrl      The base URL of the server (e.g., "http://192.168.1.100:8080"), may be null
      * @param attachmentId The attachment ID
      * @return The full attachment URL
      */
     @NonNull
-    public static String buildAttachmentUrl(@NonNull String baseUrl, @NonNull String attachmentId) {
+    public static String buildAttachmentUrl(@Nullable String baseUrl, @NonNull String attachmentId) {
         if (baseUrl == null || baseUrl.isEmpty()) {
             return "/attachments/" + attachmentId;
         }
@@ -102,21 +109,16 @@ public final class ContentParser {
     /**
      * Extracts distinct attachment references from the given content string.
      * Unlike {@link #extractAttachmentReferences(String)}, this method returns unique IDs only.
+     * Uses LinkedHashSet for O(1) lookup while preserving insertion order.
+     * Accepts null or empty content and returns an empty list in such cases.
      *
-     * @param content The content string to parse
+     * @param content The content string to parse (may be null)
      * @return A list of unique attachment IDs found in the content
      */
     @NonNull
-    public static List<String> extractDistinctAttachmentReferences(@NonNull String content) {
+    public static List<String> extractDistinctAttachmentReferences(@Nullable String content) {
         List<String> allRefs = extractAttachmentReferences(content);
-        List<String> distinctRefs = new ArrayList<>();
-
-        for (String ref : allRefs) {
-            if (!distinctRefs.contains(ref)) {
-                distinctRefs.add(ref);
-            }
-        }
-
-        return distinctRefs;
+        Set<String> distinctSet = new LinkedHashSet<>(allRefs);
+        return new ArrayList<>(distinctSet);
     }
 }

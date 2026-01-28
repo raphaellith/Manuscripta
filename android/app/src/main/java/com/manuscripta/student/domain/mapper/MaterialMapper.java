@@ -1,8 +1,11 @@
 package com.manuscripta.student.domain.mapper;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
@@ -21,6 +24,13 @@ import java.util.List;
  */
 public final class MaterialMapper {
 
+    /** Tag for logging. */
+    private static final String TAG = "MaterialMapper";
+
+    /**
+     * Gson instance for JSON serialization/deserialization of vocabulary terms.
+     * Uses default configuration which serializes all fields and handles nulls appropriately.
+     */
     private static final Gson GSON = new Gson();
 
     /**
@@ -171,9 +181,10 @@ public final class MaterialMapper {
 
     /**
      * Converts a JSON array string to a list of VocabularyTermDto.
+     * Invalid JSON will result in an empty list being returned, with the error logged.
      *
      * @param json The JSON array string
-     * @return List of VocabularyTermDto
+     * @return List of VocabularyTermDto, or empty list if parsing fails
      */
     @NonNull
     private static List<VocabularyTermDto> convertJsonToVocabularyTerms(String json) {
@@ -183,7 +194,8 @@ public final class MaterialMapper {
         try {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
             return java.util.Arrays.asList(terms);
-        } catch (Exception e) {
+        } catch (JsonSyntaxException e) {
+            Log.w(TAG, "Failed to parse vocabulary terms JSON: " + e.getMessage());
             return java.util.Collections.emptyList();
         }
     }
