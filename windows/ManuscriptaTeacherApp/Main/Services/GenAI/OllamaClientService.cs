@@ -198,4 +198,37 @@ public class OllamaClientService
             await PullModelAsync(modelName);
         }
     }
+
+    /// <summary>
+    /// Checks if the system has sufficient resources to generate with a given model.
+    /// See GenAISpec.md §1(6) - detection of insufficient resources.
+    /// </summary>
+    public async Task<bool> CanGenerateWithModelAsync(string modelName)
+    {
+        try
+        {
+            // Attempt a minimal test generation to detect resource constraints
+            var testPrompt = "Test";
+            var response = await _httpClient.PostAsJsonAsync("/api/chat", new
+            {
+                model = modelName,
+                messages = new[] { new { role = "user", content = testPrompt } },
+                stream = false
+            });
+
+            // If we get a 507 (Insufficient Storage) or 503 (Service Unavailable), resources insufficient
+            if (response.StatusCode == System.Net.HttpStatusCode.InsufficientStorage ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                return false;
+            }
+
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            // If we can't reach the API, resources are insufficient
+            return false;
+        }
+    }
 }

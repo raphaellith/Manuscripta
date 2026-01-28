@@ -57,9 +57,17 @@ public class MaterialGenerationService
         try
         {
             await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
+            
+            // §1(6): Check for insufficient resources per GenAISpec §1(4)
+            var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
+            if (!canUsePrimary)
+            {
+                throw new InvalidOperationException("Insufficient resources for primary model");
+            }
         }
         catch
         {
+            // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
             modelToUse = FallbackModel;
             useFallback = true;
             await _ollamaClient.EnsureModelReadyAsync(FallbackModel);

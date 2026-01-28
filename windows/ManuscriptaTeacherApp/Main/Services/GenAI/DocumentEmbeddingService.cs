@@ -1,9 +1,12 @@
 using ChromaDB.Client;
 using ChromaDB.Client.Models;
+using Main.Data;
 using Main.Models.Entities;
 using Main.Models.Enums;
 using Main.Services.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -18,6 +21,8 @@ public class DocumentEmbeddingService
     private readonly ChromaConfigurationOptions _chromaOptions;
     private readonly HttpClient _httpClient;
     private readonly IHubContext<TeacherPortalHub> _hubContext;
+    private readonly MainDbContext _dbContext;
+    private readonly ILogger<DocumentEmbeddingService> _logger;
     private const int ChunkSizeTokens = 512;
     private const int ChunkOverlapTokens = 64;
     private const int MaxEmbeddingRetries = 3;
@@ -27,13 +32,17 @@ public class DocumentEmbeddingService
         ChromaClient chromaClient,
         ChromaConfigurationOptions chromaOptions,
         HttpClient httpClient,
-        IHubContext<TeacherPortalHub> hubContext)
+        IHubContext<TeacherPortalHub> hubContext,
+        MainDbContext dbContext,
+        ILogger<DocumentEmbeddingService> logger)
     {
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
         _chromaOptions = chromaOptions;
         _httpClient = httpClient;
         _hubContext = hubContext;
+        _dbContext = dbContext;
+        _logger = logger;
     }
 
     /// <summary>
@@ -198,9 +207,17 @@ public class DocumentEmbeddingService
     {
         var chunks = new List<string>();
         
-        // Simple sentence-based splitting (approximate tokenization)
-        // In production, use a proper tokenizer
-        var sentences = text.Split(new[] { ". ", "! ", "? " }, StringSplitOptions.RemoveEmptyEntries);
+        // §2(1)(c): Split on sentence boundaries using more robust pattern
+        // This pattern captures sentences ending with . ! or ? while respecting common abbreviations
+        var sentencePattern = new System.Text.RegularExpressions.Regex(
+            @"(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])$",
+            System.Text.RegularExpressions.RegexOptions.Multiline
+        );
+        
+        // Split text into sentences, preserving punctuation
+        var sentences = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?])\s+")
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToArray();
         
         var currentChunk = new List<string>();
         var currentTokenCount = 0;
@@ -208,20 +225,23 @@ public class DocumentEmbeddingService
         foreach (var sentence in sentences)
         {
             // Rough approximation: 1 token ≈ 4 characters
-            var sentenceTokens = sentence.Length / 4;
+            // See §2(1) - approximate tokenization
+            var sentenceTokens = (int)Math.Ceiling(sentence.Length / 4.0);
 
             if (currentTokenCount + sentenceTokens > ChunkSizeTokens && currentChunk.Count > 0)
             {
-                chunks.Add(string.Join(". ", currentChunk) + ".");
+                // §2(1)(a): Create chunk of max 512 tokens
+                chunks.Add(string.Join(" ", currentChunk));
                 
-                // Create overlap by keeping some sentences
+                // §2(1)(b): Create overlap by keeping some sentences from end of previous chunk
                 var overlapSentences = new List<string>();
                 var overlapTokens = 0;
                 
                 for (int i = currentChunk.Count - 1; i >= 0 && overlapTokens < ChunkOverlapTokens; i--)
                 {
                     var s = currentChunk[i];
-                    overlapTokens += s.Length / 4;
+                    var s_tokens = (int)Math.Ceiling(s.Length / 4.0);
+                    overlapTokens += s_tokens;
                     overlapSentences.Insert(0, s);
                 }
                 
@@ -235,7 +255,7 @@ public class DocumentEmbeddingService
 
         if (currentChunk.Count > 0)
         {
-            chunks.Add(string.Join(". ", currentChunk) + ".");
+            chunks.Add(string.Join(" ", currentChunk));
         }
 
         return chunks;
@@ -248,5 +268,47 @@ public class DocumentEmbeddingService
     private async Task<ChromaCollection> GetOrCreateCollectionAsync()
     {
         return await _chromaClient.GetOrCreateCollection("source_documents");
+    }
+
+    /// <summary>
+    /// Identifies failed source documents on application startup.
+    /// See GenAISpec.md §3A(8)(a)-(c).
+    /// </summary>
+    public async Task InitializeFailedEmbeddingsAsync()
+    {
+        try
+        {
+            // §3A(8)(a): Identify all SourceDocumentEntity objects with EmbeddingStatus of FAILED
+            var failedDocuments = await _dbContext.SourceDocuments
+                .Where(d => d.EmbeddingStatus == EmbeddingStatus.FAILED)
+                .ToListAsync();
+
+            if (failedDocuments.Count > 0)
+            {
+                // §3A(8)(b): Do not automatically retry these documents (to avoid repeated failures)
+                _logger.LogWarning(
+                    "Found {Count} source document(s) with FAILED embedding status. " +
+                    "These will not be automatically retried. Teachers may retry manually or delete and re-upload.",
+                    failedDocuments.Count
+                );
+
+                // Log each failed document for monitoring
+                foreach (var doc in failedDocuments)
+                {
+                    _logger.LogWarning(
+                        "Failed source document: {SourceDocumentId} in unit collection {UnitCollectionId}",
+                        doc.Id,
+                        doc.UnitCollectionId
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error during embedding startup initialization"
+            );
+        }
     }
 }

@@ -118,6 +118,10 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
     // DbInitializer.Initialize(context);
 
+    // Initialize embedding startup handler per GenAISpec.md §3A(8)
+    var embeddingService = services.GetRequiredService<Main.Services.GenAI.DocumentEmbeddingService>();
+    await embeddingService.InitializeFailedEmbeddingsAsync();
+
     // Orphan file removal per PersistenceAndCascadingRules §3
     // Delete attachment files not linked to any entity
     var fileService = services.GetRequiredService<IFileService>();
