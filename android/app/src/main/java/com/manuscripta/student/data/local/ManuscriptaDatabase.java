@@ -3,11 +3,12 @@ package com.manuscripta.student.data.local;
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
 
+import com.manuscripta.student.data.model.DeviceStatusEntity;
+import com.manuscripta.student.data.model.FeedbackEntity;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.QuestionEntity;
-import com.manuscripta.student.data.model.SessionEntity;
 import com.manuscripta.student.data.model.ResponseEntity;
-import com.manuscripta.student.data.model.DeviceStatusEntity;
+import com.manuscripta.student.data.model.SessionEntity;
 
 /**
  * Room database for Manuscripta application.
@@ -19,9 +20,10 @@ import com.manuscripta.student.data.model.DeviceStatusEntity;
         QuestionEntity.class,
         ResponseEntity.class,
         SessionEntity.class,
-        DeviceStatusEntity.class
+        DeviceStatusEntity.class,
+        FeedbackEntity.class
     },
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 public abstract class ManuscriptaDatabase extends RoomDatabase {
@@ -60,4 +62,11 @@ public abstract class ManuscriptaDatabase extends RoomDatabase {
      * @return DeviceStatusDao instance
      */
     public abstract DeviceStatusDao deviceStatusDao();
+
+    /**
+     * Get the Feedback DAO for database operations on feedback.
+     *
+     * @return FeedbackDao instance
+     */
+    public abstract FeedbackDao feedbackDao();
 }
