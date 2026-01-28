@@ -1,5 +1,7 @@
 package com.manuscripta.student.network;
 
+import androidx.annotation.NonNull;
+
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
@@ -18,5 +20,5 @@ public interface ApiService {
      * @return Call wrapping the FeedbackResponse
      */
     @GET("/feedback/{deviceId}")
-    Call<FeedbackResponse> getFeedback(@Path("deviceId") String deviceId);
+    Call<FeedbackResponse> getFeedback(@NonNull @Path("deviceId") String deviceId);
 }

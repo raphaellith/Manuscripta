@@ -1,5 +1,7 @@
 package com.manuscripta.student.data.repository;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.manuscripta.student.data.local.FeedbackDao;
@@ -28,6 +30,8 @@ import retrofit2.Response;
 @Singleton
 public class FeedbackRepositoryImpl implements FeedbackRepository {
 
+    private static final String TAG = "FeedbackRepositoryImpl";
+
     private final FeedbackDao feedbackDao;
     private final ApiService apiService;
     private final TcpSocketManager tcpSocketManager;
@@ -50,12 +54,17 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
     @Override
     public void fetchAndStoreFeedback(@NonNull String deviceId) throws Exception {
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be null or empty");
+        }
+
         // Fetch feedback from server via HTTP
         Response<FeedbackResponse> response = apiService.getFeedback(deviceId).execute();
 
         if (!response.isSuccessful()) {
             if (response.code() == 404) {
-                // No feedback available - this is not an error
+                // No feedback available - this is not an error, send ACK
+                sendAcknowledgement(deviceId);
                 return;
             }
             throw new IOException("Failed to fetch feedback: HTTP " + response.code());
@@ -63,19 +72,28 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
         FeedbackResponse feedbackResponse = response.body();
         if (feedbackResponse == null || feedbackResponse.getFeedback() == null) {
+            sendAcknowledgement(deviceId);
             return;
         }
 
-        // Convert DTOs to entities and store
+        // Convert DTOs to entities via domain model for validation
         List<FeedbackEntity> entities = new ArrayList<>();
         for (FeedbackDto dto : feedbackResponse.getFeedback()) {
-            FeedbackEntity entity = new FeedbackEntity(
-                    dto.getId(),
-                    dto.getResponseId(),
-                    dto.getText(),
-                    dto.getMarks()
-            );
-            entities.add(entity);
+            try {
+                // Validate through domain model
+                Feedback domainFeedback = new Feedback(
+                        dto.getId(),
+                        dto.getResponseId(),
+                        dto.getText(),
+                        dto.getMarks()
+                );
+                // Convert to entity for persistence
+                FeedbackEntity entity = FeedbackMapper.toEntity(domainFeedback);
+                entities.add(entity);
+            } catch (IllegalArgumentException e) {
+                // Log and skip invalid feedback entries
+                Log.w(TAG, "Skipping invalid feedback: " + e.getMessage());
+            }
         }
 
         if (!entities.isEmpty()) {
@@ -83,6 +101,15 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
         }
 
         // Send acknowledgement via TCP
+        sendAcknowledgement(deviceId);
+    }
+
+    /**
+     * Sends a FEEDBACK_ACK message to the server.
+     *
+     * @param deviceId The device ID to include in the acknowledgement
+     */
+    private void sendAcknowledgement(@NonNull String deviceId) {
         FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
         tcpSocketManager.sendMessage(ackMessage);
     }

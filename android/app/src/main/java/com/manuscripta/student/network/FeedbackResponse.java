@@ -12,7 +12,7 @@ import java.util.List;
  * <pre>
  * {
  *   "feedback": [
- *     // Array of FeedbackEntity objects
+ *     // Array of FeedbackDto objects
  *   ]
  * }
  * </pre>
@@ -21,6 +21,7 @@ public class FeedbackResponse {
 
     /**
      * The list of feedback items.
+     * Per API Contract §2.6, the JSON field name is lowercase "feedback".
      */
     @SerializedName("feedback")
     private List<FeedbackDto> feedback;
