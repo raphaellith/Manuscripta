@@ -10,7 +10,7 @@ import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.network.dto.QuestionDto;
 
 import java.util.Arrays;
-import java.util.Collections;
+
 import java.util.List;
 import java.util.Locale;
 
@@ -172,7 +172,7 @@ public final class QuestionMapper {
     @NonNull
     private static String convertOptionsToJson(List<String> options) {
         if (options == null || options.isEmpty()) {
-            return "[]";
+            return "";
         }
         return GSON.toJson(options);
     }
@@ -187,16 +187,16 @@ public final class QuestionMapper {
     @NonNull
     private static List<String> convertJsonToOptions(String json) {
         if (json == null || json.isEmpty() || "[]".equals(json)) {
-            return Collections.emptyList();
+            return new java.util.ArrayList<>();
         }
         try {
             String[] options = GSON.fromJson(json, String[].class);
             return options != null
                     ? new java.util.ArrayList<>(Arrays.asList(options))
-                    : Collections.emptyList();
+                    : new java.util.ArrayList<>();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
-            return Collections.emptyList();
+            return new java.util.ArrayList<>();
         }
     }
 }

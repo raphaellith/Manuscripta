@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
 
 import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.QuestionType;
@@ -217,7 +217,7 @@ public class QuestionMapperTest {
         assertEquals(TEST_MATERIAL_ID, domain.getMaterialId());
         assertEquals("Explain your reasoning", domain.getQuestionText());
         assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
-        assertEquals("[]", domain.getOptions());
+        assertEquals("", domain.getOptions());
         assertEquals("Expected answer text", domain.getCorrectAnswer());
     }
 
@@ -318,7 +318,7 @@ public class QuestionMapperTest {
         Question domain = QuestionMapper.fromDto(dto);
 
         // Then
-        assertEquals("[]", domain.getOptions());
+        assertEquals("", domain.getOptions());
     }
 
     @Test(expected = IllegalArgumentException.class)

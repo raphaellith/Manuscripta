@@ -188,16 +188,16 @@ public final class MaterialMapper {
     @NonNull
     private static List<VocabularyTermDto> convertJsonToVocabularyTerms(String json) {
         if (json == null || json.isEmpty() || "[]".equals(json)) {
-            return java.util.Collections.emptyList();
+            return new java.util.ArrayList<>();
         }
         try {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
             return terms != null
                     ? new java.util.ArrayList<>(java.util.Arrays.asList(terms))
-                    : java.util.Collections.emptyList();
+                    : new java.util.ArrayList<>();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
-            return java.util.Collections.emptyList();
+            return new java.util.ArrayList<>();
         }
     }
 }

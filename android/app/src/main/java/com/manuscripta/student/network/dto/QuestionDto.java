@@ -58,8 +58,11 @@ public class QuestionDto {
 
     /**
      * The correct answer for the question.
-     * For multiple choice, this is the index of the correct option.
-     * For written answer, this is the expected answer text.
+     * For multiple choice questions, this stores the value used by the teacher
+     * application to identify the correct option (for example "A", "2", or the
+     * full option text), and is not guaranteed to be a numeric index into
+     * {@link #options}.
+     * For written answer questions, this is the expected answer text.
      */
     @SerializedName("CorrectAnswer")
     @Nullable
