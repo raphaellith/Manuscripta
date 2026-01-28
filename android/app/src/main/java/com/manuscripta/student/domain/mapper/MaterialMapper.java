@@ -13,6 +13,7 @@ import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.network.dto.VocabularyTermDto;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Mapper class to convert between MaterialEntity (data layer), Material (domain layer),
@@ -96,7 +97,9 @@ public final class MaterialMapper {
         String typeStr = dto.getType();
         MaterialType type;
         try {
-            type = typeStr != null ? MaterialType.valueOf(typeStr.toUpperCase()) : MaterialType.READING;
+            type = typeStr != null
+                    ? MaterialType.valueOf(typeStr.trim().toUpperCase(Locale.ROOT))
+                    : MaterialType.READING;
         } catch (IllegalArgumentException e) {
             Log.w(TAG, "Unknown MaterialType '" + typeStr + "', defaulting to READING");
             type = MaterialType.READING;
@@ -194,7 +197,7 @@ public final class MaterialMapper {
         }
         try {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
-            return java.util.Arrays.asList(terms);
+            return terms != null ? java.util.Arrays.asList(terms) : java.util.Collections.emptyList();
         } catch (JsonSyntaxException e) {
             Log.w(TAG, "Failed to parse vocabulary terms JSON: " + e.getMessage());
             return java.util.Collections.emptyList();

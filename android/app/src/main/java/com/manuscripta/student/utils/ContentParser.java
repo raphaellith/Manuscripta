@@ -21,10 +21,12 @@ public final class ContentParser {
 
     /**
      * Regex pattern to match attachment references in content.
-     * Matches URLs like "/attachments/abc-123" or "/attachments/550e8400-e29b-41d4-a716-446655440000"
+     * Matches UUIDs in format: 8-4-4-4-12 hex characters (e.g., "550e8400-e29b-41d4-a716-446655440000").
+     * Per Validation Rules, attachment IDs are mandatory UUIDs.
      */
     private static final Pattern ATTACHMENT_PATTERN =
-            Pattern.compile("/attachments/([a-zA-Z0-9\\-]+)");
+            Pattern.compile("/attachments/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-"
+                    + "[a-fA-F0-9]{4}-[a-fA-F0-9]{12})");
 
     /**
      * Private constructor to prevent instantiation of utility class.
