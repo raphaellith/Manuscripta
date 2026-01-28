@@ -241,6 +241,12 @@ public class QuestionDto {
         this.maxScore = maxScore;
     }
 
+    /**
+     * Returns a string representation of this DTO for debugging.
+     * Note: correctAnswer is intentionally redacted to prevent answer key exposure in logs.
+     *
+     * @return String representation with correctAnswer redacted
+     */
     @Override
     @NonNull
     public String toString() {
@@ -250,7 +256,7 @@ public class QuestionDto {
                 + ", questionType='" + questionType + '\''
                 + ", questionText='" + questionText + '\''
                 + ", options=" + options
-                + ", correctAnswer='" + correctAnswer + '\''
+                + ", correctAnswer='[REDACTED]'"
                 + ", maxScore=" + maxScore
                 + '}';
     }

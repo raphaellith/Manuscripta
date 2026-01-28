@@ -171,6 +171,9 @@ public class QuestionDtoTest {
         assertTrue(result.contains(TEST_ID));
         assertTrue(result.contains(TEST_MATERIAL_ID));
         assertTrue(result.contains(TEST_QUESTION_TYPE));
+        // Verify correctAnswer is redacted (not exposed as correctAnswer='<actual value>')
+        assertFalse(result.contains("correctAnswer='" + TEST_CORRECT_ANSWER + "'"));
+        assertTrue(result.contains("correctAnswer='[REDACTED]'"));
     }
 
     @Test

@@ -302,7 +302,7 @@ public class QuestionMapperTest {
     }
 
     @Test
-    public void testFromDto_EmptyOptionsListConvertsToEmptyJson() {
+    public void testFromDto_EmptyOptionsListConvertsToEmptyString() {
         // Given
         QuestionDto dto = new QuestionDto(
                 TEST_ID,

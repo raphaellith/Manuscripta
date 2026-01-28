@@ -169,10 +169,11 @@ public final class QuestionMapper {
     }
 
     /**
-     * Converts a list of options to a JSON array string.
+     * Converts a list of options to a JSON array string for storage.
      *
      * @param options The list of options
-     * @return JSON array string representation
+     * @return JSON array string for non-empty lists, or empty string for null/empty input
+     *         (used as a storage sentinel by Question/QuestionEntity)
      */
     @NonNull
     private static String convertOptionsToJson(List<String> options) {
