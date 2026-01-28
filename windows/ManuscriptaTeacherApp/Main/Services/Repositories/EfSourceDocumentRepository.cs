@@ -37,6 +37,12 @@ public class EfSourceDocumentRepository : ISourceDocumentRepository
         await _ctx.SaveChangesAsync();
     }
 
+    public async Task UpdateAsync(SourceDocumentEntity entity)
+    {
+        _ctx.SourceDocuments.Update(entity);
+        await _ctx.SaveChangesAsync();
+    }
+
     public async Task DeleteAsync(Guid id)
     {
         var entity = await _ctx.SourceDocuments.FindAsync(id);

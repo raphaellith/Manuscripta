@@ -7,12 +7,13 @@ namespace Main.Services.Repositories;
 
 /// <summary>
 /// Repository interface for managing source documents.
-/// Per NetworkingAPISpec §1(1)(k).
+/// Per NetworkingAPISpec §1(1)(k) and GenAISpec.md §3A(3).
 /// </summary>
 public interface ISourceDocumentRepository
 {
     Task<SourceDocumentEntity?> GetByIdAsync(Guid id);
     Task<IEnumerable<SourceDocumentEntity>> GetAllAsync();
     Task AddAsync(SourceDocumentEntity entity);
+    Task UpdateAsync(SourceDocumentEntity entity);
     Task DeleteAsync(Guid id);
 }
