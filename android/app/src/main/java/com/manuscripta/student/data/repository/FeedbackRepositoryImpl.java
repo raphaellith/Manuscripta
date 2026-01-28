@@ -30,10 +30,14 @@ import retrofit2.Response;
 @Singleton
 public class FeedbackRepositoryImpl implements FeedbackRepository {
 
+    /** Logging tag for this class. */
     private static final String TAG = "FeedbackRepositoryImpl";
 
+    /** The DAO for feedback persistence. */
     private final FeedbackDao feedbackDao;
+    /** The Retrofit API service for network calls. */
     private final ApiService apiService;
+    /** The TCP socket manager for sending acknowledgements. */
     private final TcpSocketManager tcpSocketManager;
 
     /**
@@ -111,7 +115,11 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
      */
     private void sendAcknowledgement(@NonNull String deviceId) {
         FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
-        tcpSocketManager.sendMessage(ackMessage);
+        try {
+            tcpSocketManager.send(ackMessage);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send FEEDBACK_ACK: " + e.getMessage());
+        }
     }
 
     @Override
