@@ -9,8 +9,8 @@ import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.network.dto.QuestionDto;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-
 import java.util.List;
 import java.util.Locale;
 
@@ -187,16 +187,16 @@ public final class QuestionMapper {
     @NonNull
     private static List<String> convertJsonToOptions(String json) {
         if (json == null || json.isEmpty() || "[]".equals(json)) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
         try {
             String[] options = GSON.fromJson(json, String[].class);
             return options != null
-                    ? new java.util.ArrayList<>(Arrays.asList(options))
-                    : new java.util.ArrayList<>();
+                    ? new ArrayList<>(Arrays.asList(options))
+                    : new ArrayList<>();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
     }
 }

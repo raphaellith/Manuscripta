@@ -10,6 +10,8 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.network.dto.VocabularyTermDto;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -188,16 +190,16 @@ public final class MaterialMapper {
     @NonNull
     private static List<VocabularyTermDto> convertJsonToVocabularyTerms(String json) {
         if (json == null || json.isEmpty() || "[]".equals(json)) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
         try {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
             return terms != null
-                    ? new java.util.ArrayList<>(java.util.Arrays.asList(terms))
-                    : new java.util.ArrayList<>();
+                    ? new ArrayList<>(Arrays.asList(terms))
+                    : new ArrayList<>();
         } catch (JsonSyntaxException e) {
             // Invalid JSON - silently return empty list
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
     }
 }
