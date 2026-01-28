@@ -4,12 +4,14 @@ import androidx.annotation.NonNull;
 
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 import com.manuscripta.student.network.tcp.message.HandAckMessage;
 import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
 import com.manuscripta.student.network.tcp.message.PairingAckMessage;
 import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
 import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
 import com.manuscripta.student.network.tcp.message.UnpairMessage;
@@ -93,10 +95,12 @@ public final class TcpMessageDecoder {
             case UNPAIR -> new UnpairMessage();
             case DISTRIBUTE_MATERIAL -> new DistributeMaterialMessage();
             case HAND_ACK -> createHandAckMessage(operand);
+            case RETURN_FEEDBACK -> new ReturnFeedbackMessage();
             case PAIRING_ACK -> new PairingAckMessage();
             case STATUS_UPDATE -> createStatusUpdateMessage(operand);
             case HAND_RAISED -> createHandRaisedMessage(operand);
             case DISTRIBUTE_ACK -> createDistributeAckMessage(operand);
+            case FEEDBACK_ACK -> createFeedbackAckMessage(operand);
             case PAIRING_REQUEST -> createPairingRequestMessage(operand);
         };
     }
@@ -175,6 +179,25 @@ public final class TcpMessageDecoder {
         }
         String deviceId = new String(operand, StandardCharsets.UTF_8);
         return new DistributeAckMessage(deviceId);
+    }
+
+    /**
+     * Creates a FeedbackAckMessage from the operand.
+     *
+     * @param operand The UTF-8 encoded device ID.
+     * @return The FeedbackAckMessage.
+     * @throws TcpProtocolException If the operand is empty.
+     */
+    @NonNull
+    private FeedbackAckMessage createFeedbackAckMessage(@NonNull byte[] operand)
+            throws TcpProtocolException {
+        if (operand.length == 0) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "FEEDBACK_ACK message requires device ID");
+        }
+        String deviceId = new String(operand, StandardCharsets.UTF_8);
+        return new FeedbackAckMessage(deviceId);
     }
 
     /**

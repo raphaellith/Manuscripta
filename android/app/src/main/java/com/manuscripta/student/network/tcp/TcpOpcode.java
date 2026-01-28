@@ -47,6 +47,12 @@ public enum TcpOpcode {
     HAND_ACK((byte) 0x06),
 
     /**
+     * Return feedback command from server to client.
+     * Instructs the student device to fetch feedback via HTTP.
+     */
+    RETURN_FEEDBACK((byte) 0x07),
+
+    /**
      * Status update message from client to server.
      * Contains device status information as JSON.
      */
@@ -65,6 +71,13 @@ public enum TcpOpcode {
      * Operand: Device ID (UTF-8).
      */
     DISTRIBUTE_ACK((byte) 0x12),
+
+    /**
+     * Feedback acknowledgement from client to server.
+     * Confirms the client received the feedback.
+     * Operand: Device ID (UTF-8).
+     */
+    FEEDBACK_ACK((byte) 0x13),
 
     /**
      * Pairing request from client to server.
@@ -129,6 +142,7 @@ public enum TcpOpcode {
                 || this == UNPAIR
                 || this == DISTRIBUTE_MATERIAL
                 || this == HAND_ACK
+                || this == RETURN_FEEDBACK
                 || this == PAIRING_ACK;
     }
 
@@ -141,6 +155,7 @@ public enum TcpOpcode {
         return this == STATUS_UPDATE
                 || this == HAND_RAISED
                 || this == DISTRIBUTE_ACK
+                || this == FEEDBACK_ACK
                 || this == PAIRING_REQUEST;
     }
 

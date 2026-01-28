@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
@@ -16,7 +18,12 @@ import java.util.Locale;
 /**
  * Mapper class to convert between MaterialEntity (data layer), Material (domain layer),
  * and MaterialDto (network layer).
+ * Mapper class to convert between MaterialEntity (data layer), Material (domain layer),
+ * and MaterialDto (network layer).
  * Provides bidirectional mapping for Clean Architecture separation.
+ *
+ * <p>Important: DTOs must preserve entity IDs exactly as received from the Windows teacher
+ * application, without modification or regeneration.</p>
  *
  * <p>Important: DTOs must preserve entity IDs exactly as received from the Windows teacher
  * application, without modification or regeneration.</p>

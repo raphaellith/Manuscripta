@@ -887,6 +887,8 @@ public class UdpDiscoveryManagerTest {
         manager.startDiscovery();
         awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.TIMEOUT,
                 2000, "State should transition to TIMEOUT");
+        // Wait for full cleanup to complete
+        awaitCondition(() -> !manager.isRunning(), 2000, "Manager should stop running");
 
         // Then
         verify(mockLockManager).release();
