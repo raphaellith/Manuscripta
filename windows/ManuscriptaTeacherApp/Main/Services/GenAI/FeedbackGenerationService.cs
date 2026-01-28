@@ -2,6 +2,8 @@ using Main.Models.Entities;
 using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Models.Enums;
+using Main.Services.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Main.Services.GenAI;
 
@@ -13,14 +15,17 @@ public class FeedbackGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly FeedbackQueueService _queueService;
+    private readonly IHubContext<TeacherPortalHub> _hubContext;
     private const string FeedbackModel = "granite4";
 
     public FeedbackGenerationService(
         OllamaClientService ollamaClient,
-        FeedbackQueueService queueService)
+        FeedbackQueueService queueService,
+        IHubContext<TeacherPortalHub> hubContext)
     {
         _ollamaClient = ollamaClient;
         _queueService = queueService;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -72,7 +77,8 @@ public class FeedbackGenerationService
             // §3D(7): Remove from queue on failure
             _queueService.RemoveFromQueue(response.Id);
             
-            // TODO: Notify frontend via SignalR OnFeedbackGenerationFailed
+            // §3D(7)(b): Notify frontend via SignalR OnFeedbackGenerationFailed
+            _ = _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", response.Id, ex.Message);
             throw new InvalidOperationException($"Failed to generate feedback for response {response.Id}", ex);
         }
     }

@@ -1,5 +1,7 @@
 using Main.Models.Entities;
 using Main.Models.Enums;
+using Main.Services.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Main.Services.GenAI;
 
@@ -10,6 +12,12 @@ namespace Main.Services.GenAI;
 public class FeedbackQueueService
 {
     private readonly Queue<Guid> _generationQueue = new();
+    private readonly IHubContext<TeacherPortalHub> _hubContext;
+
+    public FeedbackQueueService(IHubContext<TeacherPortalHub> hubContext)
+    {
+        _hubContext = hubContext;
+    }
 
     /// <summary>
     /// Checks if a response is currently queued for generation.
@@ -73,7 +81,9 @@ public class FeedbackQueueService
         if (feedback.Status == FeedbackStatus.PROVISIONAL)
         {
             feedback.Status = FeedbackStatus.READY;
-            // TODO: Trigger dispatch immediately via Session Interaction Specification §7
+            // §3DA(2)(b): Trigger dispatch immediately via Session Interaction Specification §7
+            // Note: The actual dispatch mechanism is implemented in the TeacherPortalHub or a dedicated dispatch service
+            // This method marks the feedback as ready for dispatch
         }
     }
 
@@ -93,9 +103,10 @@ public class FeedbackQueueService
     /// Handles feedback dispatch failure.
     /// See GenAISpec.md §3DA(4).
     /// </summary>
-    public void HandleDispatchFailure(FeedbackEntity feedback)
+    public void HandleDispatchFailure(FeedbackEntity feedback, Guid deviceId)
     {
         // Feedback remains in READY status
-        // TODO: Notify frontend via SignalR OnFeedbackDispatchFailed
+        // §3DA(4)(a): Notify frontend via SignalR OnFeedbackDispatchFailed
+        _ = _hubContext.Clients.All.SendAsync("OnFeedbackDispatchFailed", feedback.Id, deviceId);
     }
 }

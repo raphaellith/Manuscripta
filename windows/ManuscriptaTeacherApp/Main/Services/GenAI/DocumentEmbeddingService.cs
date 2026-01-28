@@ -2,6 +2,8 @@ using ChromaDB.Client;
 using ChromaDB.Client.Models;
 using Main.Models.Entities;
 using Main.Models.Enums;
+using Main.Services.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Main.Services.GenAI;
 
@@ -15,6 +17,7 @@ public class DocumentEmbeddingService
     private readonly ChromaClient _chromaClient;
     private readonly ChromaConfigurationOptions _chromaOptions;
     private readonly HttpClient _httpClient;
+    private readonly IHubContext<TeacherPortalHub> _hubContext;
     private const int ChunkSizeTokens = 512;
     private const int ChunkOverlapTokens = 64;
     private const int MaxEmbeddingRetries = 3;
@@ -23,12 +26,14 @@ public class DocumentEmbeddingService
         OllamaClientService ollamaClient,
         ChromaClient chromaClient,
         ChromaConfigurationOptions chromaOptions,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IHubContext<TeacherPortalHub> hubContext)
     {
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
         _chromaOptions = chromaOptions;
         _httpClient = httpClient;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -90,7 +95,8 @@ public class DocumentEmbeddingService
                 if (retries > MaxEmbeddingRetries)
                 {
                     document.EmbeddingStatus = EmbeddingStatus.FAILED;
-                    // TODO: Notify frontend via SignalR OnEmbeddingFailed
+                    // §3A(6)(b)(ii): Notify frontend via SignalR OnEmbeddingFailed
+                    _ = _hubContext.Clients.All.SendAsync("OnEmbeddingFailed", document.Id, ex.Message);
                     throw new InvalidOperationException($"Failed to index document after {MaxEmbeddingRetries} retries", ex);
                 }
 
