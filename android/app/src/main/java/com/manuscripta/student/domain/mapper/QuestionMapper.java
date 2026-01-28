@@ -26,7 +26,7 @@ public final class QuestionMapper {
 
     /**
      * Gson instance for JSON serialization/deserialization of options.
-     * Uses default configuration which serializes all fields and handles nulls appropriately.
+     * Uses Gson's default configuration, which omits fields with null values during serialisation.
      */
     private static final Gson GSON = new Gson();
 
