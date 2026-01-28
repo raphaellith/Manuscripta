@@ -9,6 +9,7 @@ import androidx.annotation.VisibleForTesting;
 import com.google.gson.Gson;
 import com.manuscripta.student.domain.model.DeviceStatus;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 
 import java.io.IOException;
@@ -25,14 +26,15 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Manages the TCP heartbeat mechanism for maintaining connection and triggering material fetches.
+ * Manages the TCP heartbeat mechanism for maintaining connection and triggering fetches.
  *
  * <p>The heartbeat pattern works as follows:
  * <ol>
  *   <li>Android sends periodic {@code STATUS_UPDATE} (0x10) messages via TCP</li>
- *   <li>Server checks if new materials are available for this device</li>
+ *   <li>Server checks if new materials or feedback are available for this device</li>
  *   <li>If materials are available, server responds with {@code DISTRIBUTE_MATERIAL} (0x05)</li>
- *   <li>HeartbeatManager notifies the callback to trigger HTTP material fetch</li>
+ *   <li>If feedback is available, server responds with {@code RETURN_FEEDBACK} (0x07)</li>
+ *   <li>HeartbeatManager notifies the appropriate callback to trigger HTTP fetch</li>
  * </ol>
  *
  * <p>Usage:
@@ -40,6 +42,7 @@ import javax.inject.Singleton;
  * HeartbeatManager heartbeat = new HeartbeatManager(socketManager);
  * heartbeat.setDeviceStatusProvider(() -> getCurrentDeviceStatus());
  * heartbeat.setMaterialCallback(() -> fetchMaterialsViaHttp());
+ * heartbeat.setFeedbackCallback(() -> fetchFeedbackViaHttp());
  * heartbeat.start();
  * }</pre>
  *
@@ -76,6 +79,17 @@ public class HeartbeatManager implements TcpMessageListener {
         void onMaterialsAvailable();
     }
 
+    /**
+     * Callback for when the server signals that feedback is available.
+     */
+    public interface FeedbackAvailableCallback {
+        /**
+         * Called when the server sends a RETURN_FEEDBACK message.
+         * The implementation should trigger an HTTP fetch to download feedback.
+         */
+        void onFeedbackAvailable();
+    }
+
     /** The TCP socket manager for sending messages. */
     private final TcpSocketManager socketManager;
     /** Gson instance for JSON serialization. */
@@ -95,6 +109,9 @@ public class HeartbeatManager implements TcpMessageListener {
     /** Callback for when materials are available. */
     @Nullable
     private MaterialAvailableCallback materialCallback;
+    /** Callback for when feedback is available. */
+    @Nullable
+    private FeedbackAvailableCallback feedbackCallback;
 
     /** The heartbeat configuration. */
     private HeartbeatConfig config;
@@ -160,6 +177,15 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void setMaterialCallback(@Nullable MaterialAvailableCallback callback) {
         this.materialCallback = callback;
+    }
+
+    /**
+     * Sets the callback for when feedback is available.
+     *
+     * @param callback The callback to invoke when RETURN_FEEDBACK is received.
+     */
+    public void setFeedbackCallback(@Nullable FeedbackAvailableCallback callback) {
+        this.feedbackCallback = callback;
     }
 
     /**
@@ -247,6 +273,12 @@ public class HeartbeatManager implements TcpMessageListener {
             MaterialAvailableCallback callback = this.materialCallback;
             if (callback != null) {
                 callback.onMaterialsAvailable();
+            }
+        } else if (message instanceof ReturnFeedbackMessage) {
+            Log.d(TAG, "Received RETURN_FEEDBACK signal");
+            FeedbackAvailableCallback callback = this.feedbackCallback;
+            if (callback != null) {
+                callback.onFeedbackAvailable();
             }
         }
     }

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import com.manuscripta.student.data.model.DeviceStatus;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 
 import org.junit.After;
@@ -281,6 +282,39 @@ public class HeartbeatManagerTest {
 
         // Should not throw
         heartbeatManager.onMessageReceived(new DistributeMaterialMessage());
+    }
+
+    // ========== RETURN_FEEDBACK handling tests ==========
+
+    @Test
+    public void onMessageReceived_returnFeedback_callsFeedbackCallback() {
+        AtomicBoolean callbackCalled = new AtomicBoolean(false);
+        heartbeatManager.setFeedbackCallback(() -> callbackCalled.set(true));
+
+        heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
+
+        assertTrue(callbackCalled.get());
+    }
+
+    @Test
+    public void onMessageReceived_returnFeedback_doesNotCallMaterialCallback() {
+        AtomicBoolean materialCalled = new AtomicBoolean(false);
+        AtomicBoolean feedbackCalled = new AtomicBoolean(false);
+        heartbeatManager.setMaterialCallback(() -> materialCalled.set(true));
+        heartbeatManager.setFeedbackCallback(() -> feedbackCalled.set(true));
+
+        heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
+
+        assertTrue(feedbackCalled.get());
+        assertFalse(materialCalled.get());
+    }
+
+    @Test
+    public void onMessageReceived_returnFeedback_handlesNullCallback() {
+        heartbeatManager.setFeedbackCallback(null);
+
+        // Should not throw
+        heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
     }
 
     // ========== Connection state handling tests ==========
