@@ -26,16 +26,13 @@ var vectorStorePath = Path.Combine(
 );
 Directory.CreateDirectory(vectorStorePath);
 
-builder.Services.AddSingleton(new ChromaConfigurationOptions 
-{ 
-    BasePath = vectorStorePath 
-});
+builder.Services.AddSingleton(new ChromaConfigurationOptions());
+builder.Services.AddSingleton<HttpClient>();
 builder.Services.AddSingleton<ChromaClient>(sp =>
 {
-    var options = sp.GetRequiredService<ChromaConfigurationOptions>();
-    return new ChromaClient(options);
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new ChromaClient(new ChromaConfigurationOptions(), httpClient);
 });
-builder.Services.AddSingleton<HttpClient>();
 
 // Register pairing and device services
 builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
