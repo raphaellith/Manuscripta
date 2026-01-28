@@ -1,5 +1,6 @@
-using Main.Models.Entities;
+using Main.Data;
 using Main.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Main.Services.GenAI;
 
@@ -9,14 +10,28 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class EmbeddingStatusService
 {
+    private readonly MainDbContext _dbContext;
+
+    public EmbeddingStatusService(MainDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     /// <summary>
     /// Retrieves the current embedding status of a source document.
     /// See GenAISpec.md §3E(1)(a) and §3E(2).
     /// </summary>
-    public Task<EmbeddingStatus> GetEmbeddingStatus(SourceDocumentEntity document)
+    public async Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
     {
+        var document = await _dbContext.SourceDocuments.FindAsync(sourceDocumentId);
+        
+        if (document == null)
+        {
+            throw new InvalidOperationException($"Source document {sourceDocumentId} not found");
+        }
+
         // Return the current status, or treat null as not submitted for indexing
         var status = document.EmbeddingStatus ?? EmbeddingStatus.PENDING;
-        return Task.FromResult(status);
+        return status;
     }
 }

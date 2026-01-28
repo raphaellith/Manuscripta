@@ -3,28 +3,37 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Main.Models.Entities.Responses;
 using Main.Models.Entities.Questions;
+using Main.Models.Enums;
 using Main.Services.Repositories;
+using Main.Services.GenAI;
 
 namespace Main.Services;
 
 /// <summary>
 /// Service for managing responses.
 /// Enforces business rules and data validation.
+/// Integrates with AI feedback generation per GenAISpec.md §3D.
 /// </summary>
 public class ResponseService : IResponseService
 {
     private readonly IResponseRepository _responseRepository;
     private readonly IQuestionRepository _questionRepository;
     private readonly IFeedbackRepository _feedbackRepository;
+    private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly FeedbackGenerationService _feedbackGenerationService;
 
     public ResponseService(
         IResponseRepository responseRepository, 
         IQuestionRepository questionRepository,
-        IFeedbackRepository feedbackRepository)
+        IFeedbackRepository feedbackRepository,
+        FeedbackQueueService feedbackQueueService,
+        FeedbackGenerationService feedbackGenerationService)
     {
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
+        _feedbackGenerationService = feedbackGenerationService ?? throw new ArgumentNullException(nameof(feedbackGenerationService));
     }
 
     public async Task<ResponseEntity> CreateResponseAsync(ResponseEntity response)
@@ -36,6 +45,14 @@ public class ResponseService : IResponseService
         await ValidateResponseAsync(response);
 
         await _responseRepository.AddAsync(response);
+        
+        // §3D(1): Automatically queue for AI feedback if applicable
+        var question = await _questionRepository.GetByIdAsync(response.QuestionId);
+        if (question != null && _feedbackGenerationService.ShouldGenerateFeedback(question))
+        {
+            _feedbackQueueService.QueueForAiGeneration(response.Id);
+        }
+        
         return response;
     }
 
@@ -62,6 +79,9 @@ public class ResponseService : IResponseService
     /// </summary>
     public async Task DeleteResponseAsync(Guid id)
     {
+        // §3D(6): Remove from generation queue if present
+        _feedbackQueueService.RemoveFromQueue(id);
+        
         await _feedbackRepository.DeleteByResponseIdAsync(id);
         await _responseRepository.DeleteAsync(id);
     }

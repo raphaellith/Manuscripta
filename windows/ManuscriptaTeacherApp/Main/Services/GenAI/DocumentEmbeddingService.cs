@@ -271,6 +271,42 @@ public class DocumentEmbeddingService
     }
 
     /// <summary>
+    /// Retries embedding for a failed source document.
+    /// See GenAISpec.md §3A(7).
+    /// </summary>
+    public async Task RetryEmbeddingAsync(Guid sourceDocumentId)
+    {
+        var document = await _dbContext.SourceDocuments.FindAsync(sourceDocumentId);
+        
+        if (document == null)
+        {
+            throw new InvalidOperationException($"Source document {sourceDocumentId} not found");
+        }
+
+        if (document.EmbeddingStatus != EmbeddingStatus.FAILED)
+        {
+            throw new InvalidOperationException($"Cannot retry embedding for document with status {document.EmbeddingStatus}");
+        }
+
+        // Re-run the indexing workflow
+        await IndexSourceDocumentAsync(document);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Re-indexes a source document when it is updated.
+    /// See GenAISpec.md §3A(3).
+    /// </summary>
+    public async Task ReIndexSourceDocumentAsync(SourceDocumentEntity document)
+    {
+        // §3A(3)(a): Remove existing chunks
+        await RemoveSourceDocumentAsync(document.Id);
+        
+        // §3A(3)(b): Re-index following the workflow in §3A(2)
+        await IndexSourceDocumentAsync(document);
+    }
+
+    /// <summary>
     /// Identifies failed source documents on application startup.
     /// See GenAISpec.md §3A(8)(a)-(c).
     /// </summary>

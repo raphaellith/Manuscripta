@@ -89,6 +89,11 @@ public class FeedbackGenerationService
     /// </summary>
     private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
     {
+        // §3D(9)(b)(iii): Include maximum score if present
+        var maxScoreSection = question.MaxScore.HasValue
+            ? $"Maximum Score: {question.MaxScore.Value}\n\n"
+            : "";
+
         return $@"Generate constructive feedback for a student's response to the following question.
 
 Question:
@@ -97,7 +102,7 @@ Question:
 Mark Scheme:
 {question.MarkScheme}
 
-Student's Response:
+{maxScoreSection}Student's Response:
 {response.ResponseText}
 
 Provide feedback that includes:

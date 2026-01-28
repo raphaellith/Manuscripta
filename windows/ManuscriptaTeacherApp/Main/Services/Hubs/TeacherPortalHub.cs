@@ -5,6 +5,7 @@ using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services.Repositories;
+using Main.Services.GenAI;
 
 namespace Main.Services.Hubs;
 
@@ -28,6 +29,11 @@ public class TeacherPortalHub : Hub
     private readonly IQuestionRepository _questionRepository;
     private readonly ISourceDocumentRepository _sourceDocumentRepository;
     private readonly IAttachmentRepository _attachmentRepository;
+    private readonly MaterialGenerationService _materialGenerationService;
+    private readonly ContentModificationService _contentModificationService;
+    private readonly EmbeddingStatusService _embeddingStatusService;
+    private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly DocumentEmbeddingService _documentEmbeddingService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -43,7 +49,12 @@ public class TeacherPortalHub : Hub
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository,
         ISourceDocumentRepository sourceDocumentRepository,
-        IAttachmentRepository attachmentRepository)
+        IAttachmentRepository attachmentRepository,
+        MaterialGenerationService materialGenerationService,
+        ContentModificationService contentModificationService,
+        EmbeddingStatusService embeddingStatusService,
+        FeedbackQueueService feedbackQueueService,
+        DocumentEmbeddingService documentEmbeddingService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -59,6 +70,11 @@ public class TeacherPortalHub : Hub
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
+        _materialGenerationService = materialGenerationService ?? throw new ArgumentNullException(nameof(materialGenerationService));
+        _contentModificationService = contentModificationService ?? throw new ArgumentNullException(nameof(contentModificationService));
+        _embeddingStatusService = embeddingStatusService ?? throw new ArgumentNullException(nameof(embeddingStatusService));
+        _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
+        _documentEmbeddingService = documentEmbeddingService ?? throw new ArgumentNullException(nameof(documentEmbeddingService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -401,6 +417,15 @@ public class TeacherPortalHub : Hub
     }
 
     /// <summary>
+    /// Updates a source document entity.
+    /// Per GenAISpec.md §3A(3) - triggers re-indexing.
+    /// </summary>
+    public async Task UpdateSourceDocument(SourceDocumentEntity updated)
+    {
+        await _sourceDocumentService.UpdateAsync(updated);
+    }
+
+    /// <summary>
     /// Deletes a source document entity by ID.
     /// Per NetworkingAPISpec §1(1)(k)(iii).
     /// </summary>
@@ -444,5 +469,105 @@ public class TeacherPortalHub : Hub
     }
 
     #endregion
-}
+
+    #region GenAI Operations - NetworkingAPISpec §1(1)(i)
+
+    /// <summary>
+    /// Generates reading content using AI.
+    /// Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec.md §3B(1)(a).
+    /// </summary>
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request)
+    {
+        try
+        {
+            return await _materialGenerationService.GenerateReading(request);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to generate reading: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Generates worksheet content using AI.
+    /// Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec.md §3B(1)(b).
+    /// </summary>
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+    {
+        try
+        {
+            return await _materialGenerationService.GenerateWorksheet(request);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to generate worksheet: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Modifies selected content using the AI assistant.
+    /// Per NetworkingAPISpec §1(1)(i)(iv) and GenAISpec.md §3C(1)(a).
+    /// </summary>
+    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+    {
+        try
+        {
+            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to modify content: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the current embedding status of a source document.
+    /// Per NetworkingAPISpec §1(1)(i)(v) and GenAISpec.md §3E(1)(a).
+    /// </summary>
+    public async Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
+    {
+        try
+        {
+            return await _embeddingStatusService.GetEmbeddingStatus(sourceDocumentId);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get embedding status: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Queues a response for AI feedback generation.
+    /// Per NetworkingAPISpec §1(1)(i)(vi) and GenAISpec.md §3D(5).
+    /// </summary>
+    public Task QueueForAiGeneration(Guid responseId)
+    {
+        try
+        {
+            _feedbackQueueService.QueueForAiGeneration(responseId);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to queue response for AI generation: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Retries embedding for a failed source document.
+    /// Per NetworkingAPISpec §1(1)(i)(vii) and GenAISpec.md §3A(7).
+    /// </summary>
+    public async Task RetryEmbedding(Guid sourceDocumentId)
+    {
+        try
+        {
+            await _documentEmbeddingService.RetryEmbeddingAsync(sourceDocumentId);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to retry embedding: {ex.Message}");
+        }
+    }
+
+    #endregion
 
