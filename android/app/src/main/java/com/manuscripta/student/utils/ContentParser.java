@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * Materials may reference attachment files (PDFs, images) via URLs in the content field.
  *
  * <p>Attachment references follow the format "/attachments/{id}" where {id} is
- * a UUID or alphanumeric identifier.</p>
+ * a UUID in standard 8-4-4-4-12 hexadecimal format.</p>
  */
 public final class ContentParser {
 

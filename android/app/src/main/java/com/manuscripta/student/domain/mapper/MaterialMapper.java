@@ -1,7 +1,5 @@
 package com.manuscripta.student.domain.mapper;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
@@ -24,9 +22,6 @@ import java.util.Locale;
  * application, without modification or regeneration.</p>
  */
 public final class MaterialMapper {
-
-    /** Tag for logging. */
-    private static final String TAG = "MaterialMapper";
 
     /**
      * Gson instance for JSON serialization/deserialization of vocabulary terms.
@@ -101,7 +96,7 @@ public final class MaterialMapper {
                     ? MaterialType.valueOf(typeStr.trim().toUpperCase(Locale.ROOT))
                     : MaterialType.READING;
         } catch (IllegalArgumentException e) {
-            Log.w(TAG, "Unknown MaterialType '" + typeStr + "', defaulting to READING");
+            // Unknown type - silently default to READING
             type = MaterialType.READING;
         }
 
@@ -185,7 +180,7 @@ public final class MaterialMapper {
 
     /**
      * Converts a JSON array string to a list of VocabularyTermDto.
-     * Invalid JSON will result in an empty list being returned, with the error logged.
+     * Invalid JSON will result in an empty list being returned silently.
      *
      * @param json The JSON array string
      * @return List of VocabularyTermDto, or empty list if parsing fails
@@ -199,7 +194,7 @@ public final class MaterialMapper {
             VocabularyTermDto[] terms = GSON.fromJson(json, VocabularyTermDto[].class);
             return terms != null ? java.util.Arrays.asList(terms) : java.util.Collections.emptyList();
         } catch (JsonSyntaxException e) {
-            Log.w(TAG, "Failed to parse vocabulary terms JSON: " + e.getMessage());
+            // Invalid JSON - silently return empty list
             return java.util.Collections.emptyList();
         }
     }
