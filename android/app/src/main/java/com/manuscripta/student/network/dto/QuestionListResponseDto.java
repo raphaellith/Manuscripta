@@ -14,7 +14,7 @@ import java.util.List;
  * <p>The order of IDs in the list represents the intended display order
  * as determined by the teacher application.</p>
  */
-public class QuestionListDto {
+public class QuestionListResponseDto {
 
     /**
      * Ordered list of question IDs.
@@ -43,7 +43,7 @@ public class QuestionListDto {
     /**
      * Default constructor for Gson deserialization.
      */
-    public QuestionListDto() {
+    public QuestionListResponseDto() {
     }
 
     /**
@@ -53,9 +53,9 @@ public class QuestionListDto {
      * @param questions   Optional list of full question objects
      * @param totalCount  Total count of questions available
      */
-    public QuestionListDto(@Nullable List<String> questionIds,
-                           @Nullable List<QuestionDto> questions,
-                           @Nullable Integer totalCount) {
+    public QuestionListResponseDto(@Nullable List<String> questionIds,
+                                    @Nullable List<QuestionDto> questions,
+                                    @Nullable Integer totalCount) {
         this.questionIds = questionIds;
         this.questions = questions;
         this.totalCount = totalCount;
@@ -121,7 +121,7 @@ public class QuestionListDto {
     @Override
     @NonNull
     public String toString() {
-        return "QuestionListDto{"
+        return "QuestionListResponseDto{"
                 + "questionIds=" + questionIds
                 + ", questions=" + questions
                 + ", totalCount=" + totalCount
@@ -136,7 +136,7 @@ public class QuestionListDto {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        QuestionListDto that = (QuestionListDto) o;
+        QuestionListResponseDto that = (QuestionListResponseDto) o;
         if (questionIds != null ? !questionIds.equals(that.questionIds)
                 : that.questionIds != null) {
             return false;

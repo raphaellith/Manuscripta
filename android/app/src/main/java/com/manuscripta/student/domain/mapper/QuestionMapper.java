@@ -121,6 +121,11 @@ public final class QuestionMapper {
      * Converts a Question domain model to a QuestionDto.
      * Preserves the ID exactly for API communication.
      *
+     * <p><b>Note:</b> The {@code maxScore} field is intentionally set to {@code null} because
+     * it is an optional field per Validation Rules §2B(2)(c) that is not currently stored in
+     * the domain model. The Android client does not use {@code maxScore} for business logic;
+     * if this changes in future, the domain model and entity should be extended accordingly.</p>
+     *
      * @param domain The Question domain model to convert
      * @return QuestionDto for API communication
      */

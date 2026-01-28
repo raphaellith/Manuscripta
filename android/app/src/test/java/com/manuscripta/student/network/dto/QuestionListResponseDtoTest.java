@@ -13,10 +13,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Unit tests for {@link QuestionListDto}.
+ * Unit tests for {@link QuestionListResponseDto}.
  * Tests construction, getters, setters, equals, hashCode, and toString methods.
  */
-public class QuestionListDtoTest {
+public class QuestionListResponseDtoTest {
 
     private static final String TEST_QUESTION_ID_1 = "550e8400-e29b-41d4-a716-446655440000";
     private static final String TEST_QUESTION_ID_2 = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
@@ -25,7 +25,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testDefaultConstructor() {
-        QuestionListDto dto = new QuestionListDto();
+        QuestionListResponseDto dto = new QuestionListResponseDto();
 
         assertNull(dto.getQuestionIds());
         assertNull(dto.getQuestions());
@@ -37,7 +37,7 @@ public class QuestionListDtoTest {
         List<String> questionIds = createTestQuestionIds();
         List<QuestionDto> questions = createTestQuestions();
 
-        QuestionListDto dto = new QuestionListDto(questionIds, questions, TEST_TOTAL_COUNT);
+        QuestionListResponseDto dto = new QuestionListResponseDto(questionIds, questions, TEST_TOTAL_COUNT);
 
         assertEquals(questionIds, dto.getQuestionIds());
         assertEquals(questions, dto.getQuestions());
@@ -46,7 +46,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testConstructorWithNullValues() {
-        QuestionListDto dto = new QuestionListDto(null, null, null);
+        QuestionListResponseDto dto = new QuestionListResponseDto(null, null, null);
 
         assertNull(dto.getQuestionIds());
         assertNull(dto.getQuestions());
@@ -55,7 +55,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testSetQuestionIds() {
-        QuestionListDto dto = new QuestionListDto();
+        QuestionListResponseDto dto = new QuestionListResponseDto();
         List<String> questionIds = createTestQuestionIds();
 
         dto.setQuestionIds(questionIds);
@@ -67,7 +67,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testSetQuestions() {
-        QuestionListDto dto = new QuestionListDto();
+        QuestionListResponseDto dto = new QuestionListResponseDto();
         List<QuestionDto> questions = createTestQuestions();
 
         dto.setQuestions(questions);
@@ -79,7 +79,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testSetTotalCount() {
-        QuestionListDto dto = new QuestionListDto();
+        QuestionListResponseDto dto = new QuestionListResponseDto();
 
         dto.setTotalCount(TEST_TOTAL_COUNT);
         assertEquals(TEST_TOTAL_COUNT, dto.getTotalCount());
@@ -90,7 +90,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testToString() {
-        QuestionListDto dto = new QuestionListDto(
+        QuestionListResponseDto dto = new QuestionListResponseDto(
                 createTestQuestionIds(),
                 createTestQuestions(),
                 TEST_TOTAL_COUNT
@@ -99,47 +99,47 @@ public class QuestionListDtoTest {
         String result = dto.toString();
 
         assertNotNull(result);
-        assertTrue(result.contains("QuestionListDto"));
+        assertTrue(result.contains("QuestionListResponseDto"));
         assertTrue(result.contains(TEST_QUESTION_ID_1));
         assertTrue(result.contains(TEST_TOTAL_COUNT.toString()));
     }
 
     @Test
     public void testToStringWithNullValues() {
-        QuestionListDto dto = new QuestionListDto();
+        QuestionListResponseDto dto = new QuestionListResponseDto();
 
         String result = dto.toString();
 
         assertNotNull(result);
-        assertTrue(result.contains("QuestionListDto"));
+        assertTrue(result.contains("QuestionListResponseDto"));
         assertTrue(result.contains("null"));
     }
 
     @Test
     public void testEqualsSameObject() {
-        QuestionListDto dto = createTestQuestionListDto();
+        QuestionListResponseDto dto = createTestQuestionListResponseDto();
 
         assertTrue(dto.equals(dto));
     }
 
     @Test
     public void testEqualsNull() {
-        QuestionListDto dto = createTestQuestionListDto();
+        QuestionListResponseDto dto = createTestQuestionListResponseDto();
 
         assertFalse(dto.equals(null));
     }
 
     @Test
     public void testEqualsDifferentClass() {
-        QuestionListDto dto = createTestQuestionListDto();
+        QuestionListResponseDto dto = createTestQuestionListResponseDto();
 
         assertFalse(dto.equals("not a dto"));
     }
 
     @Test
     public void testEqualsSameValues() {
-        QuestionListDto dto1 = createTestQuestionListDto();
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = createTestQuestionListResponseDto();
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
 
         assertTrue(dto1.equals(dto2));
         assertTrue(dto2.equals(dto1));
@@ -147,8 +147,8 @@ public class QuestionListDtoTest {
 
     @Test
     public void testEqualsDifferentQuestionIds() {
-        QuestionListDto dto1 = createTestQuestionListDto();
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = createTestQuestionListResponseDto();
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
         dto2.setQuestionIds(Arrays.asList("different-id"));
 
         assertFalse(dto1.equals(dto2));
@@ -156,8 +156,8 @@ public class QuestionListDtoTest {
 
     @Test
     public void testEqualsDifferentQuestions() {
-        QuestionListDto dto1 = createTestQuestionListDto();
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = createTestQuestionListResponseDto();
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
         List<QuestionDto> differentQuestions = Arrays.asList(
                 new QuestionDto("diff-id", TEST_MATERIAL_ID, "WRITTEN_ANSWER",
                         "Different question?", null, "", null)
@@ -169,8 +169,8 @@ public class QuestionListDtoTest {
 
     @Test
     public void testEqualsDifferentTotalCount() {
-        QuestionListDto dto1 = createTestQuestionListDto();
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = createTestQuestionListResponseDto();
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
         dto2.setTotalCount(999);
 
         assertFalse(dto1.equals(dto2));
@@ -178,31 +178,31 @@ public class QuestionListDtoTest {
 
     @Test
     public void testEqualsNullQuestionIds() {
-        QuestionListDto dto1 = new QuestionListDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
-        QuestionListDto dto2 = new QuestionListDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
+        QuestionListResponseDto dto1 = new QuestionListResponseDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
+        QuestionListResponseDto dto2 = new QuestionListResponseDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
 
         assertTrue(dto1.equals(dto2));
     }
 
     @Test
     public void testEqualsNullVsNonNullQuestionIds() {
-        QuestionListDto dto1 = new QuestionListDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = new QuestionListResponseDto(null, createTestQuestions(), TEST_TOTAL_COUNT);
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
 
         assertFalse(dto1.equals(dto2));
     }
 
     @Test
     public void testEqualsAllNullValues() {
-        QuestionListDto dto1 = new QuestionListDto();
-        QuestionListDto dto2 = new QuestionListDto();
+        QuestionListResponseDto dto1 = new QuestionListResponseDto();
+        QuestionListResponseDto dto2 = new QuestionListResponseDto();
 
         assertTrue(dto1.equals(dto2));
     }
 
     @Test
     public void testHashCodeConsistency() {
-        QuestionListDto dto = createTestQuestionListDto();
+        QuestionListResponseDto dto = createTestQuestionListResponseDto();
 
         int hashCode1 = dto.hashCode();
         int hashCode2 = dto.hashCode();
@@ -212,23 +212,23 @@ public class QuestionListDtoTest {
 
     @Test
     public void testHashCodeEquality() {
-        QuestionListDto dto1 = createTestQuestionListDto();
-        QuestionListDto dto2 = createTestQuestionListDto();
+        QuestionListResponseDto dto1 = createTestQuestionListResponseDto();
+        QuestionListResponseDto dto2 = createTestQuestionListResponseDto();
 
         assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
     @Test
     public void testHashCodeWithNullValues() {
-        QuestionListDto dto1 = new QuestionListDto();
-        QuestionListDto dto2 = new QuestionListDto();
+        QuestionListResponseDto dto1 = new QuestionListResponseDto();
+        QuestionListResponseDto dto2 = new QuestionListResponseDto();
 
         assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
     @Test
     public void testEmptyQuestionIdsList() {
-        QuestionListDto dto = new QuestionListDto(
+        QuestionListResponseDto dto = new QuestionListResponseDto(
                 new ArrayList<>(),
                 null,
                 0
@@ -240,7 +240,7 @@ public class QuestionListDtoTest {
 
     @Test
     public void testEmptyQuestionsList() {
-        QuestionListDto dto = new QuestionListDto(
+        QuestionListResponseDto dto = new QuestionListResponseDto(
                 createTestQuestionIds(),
                 new ArrayList<>(),
                 TEST_TOTAL_COUNT
@@ -254,7 +254,7 @@ public class QuestionListDtoTest {
     public void testQuestionIdsOnlyNoFullObjects() {
         List<String> questionIds = createTestQuestionIds();
 
-        QuestionListDto dto = new QuestionListDto(questionIds, null, 2);
+        QuestionListResponseDto dto = new QuestionListResponseDto(questionIds, null, 2);
 
         assertEquals(2, dto.getQuestionIds().size());
         assertNull(dto.getQuestions());
@@ -265,7 +265,7 @@ public class QuestionListDtoTest {
     public void testQuestionsOnlyNoIds() {
         List<QuestionDto> questions = createTestQuestions();
 
-        QuestionListDto dto = new QuestionListDto(null, questions, questions.size());
+        QuestionListResponseDto dto = new QuestionListResponseDto(null, questions, questions.size());
 
         assertNull(dto.getQuestionIds());
         assertEquals(2, dto.getQuestions().size());
@@ -276,15 +276,15 @@ public class QuestionListDtoTest {
     public void testOrderPreservation() {
         List<String> questionIds = Arrays.asList("id-3", "id-1", "id-2");
 
-        QuestionListDto dto = new QuestionListDto(questionIds, null, 3);
+        QuestionListResponseDto dto = new QuestionListResponseDto(questionIds, null, 3);
 
         assertEquals("id-3", dto.getQuestionIds().get(0));
         assertEquals("id-1", dto.getQuestionIds().get(1));
         assertEquals("id-2", dto.getQuestionIds().get(2));
     }
 
-    private QuestionListDto createTestQuestionListDto() {
-        return new QuestionListDto(
+    private QuestionListResponseDto createTestQuestionListResponseDto() {
+        return new QuestionListResponseDto(
                 createTestQuestionIds(),
                 createTestQuestions(),
                 TEST_TOTAL_COUNT
