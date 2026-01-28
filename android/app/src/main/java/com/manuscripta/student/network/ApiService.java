@@ -1,9 +1,22 @@
 package com.manuscripta.student.network;
 
+import retrofit2.Call;
+import retrofit2.http.GET;
+import retrofit2.http.Path;
+
 /**
  * Retrofit API service interface.
- * Define API endpoints here.
+ * Defines HTTP endpoints for communication with the Windows teacher server.
  */
 public interface ApiService {
-    // API endpoints will be defined here
+
+    /**
+     * Retrieves feedback for responses submitted by a specific device.
+     * Per API Contract §2.6, returns all available feedback for the device.
+     *
+     * @param deviceId The device ID to fetch feedback for
+     * @return Call wrapping the FeedbackResponse
+     */
+    @GET("/feedback/{deviceId}")
+    Call<FeedbackResponse> getFeedback(@Path("deviceId") String deviceId);
 }

@@ -1,0 +1,128 @@
+package com.manuscripta.student.data.repository;
+
+import androidx.annotation.NonNull;
+
+import com.manuscripta.student.data.local.FeedbackDao;
+import com.manuscripta.student.data.model.FeedbackEntity;
+import com.manuscripta.student.domain.mapper.FeedbackMapper;
+import com.manuscripta.student.domain.model.Feedback;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.FeedbackDto;
+import com.manuscripta.student.network.FeedbackResponse;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import retrofit2.Response;
+
+/**
+ * Implementation of {@link FeedbackRepository}.
+ * Handles the complete feedback fetch→store→ACK flow.
+ */
+@Singleton
+public class FeedbackRepositoryImpl implements FeedbackRepository {
+
+    private final FeedbackDao feedbackDao;
+    private final ApiService apiService;
+    private final TcpSocketManager tcpSocketManager;
+
+    /**
+     * Creates a new FeedbackRepositoryImpl.
+     *
+     * @param feedbackDao      The DAO for feedback persistence
+     * @param apiService       The Retrofit API service
+     * @param tcpSocketManager The TCP socket manager for sending ACK
+     */
+    @Inject
+    public FeedbackRepositoryImpl(@NonNull FeedbackDao feedbackDao,
+                                  @NonNull ApiService apiService,
+                                  @NonNull TcpSocketManager tcpSocketManager) {
+        this.feedbackDao = feedbackDao;
+        this.apiService = apiService;
+        this.tcpSocketManager = tcpSocketManager;
+    }
+
+    @Override
+    public void fetchAndStoreFeedback(@NonNull String deviceId) throws Exception {
+        // Fetch feedback from server via HTTP
+        Response<FeedbackResponse> response = apiService.getFeedback(deviceId).execute();
+
+        if (!response.isSuccessful()) {
+            if (response.code() == 404) {
+                // No feedback available - this is not an error
+                return;
+            }
+            throw new IOException("Failed to fetch feedback: HTTP " + response.code());
+        }
+
+        FeedbackResponse feedbackResponse = response.body();
+        if (feedbackResponse == null || feedbackResponse.getFeedback() == null) {
+            return;
+        }
+
+        // Convert DTOs to entities and store
+        List<FeedbackEntity> entities = new ArrayList<>();
+        for (FeedbackDto dto : feedbackResponse.getFeedback()) {
+            FeedbackEntity entity = new FeedbackEntity(
+                    dto.getId(),
+                    dto.getResponseId(),
+                    dto.getText(),
+                    dto.getMarks()
+            );
+            entities.add(entity);
+        }
+
+        if (!entities.isEmpty()) {
+            feedbackDao.insertAll(entities);
+        }
+
+        // Send acknowledgement via TCP
+        FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
+        tcpSocketManager.sendMessage(ackMessage);
+    }
+
+    @Override
+    public Feedback getFeedbackForResponse(@NonNull String responseId) {
+        FeedbackEntity entity = feedbackDao.getByResponseId(responseId);
+        if (entity == null) {
+            return null;
+        }
+        return FeedbackMapper.toDomain(entity);
+    }
+
+    @Override
+    public List<Feedback> getAllFeedback() {
+        List<FeedbackEntity> entities = feedbackDao.getAll();
+        List<Feedback> feedbackList = new ArrayList<>();
+        for (FeedbackEntity entity : entities) {
+            feedbackList.add(FeedbackMapper.toDomain(entity));
+        }
+        return feedbackList;
+    }
+
+    @Override
+    public List<Feedback> getAllFeedbackByDeviceId(@NonNull String deviceId) {
+        List<FeedbackEntity> entities = feedbackDao.getAllByDeviceId(deviceId);
+        List<Feedback> feedbackList = new ArrayList<>();
+        for (FeedbackEntity entity : entities) {
+            feedbackList.add(FeedbackMapper.toDomain(entity));
+        }
+        return feedbackList;
+    }
+
+    @Override
+    public void deleteAllFeedback() {
+        feedbackDao.deleteAll();
+    }
+
+    @Override
+    public int getFeedbackCount() {
+        return feedbackDao.getCount();
+    }
+}
