@@ -1,4 +1,4 @@
-package com.manuscripta.student.network.dto;
+package com.manuscripta.student.utils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

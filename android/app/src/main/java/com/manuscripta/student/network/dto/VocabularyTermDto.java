@@ -17,14 +17,14 @@ public class VocabularyTermDto {
     /**
      * The vocabulary term word or phrase.
      */
-    @SerializedName("term")
+    @SerializedName("Term")
     @Nullable
     private String term;
 
     /**
      * The definition or explanation of the term.
      */
-    @SerializedName("definition")
+    @SerializedName("Definition")
     @Nullable
     private String definition;
 

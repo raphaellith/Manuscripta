@@ -22,21 +22,21 @@ public class MaterialDto {
      * Unique identifier for the material (UUID format).
      * Assigned by the Windows teacher application and preserved across services.
      */
-    @SerializedName("id")
+    @SerializedName("Id")
     @Nullable
     private String id;
 
     /**
      * The type of material (e.g., "READING", "QUIZ", "WORKSHEET", "POLL").
      */
-    @SerializedName("type")
+    @SerializedName("Type")
     @Nullable
     private String type;
 
     /**
      * The title of the material.
      */
-    @SerializedName("title")
+    @SerializedName("Title")
     @Nullable
     private String title;
 
@@ -44,14 +44,14 @@ public class MaterialDto {
      * The main content of the material.
      * May contain references to attachments in the format "/attachments/{id}".
      */
-    @SerializedName("content")
+    @SerializedName("Content")
     @Nullable
     private String content;
 
     /**
      * Additional metadata in JSON format (e.g., author, subject, grade level).
      */
-    @SerializedName("metadata")
+    @SerializedName("Metadata")
     @Nullable
     private String metadata;
 
@@ -59,14 +59,14 @@ public class MaterialDto {
      * Key vocabulary terms for accessibility support (MAT6).
      * Used for text-to-speech and content simplification features.
      */
-    @SerializedName("vocabularyTerms")
+    @SerializedName("VocabularyTerms")
     @Nullable
     private List<VocabularyTermDto> vocabularyTerms;
 
     /**
      * Timestamp when the material was created or last modified (Unix epoch milliseconds).
      */
-    @SerializedName("timestamp")
+    @SerializedName("Timestamp")
     @Nullable
     private Long timestamp;
 

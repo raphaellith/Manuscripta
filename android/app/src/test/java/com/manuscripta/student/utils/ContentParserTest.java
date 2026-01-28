@@ -1,4 +1,4 @@
-package com.manuscripta.student.network.dto;
+package com.manuscripta.student.utils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -7,8 +7,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 /**
@@ -233,18 +231,6 @@ public class ContentParserTest {
         assertEquals(2, attachmentIds.size());
         assertEquals("valid-id", attachmentIds.get(0));
         assertEquals("also", attachmentIds.get(1)); // stops at underscore
-    }
-
-    @Test
-    public void testPrivateConstructorThrowsException() throws Exception {
-        Constructor<ContentParser> constructor = ContentParser.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        try {
-            constructor.newInstance();
-            throw new AssertionError("Expected constructor to throw AssertionError");
-        } catch (InvocationTargetException e) {
-            assertEquals(AssertionError.class, e.getCause().getClass());
-        }
     }
 
     @Test

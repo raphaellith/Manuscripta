@@ -20,7 +20,7 @@ public class MaterialListResponseDto {
      * Ordered list of material IDs.
      * The order represents the intended display sequence.
      */
-    @SerializedName("materialIds")
+    @SerializedName("MaterialIds")
     @Nullable
     private List<String> materialIds;
 
@@ -28,7 +28,7 @@ public class MaterialListResponseDto {
      * Optional list of full material objects.
      * May be included for convenience to avoid additional API calls.
      */
-    @SerializedName("materials")
+    @SerializedName("Materials")
     @Nullable
     private List<MaterialDto> materials;
 
@@ -36,7 +36,7 @@ public class MaterialListResponseDto {
      * Total count of materials available.
      * May differ from the returned list if pagination is used.
      */
-    @SerializedName("totalCount")
+    @SerializedName("TotalCount")
     @Nullable
     private Integer totalCount;
 

@@ -98,6 +98,7 @@ public final class MaterialMapper {
         try {
             type = typeStr != null ? MaterialType.valueOf(typeStr.toUpperCase()) : MaterialType.READING;
         } catch (IllegalArgumentException e) {
+            Log.w(TAG, "Unknown MaterialType '" + typeStr + "', defaulting to READING");
             type = MaterialType.READING;
         }
 

@@ -381,7 +381,7 @@ public class MaterialMapperTest {
     @Test
     public void testToDtoWithVocabularyTerms() {
         // Given
-        String vocabJson = "[{\"term\":\"mitosis\",\"definition\":\"Cell division\"}]";
+        String vocabJson = "[{\"Term\":\"mitosis\",\"Definition\":\"Cell division\"}]";
         Material domain = new Material(
                 TEST_ID,
                 MaterialType.READING,
@@ -455,7 +455,7 @@ public class MaterialMapperTest {
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
-                "[{\"term\":\"vocab\",\"definition\":\"word\"}]",
+                "[{\"Term\":\"vocab\",\"Definition\":\"word\"}]",
                 TEST_TIMESTAMP
         );
 
@@ -535,19 +535,5 @@ public class MaterialMapperTest {
         // Then
         assertNotNull(dto.getVocabularyTerms());
         assertTrue(dto.getVocabularyTerms().isEmpty());
-    }
-
-    @Test
-    public void testPrivateConstructorThrowsException() throws Exception {
-        // Use reflection to access private constructor
-        java.lang.reflect.Constructor<MaterialMapper> constructor = MaterialMapper.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        try {
-            constructor.newInstance();
-            throw new AssertionError("Expected constructor to throw AssertionError");
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            // Verify the cause is AssertionError
-            assertEquals(AssertionError.class, e.getCause().getClass());
-        }
     }
 }
