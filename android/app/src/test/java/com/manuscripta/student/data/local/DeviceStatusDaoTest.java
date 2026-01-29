@@ -19,6 +19,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -127,7 +128,7 @@ public class DeviceStatusDaoTest {
     public void testInsertAll() {
         DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
         DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
-        List<DeviceStatusEntity> list = java.util.Arrays.asList(entity1, entity2);
+        List<DeviceStatusEntity> list = Arrays.asList(entity1, entity2);
 
         dao.insertAll(list);
 
