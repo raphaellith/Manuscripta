@@ -39,7 +39,8 @@ The portal allows teachers to create and manage custom lesson materials, empower
 
 ### For Teachers (Windows Application)
 
-- **AI-Powered Content Generation** — Create quizzes, worksheets, reading materials, and polls using on-device generative AI models (IBM Granite via OpenVINO/Qualcomm AI Stack)
+- **Rich Text Editor** — Create and edit materials with full formatting support including tables, mathematical equations, embedded images, and PDF documents
+- **AI-Powered Content Generation** — Generate quizzes, worksheets, reading materials, and polls using on-device generative AI models
 - **Lesson Library Management** — Organise materials in a hierarchical structure of units, lessons, and individual materials
 - **Real-Time Dashboard** — Monitor student progress, device status, and engagement through a comprehensive classroom overview
 - **Differentiated Instruction** — Deploy different materials to specific groups of students simultaneously
