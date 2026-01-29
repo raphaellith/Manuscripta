@@ -170,7 +170,11 @@ public class OllamaClientService
             CreateNoWindow = true
         };
 
-        System.Diagnostics.Process.Start(processStartInfo);
+        using var process = System.Diagnostics.Process.Start(processStartInfo);
+        if (process is null)
+        {
+            throw new InvalidOperationException("Failed to start Ollama daemon process");
+        }
         
         // Wait for daemon to start
         for (int i = 0; i < 10; i++)
