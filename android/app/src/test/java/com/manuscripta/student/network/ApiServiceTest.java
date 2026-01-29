@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -212,6 +211,7 @@ public class ApiServiceTest {
         Response<DistributionBundleDto> response = call.execute();
 
         assertTrue(response.isSuccessful());
+        assertNotNull(response.body());
         assertEquals(2, response.body().getMaterials().size());
         assertEquals(2, response.body().getQuestions().size());
     }
@@ -308,6 +308,7 @@ public class ApiServiceTest {
         Response<ConfigResponseDto> response = call.execute();
 
         assertTrue(response.isSuccessful());
+        assertNotNull(response.body());
         assertEquals(Boolean.FALSE, response.body().getKioskMode());
         assertEquals("large", response.body().getTextSize());
     }
@@ -326,6 +327,7 @@ public class ApiServiceTest {
         Response<ConfigResponseDto> response = call.execute();
 
         assertTrue(response.isSuccessful());
+        assertNotNull(response.body());
         assertNull(response.body().getKioskMode());
         assertNull(response.body().getTextSize());
     }
