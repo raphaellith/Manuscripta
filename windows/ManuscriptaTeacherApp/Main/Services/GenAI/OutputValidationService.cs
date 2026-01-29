@@ -167,16 +167,16 @@ public class OutputValidationService
 
         // §3F(2)(b): Check for excessive header levels
         var headerMatches = Regex.Matches(content, @"^#{4,}\s+", RegexOptions.Multiline);
-        foreach (Match match in headerMatches)
-        {
+        var headerWarnings = headerMatches.Select(match => {
             var lineNum = FindLineNumberForMatch(content, match);
-            warnings.Add(new ValidationWarning
+            return new ValidationWarning
             {
                 ErrorType = "INVALID_HEADER_LEVEL",
                 Description = "Header levels exceed maximum of H3",
                 LineNumber = lineNum
-            });
-        }
+            };
+        }).ToList();
+        warnings.AddRange(headerWarnings);
 
         return warnings;
     }
