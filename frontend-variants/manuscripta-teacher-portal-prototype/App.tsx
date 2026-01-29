@@ -9,6 +9,9 @@ import { ResponsesView } from './components/ResponsesView';
 import { Settings } from './components/Settings';
 import { HierarchyVisualizer } from './components/HierarchyVisualizer';
 import { MaterialFlowVisualizer } from './components/MaterialFlowVisualizer';
+import { LLMImplementationPlanning } from './components/LLMImplementationPlanning';
+import { RAGPipelineDesign } from './components/RAGPipelineDesign';
+import { ModelSelection } from './components/ModelSelection';
 import type { View, ContentItem, LessonFolder, Unit, Collection } from './types';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 
@@ -162,6 +165,9 @@ const App: React.FC = () => {
   const [contentItems, setContentItems] = useState<ContentItem[]>(initialContentItems);
   const [showHierarchy, setShowHierarchy] = useState(false);
   const [showMaterialFlow, setShowMaterialFlow] = useState(false);
+  const [showLLMPlanning, setShowLLMPlanning] = useState(false);
+  const [showRAGPipeline, setShowRAGPipeline] = useState(false);
+  const [showModelSelection, setShowModelSelection] = useState(false);
   
   // Tree expanded state (persisted at app level so it survives view changes)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
@@ -173,6 +179,9 @@ const App: React.FC = () => {
     const handleHashChange = () => {
       setShowHierarchy(window.location.hash === '#/hierarchy');
       setShowMaterialFlow(window.location.hash === '#/material-flow');
+      setShowLLMPlanning(window.location.hash === '#/llm-planning');
+      setShowRAGPipeline(window.location.hash === '#/rag-pipeline');
+      setShowModelSelection(window.location.hash === '#/model-selection');
     };
     
     // Check initial hash
@@ -266,6 +275,18 @@ const App: React.FC = () => {
   // If showing material flow visualizer, render it full-page without the main app chrome
   if (showMaterialFlow) {
     return <MaterialFlowVisualizer />;
+  }
+
+  if (showLLMPlanning) {
+    return <LLMImplementationPlanning />;
+  }
+
+  if (showRAGPipeline) {
+    return <RAGPipelineDesign />;
+  }
+
+  if (showModelSelection) {
+    return <ModelSelection />;
   }
 
   return (

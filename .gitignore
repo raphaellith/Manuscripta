@@ -264,6 +264,10 @@ Temporary Items
 # Node.js dependencies
 node_modules/
 
+# Electron Forge / Webpack build output
+.webpack/
+out/
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
