@@ -83,7 +83,6 @@ public class OutputValidationService
     private List<ValidationWarning> ValidateContent(string content)
     {
         var warnings = new List<ValidationWarning>();
-        var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         // §3F(2)(a): Check for unclosed code blocks
         var codeBlockMatches = Regex.Matches(content, "```");
