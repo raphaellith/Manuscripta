@@ -57,7 +57,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) When embeddings are stored —
 
-    (a) ChromaDB shall be used in embedded mode.
+    (a) [Deleted.]
+
+    (a1) ChromaDB shall be used in client-server mode.
 
     (b) ChromaDB shall store its data in `%AppData%\ManuscriptaTeacherApp\VectorStore`.
 

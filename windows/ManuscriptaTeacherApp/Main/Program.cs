@@ -2,6 +2,9 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using ChromaDB.Client;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 using Main.Data;
 using Main.Services;
@@ -10,6 +13,10 @@ using Main.Services.GenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Start ChromaDB server if not already running
+// See GenAISpec.md §2(3)
+await StartChromaDbServerAsync(builder.Configuration);
+
 // Configure network settings from appsettings.json
 builder.Services.Configure<NetworkSettings>(
     builder.Configuration.GetSection("NetworkSettings"));
@@ -17,22 +24,20 @@ builder.Services.Configure<NetworkSettings>(
 builder.Services.AddDbContext<MainDbContext>(options =>
   options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
 
-// Configure ChromaDB for embedded mode
+// Configure ChromaDB for client-server mode
 // See GenAISpec.md §2(3)
-var vectorStorePath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "ManuscriptaTeacherApp",
-    "VectorStore"
-);
-Directory.CreateDirectory(vectorStorePath);
+// Note: ChromaDB.Client is a client-server library. The database path is configured
+// on the server side (e.g., `chroma run --path /path/to/store`), not in the C# client.
+// The client connects via HTTP to the running server using the URI below.
+var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
 
-builder.Services.AddSingleton(new ChromaConfigurationOptions());
+builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ChromaClient>(sp =>
 {
     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     var httpClient = httpClientFactory.CreateClient();
-    return new ChromaClient(new ChromaConfigurationOptions(), httpClient);
+    return new ChromaClient(new ChromaConfigurationOptions(uri: chromaServerUri), httpClient);
 });
 
 // Register pairing and device services
@@ -168,6 +173,100 @@ app.MapControllers();
 app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/hub");
 
 app.Run();
+
+
+// Helper method to start ChromaDB server if not already running
+async Task StartChromaDbServerAsync(IConfiguration configuration)
+{
+    var serverUri = configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
+    
+    // Per GenAISpec.md §2(3)(b): ChromaDB shall store its data in %AppData%\ManuscriptaTeacherApp\VectorStore
+    var dataPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ManuscriptaTeacherApp",
+        "VectorStore"
+    );
+    
+    // Ensure data directory exists
+    Directory.CreateDirectory(dataPath);
+    
+    // Check if server is already running
+    try
+    {
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        var healthCheckUri = serverUri.TrimEnd('/') + "/heartbeat";
+        var response = await httpClient.GetAsync(healthCheckUri);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("ChromaDB server is already running.");
+            return;
+        }
+    }
+    catch
+    {
+        // Server is not running, proceed to start it
+    }
+    
+    try
+    {
+        Console.WriteLine("Starting ChromaDB server...");
+        
+        var chromaProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "chroma",
+                Arguments = $"run --path \"{dataPath}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+        
+        chromaProcess.Start();
+        
+        // Wait for server to start (up to 30 seconds)
+        var startTime = DateTime.UtcNow;
+        var timeout = TimeSpan.FromSeconds(30);
+        var serverStarted = false;
+        
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            try
+            {
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+                var healthCheckUri = serverUri.TrimEnd('/') + "/heartbeat";
+                var response = await httpClient.GetAsync(healthCheckUri);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    serverStarted = true;
+                    Console.WriteLine("ChromaDB server started successfully.");
+                    break;
+                }
+            }
+            catch
+            {
+                // Server not ready yet, retry
+            }
+            
+            await Task.Delay(500);
+        }
+        
+        if (!serverStarted)
+        {
+            Console.WriteLine("Warning: ChromaDB server may not have started properly. Continuing anyway...");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Failed to start ChromaDB server: {ex.Message}");
+        Console.WriteLine("Ensure ChromaDB is installed and the 'chroma' command is available in your PATH.");
+        throw;
+    }
+}
 
 // Expose Program class for WebApplicationFactory integration testing
 public partial class Program { }
