@@ -51,13 +51,11 @@ public class OllamaClientService
             
             if (doc.RootElement.TryGetProperty("models", out var models))
             {
-                foreach (var model in models.EnumerateArray())
+                foreach (var model in models.EnumerateArray()
+                    .Where(m => m.TryGetProperty("name", out var name) && 
+                        name.GetString()?.StartsWith(modelName) == true))
                 {
-                    if (model.TryGetProperty("name", out var name) && 
-                        name.GetString()?.StartsWith(modelName) == true)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             
