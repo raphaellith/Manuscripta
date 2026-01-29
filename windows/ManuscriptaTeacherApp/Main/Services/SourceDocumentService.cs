@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Main.Models.Entities;
 using Main.Services.Repositories;
 using Main.Services.GenAI;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services;
 
@@ -17,15 +18,18 @@ public class SourceDocumentService : ISourceDocumentService
     private readonly ISourceDocumentRepository _repository;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
     private readonly DocumentEmbeddingService _embeddingService;
+    private readonly ILogger<SourceDocumentService> _logger;
 
     public SourceDocumentService(
         ISourceDocumentRepository repository,
         IUnitCollectionRepository unitCollectionRepository,
-        DocumentEmbeddingService embeddingService)
+        DocumentEmbeddingService embeddingService,
+        ILogger<SourceDocumentService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<SourceDocumentEntity> CreateAsync(SourceDocumentEntity entity)
@@ -37,8 +41,21 @@ public class SourceDocumentService : ISourceDocumentService
         await _repository.AddAsync(entity);
         
         // §3A(1): When a SourceDocumentEntity is created, index it for semantic retrieval
-        // This runs asynchronously in the background
-        _ = _embeddingService.IndexSourceDocumentAsync(entity);
+        // This runs asynchronously in the background with error handling
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _embeddingService.IndexSourceDocumentAsync(entity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Failed to index source document {SourceDocumentId} for unit collection {UnitCollectionId}. " +
+                    "Document created successfully but semantic search will not work until re-indexed.",
+                    entity.Id, entity.UnitCollectionId);
+            }
+        });
         
         return entity;
     }
