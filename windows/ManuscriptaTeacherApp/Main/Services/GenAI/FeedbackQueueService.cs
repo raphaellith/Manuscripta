@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using Main.Models.Entities;
 using Main.Models.Enums;
 using Main.Services.Hubs;
+using Main.Services.Network;
+using Main.Services.Repositories;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Main.Services.GenAI;
@@ -14,10 +16,17 @@ public class FeedbackQueueService
 {
     private readonly ConcurrentQueue<Guid> _generationQueue = new();
     private readonly IHubContext<TeacherPortalHub> _hubContext;
+    private readonly ITcpPairingService _tcpPairingService;
+    private readonly IResponseRepository _responseRepository;
 
-    public FeedbackQueueService(IHubContext<TeacherPortalHub> hubContext)
+    public FeedbackQueueService(
+        IHubContext<TeacherPortalHub> hubContext,
+        ITcpPairingService tcpPairingService,
+        IResponseRepository responseRepository)
     {
         _hubContext = hubContext;
+        _tcpPairingService = tcpPairingService;
+        _responseRepository = responseRepository;
     }
 
     /// <summary>
@@ -91,14 +100,27 @@ public class FeedbackQueueService
     /// Approves feedback and updates status to READY.
     /// See GenAISpec.md §3DA(2).
     /// </summary>
-    public void ApproveFeedback(FeedbackEntity feedback)
+    public async Task ApproveFeedbackAsync(FeedbackEntity feedback)
     {
         if (feedback.Status == FeedbackStatus.PROVISIONAL)
         {
             feedback.Status = FeedbackStatus.READY;
+            
             // §3DA(2)(b): Trigger dispatch immediately via Session Interaction Specification §7
-            // Note: The actual dispatch mechanism is implemented in the TeacherPortalHub or a dedicated dispatch service
-            // This method marks the feedback as ready for dispatch
+            // Retrieve the response to get the device ID
+            var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
+            if (response != null)
+            {
+                // Send RETURN_FEEDBACK message to the device
+                // This will trigger the Android device to retrieve feedback via GET /feedback/{deviceId}
+                await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+            }
+            else
+            {
+                // Log warning if response not found but still transition feedback to READY
+                // The teacher can manually retry dispatch if needed
+                _ = _hubContext.Clients.All.SendAsync("OnFeedbackDispatchFailed", feedback.Id, null, "Response not found for feedback");
+            }
         }
     }
 

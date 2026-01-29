@@ -6,6 +6,7 @@ using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services.Repositories;
 using Main.Services.GenAI;
+using Main.Services.Network;
 
 namespace Main.Services.Hubs;
 
@@ -29,11 +30,14 @@ public class TeacherPortalHub : Hub
     private readonly IQuestionRepository _questionRepository;
     private readonly ISourceDocumentRepository _sourceDocumentRepository;
     private readonly IAttachmentRepository _attachmentRepository;
+    private readonly IFeedbackRepository _feedbackRepository;
+    private readonly IResponseRepository _responseRepository;
     private readonly MaterialGenerationService _materialGenerationService;
     private readonly ContentModificationService _contentModificationService;
     private readonly EmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly DocumentEmbeddingService _documentEmbeddingService;
+    private readonly ITcpPairingService _tcpPairingService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -50,11 +54,14 @@ public class TeacherPortalHub : Hub
         IQuestionRepository questionRepository,
         ISourceDocumentRepository sourceDocumentRepository,
         IAttachmentRepository attachmentRepository,
+        IFeedbackRepository feedbackRepository,
+        IResponseRepository responseRepository,
         MaterialGenerationService materialGenerationService,
         ContentModificationService contentModificationService,
         EmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
-        DocumentEmbeddingService documentEmbeddingService)
+        DocumentEmbeddingService documentEmbeddingService,
+        ITcpPairingService tcpPairingService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -70,11 +77,14 @@ public class TeacherPortalHub : Hub
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
+        _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _materialGenerationService = materialGenerationService ?? throw new ArgumentNullException(nameof(materialGenerationService));
         _contentModificationService = contentModificationService ?? throw new ArgumentNullException(nameof(contentModificationService));
         _embeddingStatusService = embeddingStatusService ?? throw new ArgumentNullException(nameof(embeddingStatusService));
         _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
         _documentEmbeddingService = documentEmbeddingService ?? throw new ArgumentNullException(nameof(documentEmbeddingService));
+        _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -571,4 +581,68 @@ public class TeacherPortalHub : Hub
 
     #endregion
 
-}
+    #region Feedback Operations - NetworkingAPISpec §1(1)(h)
+
+    /// <summary>
+    /// Approves feedback and triggers dispatch to the student device.
+    /// Per NetworkingAPISpec §1(1)(h)(ii) and GenAISpec.md §3DA(2).
+    /// </summary>
+    public async Task ApproveFeedback(Guid feedbackId)
+    {
+        try
+        {
+            var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new HubException($"Feedback {feedbackId} not found");
+            }
+
+            // Approve feedback (transitions PROVISIONAL → READY and triggers dispatch)
+            await _feedbackQueueService.ApproveFeedbackAsync(feedback);
+
+            // Persist the status change
+            await _feedbackRepository.UpdateAsync(feedback);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to approve feedback: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Retries dispatch of feedback in READY status.
+    /// Per NetworkingAPISpec §1(1)(h)(iii) and GenAISpec.md §3DA(4).
+    /// </summary>
+    public async Task RetryFeedbackDispatch(Guid feedbackId)
+    {
+        try
+        {
+            var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new HubException($"Feedback {feedbackId} not found");
+            }
+
+            if (feedback.Status != FeedbackStatus.READY)
+            {
+                throw new HubException($"Cannot retry dispatch for feedback with status {feedback.Status}. Only READY feedback can be retried.");
+            }
+
+            // Retrieve the response to get the device ID
+            var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
+            if (response == null)
+            {
+                throw new HubException($"Response for feedback {feedbackId} not found");
+            }
+
+            // Retry dispatch via TCP
+            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to retry feedback dispatch: {ex.Message}");
+        }
+    }
+
+    #endregion
+
