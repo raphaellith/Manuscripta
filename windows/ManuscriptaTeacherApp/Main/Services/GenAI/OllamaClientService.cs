@@ -74,7 +74,10 @@ public class OllamaClientService
     public async Task PullModelAsync(string modelName)
     {
         var request = new { name = modelName };
-        await _httpClient.PostAsJsonAsync("/api/pull", request);
+        var response = await _httpClient.PostAsJsonAsync("/api/pull", request);
+        response.EnsureSuccessStatusCode();
+        // Consume the streaming response to wait for the pull operation to complete.
+        _ = await response.Content.ReadAsStringAsync();
     }
 
     /// <summary>
