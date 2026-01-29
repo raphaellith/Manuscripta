@@ -218,7 +218,8 @@ public class DocumentEmbeddingService
         );
         
         // Split text into sentences, preserving punctuation
-        var sentences = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?])\s+")
+        var sentences = sentencePattern
+            .Split(text)
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .ToArray();
         
