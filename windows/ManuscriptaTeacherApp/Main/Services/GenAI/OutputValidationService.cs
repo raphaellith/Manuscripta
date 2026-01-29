@@ -35,7 +35,7 @@ public class OutputValidationService
         string modelUsed,
         bool useFallback)
     {
-        var warnings = ValidateContent(content);
+        var warnings = await ValidateContentAsync(content);
 
         if (warnings.Count == 0)
         {
@@ -45,8 +45,8 @@ public class OutputValidationService
         // §3F(3): Primary model path - apply deterministic fixes
         if (!useFallback)
         {
-            content = ApplyDeterministicFixes(content);
-            warnings = ValidateContent(content);
+            content = await ApplyDeterministicFixesAsync(content);
+            warnings = await ValidateContentAsync(content);
             
             return new GenerationResult
             {
@@ -62,12 +62,12 @@ public class OutputValidationService
 
             var refinementPrompt = ConstructRefinementPrompt(content, warnings);
             content = await _ollamaClient.GenerateChatCompletionAsync(modelUsed, refinementPrompt);
-            warnings = ValidateContent(content);
+            warnings = await ValidateContentAsync(content);
         }
 
         // §3F(4)(d): Apply deterministic fixes after iterations
-        content = ApplyDeterministicFixes(content);
-        warnings = ValidateContent(content);
+        content = await ApplyDeterministicFixesAsync(content);
+        warnings = await ValidateContentAsync(content);
 
         return new GenerationResult
         {
@@ -80,7 +80,7 @@ public class OutputValidationService
     /// Validates content against Material Encoding Specification.
     /// See GenAISpec.md §3F(2).
     /// </summary>
-    private List<ValidationWarning> ValidateContent(string content)
+    private async Task<List<ValidationWarning>> ValidateContentAsync(string content)
     {
         var warnings = new List<ValidationWarning>();
 
@@ -133,7 +133,7 @@ public class OutputValidationService
             var idString = match.Groups[1].Value;
             if (Guid.TryParse(idString, out var questionId))
             {
-                var questionExists = _dbContext.Questions.Any(q => q.Id == questionId);
+                var questionExists = await _dbContext.Questions.AnyAsync(q => q.Id == questionId);
                 if (!questionExists)
                 {
                     var lineNum = FindLineNumberForMatch(content, match);
@@ -154,7 +154,7 @@ public class OutputValidationService
             var idString = match.Groups[1].Value;
             if (Guid.TryParse(idString, out var attachmentId))
             {
-                var attachmentExists = _dbContext.Attachments.Any(a => a.Id == attachmentId);
+                var attachmentExists = await _dbContext.Attachments.AnyAsync(a => a.Id == attachmentId);
                 if (!attachmentExists)
                 {
                     var lineNum = FindLineNumberForMatch(content, match);
@@ -198,7 +198,7 @@ public class OutputValidationService
     /// Applies deterministic post-processing fixes to common errors.
     /// See GenAISpec.md §3F(5).
     /// </summary>
-    private string ApplyDeterministicFixes(string content)
+    private async Task<string> ApplyDeterministicFixesAsync(string content)
     {
         // §3F(5)(a): Close unclosed code blocks
         var codeBlockMatches = Regex.Matches(content, "```");
@@ -229,10 +229,10 @@ public class OutputValidationService
         content = Regex.Replace(content, @"\[ATTACHMENT\s+id=['""]?['""]?\]", "");
         
         // §3F(5)(e)(i): Remove attachment markers where attachment entity or file does not exist
-        content = RemoveInvalidAttachmentMarkers(content);
+        content = await RemoveInvalidAttachmentMarkersAsync(content);
         
         // §3F(5)(e)(ii): Remove question markers where question entity does not exist
-        content = RemoveInvalidQuestionMarkers(content);
+        content = await RemoveInvalidQuestionMarkersAsync(content);
 
         return content;
     }
@@ -241,7 +241,7 @@ public class OutputValidationService
     /// Removes attachment markers where the referenced entity or file does not exist.
     /// See GenAISpec.md §3F(5)(e)(i).
     /// </summary>
-    private string RemoveInvalidAttachmentMarkers(string content)
+    private async Task<string> RemoveInvalidAttachmentMarkersAsync(string content)
     {
         var attachmentMarkers = Regex.Matches(content, @"\[ATTACHMENT\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
         
@@ -251,12 +251,12 @@ public class OutputValidationService
             if (Guid.TryParse(idString, out var attachmentId))
             {
                 // Check if attachment entity exists
-                var attachmentExists = _dbContext.Attachments.Any(a => a.Id == attachmentId);
+                var attachmentExists = await _dbContext.Attachments.AnyAsync(a => a.Id == attachmentId);
                 
                 if (attachmentExists)
                 {
                     // Check if attachment file exists
-                    var attachment = _dbContext.Attachments.Find(attachmentId);
+                    var attachment = await _dbContext.Attachments.FindAsync(attachmentId);
                     if (attachment != null)
                     {
                         var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
@@ -281,7 +281,7 @@ public class OutputValidationService
     /// Removes question markers where the referenced entity does not exist.
     /// See GenAISpec.md §3F(5)(e)(ii).
     /// </summary>
-    private string RemoveInvalidQuestionMarkers(string content)
+    private async Task<string> RemoveInvalidQuestionMarkersAsync(string content)
     {
         var questionMarkers = Regex.Matches(content, @"\[QUESTION\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
         
@@ -291,7 +291,7 @@ public class OutputValidationService
             if (Guid.TryParse(idString, out var questionId))
             {
                 // Check if question entity exists
-                var questionExists = _dbContext.Questions.Any(q => q.Id == questionId);
+                var questionExists = await _dbContext.Questions.AnyAsync(q => q.Id == questionId);
                 
                 if (!questionExists)
                 {
