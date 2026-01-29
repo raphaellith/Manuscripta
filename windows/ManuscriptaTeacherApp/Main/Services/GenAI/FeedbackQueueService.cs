@@ -30,6 +30,19 @@ public class FeedbackQueueService
     }
 
     /// <summary>
+    /// Dequeues the next response ID for processing.
+    /// Returns null if the queue is empty.
+    /// </summary>
+    public Guid? DequeueNext()
+    {
+        if (_generationQueue.TryDequeue(out var responseId))
+        {
+            return responseId;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Adds a response to the generation queue.
     /// See GenAISpec.md §3D(5).
     /// </summary>
