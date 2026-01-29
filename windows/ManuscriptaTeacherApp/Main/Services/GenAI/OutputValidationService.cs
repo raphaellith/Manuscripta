@@ -112,18 +112,15 @@ public class OutputValidationService
 
         // §3F(2)(c): Check for malformed attachment markers with invalid or missing id
         var attachmentMarkers = Regex.Matches(content, @"\[ATTACHMENT\s+id=['""]?([^'"">\]]+)['""]?\]");
-        foreach (Match match in attachmentMarkers)
+        foreach (Match match in attachmentMarkers.Cast<Match>().Where(match => string.IsNullOrWhiteSpace(match.Groups[1].Value)))
         {
-            if (string.IsNullOrWhiteSpace(match.Groups[1].Value))
+            var lineNum = FindLineNumberForMatch(content, match);
+            warnings.Add(new ValidationWarning
             {
-                var lineNum = FindLineNumberForMatch(content, match);
-                warnings.Add(new ValidationWarning
-                {
-                    ErrorType = "MALFORMED_MARKER",
-                    Description = "Attachment marker with invalid or missing id attribute",
-                    LineNumber = lineNum
-                });
-            }
+                ErrorType = "MALFORMED_MARKER",
+                Description = "Attachment marker with invalid or missing id attribute",
+                LineNumber = lineNum
+            });
         }
 
         // §3F(2)(b): Check for invalid references - questions that don't exist
