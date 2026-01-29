@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Main.Models.Entities;
 using Main.Models.Enums;
 using Main.Services.Hubs;
@@ -11,7 +12,7 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class FeedbackQueueService
 {
-    private readonly Queue<Guid> _generationQueue = new();
+    private readonly ConcurrentQueue<Guid> _generationQueue = new();
     private readonly IHubContext<TeacherPortalHub> _hubContext;
 
     public FeedbackQueueService(IHubContext<TeacherPortalHub> hubContext)
@@ -25,7 +26,7 @@ public class FeedbackQueueService
     /// </summary>
     public bool IsQueued(Guid responseId)
     {
-        return _generationQueue.Contains(responseId);
+        return _generationQueue.AsEnumerable().Contains(responseId);
     }
 
     /// <summary>
@@ -46,19 +47,20 @@ public class FeedbackQueueService
     /// </summary>
     public void RemoveFromQueue(Guid responseId)
     {
-        var tempQueue = new Queue<Guid>();
-        while (_generationQueue.Count > 0)
+        // Rebuild the queue without the specified responseId
+        var itemsToKeep = new List<Guid>();
+        while (_generationQueue.TryDequeue(out var id))
         {
-            var id = _generationQueue.Dequeue();
             if (id != responseId)
             {
-                tempQueue.Enqueue(id);
+                itemsToKeep.Add(id);
             }
         }
         
-        while (tempQueue.Count > 0)
+        // Re-enqueue the remaining items
+        foreach (var item in itemsToKeep)
         {
-            _generationQueue.Enqueue(tempQueue.Dequeue());
+            _generationQueue.Enqueue(item);
         }
     }
 
