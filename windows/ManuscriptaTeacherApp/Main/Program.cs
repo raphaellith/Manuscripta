@@ -27,10 +27,11 @@ var vectorStorePath = Path.Combine(
 Directory.CreateDirectory(vectorStorePath);
 
 builder.Services.AddSingleton(new ChromaConfigurationOptions());
-builder.Services.AddSingleton<HttpClient>();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ChromaClient>(sp =>
 {
-    var httpClient = sp.GetRequiredService<HttpClient>();
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient();
     return new ChromaClient(new ChromaConfigurationOptions(), httpClient);
 });
 
