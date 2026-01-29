@@ -52,6 +52,7 @@ public class DocumentEmbeddingService
     public async Task IndexSourceDocumentAsync(SourceDocumentEntity document)
     {
         document.EmbeddingStatus = EmbeddingStatus.PENDING;
+        await _dbContext.SaveChangesAsync();
         
         var retries = 0;
         while (retries <= MaxEmbeddingRetries)
@@ -95,6 +96,7 @@ public class DocumentEmbeddingService
                 }
 
                 document.EmbeddingStatus = EmbeddingStatus.INDEXED;
+                await _dbContext.SaveChangesAsync();
                 return;
             }
             catch (Exception ex)
@@ -104,6 +106,7 @@ public class DocumentEmbeddingService
                 if (retries > MaxEmbeddingRetries)
                 {
                     document.EmbeddingStatus = EmbeddingStatus.FAILED;
+                    await _dbContext.SaveChangesAsync();
                     // §3A(6)(b)(ii): Notify frontend via SignalR OnEmbeddingFailed
                     _ = _hubContext.Clients.All.SendAsync("OnEmbeddingFailed", document.Id, ex.Message);
                     throw new InvalidOperationException($"Failed to index document after {MaxEmbeddingRetries} retries", ex);
