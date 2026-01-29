@@ -37,6 +37,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
 
+(7) ChromaDB is assumed to have been installed silently during the installation of the Windows application.
+
+
 ---
 
 ## Section 2 — Document Chunking and Vector Storage
