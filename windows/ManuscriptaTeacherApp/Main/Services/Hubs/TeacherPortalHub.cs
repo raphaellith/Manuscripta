@@ -494,7 +494,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to generate reading: {ex.Message}");
+            throw new HubException($"Failed to generate reading: {ex.Message}", ex);
         }
     }
 
@@ -510,7 +510,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to generate worksheet: {ex.Message}");
+            throw new HubException($"Failed to generate worksheet: {ex.Message}", ex);
         }
     }
 
@@ -526,7 +526,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to modify content: {ex.Message}");
+            throw new HubException($"Failed to modify content: {ex.Message}", ex);
         }
     }
 
@@ -542,7 +542,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to get embedding status: {ex.Message}");
+            throw new HubException($"Failed to get embedding status: {ex.Message}", ex);
         }
     }
 
@@ -559,7 +559,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to queue response for AI generation: {ex.Message}");
+            throw new HubException($"Failed to queue response for AI generation: {ex.Message}", ex);
         }
     }
 
@@ -575,7 +575,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
-            throw new HubException($"Failed to retry embedding: {ex.Message}");
+            throw new HubException($"Failed to retry embedding: {ex.Message}", ex);
         }
     }
 
