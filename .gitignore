@@ -121,8 +121,18 @@ lint-results*.xml
 **/kspCaches/
 
 #########################
-# Windows / .NET
+# Windows / Electron / Node.js
 #########################
+
+# Node.js dependencies
+node_modules/
+
+# Webpack build output
+.webpack/
+
+# Electron build output
+out/
+dist/
 
 # Build results
 [Dd]ebug/
