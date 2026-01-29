@@ -24,7 +24,7 @@ public class ResponseDtoMapperTest {
     private static final String TEST_MATERIAL_ID = "mat-uuid-456";
     private static final String TEST_DEVICE_ID = "device-uuid-789";
     private static final String TEST_ANSWER = "3";
-    private static final long TEST_TIMESTAMP = 1698400200000L; // 2023-10-27T10:30:00Z
+    private static final long TEST_TIMESTAMP = 1698400200000L; // 2023-10-27T09:50:00Z
 
     @Test
     public void testToDto() {
@@ -221,7 +221,7 @@ public class ResponseDtoMapperTest {
 
         // Then
         assertNotNull(formatted);
-        assertEquals("2023-10-27T10:30:00Z", formatted);
+        assertEquals("2023-10-27T09:50:00Z", formatted);
     }
 
     @Test
@@ -254,7 +254,7 @@ public class ResponseDtoMapperTest {
     @Test
     public void testParseTimestamp() {
         // Given
-        String isoTimestamp = "2023-10-27T10:30:00Z";
+        String isoTimestamp = "2023-10-27T09:50:00Z";
 
         // When
         long timestamp = ResponseDtoMapper.parseTimestamp(isoTimestamp);
@@ -320,7 +320,7 @@ public class ResponseDtoMapperTest {
                 TEST_QUESTION_ID,
                 TEST_ANSWER,
                 false,
-                1698400200000L,  // 2023-10-27T10:30:00Z
+                1698400200000L,  // 2023-10-27T09:50:00Z
                 false,
                 TEST_DEVICE_ID
         );
@@ -328,7 +328,7 @@ public class ResponseDtoMapperTest {
         ResponseDto dto = ResponseDtoMapper.toDto(domain, TEST_MATERIAL_ID);
 
         // Verify timestamp is in ISO 8601 format
-        assertEquals("2023-10-27T10:30:00Z", dto.getTimestamp());
+        assertEquals("2023-10-27T09:50:00Z", dto.getTimestamp());
     }
 
     @Test
@@ -354,7 +354,7 @@ public class ResponseDtoMapperTest {
                 "q-1",
                 "A",
                 true,
-                1698400200000L,  // 10:30
+                1698400200000L,  // 09:50
                 false,
                 TEST_DEVICE_ID
         );
@@ -363,7 +363,7 @@ public class ResponseDtoMapperTest {
                 "q-2",
                 "Written answer text here",
                 false,
-                1698400260000L,  // 10:31
+                1698400260000L,  // 09:51
                 false,
                 TEST_DEVICE_ID
         );
@@ -372,7 +372,7 @@ public class ResponseDtoMapperTest {
                 "q-3",
                 "42",
                 true,
-                1698400320000L,  // 10:32
+                1698400320000L,  // 09:52
                 false,
                 TEST_DEVICE_ID
         );
@@ -388,8 +388,8 @@ public class ResponseDtoMapperTest {
         assertEquals("offline-3", batch.getResponses().get(2).getId());
 
         // Verify timestamps are in ISO 8601 format
-        assertEquals("2023-10-27T10:30:00Z", batch.getResponses().get(0).getTimestamp());
-        assertEquals("2023-10-27T10:31:00Z", batch.getResponses().get(1).getTimestamp());
-        assertEquals("2023-10-27T10:32:00Z", batch.getResponses().get(2).getTimestamp());
+        assertEquals("2023-10-27T09:50:00Z", batch.getResponses().get(0).getTimestamp());
+        assertEquals("2023-10-27T09:51:00Z", batch.getResponses().get(1).getTimestamp());
+        assertEquals("2023-10-27T09:52:00Z", batch.getResponses().get(2).getTimestamp());
     }
 }
