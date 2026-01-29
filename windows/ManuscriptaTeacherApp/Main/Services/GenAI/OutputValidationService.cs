@@ -98,19 +98,16 @@ public class OutputValidationService
         }
 
         // §3F(2)(b): Check for malformed question markers with invalid or missing id
-        var questionMarkers = Regex.Matches(content, @"\[QUESTION\s+id=['""]?([^'"">\]]+)['""]?\]");
-        foreach (Match match in questionMarkers)
+        var questionMarkers = Regex.Matches(content, @"\[QUESTION\s+id=['""']?([^'"">\]]+)['""']?\]");
+        foreach (Match match in questionMarkers.Cast<Match>().Where(match => string.IsNullOrWhiteSpace(match.Groups[1].Value)))
         {
-            if (string.IsNullOrWhiteSpace(match.Groups[1].Value))
+            var lineNum = FindLineNumberForMatch(content, match);
+            warnings.Add(new ValidationWarning
             {
-                var lineNum = FindLineNumberForMatch(content, match);
-                warnings.Add(new ValidationWarning
-                {
-                    ErrorType = "MALFORMED_MARKER",
-                    Description = "Question marker with invalid or missing id attribute",
-                    LineNumber = lineNum
-                });
-            }
+                ErrorType = "MALFORMED_MARKER",
+                Description = "Question marker with invalid or missing id attribute",
+                LineNumber = lineNum
+            });
         }
 
         // §3F(2)(c): Check for malformed attachment markers with invalid or missing id
