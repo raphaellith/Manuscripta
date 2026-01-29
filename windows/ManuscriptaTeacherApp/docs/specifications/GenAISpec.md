@@ -183,11 +183,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
 
-    (e) for worksheets, extract and process question drafts as specified in subsection (4).
+    (d1) for worksheets, extract and process question drafts as specified in subsection (4).
 
-    (f) validate the generated content and apply refinement as specified in §3F.
+    (e) validate the generated content and apply refinement as specified in §3F.
 
-    (g) return the `GenerationResult` containing the content, any validation warnings, and created question IDs.
+    (f) return the `GenerationResult` containing the content, any validation warnings, and created question IDs.
 
 (4) Upon receiving generated worksheet content containing `question-draft` markers, the backend shall —
 
