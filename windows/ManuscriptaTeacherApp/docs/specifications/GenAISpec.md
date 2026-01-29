@@ -85,6 +85,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 |---------|---------------|
 | §3A | `DocumentEmbeddingService` |
 | §3B | `MaterialGenerationService` |
+| §3B(4) | `QuestionExtractionService` |
 | §3C | `ContentModificationService` |
 | §3D | `FeedbackGenerationService` |
 | §3DA | `FeedbackQueueService` |
@@ -176,13 +177,50 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iii) instructions to generate content in Material Encoding Specification format.
 
-        (iv) for worksheets, instructions to include question references as specified in Material Encoding Specification §4(4).
+        (iv) for worksheets, instructions to embed question drafts inline using the `question-draft` marker syntax specified in Appendix C. The AI shall place questions at pedagogically appropriate points within the content.
+
+        (v) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C.
 
     (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
 
-    (e) validate the generated content and apply refinement as specified in §3F.
+    (e) for worksheets, extract and process question drafts as specified in subsection (4).
 
-    (f) return the `GenerationResult` containing the content and any validation warnings.
+    (f) validate the generated content and apply refinement as specified in §3F.
+
+    (g) return the `GenerationResult` containing the content, any validation warnings, and created question IDs.
+
+(4) Upon receiving generated worksheet content containing `question-draft` markers, the backend shall —
+
+    (a) parse each `question-draft` marker to extract:
+
+        (i) the question type (`MULTIPLE_CHOICE` or `WRITTEN_ANSWER`).
+
+        (ii) the question text.
+
+        (iii) for multiple-choice, the options list and correct answer index.
+
+        (iv) for written-answer, the mark scheme (if provided) and correct answer (if provided).
+
+        (v) the maximum score (if provided).
+
+    (b) for each parsed question draft, create a `QuestionEntity` via `IQuestionService` with —
+
+        (i) a newly generated UUID.
+
+        (ii) the `MaterialId` of the material being created.
+
+        (iii) the extracted question data.
+
+    (c) replace the `question-draft` marker in the content with a valid `question` marker:
+        `!!! question id="{generated-uuid}"`.
+
+    (d) if parsing fails for any `question-draft` marker —
+
+        (i) remove the malformed marker from the content.
+
+        (ii) add a `ValidationWarning` to the result indicating the failure.
+
+(5) Question extraction shall be performed by a `QuestionExtractionService`, registered per §3(1).
 
 
 ### Section 3C — Content Modification (AI Assistant)
@@ -429,3 +467,62 @@ sequenceDiagram
     Ollama-->>Hub: modified content
     Hub-->>Frontend: modified content
 ```
+
+---
+
+## Appendix C — Material Encoding Reference for LLM Prompts
+
+The following condensed reference shall be included in material generation prompts:
+
+---
+
+**Markdown Syntax Supported:**
+- Headers: `#`, `##`, `###` (max H3)
+- Bold: `**text**`, Italic: `*text*`
+- Lists: `- item` or `1. item`
+- Tables: `| col | col |` with `|---|---|` separator
+- LaTeX: `$inline$` or `$$block$$`
+- Code blocks: triple backticks with optional language
+- Blockquotes: `> text`
+
+**Custom Markers:**
+- Centred text: `!!! center` followed by indented content
+- PDF embed: `!!! pdf id="uuid"` (do not generate; attachments pre-exist)
+- Question embed: `!!! question id="uuid"` (do not generate; use question-draft)
+
+**Question Drafts (worksheets only):**
+Questions must be one of exactly two types: `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist.
+
+For worksheets, embed questions inline using:
+
+```
+!!! question-draft type="MULTIPLE_CHOICE"
+    text: "Question text"
+    options:
+      - "Option A"
+      - "Option B"
+    correct: 0
+    max_score: 1
+
+!!! question-draft type="WRITTEN_ANSWER"
+    text: "Question text"
+    correct_answer: "exact expected answer"
+    max_score: 2
+
+!!! question-draft type="WRITTEN_ANSWER"
+    text: "Question text"
+    mark_scheme: "Marking criteria for AI grading"
+    max_score: 4
+```
+
+**Correct Answers vs Mark Schemes (WRITTEN_ANSWER only):**
+- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Short, factual answers only.
+- `mark_scheme`: Use for open-ended questions requiring judgement (e.g., "Explain why..."). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
+- Use one or the other, never both. If omitted, the question requires manual marking.
+
+**Multiple Choice:**
+- `correct`: 0-based index of the correct option. If omitted, no auto-marking occurs.
+
+Place questions at natural break points after relevant content.
+
+---

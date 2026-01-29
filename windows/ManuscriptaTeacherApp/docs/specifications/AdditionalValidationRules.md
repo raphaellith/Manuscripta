@@ -139,6 +139,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `Warnings` (List<ValidationWarning>) — A list of validation issues that could not be automatically resolved. See §3AD.
 
+    (b) `CreatedQuestionIds` (List<Guid>) — A list of UUIDs for `QuestionEntity` objects created during worksheet generation (per GenAISpec §3B(4)). This field shall be empty for reading materials.
+
 
 ### Section 3AD - Validation Warning
 
