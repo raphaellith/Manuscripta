@@ -13,8 +13,11 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 /**
- * Mapper class to convert between Response domain model and ResponseDto (network layer).
- * Provides mapping for network transmission per API Contract §2.4.
+ * Mapper class to convert Response domain model to ResponseDto for network transmission.
+ * This is a one-way mapper (domain → DTO only) per API Contract §2.4.
+ *
+ * <p>DTO → domain conversion is not provided because response results (feedback) are
+ * received via {@link ResponseResultDto}, which maps to a different domain model.</p>
  *
  * <p>Per API Contract §4.4, timestamps are transmitted as ISO 8601 strings but stored
  * internally as Unix epoch milliseconds.</p>

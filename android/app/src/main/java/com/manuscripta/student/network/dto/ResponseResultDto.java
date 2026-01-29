@@ -178,7 +178,7 @@ public class ResponseResultDto {
                 + ", isCorrect=" + isCorrect
                 + ", feedback='" + feedback + '\''
                 + ", score=" + score
-                + ", correctAnswer='" + correctAnswer + '\''
+                + ", correctAnswer='[REDACTED]'"
                 + '}';
     }
 

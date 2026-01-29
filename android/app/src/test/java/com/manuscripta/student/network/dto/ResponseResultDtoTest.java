@@ -131,7 +131,10 @@ public class ResponseResultDtoTest {
         assertTrue(result.contains("ResponseResultDto"));
         assertTrue(result.contains(TEST_RESPONSE_ID));
         assertTrue(result.contains(TEST_FEEDBACK));
-        assertTrue(result.contains(TEST_CORRECT_ANSWER));
+        // correctAnswer is redacted in toString() to prevent leaking answer keys in logs
+        assertTrue(result.contains("[REDACTED]"));
+        assertFalse("correctAnswer should be redacted in toString()",
+                result.contains(TEST_CORRECT_ANSWER));
     }
 
     @Test
