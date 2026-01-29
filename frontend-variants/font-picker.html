@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraunces Font Variants Picker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&display=swap');
+        
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #F8F7F5;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 { margin-bottom: 0.5rem; }
+        .subtitle { color: #666; margin-bottom: 2rem; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .card.selected {
+            border-color: #FF6106;
+        }
+        
+        .sample {
+            font-family: 'Fraunces', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #212631;
+        }
+        
+        .meta {
+            font-size: 0.75rem;
+            color: #888;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .meta span {
+            background: #f0f0f0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .css-output {
+            margin-top: 2rem;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        .css-output .comment { color: #6a9955; }
+        .css-output .prop { color: #9cdcfe; }
+        .css-output .value { color: #ce9178; }
+        
+        h2 { margin-top: 2rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Fraunces Font Picker</h1>
+    <p class="subtitle">Click a variant to select it. The CSS will be shown below.</p>
+    
+    <h2>Weight Variants (Wonky OFF)</h2>
+    <div class="grid" id="weights-off"></div>
+    
+    <h2>Weight Variants (Wonky ON)</h2>
+    <div class="grid" id="weights-on"></div>
+    
+    <h2>Softness Variants (Weight 500)</h2>
+    <div class="grid" id="softness"></div>
+    
+    <h2>Optical Size Variants (Weight 500)</h2>
+    <div class="grid" id="optical"></div>
+    
+    <div class="css-output" id="output">
+        <span class="comment">/* Click a variant above to see the CSS */</span>
+    </div>
+
+    <script>
+        const weights = [300, 400, 500, 600, 700, 800, 900];
+        const weightNames = {300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'};
+        
+        function createCard(settings, label) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const sample = document.createElement('div');
+            sample.className = 'sample';
+            sample.textContent = 'Manuscripta';
+            sample.style.fontWeight = settings.weight || 500;
+            sample.style.fontVariationSettings = `'WONK' ${settings.wonk ?? 0}, 'SOFT' ${settings.soft ?? 0}, 'opsz' ${settings.opsz ?? 24}`;
+            
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.innerHTML = `
+                <span>Weight: ${settings.weight || 500}</span>
+                <span>Wonk: ${settings.wonk ?? 0}</span>
+                <span>Soft: ${settings.soft ?? 0}</span>
+                <span>Opsz: ${settings.opsz ?? 24}</span>
+            `;
+            
+            card.appendChild(sample);
+            card.appendChild(meta);
+            
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                showCSS(settings, label);
+            });
+            
+            return card;
+        }
+        
+        function showCSS(settings, label) {
+            const output = document.getElementById('output');
+            output.innerHTML = `<span class="comment">/* ${label} */</span>
+<span class="prop">font-family</span>: <span class="value">'Fraunces', serif</span>;
+<span class="prop">font-weight</span>: <span class="value">${settings.weight || 500}</span>;
+<span class="prop">font-variation-settings</span>: <span class="value">'WONK' ${settings.wonk ?? 0}, 'SOFT' ${settings.soft ?? 0}, 'opsz' ${settings.opsz ?? 24}</span>;`;
+        }
+        
+        // Weight variants - Wonky OFF
+        const weightsOffGrid = document.getElementById('weights-off');
+        weights.forEach(w => {
+            weightsOffGrid.appendChild(createCard({weight: w, wonk: 0, soft: 0}, `${weightNames[w]} (${w}), Wonky OFF`));
+        });
+        
+        // Weight variants - Wonky ON
+        const weightsOnGrid = document.getElementById('weights-on');
+        weights.forEach(w => {
+            weightsOnGrid.appendChild(createCard({weight: w, wonk: 1, soft: 0}, `${weightNames[w]} (${w}), Wonky ON`));
+        });
+        
+        // Softness variants
+        const softnessGrid = document.getElementById('softness');
+        [0, 25, 50, 75, 100].forEach(s => {
+            softnessGrid.appendChild(createCard({weight: 500, wonk: 0, soft: s}, `Medium, Soft ${s}`));
+        });
+        
+        // Optical size variants
+        const opticalGrid = document.getElementById('optical');
+        [9, 24, 48, 72, 144].forEach(o => {
+            opticalGrid.appendChild(createCard({weight: 500, wonk: 0, soft: 0, opsz: o}, `Medium, Optical Size ${o}`));
+        });
+    </script>
+</body>
+</html>

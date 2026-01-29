@@ -222,7 +222,7 @@ export const MaterialFlowVisualizer: React.FC = () => {
             alt="Manuscripta Logo" 
             className="w-16 h-16 object-contain"
           />
-          <h1 className="font-serif text-5xl font-medium text-text-heading">
+          <h1 className="font-serif text-5xl text-text-heading">
             Manuscripta
           </h1>
         </div>
