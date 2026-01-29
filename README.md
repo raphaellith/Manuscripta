@@ -21,17 +21,19 @@
 
 ## Overview
 
-Manuscripta is a classroom orchestration system that bridges the gap between cutting-edge generative AI and distraction-free learning. The platform enables teachers to harness on-device AI to create and distribute educational materials directly to students' e-ink tablets, combining the benefits of digital learning with the focus-enhancing properties of monochromatic displays.
+Manuscripta is an accessible educational platform that combines AI-powered e-learning with a distraction-free interface, built for e-ink classroom devices.
 
-In an era where full-colour tablets often prove more distracting than helpful in educational settings, Manuscripta offers a thoughtful alternative. By decoupling content creation from content consumption, the system empowers teachers with powerful AI tools whilst providing students with a calm, focused reading environment.
+### The Problem
 
-### The Challenge
+For years, schools have been integrating digital devices into classrooms, offering students AI-assisted learning paths tailored to their individual needs. Unfortunately, full-colour screens designed to capture attention aren't really what teachers are looking for—especially in Special Educational Needs environments where minimising distractions and overstimulation is paramount.
 
-Head teachers and educators have long grappled with a difficult trade-off: whilst modern tablets enable personalised, AI-enhanced learning experiences, their vibrant displays and myriad applications frequently distract students from the task at hand. Existing solutions—such as classroom management software on standard tablets—address only part of the problem, leaving the fundamental issue of visual distraction unresolved.
+While this issue can be partially addressed by using e-ink displays like Remarkable and AIPaper, these systems fail to keep teachers in the loop.
 
 ### Our Solution
 
-Manuscripta takes a different approach. Teachers use AI-powered Windows laptops to generate and customise lesson materials, which are then seamlessly distributed to students' e-ink devices over the local network. Students interact with content through simple, monochromatic interfaces designed to minimise distraction and maximise engagement.
+To give classrooms the best of both worlds, Manuscripta consists of two interdependent components: a portal running on the teacher's Windows laptop and an Android app running on each student's e-ink display.
+
+The portal allows teachers to create and manage custom lesson materials, empowered by privacy-maintaining generative AI tools. When a material is deployed, it's sent to students' individual e-ink displays where they can view and interact with their classwork with minimal audiovisual stimuli.
 
 ## Key Features
 
