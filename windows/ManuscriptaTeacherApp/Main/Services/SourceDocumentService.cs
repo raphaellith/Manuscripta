@@ -77,9 +77,11 @@ public class SourceDocumentService : ISourceDocumentService
 
     public async Task DeleteAsync(Guid id)
     {
+        // First delete from the primary data store
+        await _repository.DeleteAsync(id);
+        
         // §3A(4): When a SourceDocumentEntity is deleted, remove its chunks from ChromaDB
         await _embeddingService.RemoveSourceDocumentAsync(id);
-        await _repository.DeleteAsync(id);
     }
 
     private async Task ValidateEntityAsync(SourceDocumentEntity entity)
