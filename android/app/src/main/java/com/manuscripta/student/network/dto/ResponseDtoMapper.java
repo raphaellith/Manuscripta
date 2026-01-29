@@ -36,6 +36,12 @@ public final class ResponseDtoMapper {
      * The materialId parameter is required because the domain model does not store it
      * (it is stored in the Question entity).
      *
+     * <p>The isCorrect field is only set to {@code true} when the domain model's isCorrect
+     * is true. Per Validation Rules §2C(2)(a), the Android device may assist in validating
+     * simple questions. A {@code null} value indicates the response has not been evaluated
+     * locally. Since the domain model uses primitive boolean (defaulting to false), we cannot
+     * distinguish "not evaluated" from "evaluated as incorrect" at the domain level.</p>
+     *
      * @param domain     The Response domain model to convert
      * @param materialId The ID of the material containing the question
      * @return ResponseDto ready for network transmission
@@ -63,7 +69,7 @@ public final class ResponseDtoMapper {
     @NonNull
     public static List<ResponseDto> toDtoList(@NonNull List<Response> responses,
                                                @Nullable String materialId) {
-        List<ResponseDto> dtos = new ArrayList<>();
+        List<ResponseDto> dtos = new ArrayList<>(responses.size());
         for (Response response : responses) {
             dtos.add(toDto(response, materialId));
         }
