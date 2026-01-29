@@ -67,11 +67,12 @@ public class SourceDocumentService : ISourceDocumentService
 
         await ValidateEntityAsync(entity);
         
-        // §3A(3): When a SourceDocumentEntity is updated, re-index it
+        // Persist the updated entity first so the database remains the source of truth
+        await _repository.UpdateAsync(entity);
+        
+        // §3A(3): After a SourceDocumentEntity is successfully updated, re-index it
         // This removes old chunks and creates new ones
         await _embeddingService.ReIndexSourceDocumentAsync(entity);
-        
-        await _repository.UpdateAsync(entity);
     }
 
     public async Task DeleteAsync(Guid id)
