@@ -2,16 +2,24 @@ package com.manuscripta.student.di;
 
 import android.content.Context;
 
+import com.manuscripta.student.data.local.DeviceStatusDao;
+import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
+import com.manuscripta.student.data.repository.FeedbackRepository;
+import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.MaterialRepository;
 import com.manuscripta.student.data.repository.MaterialRepositoryImpl;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import javax.inject.Singleton;
@@ -113,5 +121,33 @@ public class RepositoryModule {
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
                                                         FileStorageManager fileStorageManager) {
         return new MaterialRepositoryImpl(materialDao, fileStorageManager);
+    }
+
+    /**
+     * Provides the FeedbackDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return FeedbackDao instance
+     */
+    @Provides
+    @Singleton
+    public FeedbackDao provideFeedbackDao(ManuscriptaDatabase database) {
+        return database.feedbackDao();
+    }
+
+    /**
+     * Provides the FeedbackRepository implementation.
+     *
+     * @param feedbackDao      The FeedbackDao instance
+     * @param apiService       The ApiService instance
+     * @param tcpSocketManager The TcpSocketManager instance
+     * @return FeedbackRepository instance
+     */
+    @Provides
+    @Singleton
+    public FeedbackRepository provideFeedbackRepository(FeedbackDao feedbackDao,
+                                                        ApiService apiService,
+                                                        TcpSocketManager tcpSocketManager) {
+        return new FeedbackRepositoryImpl(feedbackDao, apiService, tcpSocketManager);
     }
 }
