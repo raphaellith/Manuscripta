@@ -344,8 +344,10 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     @VisibleForTesting
     static class NetworkSyncEngine implements SyncEngine {
 
+        /** Tag for logging. */
         private static final String TAG = "NetworkSyncEngine";
 
+        /** The API service for network operations. */
         private final ApiService apiService;
 
         /**
