@@ -102,7 +102,8 @@ turndownService.addRule('images', {
     filter: 'img',
     replacement: function (_content, node) {
         const img = node as HTMLImageElement;
-        const alt = img.alt || '';
+        // Sanitize alt text: remove newlines and excess whitespace (Word often adds these)
+        const alt = (img.alt || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
         const title = img.title || '';
         let src = img.src || '';
 
