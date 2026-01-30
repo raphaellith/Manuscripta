@@ -114,13 +114,15 @@ public class RepositoryModule {
      *
      * @param materialDao        The MaterialDao instance
      * @param fileStorageManager The FileStorageManager instance
+     * @param apiService         The ApiService instance
      * @return MaterialRepository instance
      */
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
-                                                        FileStorageManager fileStorageManager) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager);
+                                                        FileStorageManager fileStorageManager,
+                                                        ApiService apiService) {
+        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService);
     }
 
     /**

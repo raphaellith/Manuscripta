@@ -12,14 +12,20 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.mapper.MaterialMapper;
 import com.manuscripta.student.domain.model.Material;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.dto.DistributionBundleDto;
+import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.utils.FileStorageManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import retrofit2.Response;
 
 /**
  * Implementation of {@link MaterialRepository} that manages educational materials
@@ -49,6 +55,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** The file storage manager for attachments. */
     private final FileStorageManager fileStorageManager;
 
+    /** The API service for network operations. */
+    private final ApiService apiService;
+
     /** Lock object for thread-safe operations. */
     private final Object lock = new Object();
 
@@ -75,19 +84,25 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      *
      * @param materialDao        The DAO for material persistence
      * @param fileStorageManager The file storage manager for attachments
-     * @throws IllegalArgumentException if materialDao or fileStorageManager is null
+     * @param apiService         The API service for network operations
+     * @throws IllegalArgumentException if any dependency is null
      */
     @Inject
     public MaterialRepositoryImpl(@NonNull MaterialDao materialDao,
-                                  @NonNull FileStorageManager fileStorageManager) {
+                                  @NonNull FileStorageManager fileStorageManager,
+                                  @NonNull ApiService apiService) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
         }
         if (fileStorageManager == null) {
             throw new IllegalArgumentException("FileStorageManager cannot be null");
         }
+        if (apiService == null) {
+            throw new IllegalArgumentException("ApiService cannot be null");
+        }
         this.materialDao = materialDao;
         this.fileStorageManager = fileStorageManager;
+        this.apiService = apiService;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
         // Initialize LiveData with existing materials from database.
@@ -237,19 +252,54 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         Log.d(TAG, "Starting material sync for device: " + deviceId);
 
         try {
-            // TODO: Implement HTTP material fetch when ApiService is ready
-            // The flow should be:
             // 1. HTTP GET /distribution/{deviceId} to fetch materials
-            // 2. Parse content for attachment references (/attachments/{id})
-            // 3. Download each attachment via HTTP
-            // 4. Save attachment bytes via FileStorageManager
-            // 5. Save materials to database
-            // 6. Send DISTRIBUTE_ACK via TcpSocketManager
+            Response<DistributionBundleDto> response =
+                    apiService.getDistribution(deviceId).execute();
 
-            // For now, just log that sync was requested
-            Log.i(TAG, "Material sync requested for device " + deviceId
-                    + " - HTTP fetch not yet implemented");
+            if (!response.isSuccessful() || response.body() == null) {
+                Log.e(TAG, "Failed to fetch distribution bundle. HTTP " + response.code());
+                return;
+            }
 
+            DistributionBundleDto bundle = response.body();
+            List<MaterialDto> materialDtos = bundle.getMaterials();
+
+            if (materialDtos == null || materialDtos.isEmpty()) {
+                Log.i(TAG, "No materials in distribution bundle");
+                return;
+            }
+
+            Log.i(TAG, "Received " + materialDtos.size() + " materials");
+
+            // 2. Convert MaterialDtos to MaterialEntities and save to database
+            synchronized (lock) {
+                for (MaterialDto dto : materialDtos) {
+                    try {
+                        MaterialEntity entity = MaterialMapper.dtoToEntity(dto);
+                        materialDao.insert(entity);
+                        Log.d(TAG, "Saved material: " + entity.getId());
+                    } catch (IllegalArgumentException e) {
+                        Log.e(TAG, "Invalid material data: " + e.getMessage());
+                    }
+                }
+
+                // Refresh LiveData to notify observers
+                refreshMaterialsLiveData();
+            }
+
+            // Notify callback if registered
+            // Note: Attachments referenced in material content (/attachments/{id})
+            // will be downloaded on-demand when the material is viewed
+            if (materialAvailableCallback != null) {
+                materialAvailableCallback.onMaterialsAvailable();
+            }
+
+            Log.i(TAG, "Material sync completed successfully");
+
+        } catch (IOException e) {
+            Log.e(TAG, "Network error during material sync: " + e.getMessage(), e);
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error during material sync: " + e.getMessage(), e);
         } finally {
             syncing.set(false);
             Log.d(TAG, "Material sync completed for device: " + deviceId);
