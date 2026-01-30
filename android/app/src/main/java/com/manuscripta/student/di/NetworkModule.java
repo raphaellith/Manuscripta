@@ -1,6 +1,9 @@
 package com.manuscripta.student.di;
 
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.interceptor.AuthInterceptor;
+import com.manuscripta.student.network.interceptor.ErrorInterceptor;
+import com.manuscripta.student.network.interceptor.LoggingInterceptor;
 
 import javax.inject.Singleton;
 
@@ -9,7 +12,6 @@ import dagger.Provides;
 import dagger.hilt.InstallIn;
 import dagger.hilt.components.SingletonComponent;
 import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -26,18 +28,21 @@ public class NetworkModule {
     private static final String BASE_URL = "https://api.manuscripta.example.com/";
 
     /**
-     * Provides OkHttpClient with logging interceptor.
+     * Provides OkHttpClient with custom interceptors for authentication,
+     * logging, and error handling.
      *
-     * @return OkHttpClient instance
+     * @return OkHttpClient instance configured with interceptors
      */
     @Provides
     @Singleton
     public OkHttpClient provideOkHttpClient() {
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        // Create device ID provider (TODO: inject actual device ID provider)
+        AuthInterceptor.DeviceIdProvider deviceIdProvider = () -> null;
 
         return new OkHttpClient.Builder()
-                .addInterceptor(logging)
+                .addInterceptor(new AuthInterceptor(deviceIdProvider))
+                .addInterceptor(new LoggingInterceptor())
+                .addInterceptor(new ErrorInterceptor())
                 .build();
     }
 
