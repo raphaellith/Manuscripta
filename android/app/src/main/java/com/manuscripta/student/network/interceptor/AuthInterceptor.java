@@ -15,6 +15,7 @@ import okhttp3.Response;
  */
 public class AuthInterceptor implements Interceptor {
 
+    /** HTTP header name for device identification. */
     private static final String HEADER_DEVICE_ID = "X-Device-ID";
 
     /** Provider for device ID. */

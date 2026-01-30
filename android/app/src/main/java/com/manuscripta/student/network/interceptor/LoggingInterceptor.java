@@ -19,6 +19,7 @@ import okio.Buffer;
  */
 public class LoggingInterceptor implements Interceptor {
 
+    /** Tag for logging. */
     private static final String TAG = "LoggingInterceptor";
 
     /**

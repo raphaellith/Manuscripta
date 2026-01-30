@@ -180,6 +180,106 @@ public class ErrorInterceptorTest {
         assertEquals(503, response.code());
     }
 
+    // ========== Additional status code tests ==========
+
+    @Test
+    public void testIntercept_403Forbidden_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(403, "Forbidden");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(403, response.code());
+    }
+
+    @Test
+    public void testIntercept_405MethodNotAllowed_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(405, "Method Not Allowed");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(405, response.code());
+    }
+
+    @Test
+    public void testIntercept_408RequestTimeout_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(408, "Request Timeout");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(408, response.code());
+    }
+
+    @Test
+    public void testIntercept_409Conflict_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(409, "Conflict");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(409, response.code());
+    }
+
+    @Test
+    public void testIntercept_429TooManyRequests_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(429, "Too Many Requests");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(429, response.code());
+    }
+
+    @Test
+    public void testIntercept_504GatewayTimeout_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(504, "Gateway Timeout");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(504, response.code());
+    }
+
+    @Test
+    public void testIntercept_unknownErrorCode_logsError() throws IOException {
+        // Arrange
+        Response errorResponse = createResponse(418, "I'm a teapot");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(418, response.code());
+    }
+
     // ========== Error with body tests ==========
 
     @Test
@@ -196,6 +296,39 @@ public class ErrorInterceptorTest {
         assertNotNull(response);
         assertEquals(400, response.code());
         assertNotNull(response.body());
+    }
+
+    @Test
+    public void testIntercept_errorWithNullBody_handles() throws IOException {
+        // Arrange
+        Response errorResponse = new Response.Builder()
+                .request(testRequest)
+                .protocol(Protocol.HTTP_1_1)
+                .code(500)
+                .message("Internal Server Error")
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert - should handle null body gracefully
+        assertNotNull(response);
+        assertEquals(500, response.code());
+    }
+
+    @Test
+    public void testIntercept_errorWithEmptyBody_logsWithoutBody() throws IOException {
+        // Arrange
+        Response errorResponse = createResponseWithBody(500, "Internal Server Error", "");
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(500, response.code());
     }
 
     // ========== Exception handling tests ==========

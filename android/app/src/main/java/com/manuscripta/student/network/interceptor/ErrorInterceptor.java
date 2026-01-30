@@ -18,6 +18,7 @@ import okhttp3.ResponseBody;
  */
 public class ErrorInterceptor implements Interceptor {
 
+    /** Tag for logging. */
     private static final String TAG = "ErrorInterceptor";
 
     /**
