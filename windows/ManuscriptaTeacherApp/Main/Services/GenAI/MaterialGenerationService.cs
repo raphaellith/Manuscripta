@@ -107,7 +107,7 @@ public class MaterialGenerationService
 
     /// <summary>
     /// Constructs the generation prompt with context and requirements.
-    /// See GenAISpec.md §3B(3)(c).
+    /// See GenAISpec.md §3B(3)(c) and Material Encoding Specification §4.
     /// </summary>
     private string ConstructGenerationPrompt(
         string description,
@@ -122,7 +122,7 @@ public class MaterialGenerationService
             : "";
 
         var typeSpecificInstructions = materialType == "worksheet"
-            ? "Include questions with proper question markers using the format specified in Material Encoding Specification §4(4).\n"
+            ? "For questions, use the question marker with id attribute: !!! question id=\"{{question-uuid}}\"\n"
             : "";
 
         return $@"{contextSection}Generate {materialType} content based on the following requirements:
@@ -133,9 +133,20 @@ Actual age of audience: {actualAge}
 Approximate completion time: {durationInMinutes} minutes
 
 {typeSpecificInstructions}
-Format the content using proper Markdown syntax and Material Encoding Specification conventions.
-Use headers (maximum H3), lists, code blocks, and tables as appropriate.
-Include attachment references where relevant using the format specified in Material Encoding Specification §3.
+Markdown syntax requirements:
+- Headers shall use # for Level 1, ## for Level 2, ### for Level 3 (do not exceed Level 3)
+- Text shall be rendered in bold using **text** or __text__ syntax
+- Text shall be rendered in italic using *text* or _text_ syntax
+- Unordered lists shall be specified using - item or * item syntax
+- Ordered lists shall be specified using 1. item syntax
+- Tables use GitHub Flavored Markdown syntax with pipes (|) and dashes (---)
+- Code blocks shall be specified using triple backticks with optional language identifier
+- Blockquotes shall be specified using the > prefix
+- Horizontal rules shall be specified using three or more hyphens on a line
+- LaTeX notation shall be delimited by single dollar signs ($...$) for inline or double dollar signs ($$...$$) for blocks
+- Images shall be embedded using ![alt text](/attachments/{{attachment-uuid}})
+- PDF documents shall be embedded using the pdf marker: !!! pdf id=""{{pdf-attachment-uuid}}""
+- Text shall be centred using the center marker: !!! center
 
 Generate the content now:";
     }

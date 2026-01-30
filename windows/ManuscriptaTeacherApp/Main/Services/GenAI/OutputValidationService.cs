@@ -78,7 +78,7 @@ public class OutputValidationService
 
     /// <summary>
     /// Validates content against Material Encoding Specification.
-    /// See GenAISpec.md §3F(2).
+    /// See GenAISpec.md §3F(2) and Material Encoding Specification §4.
     /// </summary>
     private async Task<List<ValidationWarning>> ValidateContentAsync(string content)
     {
@@ -97,34 +97,38 @@ public class OutputValidationService
             });
         }
 
-        // §3F(2)(b): Check for malformed question markers with invalid or missing id
-        var questionMarkers = Regex.Matches(content, @"\[QUESTION\s+id=['""']?([^'"">\]]+)['""']?\]");
-        foreach (Match match in questionMarkers.Cast<Match>().Where(match => string.IsNullOrWhiteSpace(match.Groups[1].Value)))
+        // §3F(2)(b): Check for malformed question markers with invalid or missing id (Admonition syntax per Material Encoding §4)
+        // Valid: !!! question id="uuid" or !!! question id='uuid'
+        var validQuestionPatterns = Regex.Matches(content, @"!!![\s]+question[\s]+id\s*=\s*['""]([^'""]+)['""]");
+        
+        // Find any question markers that are NOT valid
+        var allQuestionMarkers = Regex.Matches(content, @"!!![\s]+question(?![\s]+id\s*=\s*['""])");
+        foreach (Match match in allQuestionMarkers)
         {
             var lineNum = FindLineNumberForMatch(content, match);
             warnings.Add(new ValidationWarning
             {
                 ErrorType = "MALFORMED_MARKER",
-                Description = "Question marker with invalid or missing id attribute",
+                Description = "Question marker missing or invalid id attribute (Material Encoding Specification §4(4))",
                 LineNumber = lineNum
             });
         }
 
-        // §3F(2)(c): Check for malformed attachment markers with invalid or missing id
-        var attachmentMarkers = Regex.Matches(content, @"\[ATTACHMENT\s+id=['""]?([^'"">\]]+)['""]?\]");
-        foreach (Match match in attachmentMarkers.Cast<Match>().Where(match => string.IsNullOrWhiteSpace(match.Groups[1].Value)))
+        // §3F(2)(c): Check for malformed PDF embed markers (Admonition syntax per Material Encoding §4(2))
+        var allPdfMarkers = Regex.Matches(content, @"!!![\s]+pdf(?![\s]+id\s*=\s*['""])");
+        foreach (Match match in allPdfMarkers)
         {
             var lineNum = FindLineNumberForMatch(content, match);
             warnings.Add(new ValidationWarning
             {
                 ErrorType = "MALFORMED_MARKER",
-                Description = "Attachment marker with invalid or missing id attribute",
+                Description = "PDF marker missing or invalid id attribute (Material Encoding Specification §4(2))",
                 LineNumber = lineNum
             });
         }
 
-        // §3F(2)(b): Check for invalid references - questions that don't exist
-        var validQuestionIds = Regex.Matches(content, @"\[QUESTION\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
+        // §3F(2)(b): Check for invalid references - questions that don't exist (Material Encoding Specification §4(4))
+        var validQuestionIds = Regex.Matches(content, @"!!![\s]+question[\s]+id\s*=\s*['""]([a-fA-F0-9-]+)['""]");
         foreach (Match match in validQuestionIds)
         {
             var idString = match.Groups[1].Value;
@@ -144,11 +148,12 @@ public class OutputValidationService
             }
         }
 
-        // §3F(2)(c): Check for invalid references - attachments that don't exist
-        var validAttachmentIds = Regex.Matches(content, @"\[ATTACHMENT\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
+        // §3F(2)(c): Check for invalid references - attachments that don't exist (Material Encoding Specification §3)
+        // Attachments use markdown image syntax: ![alt text](/attachments/{id})
+        var validAttachmentIds = Regex.Matches(content, @"!\[([^\]]*)\]\(/attachments/([a-fA-F0-9-]+)\)");
         foreach (Match match in validAttachmentIds)
         {
-            var idString = match.Groups[1].Value;
+            var idString = match.Groups[2].Value;
             if (Guid.TryParse(idString, out var attachmentId))
             {
                 var attachmentExists = await _dbContext.Attachments.AnyAsync(a => a.Id == attachmentId);
@@ -165,14 +170,14 @@ public class OutputValidationService
             }
         }
 
-        // §3F(2)(b): Check for excessive header levels
+        // §3F(2)(d): Check for excessive header levels (Material Encoding Specification §2(1)(d))
         var headerMatches = Regex.Matches(content, @"^#{4,}\s+", RegexOptions.Multiline);
         var headerWarnings = headerMatches.Select(match => {
             var lineNum = FindLineNumberForMatch(content, match);
             return new ValidationWarning
             {
                 ErrorType = "INVALID_HEADER_LEVEL",
-                Description = "Header levels exceed maximum of H3",
+                Description = "Header levels exceed maximum of H3 (Material Encoding Specification §2(1)(d))",
                 LineNumber = lineNum
             };
         }).ToList();
@@ -193,7 +198,7 @@ public class OutputValidationService
 
     /// <summary>
     /// Applies deterministic post-processing fixes to common errors.
-    /// See GenAISpec.md §3F(5).
+    /// See GenAISpec.md §3F(5) and Material Encoding Specification §4.
     /// </summary>
     private async Task<string> ApplyDeterministicFixesAsync(string content)
     {
@@ -207,42 +212,48 @@ public class OutputValidationService
         // §3F(5)(b): Normalize header levels to maximum H3
         content = Regex.Replace(content, @"^#{4,}\s+", "### ", RegexOptions.Multiline);
 
-        // §3F(5)(c): Reconstruct malformed question markers where id is parseable
+        // §3F(5)(c): Reconstruct malformed question markers where id is parseable (Material Encoding Specification §4(4))
+        // Convert from malformed patterns to: !!! question id="uuid"
         content = Regex.Replace(
             content,
-            @"\[QUESTION\s+id\s*=\s*['""]?([a-fA-F0-9-]+)['""]?[^\]]*\]",
-            "[QUESTION id=\"$1\"]"
+            @"!!![\s]+question[\s]*(?:id\s*=\s*)?['""]?([a-fA-F0-9-]+)['""]?",
+            "!!! question id=\"$1\""
         );
 
-        // §3F(5)(d): Reconstruct malformed attachment markers where id is parseable
+        // §3F(5)(d): Reconstruct malformed PDF embed markers where id is parseable (Material Encoding Specification §4(2))
         content = Regex.Replace(
             content,
-            @"\[ATTACHMENT\s+id\s*=\s*['""]?([a-fA-F0-9-]+)['""]?[^\]]*\]",
-            "[ATTACHMENT id=\"$1\"]"
+            @"!!![\s]+pdf[\s]*(?:id\s*=\s*)?['""]?([a-fA-F0-9-]+)['""]?",
+            "!!! pdf id=\"$1\""
         );
 
         // §3F(5)(e): Remove invalid or empty custom markers
-        content = Regex.Replace(content, @"\[QUESTION\s+id=['""]?['""]?\]", "");
-        content = Regex.Replace(content, @"\[ATTACHMENT\s+id=['""]?['""]?\]", "");
+        // Remove empty question markers
+        content = Regex.Replace(content, @"!!![\s]+question\s*(?:id\s*=\s*)?['""]?['""]?", "");
+        // Remove empty PDF markers
+        content = Regex.Replace(content, @"!!![\s]+pdf\s*(?:id\s*=\s*)?['""]?['""]?", "");
         
-        // §3F(5)(e)(i): Remove attachment markers where attachment entity or file does not exist
-        content = await RemoveInvalidAttachmentMarkersAsync(content);
+        // §3F(5)(e)(i): Remove PDF markers where attachment entity or file does not exist
+        content = await RemoveInvalidPdfMarkersAsync(content);
         
         // §3F(5)(e)(ii): Remove question markers where question entity does not exist
         content = await RemoveInvalidQuestionMarkersAsync(content);
+        
+        // §3F(5)(e)(i): Remove attachment image references where attachment does not exist (Material Encoding Specification §3)
+        content = await RemoveInvalidAttachmentReferencesAsync(content);
 
         return content;
     }
 
     /// <summary>
-    /// Removes attachment markers where the referenced entity or file does not exist.
-    /// See GenAISpec.md §3F(5)(e)(i).
+    /// Removes PDF embed markers where the referenced entity or file does not exist.
+    /// See GenAISpec.md §3F(5)(e)(i) and Material Encoding Specification §4(2).
     /// </summary>
-    private async Task<string> RemoveInvalidAttachmentMarkersAsync(string content)
+    private async Task<string> RemoveInvalidPdfMarkersAsync(string content)
     {
-        var attachmentMarkers = Regex.Matches(content, @"\[ATTACHMENT\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
+        var pdfMarkers = Regex.Matches(content, @"!!![\s]+pdf[\s]+id\s*=\s*['""]([a-fA-F0-9-]+)['""]");
         
-        foreach (Match match in attachmentMarkers)
+        foreach (Match match in pdfMarkers)
         {
             var idString = match.Groups[1].Value;
             if (Guid.TryParse(idString, out var attachmentId))
@@ -275,12 +286,52 @@ public class OutputValidationService
     }
 
     /// <summary>
+    /// Removes attachment image references where the referenced entity or file does not exist.
+    /// See GenAISpec.md §3F(5)(e)(i) and Material Encoding Specification §3.
+    /// </summary>
+    private async Task<string> RemoveInvalidAttachmentReferencesAsync(string content)
+    {
+        var attachmentMarkers = Regex.Matches(content, @"!\[([^\]]*)\]\(/attachments/([a-fA-F0-9-]+)\)");
+        
+        foreach (Match match in attachmentMarkers)
+        {
+            var idString = match.Groups[2].Value;
+            if (Guid.TryParse(idString, out var attachmentId))
+            {
+                // Check if attachment entity exists
+                var attachmentExists = await _dbContext.Attachments.AnyAsync(a => a.Id == attachmentId);
+                
+                if (attachmentExists)
+                {
+                    // Check if attachment file exists
+                    var attachment = await _dbContext.Attachments.FindAsync(attachmentId);
+                    if (attachment != null)
+                    {
+                        var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
+                        if (!_fileService.FileExists(filePath))
+                        {
+                            attachmentExists = false;
+                        }
+                    }
+                }
+                
+                if (!attachmentExists)
+                {
+                    content = content.Replace(match.Value, "");
+                }
+            }
+        }
+        
+        return content;
+    }
+
+    /// <summary>
     /// Removes question markers where the referenced entity does not exist.
-    /// See GenAISpec.md §3F(5)(e)(ii).
+    /// See GenAISpec.md §3F(5)(e)(ii) and Material Encoding Specification §4(4).
     /// </summary>
     private async Task<string> RemoveInvalidQuestionMarkersAsync(string content)
     {
-        var questionMarkers = Regex.Matches(content, @"\[QUESTION\s+id=['""]?([a-fA-F0-9-]+)['""]?\]");
+        var questionMarkers = Regex.Matches(content, @"!!![\s]+question[\s]+id\s*=\s*['""]([a-fA-F0-9-]+)['""]");
         
         foreach (Match match in questionMarkers)
         {
