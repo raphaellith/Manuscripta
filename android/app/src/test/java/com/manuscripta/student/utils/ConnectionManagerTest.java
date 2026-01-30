@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -118,6 +119,42 @@ public class ConnectionManagerTest {
 
         assertNotNull(state.getValue());
         assertTrue(state.getValue());
+    }
+
+    // ========== Network capability edge cases ==========
+
+    @Test
+    public void testIsNetworkAvailable_networkHasInternetButNotValidated_returnsFalse() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(true);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(false);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        boolean available = connectionManager.isNetworkAvailable();
+
+        assertFalse(available);
+    }
+
+    @Test
+    public void testIsNetworkAvailable_networkHasValidatedButNotInternet_returnsFalse() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(false);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(true);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        boolean available = connectionManager.isNetworkAvailable();
+
+        assertFalse(available);
     }
 
     // ========== isNetworkAvailable tests ==========
@@ -251,5 +288,35 @@ public class ConnectionManagerTest {
 
         // Second shutdown should not throw (even though it might log an error)
         connectionManager.shutdown(); // Should not throw
+    }
+
+    // ========== Exception handling tests ==========
+
+    @Test
+    public void testConstructor_registerCallbackThrowsException_handlesGracefully() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+        when(mockConnectivityManager.registerNetworkCallback(
+                any(android.net.NetworkRequest.class),
+                any(ConnectivityManager.NetworkCallback.class)))
+                .thenThrow(new RuntimeException("Failed to register"));
+
+        // Should not throw - exception is caught and logged
+        connectionManager = new ConnectionManager(mockContext);
+
+        assertNotNull(connectionManager);
+    }
+
+    @Test
+    public void testShutdown_unregisterCallbackThrowsException_handlesGracefully() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+        connectionManager = new ConnectionManager(mockContext);
+
+        // Mock unregister to throw exception
+        doThrow(new IllegalArgumentException("Callback not registered"))
+                .when(mockConnectivityManager)
+                .unregisterNetworkCallback(any(ConnectivityManager.NetworkCallback.class));
+
+        // Should not throw - exception is caught and logged
+        connectionManager.shutdown();
     }
 }

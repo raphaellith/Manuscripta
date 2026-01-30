@@ -32,6 +32,7 @@ import javax.inject.Singleton;
 @Singleton
 public class ConnectionManager {
 
+    /** Tag for logging. */
     private static final String TAG = "ConnectionManager";
 
     /** Timeout for server reachability check in milliseconds. */
