@@ -358,14 +358,26 @@ public class OutputValidationService
     private string ConstructRefinementPrompt(string content, List<ValidationWarning> warnings)
     {
         var warningsList = string.Join("\n", warnings.Select(w => $"- {w.Description}"));
+        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get();
 
-        return $@"The following content has validation errors. Please fix ONLY these errors while preserving the content and meaning:
+        return $@"
+TASK:
+Fix all listed syntax errors in the provided document, in accordance with the Markdown syntax described below.
+Preserve the content and meaning of the original document.
+Only fix errors if they disobey the Markdown syntax described below.
+Return the corrected document with all syntax errors fixed.
 
-{warningsList}
 
-Original content:
+ORIGINAL DOCUMENT:
 {content}
 
-Return the corrected content with the errors fixed:";
+
+LIST OF SYNTAX ERRORS:
+{warningsList}
+
+
+MARKDOWN SYNTAX:
+{markdownSyntaxGuide}
+";
     }
 }

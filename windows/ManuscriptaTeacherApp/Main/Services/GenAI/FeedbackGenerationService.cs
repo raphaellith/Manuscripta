@@ -222,27 +222,27 @@ public class FeedbackGenerationService : IHostedService
     {
         // §3D(9)(b)(iii): Include maximum score if present
         var maxScoreSection = question.MaxScore.HasValue
-            ? $"Maximum Score: {question.MaxScore.Value}\n\n"
+            ? $"Maximum Score:\n{question.MaxScore.Value}"
             : "";
 
-        return $@"Generate constructive feedback for a student's response to the following question.
-
-Question:
-{question.QuestionText}
-
-Mark Scheme:
-{question.MarkScheme}
-
-{maxScoreSection}Student's Response:
-{response.ResponseText}
-
-Provide feedback that includes:
-1. A score justification explaining how well the response meets the mark scheme
-2. Specific strengths in the response
-3. Improvement suggestions for areas that could be enhanced
-
+        return $@"
+TASK:
+Generate constructive feedback for a student's response to the question given below.
+Include a score justification explaining how well the response meets the mark scheme.
+Include specific strengths in the response.
+Include improvement suggestions for areas that could be enhanced.
 Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
 
-Feedback:";
+QUESTION:
+{question.QuestionText}
+
+STUDENT'S RESPONSE:
+{response.ResponseText}
+
+MARK SCHEME:
+{question.MarkScheme}
+
+{maxScoreSection}
+";
     }
 }
