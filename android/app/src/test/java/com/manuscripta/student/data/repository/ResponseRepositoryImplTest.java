@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.model.ResponseEntity;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.ApiService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ResponseRepositoryImplTest {
 
     private ResponseDao mockDao;
+    private ApiService mockApiService;
     private ResponseRepositoryImpl.SyncEngine mockSyncEngine;
     private ResponseRepositoryImpl repository;
 
@@ -47,6 +49,7 @@ public class ResponseRepositoryImplTest {
     @Before
     public void setUp() {
         mockDao = mock(ResponseDao.class);
+        mockApiService = mock(ApiService.class);
         mockSyncEngine = mock(ResponseRepositoryImpl.SyncEngine.class);
         repository = new TestableResponseRepository(mockDao, mockSyncEngine);
     }
@@ -54,8 +57,8 @@ public class ResponseRepositoryImplTest {
     // ==================== Constructor Tests ====================
 
     @Test
-    public void testConstructor_validDao_createsInstance() {
-        ResponseRepositoryImpl repo = new ResponseRepositoryImpl(mockDao);
+    public void testConstructor_validDaoAndApiService_createsInstance() {
+        ResponseRepositoryImpl repo = new ResponseRepositoryImpl(mockDao, mockApiService);
         assertNotNull(repo);
     }
 
@@ -63,16 +66,28 @@ public class ResponseRepositoryImplTest {
     public void testConstructor_nullDao_throwsException() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> new ResponseRepositoryImpl(null)
+                () -> new ResponseRepositoryImpl(null, mockApiService)
         );
         assertEquals("ResponseDao cannot be null", exception.getMessage());
     }
 
     @Test
-    public void testConstructor_nullSyncEngine_throwsException() {
+    public void testConstructor_nullApiService_throwsException() {
+        ApiService nullApiService = null;
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> new ResponseRepositoryImpl(mockDao, null)
+                () -> new ResponseRepositoryImpl(mockDao, nullApiService)
+        );
+        // This will fail in NetworkSyncEngine constructor
+        assertTrue(exception.getMessage().contains("ApiService cannot be null"));
+    }
+
+    @Test
+    public void testConstructor_nullSyncEngine_throwsException() {
+        ResponseRepositoryImpl.SyncEngine nullEngine = null;
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new ResponseRepositoryImpl(mockDao, nullEngine)
         );
         assertEquals("SyncEngine cannot be null", exception.getMessage());
     }
@@ -745,7 +760,8 @@ public class ResponseRepositoryImplTest {
     @Test
     public void testDefaultSyncEngine_directCall_throwsAndReturnsFalse() {
         // Create a testable subclass that uses the real DefaultSyncEngine but skips sleep
-        ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(mockDao);
+        ResponseRepositoryImpl.SyncEngine defaultEngine = new ResponseRepositoryImpl.DefaultSyncEngine();
+        ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(mockDao, defaultEngine);
         ResponseEntity entity = createTestEntity();
 
         // syncWithRetry should catch the UnsupportedOperationException and return false
@@ -770,14 +786,14 @@ public class ResponseRepositoryImplTest {
     @Test
     public void testSleep_normalExecution_completesWithoutException() {
         // Use a real repository (not testable) to test actual sleep
-        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao);
+        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao, mockApiService);
         realRepo.sleep(1);
     }
 
     @Test
     public void testSleep_interrupted_setsInterruptFlag() throws InterruptedException {
         // Use a real repository (not testable) to test actual sleep with interrupt
-        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao);
+        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao, mockApiService);
 
         Thread testThread = new Thread(() -> {
             Thread.currentThread().interrupt();
@@ -823,8 +839,8 @@ public class ResponseRepositoryImplTest {
      * Testable subclass that overrides sleep to avoid actual delays.
      */
     private static class TestableResponseRepository extends ResponseRepositoryImpl {
-        TestableResponseRepository(ResponseDao responseDao) {
-            super(responseDao);
+        TestableResponseRepository(ResponseDao responseDao, ApiService apiService) {
+            super(responseDao, apiService);
         }
 
         TestableResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {

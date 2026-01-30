@@ -1,5 +1,7 @@
 package com.manuscripta.student.data.repository;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
@@ -7,7 +9,10 @@ import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.model.ResponseEntity;
 import com.manuscripta.student.domain.mapper.ResponseMapper;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.dto.ResponseDto;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -64,13 +69,15 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     private final SyncEngine syncEngine;
 
     /**
-     * Creates a new ResponseRepositoryImpl with the given DAO.
+     * Creates a new ResponseRepositoryImpl with the given DAO and API service.
      *
      * @param responseDao The DAO for response persistence
+     * @param apiService  The API service for network operations
      */
     @Inject
-    public ResponseRepositoryImpl(@NonNull ResponseDao responseDao) {
-        this(responseDao, new DefaultSyncEngine());
+    public ResponseRepositoryImpl(@NonNull ResponseDao responseDao,
+                                   @NonNull ApiService apiService) {
+        this(responseDao, new NetworkSyncEngine(apiService));
     }
 
     /**
@@ -329,12 +336,76 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     }
 
     /**
+     * Network implementation of SyncEngine that uses ApiService to submit responses
+     * to the server via HTTP POST /responses.
+     *
+     * <p>Per API Contract §2.4, expects HTTP 201 Created on success.</p>
+     */
+    @VisibleForTesting
+    static class NetworkSyncEngine implements SyncEngine {
+
+        private static final String TAG = "NetworkSyncEngine";
+
+        private final ApiService apiService;
+
+        /**
+         * Creates a NetworkSyncEngine with the given API service.
+         *
+         * @param apiService The API service for network operations
+         * @throws IllegalArgumentException if apiService is null
+         */
+        NetworkSyncEngine(@NonNull ApiService apiService) {
+            if (apiService == null) {
+                throw new IllegalArgumentException("ApiService cannot be null");
+            }
+            this.apiService = apiService;
+        }
+
+        @Override
+        public boolean syncResponse(@NonNull ResponseEntity entity) {
+            try {
+                // Convert ResponseEntity -> Response (domain) -> ResponseDto (network)
+                Response domainResponse = ResponseMapper.toDomain(entity);
+                // MaterialId is null because ResponseEntity doesn't contain it
+                // The server can derive it from questionId if needed
+                ResponseDto dto = ResponseMapper.toDto(domainResponse, null);
+
+                // Execute HTTP POST /responses
+                retrofit2.Response<Void> response = apiService.submitResponse(dto).execute();
+
+                // Per API Contract §2.4, expect HTTP 201 Created on success
+                if (response.code() == 201) {
+                    Log.d(TAG, "Successfully synced response: " + entity.getId());
+                    return true;
+                } else {
+                    Log.w(TAG, "Failed to sync response: " + entity.getId()
+                            + " - HTTP " + response.code());
+                    return false;
+                }
+            } catch (IOException e) {
+                // Network errors should return false to trigger retry
+                Log.e(TAG, "Network error syncing response: " + entity.getId()
+                        + " - " + e.getMessage());
+                return false;
+            } catch (Exception e) {
+                // Unexpected errors should also return false
+                Log.e(TAG, "Unexpected error syncing response: " + entity.getId()
+                        + " - " + e.getMessage(), e);
+                return false;
+            }
+        }
+    }
+
+    /**
      * Default implementation of SyncEngine.
      * Throws UnsupportedOperationException until network sync is implemented.
-     * 
+     *
      * @see <a href="https://github.com/raphaellith/Manuscripta/issues/TBD">Issue: Implement Response Network Sync</a>
+     * @deprecated Replaced by NetworkSyncEngine. Kept for testing purposes.
      */
-    private static class DefaultSyncEngine implements SyncEngine {
+    @Deprecated
+    @VisibleForTesting
+    static class DefaultSyncEngine implements SyncEngine {
         @Override
         public boolean syncResponse(@NonNull ResponseEntity entity) {
             // Network sync not yet implemented - see android/issues.md

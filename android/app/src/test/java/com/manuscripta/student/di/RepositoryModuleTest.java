@@ -13,6 +13,7 @@ import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
+import com.manuscripta.student.network.ApiService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -26,6 +27,7 @@ public class RepositoryModuleTest {
     private ManuscriptaDatabase mockDatabase;
     private SessionDao mockSessionDao;
     private ResponseDao mockResponseDao;
+    private ApiService mockApiService;
 
     @Before
     public void setUp() {
@@ -33,6 +35,7 @@ public class RepositoryModuleTest {
         mockDatabase = mock(ManuscriptaDatabase.class);
         mockSessionDao = mock(SessionDao.class);
         mockResponseDao = mock(ResponseDao.class);
+        mockApiService = mock(ApiService.class);
     }
 
     @Test
@@ -65,7 +68,7 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideResponseRepository_returnsRepository() {
-        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao);
+        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao, mockApiService);
 
         assertNotNull(result);
         assertTrue(result instanceof ResponseRepositoryImpl);
