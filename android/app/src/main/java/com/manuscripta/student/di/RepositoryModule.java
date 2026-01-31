@@ -2,14 +2,11 @@ package com.manuscripta.student.di;
 
 import android.content.Context;
 
-import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
-import com.manuscripta.student.data.repository.DeviceStatusRepository;
-import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
 import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.MaterialRepository;
