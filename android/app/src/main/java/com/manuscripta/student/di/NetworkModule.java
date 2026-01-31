@@ -1,6 +1,7 @@
 package com.manuscripta.student.di;
 
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.interceptor.RetryInterceptor;
 
 import javax.inject.Singleton;
 
@@ -26,7 +27,7 @@ public class NetworkModule {
     private static final String BASE_URL = "https://api.manuscripta.example.com/";
 
     /**
-     * Provides OkHttpClient with logging interceptor.
+     * Provides OkHttpClient with retry and logging interceptors.
      *
      * @return OkHttpClient instance
      */
@@ -37,6 +38,7 @@ public class NetworkModule {
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
 
         return new OkHttpClient.Builder()
+                .addInterceptor(new RetryInterceptor())
                 .addInterceptor(logging)
                 .build();
     }
