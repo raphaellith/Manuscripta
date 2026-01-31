@@ -230,6 +230,46 @@ public class LoggingInterceptorTest {
         assertEquals(204, result.code());
     }
 
+    // ========== Request body reading error tests ==========
+
+    @Test
+    public void testIntercept_requestBodyReadError_handlesGracefully() throws IOException {
+        // Arrange
+        RequestBody problematicBody = new RequestBody() {
+            @Override
+            public okhttp3.MediaType contentType() {
+                return MediaType.parse("application/json");
+            }
+
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException {
+                throw new IOException("Failed to write request body");
+            }
+        };
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .post(problematicBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        // Act
+        Response result = interceptor.intercept(mockChain);
+
+        // Assert - should handle exception gracefully and still return response
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
     // ========== Network error tests ==========
 
     @Test

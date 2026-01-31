@@ -331,6 +331,48 @@ public class ErrorInterceptorTest {
         assertEquals(500, response.code());
     }
 
+    // ========== Response body reading tests ==========
+
+    @Test
+    public void testIntercept_errorResponseBodyReadFailure_handlesGracefully() throws IOException {
+        // Arrange
+        // Create a response body that throws exception when reading
+        ResponseBody problematicBody = new ResponseBody() {
+            @Override
+            public okhttp3.MediaType contentType() {
+                return MediaType.parse("text/plain");
+            }
+
+            @Override
+            public long contentLength() {
+                return -1;
+            }
+
+            @Override
+            public okio.BufferedSource source() {
+                okio.Buffer buffer = new okio.Buffer();
+                buffer.writeUtf8("error");
+                return buffer;
+            }
+        };
+
+        Response errorResponse = new Response.Builder()
+                .request(testRequest)
+                .protocol(Protocol.HTTP_1_1)
+                .code(500)
+                .message("Internal Server Error")
+                .body(problematicBody)
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        // Act
+        Response response = interceptor.intercept(mockChain);
+
+        // Assert - should handle gracefully and still return response
+        assertNotNull(response);
+        assertEquals(500, response.code());
+    }
+
     // ========== Exception handling tests ==========
 
     @Test
