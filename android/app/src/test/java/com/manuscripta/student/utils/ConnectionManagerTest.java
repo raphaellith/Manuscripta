@@ -295,10 +295,11 @@ public class ConnectionManagerTest {
     @Test
     public void testConstructor_registerCallbackThrowsException_handlesGracefully() {
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
-        when(mockConnectivityManager.registerNetworkCallback(
-                any(android.net.NetworkRequest.class),
-                any(ConnectivityManager.NetworkCallback.class)))
-                .thenThrow(new RuntimeException("Failed to register"));
+        doThrow(new RuntimeException("Failed to register"))
+                .when(mockConnectivityManager)
+                .registerNetworkCallback(
+                        any(android.net.NetworkRequest.class),
+                        any(ConnectivityManager.NetworkCallback.class));
 
         // Should not throw - exception is caught and logged
         connectionManager = new ConnectionManager(mockContext);
