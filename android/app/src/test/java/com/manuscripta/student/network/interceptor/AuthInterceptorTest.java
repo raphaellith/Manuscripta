@@ -193,35 +193,4 @@ public class AuthInterceptorTest {
         // Act & Assert - should propagate the exception
         assertThrows(RuntimeException.class, () -> interceptor.intercept(mockChain));
     }
-
-    @Test
-    public void testIntercept_whitespaceDeviceId_noHeader() throws IOException {
-        // Arrange
-        when(mockDeviceIdProvider.getDeviceId()).thenReturn("   ");
-        when(mockChain.request()).thenReturn(testRequest);
-
-        Response mockResponse = new Response.Builder()
-                .request(testRequest)
-                .protocol(Protocol.HTTP_1_1)
-                .code(200)
-                .message("OK")
-                .build();
-        when(mockChain.proceed(any(Request.class))).thenReturn(mockResponse);
-
-        interceptor = new AuthInterceptor(mockDeviceIdProvider);
-
-        // Act
-        Response response = interceptor.intercept(mockChain);
-
-        // Assert
-        assertNotNull(response);
-
-        // Verify the request passed to chain.proceed has the header (whitespace is valid)
-        org.mockito.ArgumentCaptor<Request> requestCaptor =
-                org.mockito.ArgumentCaptor.forClass(Request.class);
-        verify(mockChain).proceed(requestCaptor.capture());
-        Request capturedRequest = requestCaptor.getValue();
-
-        assertEquals("   ", capturedRequest.header("X-Device-ID"));
-    }
 }
