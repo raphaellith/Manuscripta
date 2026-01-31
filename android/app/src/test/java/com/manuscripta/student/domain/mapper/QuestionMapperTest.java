@@ -47,7 +47,7 @@ public class QuestionMapperTest {
                 "question-id-789",
                 "material-id-012",
                 "Is the sky blue?",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
                 "true"
         );
@@ -122,7 +122,7 @@ public class QuestionMapperTest {
                 "round-trip-domain-id",
                 "material-domain-id",
                 "True or False question",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
                 "false"
         );

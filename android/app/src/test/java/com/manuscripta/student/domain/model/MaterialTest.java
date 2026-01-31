@@ -45,7 +45,7 @@ public class MaterialTest {
         // Empty content is valid (e.g., placeholder material)
         Material mat = new Material(
                 "id",
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 "Title",
                 "",
                 "{}",

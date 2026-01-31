@@ -45,7 +45,7 @@ public class MaterialDaoTest {
 
         defaultMaterial = new MaterialEntity(
                 "mat-1",
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 "Test Quiz",
                 "Sample Content",
                 "{\"author\": \"Teacher\"}",
@@ -69,7 +69,7 @@ public class MaterialDaoTest {
         assertNotNull(retrieved);
         assertEquals("mat-1", retrieved.getId());
         assertEquals("Test Quiz", retrieved.getTitle());
-        assertEquals(MaterialType.QUIZ, retrieved.getType());
+        assertEquals(MaterialType.WORKSHEET, retrieved.getType());
         assertEquals("Sample Content", retrieved.getContent());
     }
 
@@ -96,7 +96,7 @@ public class MaterialDaoTest {
     public void testGetByType() {
         MaterialEntity quiz = new MaterialEntity(
                 "mat-1", 
-                MaterialType.QUIZ, 
+                MaterialType.WORKSHEET, 
                 "Quiz",
                 "Content", "{}", "[]", 0
         );
@@ -109,7 +109,7 @@ public class MaterialDaoTest {
         materialDao.insert(quiz);
         materialDao.insert(reading);
 
-        List<MaterialEntity> quizzes = materialDao.getByType(MaterialType.QUIZ);
+        List<MaterialEntity> quizzes = materialDao.getByType(MaterialType.WORKSHEET);
         assertEquals(1, quizzes.size());
         assertEquals("Quiz", quizzes.get(0).getTitle());
     }
@@ -152,7 +152,7 @@ public class MaterialDaoTest {
     @Test
     public void testDeleteAll() {
         materialDao.insert(defaultMaterial);
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.WORKSHEET, "Quiz 2", "C", "{}", "[]", 0));
         materialDao.deleteAll();
 
         assertEquals(0, materialDao.getCount());
@@ -165,7 +165,7 @@ public class MaterialDaoTest {
         materialDao.insert(defaultMaterial);
         assertEquals(1, materialDao.getCount());
 
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.WORKSHEET, "Quiz 2", "C", "{}", "[]", 0));
         assertEquals(2, materialDao.getCount());
     }
 
@@ -183,7 +183,7 @@ public class MaterialDaoTest {
 
         MaterialEntity updated = new MaterialEntity(
                 "mat-1", 
-                MaterialType.QUIZ, 
+                MaterialType.WORKSHEET, 
                 "Replaced",
                 "New Content",
                 "{}",

@@ -50,7 +50,7 @@ public class QuestionDaoTest {
         // Insert a parent material for foreign key constraint
         MaterialEntity material = new MaterialEntity(
                 "mat-1",
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 "Test Quiz",
                 "Content",
                 "{}",
@@ -90,7 +90,7 @@ public class QuestionDaoTest {
     @Test
     public void testGetAll() {
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
 
         List<QuestionEntity> questions = questionDao.getAll();
         assertEquals(2, questions.size());
@@ -102,8 +102,8 @@ public class QuestionDaoTest {
         materialDao.insert(new MaterialEntity("mat-2", MaterialType.READING, "Reading", "C", "{}", "[]", 0));
 
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
-        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
 
         List<QuestionEntity> mat1Questions = questionDao.getByMaterialId("mat-1");
         assertEquals(2, mat1Questions.size());
@@ -149,7 +149,7 @@ public class QuestionDaoTest {
     @Test
     public void testDeleteByMaterialId() {
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
         questionDao.deleteByMaterialId("mat-1");
 
         assertEquals(0, questionDao.getCountByMaterialId("mat-1"));
@@ -158,7 +158,7 @@ public class QuestionDaoTest {
     @Test
     public void testDeleteAll() {
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
         questionDao.deleteAll();
 
         assertEquals(0, questionDao.getCount());
@@ -171,7 +171,7 @@ public class QuestionDaoTest {
         questionDao.insert(defaultQuestion);
         assertEquals(1, questionDao.getCount());
 
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
         assertEquals(2, questionDao.getCount());
     }
 
@@ -180,8 +180,8 @@ public class QuestionDaoTest {
         materialDao.insert(new MaterialEntity("mat-2", MaterialType.READING, "Reading", "C", "{}", "[]", 0));
 
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
-        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-3", "mat-2", "Q3", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
 
         assertEquals(2, questionDao.getCountByMaterialId("mat-1"));
         assertEquals(1, questionDao.getCountByMaterialId("mat-2"));
@@ -189,7 +189,7 @@ public class QuestionDaoTest {
 
     @Test
     public void testInsertAll() {
-        QuestionEntity q2 = new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True");
+        QuestionEntity q2 = new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True");
         questionDao.insertAll(Arrays.asList(defaultQuestion, q2));
 
         assertEquals(2, questionDao.getCount());
@@ -198,7 +198,7 @@ public class QuestionDaoTest {
     @Test
     public void testCascadeDeleteOnMaterialDelete() {
         questionDao.insert(defaultQuestion);
-        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.TRUE_FALSE, "[]", "True"));
+        questionDao.insert(new QuestionEntity("q-2", "mat-1", "Q2", QuestionType.MULTIPLE_CHOICE, "[]", "True"));
 
         // Delete the parent material
         materialDao.deleteById("mat-1");

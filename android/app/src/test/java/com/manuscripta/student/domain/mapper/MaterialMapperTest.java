@@ -20,7 +20,7 @@ public class MaterialMapperTest {
         // Given
         MaterialEntity entity = new MaterialEntity(
                 "test-id-123",
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 "Test Quiz Title",
                 "Test quiz content with questions",
                 "{\"author\":\"Teacher\",\"subject\":\"Math\"}",

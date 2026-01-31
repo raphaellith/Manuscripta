@@ -49,7 +49,7 @@ public class SessionDaoTest {
         // Insert a parent material for foreign key constraint
         MaterialEntity material = new MaterialEntity(
                 "mat-1",
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 "Test Quiz",
                 "Content",
                 "{}",
