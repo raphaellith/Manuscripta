@@ -278,6 +278,59 @@ public class LoggingInterceptorTest {
         // Verify the call completed (timing is logged but we can't directly verify it)
     }
 
+    // ========== Null body tests ==========
+
+    @Test
+    public void testIntercept_requestWithNullBody_handlesGracefully() throws IOException {
+        // Arrange
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .get() // GET request has null body
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        // Act
+        Response result = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
+    @Test
+    public void testIntercept_responseWithNullBody_handlesGracefully() throws IOException {
+        // Arrange
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .get()
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(204)
+                .message("No Content")
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        // Act
+        Response result = interceptor.intercept(mockChain);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(204, result.code());
+    }
+
     // ========== JSON response body tests ==========
 
     @Test
