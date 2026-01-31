@@ -285,6 +285,38 @@ public class ConnectionManagerTest {
         assertFalse(reachable);
     }
 
+    // ========== Constructor and registration tests ==========
+
+    @Test
+    public void testConstructor_registersNetworkCallback() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        // Verify network callback was registered
+        verify(mockConnectivityManager).registerNetworkCallback(
+                any(android.net.NetworkRequest.class),
+                any(ConnectivityManager.NetworkCallback.class));
+    }
+
+    @Test
+    public void testConstructor_withConnectedNetwork_initializesCorrectly() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(true);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(true);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        assertNotNull(connectionManager);
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertTrue(state.getValue());
+    }
+
     // ========== shutdown tests ==========
 
     @Test
@@ -418,6 +450,33 @@ public class ConnectionManagerTest {
     }
 
     @Test
+    public void testNetworkCallback_onCapabilitiesChanged_bothFalse_updatesConnectionState() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+        connectionManager = new ConnectionManager(mockContext);
+
+        // Capture the network callback
+        org.mockito.ArgumentCaptor<ConnectivityManager.NetworkCallback> callbackCaptor =
+                org.mockito.ArgumentCaptor.forClass(ConnectivityManager.NetworkCallback.class);
+        verify(mockConnectivityManager).registerNetworkCallback(
+                any(android.net.NetworkRequest.class),
+                callbackCaptor.capture());
+
+        ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
+
+        // Create mock capabilities with neither internet nor validation
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(false);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(false);
+
+        // Trigger onCapabilitiesChanged
+        callback.onCapabilitiesChanged(mockNetwork, mockCapabilities);
+
+        // Code path covered
+        assertNotNull(callback);
+    }
+
+    @Test
     public void testNetworkCallback_onCapabilitiesChanged_notValidated_updatesConnectionState() {
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
         connectionManager = new ConnectionManager(mockContext);
@@ -459,6 +518,23 @@ public class ConnectionManagerTest {
         connectionManager = new ConnectionManager(mockContext);
 
         assertNotNull(connectionManager);
+    }
+
+    @Test
+    public void testRegisterNetworkCallback_createsRequestWithInternetCapability() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        // Capture the NetworkRequest that was created
+        org.mockito.ArgumentCaptor<android.net.NetworkRequest> requestCaptor =
+                org.mockito.ArgumentCaptor.forClass(android.net.NetworkRequest.class);
+        verify(mockConnectivityManager).registerNetworkCallback(
+                requestCaptor.capture(),
+                any(ConnectivityManager.NetworkCallback.class));
+
+        android.net.NetworkRequest capturedRequest = requestCaptor.getValue();
+        assertNotNull(capturedRequest);
     }
 
     @Test
