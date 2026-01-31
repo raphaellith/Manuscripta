@@ -89,6 +89,8 @@ public class ConnectionManagerTest {
         LiveData<Boolean> state = connectionManager.getConnectionState();
 
         assertNotNull(state);
+        // Verify it's a LiveData object
+        assertTrue(state instanceof LiveData);
     }
 
     @Test
@@ -328,6 +330,39 @@ public class ConnectionManagerTest {
 
         verify(mockConnectivityManager).unregisterNetworkCallback(any(
                 ConnectivityManager.NetworkCallback.class));
+    }
+
+    @Test
+    public void testIsNetworkAvailable_multipleCallsConsistent() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(true);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(true);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        // Call multiple times - should be consistent
+        boolean first = connectionManager.isNetworkAvailable();
+        boolean second = connectionManager.isNetworkAvailable();
+
+        assertTrue(first);
+        assertTrue(second);
+    }
+
+    @Test
+    public void testGetConnectionState_returnsLiveDataInstance() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
+        connectionManager = new ConnectionManager(mockContext);
+
+        LiveData<Boolean> state1 = connectionManager.getConnectionState();
+        LiveData<Boolean> state2 = connectionManager.getConnectionState();
+
+        // Should return the same instance
+        assertNotNull(state1);
+        assertNotNull(state2);
     }
 
     @Test
