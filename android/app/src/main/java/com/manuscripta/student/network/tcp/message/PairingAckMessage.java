@@ -2,8 +2,8 @@ package com.manuscripta.student.network.tcp.message;
 
 import androidx.annotation.NonNull;
 
-import com.manuscripta.student.network.tcp.TcpMessage;
-import com.manuscripta.student.network.tcp.TcpOpcode;
+import com.manuscripta.student.network.tcp.codec.TcpMessage;
+import com.manuscripta.student.network.tcp.codec.TcpOpcode;
 
 /**
  * TCP message acknowledging a successful pairing.

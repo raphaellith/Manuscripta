@@ -14,7 +14,7 @@ import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.core.TcpSocketManager;
 
 import javax.inject.Singleton;
 

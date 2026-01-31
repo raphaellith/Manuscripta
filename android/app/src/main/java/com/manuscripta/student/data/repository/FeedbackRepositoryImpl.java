@@ -11,7 +11,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.core.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
 import java.io.IOException;
