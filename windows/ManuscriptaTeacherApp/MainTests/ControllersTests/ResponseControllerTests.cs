@@ -6,7 +6,7 @@ using Main.Models.Dtos;
 using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Services;
-using Main.Services.Repositories;
+
 using Xunit;
 
 namespace MainTests.ControllersTests;
@@ -18,7 +18,6 @@ namespace MainTests.ControllersTests;
 public class ResponseControllerTests
 {
     private readonly Mock<IResponseService> _mockResponseService;
-    private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<ILogger<ResponseController>> _mockLogger;
     private readonly ResponseController _controller;
 
@@ -29,11 +28,9 @@ public class ResponseControllerTests
     public ResponseControllerTests()
     {
         _mockResponseService = new Mock<IResponseService>();
-        _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockLogger = new Mock<ILogger<ResponseController>>();
         _controller = new ResponseController(
             _mockResponseService.Object,
-            _mockQuestionRepo.Object,
             _mockLogger.Object);
     }
 
@@ -43,21 +40,14 @@ public class ResponseControllerTests
     public void Constructor_NullResponseService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(null!, _mockQuestionRepo.Object, _mockLogger.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(_mockResponseService.Object, null!, _mockLogger.Object));
+            new ResponseController(null!, _mockLogger.Object));
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(_mockResponseService.Object, _mockQuestionRepo.Object, null!));
+            new ResponseController(_mockResponseService.Object, null!));
     }
 
     #endregion

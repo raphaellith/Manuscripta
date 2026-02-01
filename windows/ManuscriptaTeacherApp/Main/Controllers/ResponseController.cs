@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Main.Models.Dtos;
 using Main.Services;
-using Main.Services.Repositories;
+
 
 namespace Main.Controllers;
 
@@ -15,16 +15,13 @@ namespace Main.Controllers;
 public class ResponseController : ControllerBase
 {
     private readonly IResponseService _responseService;
-    private readonly IQuestionRepository _questionRepository;
     private readonly ILogger<ResponseController> _logger;
 
     public ResponseController(
         IResponseService responseService,
-        IQuestionRepository questionRepository,
         ILogger<ResponseController> logger)
     {
         _responseService = responseService ?? throw new ArgumentNullException(nameof(responseService));
-        _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
