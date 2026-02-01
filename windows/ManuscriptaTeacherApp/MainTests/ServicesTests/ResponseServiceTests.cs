@@ -8,6 +8,7 @@ using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Services;
 using Main.Services.Repositories;
+using Main.Models.Dtos;
 
 namespace MainTests.ServicesTests;
 
@@ -72,11 +73,11 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_NullResponse_ThrowsArgumentNullException()
+    public async Task CreateResponseAsync_NullResponseEntity_ThrowsArgumentNullException()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.CreateResponseAsync(null!));
+            () => _service.CreateResponseAsync((ResponseEntity)null!));
     }
 
     [Fact]
@@ -446,4 +447,130 @@ public class ResponseServiceTests
         _mockFeedbackRepo.Verify(r => r.DeleteByResponseIdAsync(responseId), Times.Once);
         _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
+
+
+    #region DTO & Batch Tests
+
+    [Fact]
+    public async Task CreateResponseAsync_ValidDto_FetchesQuestionOnceAndSaves()
+    {
+        // Arrange
+        var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        
+        var dto = new SubmitResponseDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuestionId = questionId.ToString(),
+            DeviceId = deviceId.ToString(),
+            Answer = "1",
+            Timestamp = DateTime.UtcNow.ToString("O"),
+            IsCorrect = null
+        };
+
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B", "C" }, 0);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(dto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(Guid.Parse(dto.Id), result.Id);
+        
+        // Verify optimization: GetByIdAsync called ONCE
+        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId), Times.Once);
+        
+        // Verify Persistence
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBatchResponsesAsync_AllValid_FetchesQuestionsAndSavesAll()
+    {
+        // Arrange
+        var questionId1 = Guid.NewGuid();
+        var questionId2 = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+
+        var dto1 = new SubmitResponseDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuestionId = questionId1.ToString(),
+            DeviceId = deviceId.ToString(),
+            Answer = "0",
+            Timestamp = DateTime.UtcNow.ToString("O")
+        };
+        var dto2 = new SubmitResponseDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuestionId = questionId2.ToString(),
+            DeviceId = deviceId.ToString(),
+            Answer = "1",
+            Timestamp = DateTime.UtcNow.ToString("O")
+        };
+
+        var question1 = new MultipleChoiceQuestionEntity(questionId1, Guid.NewGuid(), "Q1", new List<string> { "A", "B" }, 0);
+        var question2 = new MultipleChoiceQuestionEntity(questionId2, Guid.NewGuid(), "Q2", new List<string> { "A", "B" }, 1);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId1)).ReturnsAsync(question1);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId2)).ReturnsAsync(question2);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        await _service.CreateBatchResponsesAsync(new List<SubmitResponseDto> { dto1, dto2 });
+
+        // Assert
+        // Verify optimizations: 1 query per DTO
+        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId1), Times.Once);
+        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId2), Times.Once);
+
+        // Verify Persistence: 2 Adds
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CreateBatchResponsesAsync_OneInvalid_ThrowsAndSavesNone()
+    {
+        // Arrange
+        var questionId1 = Guid.NewGuid();
+        var questionId2 = Guid.NewGuid(); // Will mimic invalid answer for this one
+
+        var dto1 = new SubmitResponseDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuestionId = questionId1.ToString(),
+            DeviceId = Guid.NewGuid().ToString(),
+            Answer = "0", // Valid
+            Timestamp = DateTime.UtcNow.ToString("O")
+        };
+        var dto2 = new SubmitResponseDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuestionId = questionId2.ToString(),
+            DeviceId = Guid.NewGuid().ToString(),
+            Answer = "99", // Invalid index
+            Timestamp = DateTime.UtcNow.ToString("O")
+        };
+
+        var question1 = new MultipleChoiceQuestionEntity(questionId1, Guid.NewGuid(), "Q1", new List<string> { "A", "B" }, 0);
+        var question2 = new MultipleChoiceQuestionEntity(questionId2, Guid.NewGuid(), "Q2", new List<string> { "A", "B" }, 0);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId1)).ReturnsAsync(question1);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId2)).ReturnsAsync(question2);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateBatchResponsesAsync(new [] { dto1, dto2 }));
+
+        // Verify Atomic Failure: No calls to AddAsync
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Never);
+    }
+
+    #endregion
 }

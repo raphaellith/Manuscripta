@@ -81,6 +81,9 @@ public class ResponseControllerTests
         // Arrange
         var request = CreateValidSubmitResponseDto();
         request.Id = "not-a-guid";
+        
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new FormatException("Id must be a valid GUID"));
 
         // Act
         var result = await _controller.SubmitResponse(request);
@@ -96,6 +99,9 @@ public class ResponseControllerTests
         // Arrange
         var request = CreateValidSubmitResponseDto();
         request.QuestionId = "invalid";
+        
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new FormatException("QuestionId must be a valid GUID"));
 
         // Act
         var result = await _controller.SubmitResponse(request);
@@ -111,6 +117,9 @@ public class ResponseControllerTests
         // Arrange
         var request = CreateValidSubmitResponseDto();
         request.DeviceId = "invalid";
+        
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new FormatException("DeviceId must be a valid GUID"));
 
         // Act
         var result = await _controller.SubmitResponse(request);
@@ -126,6 +135,9 @@ public class ResponseControllerTests
         // Arrange
         var request = CreateValidSubmitResponseDto();
         request.Timestamp = "not-a-timestamp";
+        
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new FormatException("Timestamp must be a valid ISO 8601"));
 
         // Act
         var result = await _controller.SubmitResponse(request);
@@ -140,8 +152,8 @@ public class ResponseControllerTests
     {
         // Arrange
         var request = CreateValidSubmitResponseDto();
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((QuestionEntity?)null);
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new InvalidOperationException("Question with ID ... not found"));
 
         // Act
         var result = await _controller.SubmitResponse(request);
@@ -156,208 +168,104 @@ public class ResponseControllerTests
     {
         // Arrange
         var request = CreateValidSubmitResponseDto();
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-        _mockResponseService.Setup(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()))
-            .ReturnsAsync((ResponseEntity r) => r);
+        var responseEntity = new MultipleChoiceResponseEntity(Guid.Parse(request.Id), _testQuestionId, _testDeviceId, 0, DateTime.UtcNow, null);
 
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ReturnsAsync(responseEntity);
+ 
         // Act
         var result = await _controller.SubmitResponse(request);
-
+ 
         // Assert
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, statusResult.StatusCode);
+        _mockResponseService.Verify(s => s.CreateResponseAsync(request), Times.Once);
     }
-
-    [Fact]
-    public async Task SubmitResponse_WrittenAnswer_Returns201Created()
-    {
-        // Arrange
-        var request = CreateValidSubmitResponseDto();
-        request.Answer = "My written answer";
-        var question = new WrittenAnswerQuestionEntity(
-            _testQuestionId, _testMaterialId, "Explain?", "Sample answer");
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-        _mockResponseService.Setup(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()))
-            .ReturnsAsync((ResponseEntity r) => r);
-
-        // Act
-        var result = await _controller.SubmitResponse(request);
-
-        // Assert
-        var statusResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(201, statusResult.StatusCode);
-    }
-
-    [Fact]
-    public async Task SubmitResponse_MultipleChoiceInvalidAnswerFormat_Returns400BadRequest()
-    {
-        // Arrange - Answer must be an integer index for MC questions
-        var request = CreateValidSubmitResponseDto();
-        request.Answer = "not-a-number";
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-
-        // Act
-        var result = await _controller.SubmitResponse(request);
-
-        // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal(400, badRequest.StatusCode);
-    }
-
+ 
     [Fact]
     public async Task SubmitResponse_ServiceValidationFailure_Returns400BadRequest()
     {
-        // Arrange - Per Validation Rules §1A(3): Service throws, controller returns 400
+        // Arrange
         var request = CreateValidSubmitResponseDto();
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-        _mockResponseService.Setup(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()))
-            .ThrowsAsync(new InvalidOperationException("Device not paired"));
-
+        _mockResponseService.Setup(s => s.CreateResponseAsync(request))
+            .ThrowsAsync(new InvalidOperationException("Validation failed"));
+ 
         // Act
         var result = await _controller.SubmitResponse(request);
-
+ 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequest.StatusCode);
     }
 
     #endregion
-
+ 
     #region POST /responses/batch Tests
-
+ 
     [Fact]
     public async Task SubmitBatchResponses_NullRequest_Returns400BadRequest()
     {
         // Act
         var result = await _controller.SubmitBatchResponses(null!);
-
+ 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequest.StatusCode);
     }
-
+ 
     [Fact]
     public async Task SubmitBatchResponses_EmptyResponses_Returns400BadRequest()
     {
         // Arrange
         var request = new BatchSubmitResponsesDto { Responses = new List<SubmitResponseDto>() };
-
+ 
         // Act
         var result = await _controller.SubmitBatchResponses(request);
-
+ 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequest.StatusCode);
     }
-
+ 
     [Fact]
     public async Task SubmitBatchResponses_ValidResponses_Returns201Created()
     {
         // Arrange
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-        _mockResponseService.Setup(s => s.ValidateResponseAsync(It.IsAny<ResponseEntity>()))
-            .Returns(Task.CompletedTask);
-        _mockResponseService.Setup(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()))
-            .ReturnsAsync((ResponseEntity r) => r);
-
         var request = new BatchSubmitResponsesDto
         {
             Responses = new List<SubmitResponseDto> { CreateValidSubmitResponseDto(), CreateValidSubmitResponseDto() }
         };
 
+        _mockResponseService.Setup(s => s.CreateBatchResponsesAsync(request.Responses))
+            .Returns(Task.CompletedTask);
+ 
         // Act
         var result = await _controller.SubmitBatchResponses(request);
-
+ 
         // Assert
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, statusResult.StatusCode);
-        
-        // Verify CreateResponseAsync was called for both
-        _mockResponseService.Verify(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Exactly(2));
+        _mockResponseService.Verify(s => s.CreateBatchResponsesAsync(request.Responses), Times.Once);
     }
-
+ 
     [Fact]
-    public async Task SubmitBatchResponses_OneInvalidResponse_Returns400BadRequest_AndPersistsNone()
+    public async Task SubmitBatchResponses_ServiceThrowsInvalidOperation_Returns400BadRequest()
     {
         // Arrange
-        var validRequest = CreateValidSubmitResponseDto();
-        var invalidRequest = CreateValidSubmitResponseDto();
-        invalidRequest.Id = "invalid-guid"; // Format error
-
         var request = new BatchSubmitResponsesDto
         {
-            Responses = new List<SubmitResponseDto> { validRequest, invalidRequest }
+            Responses = new List<SubmitResponseDto> { CreateValidSubmitResponseDto() }
         };
 
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-
+        _mockResponseService.Setup(s => s.CreateBatchResponsesAsync(request.Responses))
+            .ThrowsAsync(new InvalidOperationException("Atomic validation failed"));
+ 
         // Act
         var result = await _controller.SubmitBatchResponses(request);
-
+ 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequest.StatusCode);
-
-        // Crucial: Verify CreateResponseAsync was NEVER called (atomic failure)
-        _mockResponseService.Verify(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Never);
-    }
-    
-    [Fact]
-    public async Task SubmitBatchResponses_OneServiceInvalidResponse_Returns400_AndPersistsNone()
-    {
-        // Arrange - First checks fail validation
-        var validDto = CreateValidSubmitResponseDto();
-        var invalidDto = CreateValidSubmitResponseDto();
-        // Give them different IDs so we can distinguish if needed, but here structure is same.
-        // We will make the service fail validation for the second one.
-        
-        var question = new MultipleChoiceQuestionEntity(
-            _testQuestionId, _testMaterialId, "Test?", new List<string> { "A", "B" }, 0);
-        
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(_testQuestionId))
-            .ReturnsAsync(question);
-            
-        // Setup validation success for first call, failure for second
-        _mockResponseService.SetupSequence(s => s.ValidateResponseAsync(It.IsAny<ResponseEntity>()))
-            .Returns(Task.CompletedTask)
-            .ThrowsAsync(new InvalidOperationException("Validation failed"));
-
-        var request = new BatchSubmitResponsesDto
-        {
-            Responses = new List<SubmitResponseDto> { validDto, invalidDto }
-        };
-
-        // Act
-        var result = await _controller.SubmitBatchResponses(request);
-
-        // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal(400, badRequest.StatusCode);
-        
-        // Crucial: Verify CreateResponseAsync was NEVER called
-        _mockResponseService.Verify(s => s.CreateResponseAsync(It.IsAny<ResponseEntity>()), Times.Never);
     }
 
     #endregion

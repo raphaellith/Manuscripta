@@ -35,6 +35,10 @@ public class ResponseController : ControllerBase
     /// Submits a single response to a question.
     /// Per API Contract.md §2.3 and Validation Rules §2C.
     /// </summary>
+    /// <summary>
+    /// Submits a single response to a question.
+    /// Per API Contract.md §2.3 and Validation Rules §2C.
+    /// </summary>
     [HttpPost("responses")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -48,11 +52,8 @@ public class ResponseController : ControllerBase
 
         try
         {
-            // Parse DTO to Entity without saving
-            var response = await ParseDtoToEntityAsync(request);
-            
-            // Create (validates and saves)
-            await _responseService.CreateResponseAsync(response);
+            // Delegate logic to Service (optimized 1-query flow)
+            var response = await _responseService.CreateResponseAsync(request);
             
             _logger.LogInformation("Response {ResponseId} submitted for question {QuestionId}", response.Id, response.QuestionId);
             
@@ -86,7 +87,7 @@ public class ResponseController : ControllerBase
     /// <summary>
     /// Submits multiple responses at once.
     /// Per API Contract.md §2.3 - for offline reconnection scenarios.
-    /// Implements Validation Rules §1A(2): "All-or-Nothing" atomic validation.
+    /// Implements Validation Rules §1A(2): "All-or-Nothing" atomic validation via Service.
     /// </summary>
     [HttpPost("responses/batch")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -101,25 +102,8 @@ public class ResponseController : ControllerBase
 
         try
         {
-            // Pass 1: Parse and Validate ALL responses (no persistence)
-            var validatedEntities = new List<ResponseEntity>();
-            
-            foreach (var responseDto in request.Responses)
-            {
-                // Parse (checks basic formats and question existence)
-                var entity = await ParseDtoToEntityAsync(responseDto);
-                
-                // Validate business rules (checks device ID, answer index, etc.) without saving
-                await _responseService.ValidateResponseAsync(entity);
-                
-                validatedEntities.Add(entity);
-            }
-
-            // Pass 2: Persist ALL responses (only if Pass 1 succeeded completely)
-            foreach (var entity in validatedEntities)
-            {
-                await _responseService.CreateResponseAsync(entity);
-            }
+            // Delegate ALL orchestration to service (Validate All -> Save All)
+            await _responseService.CreateBatchResponsesAsync(request.Responses);
 
             _logger.LogInformation("Batch submitted {Count} responses", request.Responses.Count);
             
@@ -148,49 +132,5 @@ public class ResponseController : ControllerBase
             _logger.LogError(ex, "Error processing batch response submission");
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Internal server error" });
         }
-    }
-
-    /// <summary>
-    /// Parses the DTO and creates the appropriate ResponseEntity.
-    /// Does NOT persist the entity.
-    /// </summary>
-    private async Task<ResponseEntity> ParseDtoToEntityAsync(SubmitResponseDto dto)
-    {
-        // Validate GUID formats
-        if (!Guid.TryParse(dto.Id, out var responseId))
-            throw new FormatException("Id must be a valid GUID");
-        
-        if (!Guid.TryParse(dto.QuestionId, out var questionId))
-            throw new FormatException("QuestionId must be a valid GUID");
-        
-        if (!Guid.TryParse(dto.DeviceId, out var deviceId))
-            throw new FormatException("DeviceId must be a valid GUID");
-
-        // Parse timestamp per API Contract §4.4 - ISO 8601
-        if (!DateTime.TryParse(dto.Timestamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var timestamp))
-            throw new FormatException("Timestamp must be a valid ISO 8601 date-time string");
-
-        // Determine response type based on question type
-        var question = await _questionRepository.GetByIdAsync(questionId);
-        if (question == null)
-            throw new InvalidOperationException($"Question with ID {questionId} not found");
-
-        ResponseEntity response = question switch
-        {
-            MultipleChoiceQuestionEntity => CreateMultipleChoiceResponse(responseId, questionId, deviceId, dto.Answer, timestamp, dto.IsCorrect),
-            WrittenAnswerQuestionEntity => new WrittenAnswerResponseEntity(responseId, questionId, deviceId, dto.Answer, timestamp, dto.IsCorrect),
-            _ => throw new InvalidOperationException($"Unsupported question type: {question.GetType().Name}")
-        };
-
-        return response;
-    }
-
-    private static MultipleChoiceResponseEntity CreateMultipleChoiceResponse(
-        Guid responseId, Guid questionId, Guid deviceId, string answer, DateTime timestamp, bool? isCorrect)
-    {
-        if (!int.TryParse(answer, out var answerIndex))
-            throw new FormatException("Answer must be a valid integer index for multiple choice questions");
-
-        return new MultipleChoiceResponseEntity(responseId, questionId, deviceId, answerIndex, timestamp, isCorrect);
     }
 }
