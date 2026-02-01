@@ -74,5 +74,16 @@ public class InMemoryResponseRepository : IResponseRepository
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Checks if a response already exists for the given question and device combination.
+    /// Per Validation Rules §2C(3)(f): one response per question per device.
+    /// </summary>
+    public Task<bool> ExistsForQuestionAndDeviceAsync(Guid questionId, Guid deviceId)
+    {
+        var exists = _responses.Values
+            .Any(r => r.QuestionId == questionId && r.DeviceId == deviceId);
+        return Task.FromResult(exists);
+    }
 }
 

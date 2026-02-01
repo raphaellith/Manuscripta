@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Main.Models.Entities.Responses;
 using Main.Models.Entities.Questions;
-using Main.Models.Dtos;
-using System.Globalization;
 using Main.Services.Repositories;
 
 namespace Main.Services;
 
 /// <summary>
 /// Service for managing responses.
-/// Enforces business rules and data validation per Validation Rules §2C.
+/// Enforces business rules and data validation.
 /// </summary>
 public class ResponseService : IResponseService
 {
@@ -21,7 +20,7 @@ public class ResponseService : IResponseService
     private readonly DeviceIdValidator _deviceIdValidator;
 
     public ResponseService(
-        IResponseRepository responseRepository, 
+        IResponseRepository responseRepository,
         IQuestionRepository questionRepository,
         IFeedbackRepository feedbackRepository,
         DeviceIdValidator deviceIdValidator)
@@ -62,97 +61,58 @@ public class ResponseService : IResponseService
     }
 
     /// <summary>
-    /// Creates a response from a DTO, handling type determination and validation internally.
-    /// Optimizes DB access by fetching the question only once.
+    /// Creates multiple responses atomically with optimized validation.
+    /// Validates unique device IDs once before processing.
+    /// All-or-nothing semantics: if any response fails, none are stored.
     /// </summary>
-    public async Task<ResponseEntity> CreateResponseAsync(SubmitResponseDto dto)
+    public async Task CreateResponseBatchAsync(IEnumerable<ResponseEntity> responses)
     {
-        // 1. Parse and Create Entity (includes fetching question and basic validation)
-        // Pass 'validateBusinessRules: true' to perform full validation immediately
-        var (response, _) = await ParseDtoToEntityAsync(dto, validateBusinessRules: true);
-
-        // 2. Persist
-        await _responseRepository.AddAsync(response);
-        return response;
-    }
-
-    /// <summary>
-    /// Creates a batch of responses from DTOs, strictly enforcing Validation Rules §1A(2) (All-or-Nothing).
-    /// </summary>
-    public async Task CreateBatchResponsesAsync(IEnumerable<SubmitResponseDto> dtos)
-    {
-        if (dtos == null) throw new ArgumentNullException(nameof(dtos));
-
-        var validatedEntities = new List<ResponseEntity>();
-
-        // Pass 1: Parse and Validate ALL responses
-        foreach (var dto in dtos)
-        {
-            // Parse and perform full validation (fetching question once)
-            var (response, _) = await ParseDtoToEntityAsync(dto, validateBusinessRules: true);
-            validatedEntities.Add(response);
-        }
-
-        // Pass 2: Persist ALL responses
-        foreach (var entity in validatedEntities)
-        {
-            await _responseRepository.AddAsync(entity);
-        }
-    }
-
-    /// <summary>
-    /// Helper to parse DTO to Entity.
-    /// Fetches the question once.
-    /// Optionally performs business rule validation (ValidateResponseInternal).
-    /// </summary>
-    private async Task<(ResponseEntity Entity, QuestionEntity Question)> ParseDtoToEntityAsync(SubmitResponseDto dto, bool validateBusinessRules)
-    {
-        // Validate GUID formats
-        if (!Guid.TryParse(dto.Id, out var responseId))
-            throw new FormatException("Id must be a valid GUID");
+        var responseList = responses?.ToList() ?? throw new ArgumentNullException(nameof(responses));
         
-        if (!Guid.TryParse(dto.QuestionId, out var questionId))
-            throw new FormatException("QuestionId must be a valid GUID");
-        
-        if (!Guid.TryParse(dto.DeviceId, out var deviceId))
-            throw new FormatException("DeviceId must be a valid GUID");
+        if (responseList.Count == 0)
+            throw new ArgumentException("Response batch cannot be empty.", nameof(responses));
 
-        // Parse timestamp
-        if (!DateTime.TryParse(dto.Timestamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var timestamp))
-            throw new FormatException("Timestamp must be a valid ISO 8601 date-time string");
-
-        // Fetch Question (ONCE)
-        var question = await _questionRepository.GetByIdAsync(questionId);
-        if (question == null)
-            throw new InvalidOperationException($"Question with ID {questionId} not found");
-
-        // Create Entity
-        ResponseEntity response = question switch
+        // Optimization: Validate unique device IDs once instead of per-response
+        var uniqueDeviceIds = responseList.Select(r => r.DeviceId).Distinct().ToList();
+        foreach (var deviceId in uniqueDeviceIds)
         {
-            MultipleChoiceQuestionEntity => CreateMultipleChoiceResponse(responseId, questionId, deviceId, dto.Answer, timestamp, dto.IsCorrect),
-            WrittenAnswerQuestionEntity => new WrittenAnswerResponseEntity(responseId, questionId, deviceId, dto.Answer, timestamp, dto.IsCorrect),
-            _ => throw new InvalidOperationException($"Unsupported question type: {question.GetType().Name}")
-        };
-
-        // Validate Business Rules if requested (using the already fetched question)
-        if (validateBusinessRules)
-        {
-            await ValidateResponseInternalAsync(response, question);
+            if (!await _deviceIdValidator.IsValidDeviceIdAsync(deviceId))
+                throw new InvalidOperationException($"Device ID {deviceId} does not correspond to a valid paired device.");
         }
 
-        return (response, question);
+        // Validate all responses (question validation and answer validation)
+        foreach (var response in responseList)
+        {
+            await ValidateResponseWithoutDeviceCheckAsync(response);
+        }
+
+        // All validations passed - add all responses atomically
+        var addedIds = new List<Guid>();
+        try
+        {
+            foreach (var response in responseList)
+            {
+                await _responseRepository.AddAsync(response);
+                addedIds.Add(response.Id);
+            }
+        }
+        catch
+        {
+            // Rollback: remove any responses that were added
+            foreach (var id in addedIds)
+            {
+                try
+                {
+                    await _responseRepository.DeleteAsync(id);
+                }
+                catch
+                {
+                    // Best effort rollback - log in production
+                }
+            }
+            throw;
+        }
     }
-
-    private static MultipleChoiceResponseEntity CreateMultipleChoiceResponse(
-        Guid responseId, Guid questionId, Guid deviceId, string answer, DateTime timestamp, bool? isCorrect)
-    {
-        if (!int.TryParse(answer, out var answerIndex))
-            throw new FormatException("Answer must be a valid integer index for multiple choice questions");
-
-        return new MultipleChoiceResponseEntity(responseId, questionId, deviceId, answerIndex, timestamp, isCorrect);
-    }
-
-
 
     /// <summary>
     /// Deletes a response and its associated feedback.
@@ -168,31 +128,21 @@ public class ResponseService : IResponseService
 
     /// <summary>
     /// Validates a response according to business rules:
-    /// - §2C(3)(a): Responses must reference a Question
-    /// - §2C(3)(b): Answer of a Multiple-Choice response must be a valid index
-    /// - §2C(3)(e): DeviceId must correspond to a valid device
+    /// - 2C(3)(a): Responses must reference a Question
+    /// - 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
     /// </summary>
-    public async Task ValidateResponseAsync(ResponseEntity response)
+    private async Task ValidateResponseAsync(ResponseEntity response)
     {
-        // If we only have the entity, we must fetch the question.
-        // This method is kept for backward compatibility and internal calls where we don't have the question context.
+        // Rule 2C(3)(a): Responses must reference a Question
         var question = await _questionRepository.GetByIdAsync(response.QuestionId);
         if (question == null)
             throw new InvalidOperationException($"Question with ID {response.QuestionId} not found.");
 
-        await ValidateResponseInternalAsync(response, question);
-    }
+        // Rule 2C(3)(e): DeviceId must correspond to a valid device
+        if (!await _deviceIdValidator.IsValidDeviceIdAsync(response.DeviceId))
+            throw new InvalidOperationException($"Device ID {response.DeviceId} does not correspond to a valid paired device.");
 
-    /// <summary>
-    /// Internal validation logic that accepts the pre-fetched question context.
-    /// Avoids redundant DB lookups.
-    /// </summary>
-    private async Task ValidateResponseInternalAsync(ResponseEntity response, QuestionEntity question)
-    {
-        // Rule §2C(3)(e): DeviceId must correspond to a valid device
-        await _deviceIdValidator.ValidateOrThrowAsync(response.DeviceId);
-
-        // Rule §2C(3)(b): Answer of a Multiple-Choice response must be a valid index
+        // Rule 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
         if (response is MultipleChoiceResponseEntity mcResponse && question is MultipleChoiceQuestionEntity mcQuestion)
         {
             if (mcResponse.AnswerIndex < 0 || mcResponse.AnswerIndex >= mcQuestion.Options.Count)
@@ -200,6 +150,40 @@ public class ResponseService : IResponseService
                     $"Answer index {mcResponse.AnswerIndex} is out of range. " +
                     $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
         }
+
+        // Rule 2C(3)(f): One response per question per device
+        if (await _responseRepository.ExistsForQuestionAndDeviceAsync(response.QuestionId, response.DeviceId))
+            throw new InvalidOperationException(
+                $"A response for question {response.QuestionId} from device {response.DeviceId} already exists.");
+
+        // Additional validation: ensure response type matches question type
+        ValidateResponseTypeMatchesQuestion(response, question);
+    }
+
+    /// <summary>
+    /// Validates a response without device check (for batch optimization).
+    /// Device validation is performed once per unique device ID in batch mode.
+    /// </summary>
+    private async Task ValidateResponseWithoutDeviceCheckAsync(ResponseEntity response)
+    {
+        // Rule 2C(3)(a): Responses must reference a Question
+        var question = await _questionRepository.GetByIdAsync(response.QuestionId);
+        if (question == null)
+            throw new InvalidOperationException($"Question with ID {response.QuestionId} not found.");
+
+        // Rule 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
+        if (response is MultipleChoiceResponseEntity mcResponse && question is MultipleChoiceQuestionEntity mcQuestion)
+        {
+            if (mcResponse.AnswerIndex < 0 || mcResponse.AnswerIndex >= mcQuestion.Options.Count)
+                throw new InvalidOperationException(
+                    $"Answer index {mcResponse.AnswerIndex} is out of range. " +
+                    $"Valid range is 0 to {mcQuestion.Options.Count - 1}.");
+        }
+
+        // Rule 2C(3)(f): One response per question per device
+        if (await _responseRepository.ExistsForQuestionAndDeviceAsync(response.QuestionId, response.DeviceId))
+            throw new InvalidOperationException(
+                $"A response for question {response.QuestionId} from device {response.DeviceId} already exists.");
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);

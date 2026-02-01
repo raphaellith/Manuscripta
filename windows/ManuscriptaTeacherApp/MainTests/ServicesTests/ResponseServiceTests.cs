@@ -8,7 +8,6 @@ using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Services;
 using Main.Services.Repositories;
-using Main.Models.Dtos;
 
 namespace MainTests.ServicesTests;
 
@@ -17,7 +16,8 @@ public class ResponseServiceTests
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
-    private readonly Mock<DeviceIdValidator> _mockDeviceIdValidator;
+    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
+    private readonly DeviceIdValidator _deviceIdValidator;
     private readonly ResponseService _service;
 
     public ResponseServiceTests()
@@ -25,18 +25,22 @@ public class ResponseServiceTests
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
         
-        // Mock DeviceIdValidator - requires IDeviceRegistryService in constructor
-        var mockDeviceRegistry = new Mock<IDeviceRegistryService>();
-        mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>())).ReturnsAsync(true);
-        _mockDeviceIdValidator = new Mock<DeviceIdValidator>(mockDeviceRegistry.Object) { CallBase = false };
-        _mockDeviceIdValidator.Setup(v => v.ValidateOrThrowAsync(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+        // Default: all devices are valid (paired)
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(true);
         
+        // Default: no duplicate responses exist
+        _mockResponseRepo.Setup(r => r.ExistsForQuestionAndDeviceAsync(It.IsAny<Guid>(), It.IsAny<Guid>()))
+            .ReturnsAsync(false);
+        
+        _deviceIdValidator = new DeviceIdValidator(_mockDeviceRegistry.Object);
         _service = new ResponseService(
             _mockResponseRepo.Object, 
             _mockQuestionRepo.Object, 
             _mockFeedbackRepo.Object,
-            _mockDeviceIdValidator.Object);
+            _deviceIdValidator);
     }
 
     [Fact]
@@ -73,11 +77,11 @@ public class ResponseServiceTests
     }
 
     [Fact]
-    public async Task CreateResponseAsync_NullResponseEntity_ThrowsArgumentNullException()
+    public async Task CreateResponseAsync_NullResponse_ThrowsArgumentNullException()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.CreateResponseAsync((ResponseEntity)null!));
+            () => _service.CreateResponseAsync(null!));
     }
 
     [Fact]
@@ -99,6 +103,38 @@ public class ResponseServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateResponseAsync(response));
         Assert.Contains("not found", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_UnpairedDevice_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2C(3)(e): DeviceId must correspond to a valid device
+        var questionId = Guid.NewGuid();
+        var unpairedDeviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            new List<string> { "A", "B", "C" },
+            1
+        );
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(),
+            questionId,
+            unpairedDeviceId,
+            1
+        );
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
+            .ReturnsAsync(question);
+        // Device is NOT paired
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(unpairedDeviceId))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseAsync(response));
+        Assert.Contains("valid paired device", exception.Message);
     }
 
     [Fact]
@@ -448,127 +484,119 @@ public class ResponseServiceTests
         _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 
-
-    #region DTO & Batch Tests
+    #region Batch Tests
 
     [Fact]
-    public async Task CreateResponseAsync_ValidDto_FetchesQuestionOnceAndSaves()
+    public async Task CreateResponseBatchAsync_ValidBatch_Success()
     {
         // Arrange
         var questionId = Guid.NewGuid();
         var deviceId = Guid.NewGuid();
-        
-        var dto = new SubmitResponseDto
-        {
-            Id = Guid.NewGuid().ToString(),
-            QuestionId = questionId.ToString(),
-            DeviceId = deviceId.ToString(),
-            Answer = "1",
-            Timestamp = DateTime.UtcNow.ToString("O"),
-            IsCorrect = null
-        };
-
         var question = new MultipleChoiceQuestionEntity(
-            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B", "C" }, 0);
+            questionId,
+            Guid.NewGuid(),
+            "Question",
+            new List<string> { "A", "B", "C" },
+            1
+        );
+
+        var responses = new List<ResponseEntity>
+        {
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 1),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 2)
+        };
 
         _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId))
             .ReturnsAsync(question);
-        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>()))
-            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.CreateResponseAsync(dto);
+        await _service.CreateResponseBatchAsync(responses);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(Guid.Parse(dto.Id), result.Id);
-        
-        // Verify optimization: GetByIdAsync called ONCE
-        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId), Times.Once);
-        
-        // Verify Persistence
-        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Once);
+        // Assert - all responses added
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Exactly(3));
     }
 
     [Fact]
-    public async Task CreateBatchResponsesAsync_AllValid_FetchesQuestionsAndSavesAll()
+    public async Task CreateResponseBatchAsync_OptimizesDeviceValidation_OnlyChecksUniqueDevices()
     {
-        // Arrange
-        var questionId1 = Guid.NewGuid();
-        var questionId2 = Guid.NewGuid();
+        // Arrange - 3 responses from same device, should only validate device once
+        var questionId = Guid.NewGuid();
         var deviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
 
-        var dto1 = new SubmitResponseDto
+        var responses = new List<ResponseEntity>
         {
-            Id = Guid.NewGuid().ToString(),
-            QuestionId = questionId1.ToString(),
-            DeviceId = deviceId.ToString(),
-            Answer = "0",
-            Timestamp = DateTime.UtcNow.ToString("O")
-        };
-        var dto2 = new SubmitResponseDto
-        {
-            Id = Guid.NewGuid().ToString(),
-            QuestionId = questionId2.ToString(),
-            DeviceId = deviceId.ToString(),
-            Answer = "1",
-            Timestamp = DateTime.UtcNow.ToString("O")
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 1),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, deviceId, 0)
         };
 
-        var question1 = new MultipleChoiceQuestionEntity(questionId1, Guid.NewGuid(), "Q1", new List<string> { "A", "B" }, 0);
-        var question2 = new MultipleChoiceQuestionEntity(questionId2, Guid.NewGuid(), "Q2", new List<string> { "A", "B" }, 1);
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId1)).ReturnsAsync(question1);
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId2)).ReturnsAsync(question2);
-        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
 
         // Act
-        await _service.CreateBatchResponsesAsync(new List<SubmitResponseDto> { dto1, dto2 });
+        await _service.CreateResponseBatchAsync(responses);
 
-        // Assert
-        // Verify optimizations: 1 query per DTO
-        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId1), Times.Once);
-        _mockQuestionRepo.Verify(r => r.GetByIdAsync(questionId2), Times.Once);
-
-        // Verify Persistence: 2 Adds
-        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Exactly(2));
+        // Assert - device validation called only once for the single unique device
+        _mockDeviceRegistry.Verify(
+            r => r.IsDevicePairedAsync(deviceId), 
+            Times.Once);
     }
 
     [Fact]
-    public async Task CreateBatchResponsesAsync_OneInvalid_ThrowsAndSavesNone()
+    public async Task CreateResponseBatchAsync_InvalidDevice_ThrowsAndNothingStored()
     {
         // Arrange
-        var questionId1 = Guid.NewGuid();
-        var questionId2 = Guid.NewGuid(); // Will mimic invalid answer for this one
+        var questionId = Guid.NewGuid();
+        var invalidDeviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
 
-        var dto1 = new SubmitResponseDto
+        var responses = new List<ResponseEntity>
         {
-            Id = Guid.NewGuid().ToString(),
-            QuestionId = questionId1.ToString(),
-            DeviceId = Guid.NewGuid().ToString(),
-            Answer = "0", // Valid
-            Timestamp = DateTime.UtcNow.ToString("O")
-        };
-        var dto2 = new SubmitResponseDto
-        {
-            Id = Guid.NewGuid().ToString(),
-            QuestionId = questionId2.ToString(),
-            DeviceId = Guid.NewGuid().ToString(),
-            Answer = "99", // Invalid index
-            Timestamp = DateTime.UtcNow.ToString("O")
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), questionId, invalidDeviceId, 0)
         };
 
-        var question1 = new MultipleChoiceQuestionEntity(questionId1, Guid.NewGuid(), "Q1", new List<string> { "A", "B" }, 0);
-        var question2 = new MultipleChoiceQuestionEntity(questionId2, Guid.NewGuid(), "Q2", new List<string> { "A", "B" }, 0);
-
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId1)).ReturnsAsync(question1);
-        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId2)).ReturnsAsync(question2);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(invalidDeviceId))
+            .ReturnsAsync(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateBatchResponsesAsync(new [] { dto1, dto2 }));
+            () => _service.CreateResponseBatchAsync(responses));
+        
+        _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Never);
+    }
 
-        // Verify Atomic Failure: No calls to AddAsync
+    [Fact]
+    public async Task CreateResponseBatchAsync_EmptyBatch_ThrowsArgumentException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.CreateResponseBatchAsync(new List<ResponseEntity>()));
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_DuplicateQuestionDeviceCombination_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2C(3)(f): One response per question per device
+        var questionId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Q", new List<string> { "A", "B" }, 0);
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, deviceId, 1);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        // Response already exists for this question-device combination
+        _mockResponseRepo.Setup(r => r.ExistsForQuestionAndDeviceAsync(questionId, deviceId))
+            .ReturnsAsync(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateResponseAsync(response));
+        Assert.Contains("already exists", exception.Message);
         _mockResponseRepo.Verify(r => r.AddAsync(It.IsAny<ResponseEntity>()), Times.Never);
     }
 
