@@ -88,6 +88,8 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ## 2. HTTP Endpoints (Content & Config)
 
+**General Validation:** All HTTP endpoints accepting request bodies must validate incoming DTOs against `Validation Rules.md`. If validation fails, the endpoint shall return HTTP Status **400 (Bad Request)** per `Validation Rules.md` §1A(3).
+
 ### 2.1. Lesson Materials (Server -> Client)
 
 **DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
@@ -107,7 +109,7 @@ Downloads specific attachment files referenced within material content.
 Tablet configuration is an object associated with lesson materials but handled separately to allow dynamic updates.
 
 #### Get Configuration
--   **Endpoint:** `GET /config`
+-   **Endpoint:** `GET /config/{deviceId}`
 -   **Response:** `200 OK`
     ```json
     {
