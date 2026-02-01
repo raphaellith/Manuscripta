@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import QuillLogo from '../../../resources/Quill Logo.png';
 
 // For now, simplified view type until we have full routing
 type View = 'dashboard' | 'lesson-library' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
@@ -36,8 +37,8 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
         <div className="w-full flex justify-center p-6 pb-0 z-50">
             <header className="bg-white/95 backdrop-blur-xl border border-white/20 px-8 h-20 flex justify-between items-center shadow-soft w-full max-w-7xl rounded-2xl ring-1 ring-gray-900/5 transition-all pointer-events-auto">
                 <div className="flex items-center gap-10 h-full">
-                    <h2 className="text-2xl font-serif font-medium text-text-heading flex items-center gap-3 tracking-tight cursor-default select-none group">
-                        <span className="text-3xl">📝</span>
+                    <h2 className="text-2xl font-serif text-text-heading flex items-center gap-3 tracking-tight cursor-default select-none group">
+                        <img src={QuillLogo} alt="Manuscripta Logo" className="h-[37px] w-auto" />
                         Manuscripta
                     </h2>
 
