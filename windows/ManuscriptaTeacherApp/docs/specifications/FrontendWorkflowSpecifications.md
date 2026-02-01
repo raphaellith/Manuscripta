@@ -384,7 +384,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (1) **Definition**
 
-    For the purpose of this section, an "alert" shall be displayed as an appropriate banner.
+    For the purpose of this section, an "alert" shall be displayed as an appropriate banner. Alerts shall be displayed regardless of the tab the user is currently on.
 
 (2) **Help Request Alerts**
 
@@ -417,7 +417,6 @@ For a list of all server method and client handlers to be implemented for commun
 (7) **Feedback Delivery Failure Alerts**
 
     The frontend shall display an alert when the backend invokes the `FeedbackDeliveryFailed` client handler, as defined in s2(1)(d)(v) of the Networking API Specification. The alert shall identify the specific device(s) for which feedback delivery has failed.
-
 
 
 ## Section 6 - Functionalities for the "Responses" tab
