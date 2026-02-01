@@ -122,6 +122,7 @@ public class AttachmentControllerTests
     [Theory]
     [InlineData("png")]
     [InlineData("jpeg")]
+    [InlineData("jpg")]
     [InlineData("pdf")]
     public async Task GetAttachment_ValidAttachmentId_LooksUpEntity(string extension)
     {
