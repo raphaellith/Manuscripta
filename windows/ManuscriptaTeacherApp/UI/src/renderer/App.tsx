@@ -5,7 +5,9 @@
 
 import React, { useState } from 'react';
 import { AppProvider, useAppContext } from './state/AppContext';
+import { AlertProvider } from './state/AlertContext';
 import { Header } from './components/layout/Header';
+import { GlobalAlerts } from './components/layout/GlobalAlerts';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
 import { ClassroomPage } from './components/pages/ClassroomPage';
 
@@ -59,6 +61,9 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="h-screen bg-brand-cream text-text-body font-sans selection:bg-brand-orange-light selection:text-brand-orange relative overflow-hidden">
+            {/* Global alerts - per FrontendWorkflowSpec §5D(1) */}
+            <GlobalAlerts />
+
             {/* Connection status indicator */}
             <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {isConnected ? '● Connected' : '○ Disconnected'}
@@ -87,7 +92,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     return (
         <AppProvider>
-            <AppContent />
+            <AlertProvider>
+                <AppContent />
+            </AlertProvider>
         </AppProvider>
     );
 };
