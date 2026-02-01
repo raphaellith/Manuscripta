@@ -9,22 +9,25 @@ namespace Main.Services;
 
 /// <summary>
 /// Service for managing responses.
-/// Enforces business rules and data validation.
+/// Enforces business rules and data validation per Validation Rules §2C.
 /// </summary>
 public class ResponseService : IResponseService
 {
     private readonly IResponseRepository _responseRepository;
     private readonly IQuestionRepository _questionRepository;
     private readonly IFeedbackRepository _feedbackRepository;
+    private readonly DeviceIdValidator _deviceIdValidator;
 
     public ResponseService(
         IResponseRepository responseRepository, 
         IQuestionRepository questionRepository,
-        IFeedbackRepository feedbackRepository)
+        IFeedbackRepository feedbackRepository,
+        DeviceIdValidator deviceIdValidator)
     {
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _deviceIdValidator = deviceIdValidator ?? throw new ArgumentNullException(nameof(deviceIdValidator));
     }
 
     public async Task<ResponseEntity> CreateResponseAsync(ResponseEntity response)
@@ -70,17 +73,21 @@ public class ResponseService : IResponseService
 
     /// <summary>
     /// Validates a response according to business rules:
-    /// - 2C(3)(a): Responses must reference a Question
-    /// - 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
+    /// - §2C(3)(a): Responses must reference a Question
+    /// - §2C(3)(b): Answer of a Multiple-Choice response must be a valid index
+    /// - §2C(3)(e): DeviceId must correspond to a valid device
     /// </summary>
     private async Task ValidateResponseAsync(ResponseEntity response)
     {
-        // Rule 2C(3)(a): Responses must reference a Question
+        // Rule §2C(3)(e): DeviceId must correspond to a valid device
+        await _deviceIdValidator.ValidateOrThrowAsync(response.DeviceId);
+
+        // Rule §2C(3)(a): Responses must reference a Question
         var question = await _questionRepository.GetByIdAsync(response.QuestionId);
         if (question == null)
             throw new InvalidOperationException($"Question with ID {response.QuestionId} not found.");
 
-        // Rule 2C(3)(b): Answer of a Multiple-Choice response must be a valid index
+        // Rule §2C(3)(b): Answer of a Multiple-Choice response must be a valid index
         if (response is MultipleChoiceResponseEntity mcResponse && question is MultipleChoiceQuestionEntity mcQuestion)
         {
             if (mcResponse.AnswerIndex < 0 || mcResponse.AnswerIndex >= mcQuestion.Options.Count)

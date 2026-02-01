@@ -16,6 +16,7 @@ public class ResponseServiceTests
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
+    private readonly Mock<DeviceIdValidator> _mockDeviceIdValidator;
     private readonly ResponseService _service;
 
     public ResponseServiceTests()
@@ -23,7 +24,18 @@ public class ResponseServiceTests
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockFeedbackRepo = new Mock<IFeedbackRepository>();
-        _service = new ResponseService(_mockResponseRepo.Object, _mockQuestionRepo.Object, _mockFeedbackRepo.Object);
+        
+        // Mock DeviceIdValidator - requires IDeviceRegistryService in constructor
+        var mockDeviceRegistry = new Mock<IDeviceRegistryService>();
+        mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>())).ReturnsAsync(true);
+        _mockDeviceIdValidator = new Mock<DeviceIdValidator>(mockDeviceRegistry.Object) { CallBase = false };
+        _mockDeviceIdValidator.Setup(v => v.ValidateOrThrowAsync(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+        
+        _service = new ResponseService(
+            _mockResponseRepo.Object, 
+            _mockQuestionRepo.Object, 
+            _mockFeedbackRepo.Object,
+            _mockDeviceIdValidator.Object);
     }
 
     [Fact]

@@ -30,7 +30,7 @@ public class DeviceIdValidator
     /// - §2C(3)(e): A DeviceId must correspond to a valid device (for ResponseEntity)
     /// - §2D(3)(b): A DeviceId must correspond to a valid device (for SessionEntity)
     /// </remarks>
-    public async Task<bool> IsValidDeviceIdAsync(Guid deviceId)
+    public virtual async Task<bool> IsValidDeviceIdAsync(Guid deviceId)
     {
         return await _deviceRegistry.IsDevicePairedAsync(deviceId);
     }
@@ -40,7 +40,7 @@ public class DeviceIdValidator
     /// </summary>
     /// <param name="deviceId">The device ID to validate.</param>
     /// <exception cref="ArgumentException">Thrown when the device ID is not valid.</exception>
-    public async Task ValidateOrThrowAsync(Guid deviceId)
+    public virtual async Task ValidateOrThrowAsync(Guid deviceId)
     {
         if (!await IsValidDeviceIdAsync(deviceId))
         {
@@ -64,7 +64,7 @@ public class DeviceIdValidator
     /// </summary>
     /// <param name="deviceId">The device ID to validate.</param>
     /// <returns>True if the device ID is valid and paired; otherwise, false.</returns>
-    public bool IsValidDeviceId(Guid deviceId)
+    public virtual bool IsValidDeviceId(Guid deviceId)
     {
         // Using ConfigureAwait(false) reduces (but does not eliminate) deadlock risk
         return _deviceRegistry.IsDevicePairedAsync(deviceId).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -84,7 +84,7 @@ public class DeviceIdValidator
     /// </summary>
     /// <param name="deviceId">The device ID to validate.</param>
     /// <exception cref="ArgumentException">Thrown when the device ID is not valid.</exception>
-    public void ValidateOrThrow(Guid deviceId)
+    public virtual void ValidateOrThrow(Guid deviceId)
     {
         if (!IsValidDeviceId(deviceId))
         {
