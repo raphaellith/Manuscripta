@@ -83,7 +83,7 @@ public class AttachmentController : ControllerBase
 
     /// <summary>
     /// Maps file extension to MIME content type.
-    /// Per AdditionalValidationRules.md §3B(2)(b) - only png, jpeg, pdf are allowed.
+    /// Per AdditionalValidationRules.md §3B(2)(b) - only png, jpeg, jpg, and pdf are allowed.
     /// </summary>
     private static string GetContentType(string extension)
     {
