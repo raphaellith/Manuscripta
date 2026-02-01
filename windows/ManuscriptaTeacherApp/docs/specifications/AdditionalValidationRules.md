@@ -123,6 +123,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
         (iii) `pdf`.
 
+        (iv) `jpg`.
+
     (c) There must exist a file in the directory `%AppData%\ManuscriptaTeacherApp\Attachments` whose file base name matches the UUID of the `AttachmentEntity` and whose file extension matches the `FileExtension` specified in 1(c).
 
 

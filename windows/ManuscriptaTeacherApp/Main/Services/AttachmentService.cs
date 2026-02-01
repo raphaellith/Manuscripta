@@ -14,7 +14,7 @@ public class AttachmentService : IAttachmentService
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        "png", "jpeg", "pdf"
+        "png", "jpeg", "pdf", "jpg"
     };
 
     public AttachmentService(
