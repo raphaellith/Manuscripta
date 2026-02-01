@@ -35,10 +35,6 @@ public class ResponseController : ControllerBase
     /// Submits a single response to a question.
     /// Per API Contract.md §2.3 and Validation Rules §2C.
     /// </summary>
-    /// <summary>
-    /// Submits a single response to a question.
-    /// Per API Contract.md §2.3 and Validation Rules §2C.
-    /// </summary>
     [HttpPost("responses")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
