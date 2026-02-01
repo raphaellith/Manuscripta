@@ -48,7 +48,12 @@ public class ResponseController : ControllerBase
 
         try
         {
-            var response = await ParseAndCreateResponseAsync(request);
+            // Parse DTO to Entity without saving
+            var response = await ParseDtoToEntityAsync(request);
+            
+            // Create (validates and saves)
+            await _responseService.CreateResponseAsync(response);
+            
             _logger.LogInformation("Response {ResponseId} submitted for question {QuestionId}", response.Id, response.QuestionId);
             
             // Per API Contract §2.3: Return 201 Created with empty body
@@ -81,6 +86,7 @@ public class ResponseController : ControllerBase
     /// <summary>
     /// Submits multiple responses at once.
     /// Per API Contract.md §2.3 - for offline reconnection scenarios.
+    /// Implements Validation Rules §1A(2): "All-or-Nothing" atomic validation.
     /// </summary>
     [HttpPost("responses/batch")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -95,9 +101,24 @@ public class ResponseController : ControllerBase
 
         try
         {
+            // Pass 1: Parse and Validate ALL responses (no persistence)
+            var validatedEntities = new List<ResponseEntity>();
+            
             foreach (var responseDto in request.Responses)
             {
-                await ParseAndCreateResponseAsync(responseDto);
+                // Parse (checks basic formats and question existence)
+                var entity = await ParseDtoToEntityAsync(responseDto);
+                
+                // Validate business rules (checks device ID, answer index, etc.) without saving
+                await _responseService.ValidateResponseAsync(entity);
+                
+                validatedEntities.Add(entity);
+            }
+
+            // Pass 2: Persist ALL responses (only if Pass 1 succeeded completely)
+            foreach (var entity in validatedEntities)
+            {
+                await _responseService.CreateResponseAsync(entity);
             }
 
             _logger.LogInformation("Batch submitted {Count} responses", request.Responses.Count);
@@ -131,8 +152,9 @@ public class ResponseController : ControllerBase
 
     /// <summary>
     /// Parses the DTO and creates the appropriate ResponseEntity.
+    /// Does NOT persist the entity.
     /// </summary>
-    private async Task<ResponseEntity> ParseAndCreateResponseAsync(SubmitResponseDto dto)
+    private async Task<ResponseEntity> ParseDtoToEntityAsync(SubmitResponseDto dto)
     {
         // Validate GUID formats
         if (!Guid.TryParse(dto.Id, out var responseId))
@@ -160,7 +182,7 @@ public class ResponseController : ControllerBase
             _ => throw new InvalidOperationException($"Unsupported question type: {question.GetType().Name}")
         };
 
-        return await _responseService.CreateResponseAsync(response);
+        return response;
     }
 
     private static MultipleChoiceResponseEntity CreateMultipleChoiceResponse(

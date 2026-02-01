@@ -77,7 +77,7 @@ public class ResponseService : IResponseService
     /// - §2C(3)(b): Answer of a Multiple-Choice response must be a valid index
     /// - §2C(3)(e): DeviceId must correspond to a valid device
     /// </summary>
-    private async Task ValidateResponseAsync(ResponseEntity response)
+    public async Task ValidateResponseAsync(ResponseEntity response)
     {
         // Rule §2C(3)(e): DeviceId must correspond to a valid device
         await _deviceIdValidator.ValidateOrThrowAsync(response.DeviceId);
