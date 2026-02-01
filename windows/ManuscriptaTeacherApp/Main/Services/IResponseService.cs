@@ -14,9 +14,15 @@ public interface IResponseService
     Task<ResponseEntity> UpdateResponseAsync(ResponseEntity response);
     
     /// <summary>
+    /// Creates multiple responses atomically with optimized validation.
+    /// Validates unique device IDs once before processing.
+    /// All-or-nothing semantics: if any response fails, none are stored.
+    /// </summary>
+    Task CreateResponseBatchAsync(IEnumerable<ResponseEntity> responses);
+    
+    /// <summary>
     /// Deletes a response and its associated feedback.
     /// Per PersistenceAndCascadingRules.md §2(2A).
     /// </summary>
     Task DeleteResponseAsync(Guid id);
 }
-

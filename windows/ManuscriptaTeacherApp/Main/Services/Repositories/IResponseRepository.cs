@@ -17,4 +17,10 @@ public interface IResponseRepository
     /// Implements orphan removal per PersistenceAndCascadingRules.md §2(2).
     /// </summary>
     Task DeleteByQuestionIdAsync(Guid questionId);
+
+    /// <summary>
+    /// Checks if a response already exists for the given question and device combination.
+    /// Per Validation Rules §2C(3)(f): one response per question per device.
+    /// </summary>
+    Task<bool> ExistsForQuestionAndDeviceAsync(Guid questionId, Guid deviceId);
 }
