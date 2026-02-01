@@ -145,17 +145,7 @@ Used during the pairing handshake to register a student device with the teacher 
 Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
--   **Body:**
-    ```json
-    {
-      "Id": "resp-uuid-generated-by-client",
-      "QuestionId": "q-uuid-1",
-      "MaterialId": "mat-uuid-1",
-      "StudentId": "device-id-or-student-uuid",
-      "Answer": "3",
-      "Timestamp": "2023-10-27T10:05:00Z"
-    }
-    ```
+-   **Body:** A JSON object representing a `ResponseEntity` as defined in `Validation Rules.md` §2C.
 -   **Response:** `201 Created`
     ```json
     {} // Empty 201 to confirm submission
@@ -169,7 +159,7 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
     ```json
     {
       "Responses": [
-        // Array of response objects as above
+        // Array of ResponseEntity objects as defined in Validation Rules.md §2C
       ]
     }
     ```
@@ -364,7 +354,7 @@ All data models in this contract must conform to Validation Rules.md. This docum
 ### 4.2. Material Types
 See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
--   `QUIZ`: Interactive questions with immediate feedback.
+
 -   `WORKSHEET`: Content for reading and annotation.
 -   `POLL`: Quick class voting.
 
