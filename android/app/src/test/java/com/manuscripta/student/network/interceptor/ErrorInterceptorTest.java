@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -336,34 +338,18 @@ public class ErrorInterceptorTest {
     @Test
     public void testIntercept_errorResponseBodyReadFailure_handlesGracefully() throws IOException {
         // Arrange
-        // Create a response body that throws exception when reading
-        ResponseBody problematicBody = new ResponseBody() {
-            @Override
-            public okhttp3.MediaType contentType() {
-                return MediaType.parse("text/plain");
-            }
+        // Create a mock response that throws when trying to peek the body
+        Response mockErrorResponse = mock(Response.class);
+        ResponseBody mockBody = mock(ResponseBody.class);
 
-            @Override
-            public long contentLength() {
-                return -1;
-            }
+        when(mockErrorResponse.isSuccessful()).thenReturn(false);
+        when(mockErrorResponse.code()).thenReturn(500);
+        when(mockErrorResponse.body()).thenReturn(mockBody);
+        when(mockErrorResponse.peekBody(anyLong())).thenThrow(new IOException("Failed to read body"));
 
-            @Override
-            public okio.BufferedSource source() {
-                okio.Buffer buffer = new okio.Buffer();
-                buffer.writeUtf8("error");
-                return buffer;
-            }
-        };
-
-        Response errorResponse = new Response.Builder()
-                .request(testRequest)
-                .protocol(Protocol.HTTP_1_1)
-                .code(500)
-                .message("Internal Server Error")
-                .body(problematicBody)
-                .build();
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        // Need to return the same response since ErrorInterceptor just logs and returns
+        when(mockChain.request()).thenReturn(testRequest);
+        when(mockChain.proceed(any(Request.class))).thenReturn(mockErrorResponse);
 
         // Act
         Response response = interceptor.intercept(mockChain);

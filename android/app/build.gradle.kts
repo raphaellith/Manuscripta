@@ -37,6 +37,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     testOptions {
@@ -137,9 +138,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/HeartbeatManager$*.class",
             "**/PairingManager.class",
             "**/PairingManager$*.class",
-            "**/AuthInterceptor.class",
-            "**/ErrorInterceptor.class",
-            "**/LoggingInterceptor.class",
             "**/ui/main/MainActivity.class",
             "**/ui/main/MainActivity$*.class",
             "**/R$*.class",
@@ -192,9 +190,6 @@ tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             "**/HeartbeatManager$*.class",
             "**/PairingManager.class",
             "**/PairingManager$*.class",
-            "**/AuthInterceptor.class",
-            "**/ErrorInterceptor.class",
-            "**/LoggingInterceptor.class",
             "**/ui/main/MainActivity.class",
             "**/ui/main/MainActivity$*.class",
             "**/R$*.class",

@@ -21,6 +21,9 @@ public class ErrorInterceptor implements Interceptor {
     /** Tag for logging. */
     private static final String TAG = "ErrorInterceptor";
 
+    /** Maximum error body size to log (1 MB). */
+    private static final long MAX_ERROR_BODY_SIZE = 1024 * 1024;
+
     /**
      * Intercepts HTTP responses to detect and log errors.
      *
@@ -106,6 +109,7 @@ public class ErrorInterceptor implements Interceptor {
 
     /**
      * Reads the response body safely without consuming it.
+     * Uses peekBody() to read up to a maximum size without consuming the original body.
      *
      * @param response The HTTP response
      * @return The response body as a string, or null if reading failed
@@ -117,11 +121,11 @@ public class ErrorInterceptor implements Interceptor {
         }
 
         try {
-            // Peek at the body without consuming it
-            // Clone the buffer so we don't consume the original
-            return body.source().buffer().clone().readUtf8();
-        } catch (Exception e) {
-            // Catch any exceptions during body reading
+            // Peek at the body without consuming it, with a reasonable size cap
+            ResponseBody peekedBody = response.peekBody(MAX_ERROR_BODY_SIZE);
+            return peekedBody.string();
+        } catch (IOException e) {
+            // Catch any IO exceptions during body reading
             Log.e(TAG, "Failed to read error response body: " + e.getMessage());
             return null;
         }

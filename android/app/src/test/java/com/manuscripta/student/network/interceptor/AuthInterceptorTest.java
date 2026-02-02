@@ -20,7 +20,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -175,7 +174,7 @@ public class AuthInterceptorTest {
     }
 
     @Test
-    public void testIntercept_deviceIdProviderThrowsException_handlesGracefully() throws IOException {
+    public void testIntercept_deviceIdProviderThrowsException_propagatesException() throws IOException {
         // Arrange
         when(mockDeviceIdProvider.getDeviceId()).thenThrow(new RuntimeException("Provider failed"));
         when(mockChain.request()).thenReturn(testRequest);

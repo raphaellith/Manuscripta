@@ -38,8 +38,10 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_hasInterceptors() {
         OkHttpClient client = networkModule.provideOkHttpClient();
 
-        // Should have exactly 3 interceptors
-        assertEquals(3, client.interceptors().size());
+        // Should have at least 1 interceptor (AuthInterceptor)
+        // Debug builds have 3 interceptors total (Auth, Logging, Error)
+        assertTrue("OkHttpClient should have at least 1 interceptor",
+                   client.interceptors().size() >= 1);
     }
 
     @Test
@@ -100,5 +102,27 @@ public class NetworkModuleTest {
         Retrofit retrofit = networkModule.provideRetrofit(client);
         ApiService apiService = networkModule.provideApiService(retrofit);
         assertNotNull(apiService);
+    }
+
+    @Test
+    public void testProvideOkHttpClient_interceptorOrder() {
+        OkHttpClient client = networkModule.provideOkHttpClient();
+
+        // Verify interceptor order: Auth → Logging → Error (when in debug builds)
+        // At minimum, AuthInterceptor should be first
+        assertTrue("OkHttpClient should have at least AuthInterceptor",
+                   client.interceptors().size() >= 1);
+
+        // First interceptor should always be AuthInterceptor
+        assertTrue("First interceptor should be AuthInterceptor",
+                   client.interceptors().get(0) instanceof AuthInterceptor);
+
+        // If we have 3 interceptors (debug build), verify the full order
+        if (client.interceptors().size() == 3) {
+            assertTrue("Second interceptor should be LoggingInterceptor",
+                       client.interceptors().get(1) instanceof LoggingInterceptor);
+            assertTrue("Third interceptor should be ErrorInterceptor",
+                       client.interceptors().get(2) instanceof ErrorInterceptor);
+        }
     }
 }

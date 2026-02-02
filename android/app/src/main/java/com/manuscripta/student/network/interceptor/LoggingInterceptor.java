@@ -5,6 +5,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -16,11 +20,26 @@ import okio.Buffer;
  * OkHttp interceptor that logs HTTP requests and responses.
  * Provides detailed logging of request/response details including headers,
  * body content, and timing information for debugging network operations.
+ * Sensitive headers (Authorization, Cookie, etc.) are redacted for security.
  */
 public class LoggingInterceptor implements Interceptor {
 
     /** Tag for logging. */
     private static final String TAG = "LoggingInterceptor";
+
+    /** Maximum body size to log (1 MB). */
+    private static final long MAX_BODY_SIZE = 1024 * 1024;
+
+    /** Sensitive headers that should be redacted. */
+    private static final Set<String> SENSITIVE_HEADERS = new HashSet<>(Arrays.asList(
+            "authorization",
+            "proxy-authorization",
+            "cookie",
+            "set-cookie",
+            "x-api-key",
+            "x-auth-token",
+            "x-csrf-token"
+    ));
 
     /**
      * Intercepts HTTP requests and responses to log details.
@@ -56,6 +75,7 @@ public class LoggingInterceptor implements Interceptor {
 
     /**
      * Logs request details including method, URL, headers, and body.
+     * Sensitive headers are redacted for security.
      *
      * @param request The HTTP request
      */
@@ -64,21 +84,27 @@ public class LoggingInterceptor implements Interceptor {
         Log.d(TAG, String.format("│ Request: %s %s", request.method(), request.url()));
         Log.d(TAG, "│ Headers:");
 
-        // Log headers
+        // Log headers with redaction for sensitive ones
         for (int i = 0; i < request.headers().size(); i++) {
             String name = request.headers().name(i);
             String value = request.headers().value(i);
-            Log.d(TAG, String.format("│   %s: %s", name, value));
+            String redactedValue = redactSensitiveHeader(name, value);
+            Log.d(TAG, String.format("│   %s: %s", name, redactedValue));
         }
 
-        // Log request body if present
+        // Log request body if present and within size limit
         if (request.body() != null) {
             try {
-                Buffer buffer = new Buffer();
-                request.body().writeTo(buffer);
-                String body = buffer.readUtf8();
-                Log.d(TAG, "│ Body:");
-                Log.d(TAG, "│   " + body);
+                long contentLength = request.body().contentLength();
+                if (contentLength > MAX_BODY_SIZE) {
+                    Log.d(TAG, String.format("│ Body: <too large to log: %d bytes>", contentLength));
+                } else {
+                    Buffer buffer = new Buffer();
+                    request.body().writeTo(buffer);
+                    String body = buffer.readUtf8();
+                    Log.d(TAG, "│ Body:");
+                    Log.d(TAG, "│   " + body);
+                }
             } catch (IOException e) {
                 Log.e(TAG, "│ Failed to read request body: " + e.getMessage());
             }
@@ -87,6 +113,7 @@ public class LoggingInterceptor implements Interceptor {
 
     /**
      * Logs response details including status code, headers, body, and duration.
+     * Sensitive headers are redacted for security.
      *
      * @param response The HTTP response
      * @param duration Request duration in milliseconds
@@ -99,28 +126,28 @@ public class LoggingInterceptor implements Interceptor {
                 response.code(), response.message(), duration));
         Log.d(TAG, "│ Headers:");
 
-        // Log headers
+        // Log headers with redaction for sensitive ones
         for (int i = 0; i < response.headers().size(); i++) {
             String name = response.headers().name(i);
             String value = response.headers().value(i);
-            Log.d(TAG, String.format("│   %s: %s", name, value));
+            String redactedValue = redactSensitiveHeader(name, value);
+            Log.d(TAG, String.format("│   %s: %s", name, redactedValue));
         }
 
-        // Log response body if present
+        // Log response body if present and within size limit
         ResponseBody responseBody = response.body();
         if (responseBody != null) {
             try {
-                // Read body content
-                String bodyString = responseBody.string();
-                Log.d(TAG, "│ Body:");
-                Log.d(TAG, "│   " + bodyString);
-
-                // Reconstruct response with buffered body since we consumed it
-                ResponseBody newBody = ResponseBody.create(
-                        bodyString,
-                        responseBody.contentType()
-                );
-                response = response.newBuilder().body(newBody).build();
+                long contentLength = responseBody.contentLength();
+                if (contentLength > MAX_BODY_SIZE) {
+                    Log.d(TAG, String.format("│ Body: <too large to log: %d bytes>", contentLength));
+                } else {
+                    // Use peekBody to read without consuming the original
+                    ResponseBody peekedBody = response.peekBody(MAX_BODY_SIZE);
+                    String bodyString = peekedBody.string();
+                    Log.d(TAG, "│ Body:");
+                    Log.d(TAG, "│   " + bodyString);
+                }
             } catch (IOException e) {
                 Log.e(TAG, "│ Failed to read response body: " + e.getMessage());
             }
@@ -128,5 +155,20 @@ public class LoggingInterceptor implements Interceptor {
 
         Log.d(TAG, "└─────────────────────────────────────────────────────");
         return response;
+    }
+
+    /**
+     * Redacts sensitive header values for security.
+     *
+     * @param name  The header name
+     * @param value The header value
+     * @return The original value or "██████" if sensitive
+     */
+    @NonNull
+    private String redactSensitiveHeader(@NonNull String name, @NonNull String value) {
+        if (SENSITIVE_HEADERS.contains(name.toLowerCase(Locale.ROOT))) {
+            return "██████";
+        }
+        return value;
     }
 }

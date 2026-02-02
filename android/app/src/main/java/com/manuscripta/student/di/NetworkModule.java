@@ -1,5 +1,6 @@
 package com.manuscripta.student.di;
 
+import com.manuscripta.student.BuildConfig;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
@@ -30,20 +31,34 @@ public class NetworkModule {
     /**
      * Provides OkHttpClient with custom interceptors for authentication,
      * logging, and error handling.
+     * Logging and error interceptors are only enabled in debug builds.
+     *
+     * NOTE: AuthInterceptor currently uses a stub DeviceIdProvider that returns null.
+     * To enable device identification headers, inject a real DeviceIdProvider implementation
+     * that retrieves the actual device ID (e.g., from Android Settings.Secure.ANDROID_ID
+     * or a UUID stored in SharedPreferences).
      *
      * @return OkHttpClient instance configured with interceptors
      */
     @Provides
     @Singleton
     public OkHttpClient provideOkHttpClient() {
-        // Create device ID provider (TODO: inject actual device ID provider)
+        // Stub device ID provider - replace with real implementation when device ID is available
+        // Example: () -> Settings.Secure.getString(context.getContentResolver(),
+        //                                           Settings.Secure.ANDROID_ID)
         AuthInterceptor.DeviceIdProvider deviceIdProvider = () -> null;
 
-        return new OkHttpClient.Builder()
-                .addInterceptor(new AuthInterceptor(deviceIdProvider))
-                .addInterceptor(new LoggingInterceptor())
-                .addInterceptor(new ErrorInterceptor())
-                .build();
+        OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .addInterceptor(new AuthInterceptor(deviceIdProvider));
+
+        // Only add logging and error interceptors in debug builds to prevent
+        // sensitive data leakage and excessive logging in production
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(new LoggingInterceptor())
+                   .addInterceptor(new ErrorInterceptor());
+        }
+
+        return builder.build();
     }
 
     /**
