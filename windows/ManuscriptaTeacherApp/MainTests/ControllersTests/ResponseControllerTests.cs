@@ -394,7 +394,6 @@ public class ResponseControllerTests
         {
             Id = (responseId ?? _testResponseId).ToString(),
             QuestionId = _testQuestionId.ToString(),
-            MaterialId = _testMaterialId.ToString(),
             DeviceId = _testDeviceId.ToString(),
             Answer = "1",
             Timestamp = DateTime.UtcNow.ToString("O"),
@@ -408,7 +407,6 @@ public class ResponseControllerTests
         {
             Id = (responseId ?? _testResponseId).ToString(),
             QuestionId = _testQuestionId.ToString(),
-            MaterialId = _testMaterialId.ToString(),
             DeviceId = _testDeviceId.ToString(),
             Answer = "Sample written answer",
             Timestamp = DateTime.UtcNow.ToString("O"),
