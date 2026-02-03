@@ -4,6 +4,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.manuscripta.student.BuildConfig;
+
 import java.io.IOException;
 
 import okhttp3.Interceptor;
@@ -76,13 +78,15 @@ public class ErrorInterceptor implements Interceptor {
     private void logClientError(@NonNull String method, @NonNull String url,
                                  int statusCode, @NonNull Response response) {
         String errorMessage = getErrorMessage(statusCode);
-        String body = readResponseBody(response);
 
         Log.e(TAG, String.format("Client Error: %s %s - HTTP %d %s",
                 method, url, statusCode, errorMessage));
 
-        if (body != null && !body.isEmpty()) {
-            Log.e(TAG, "Error body: " + body);
+        if (BuildConfig.DEBUG) {
+            String body = readResponseBody(response);
+            if (body != null && !body.isEmpty()) {
+                Log.e(TAG, "Error body: " + body);
+            }
         }
     }
 
@@ -97,13 +101,15 @@ public class ErrorInterceptor implements Interceptor {
     private void logServerError(@NonNull String method, @NonNull String url,
                                  int statusCode, @NonNull Response response) {
         String errorMessage = getErrorMessage(statusCode);
-        String body = readResponseBody(response);
 
         Log.e(TAG, String.format("Server Error: %s %s - HTTP %d %s",
                 method, url, statusCode, errorMessage));
 
-        if (body != null && !body.isEmpty()) {
-            Log.e(TAG, "Error body: " + body);
+        if (BuildConfig.DEBUG) {
+            String body = readResponseBody(response);
+            if (body != null && !body.isEmpty()) {
+                Log.e(TAG, "Error body: " + body);
+            }
         }
     }
 

@@ -31,7 +31,9 @@ public class NetworkModule {
     /**
      * Provides OkHttpClient with custom interceptors for authentication,
      * logging, and error handling.
-     * Logging and error interceptors are only enabled in debug builds.
+     * LoggingInterceptor is only enabled in debug builds.
+     * ErrorInterceptor always runs for consistent error handling; body logging
+     * within it is gated behind debug builds.
      *
      * NOTE: AuthInterceptor currently uses a stub DeviceIdProvider that returns null.
      * To enable device identification headers, inject a real DeviceIdProvider implementation
@@ -51,12 +53,14 @@ public class NetworkModule {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .addInterceptor(new AuthInterceptor(deviceIdProvider));
 
-        // Only add logging and error interceptors in debug builds to prevent
-        // sensitive data leakage and excessive logging in production
+        // Only add detailed request/response logging in debug builds
         if (BuildConfig.DEBUG) {
-            builder.addInterceptor(new LoggingInterceptor())
-                   .addInterceptor(new ErrorInterceptor());
+            builder.addInterceptor(new LoggingInterceptor());
         }
+
+        // ErrorInterceptor always runs for consistent error handling across builds;
+        // body logging inside it is gated behind BuildConfig.DEBUG
+        builder.addInterceptor(new ErrorInterceptor());
 
         return builder.build();
     }

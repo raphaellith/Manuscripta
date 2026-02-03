@@ -38,10 +38,10 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_hasInterceptors() {
         OkHttpClient client = networkModule.provideOkHttpClient();
 
-        // Should have at least 1 interceptor (AuthInterceptor)
-        // Debug builds have 3 interceptors total (Auth, Logging, Error)
-        assertTrue("OkHttpClient should have at least 1 interceptor",
-                   client.interceptors().size() >= 1);
+        // Release builds have 2 interceptors (Auth, Error);
+        // debug builds have 3 (Auth, Logging, Error)
+        assertTrue("OkHttpClient should have at least 2 interceptors",
+                   client.interceptors().size() >= 2);
     }
 
     @Test
@@ -108,21 +108,19 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_interceptorOrder() {
         OkHttpClient client = networkModule.provideOkHttpClient();
 
-        // Verify interceptor order: Auth → Logging → Error (when in debug builds)
-        // At minimum, AuthInterceptor should be first
-        assertTrue("OkHttpClient should have at least AuthInterceptor",
-                   client.interceptors().size() >= 1);
+        // Order: Auth → [Logging (debug only)] → Error
+        // Release: Auth, Error (size 2); Debug: Auth, Logging, Error (size 3)
+        int size = client.interceptors().size();
+        assertTrue("OkHttpClient should have at least 2 interceptors", size >= 2);
 
-        // First interceptor should always be AuthInterceptor
         assertTrue("First interceptor should be AuthInterceptor",
                    client.interceptors().get(0) instanceof AuthInterceptor);
+        assertTrue("Last interceptor should be ErrorInterceptor",
+                   client.interceptors().get(size - 1) instanceof ErrorInterceptor);
 
-        // If we have 3 interceptors (debug build), verify the full order
-        if (client.interceptors().size() == 3) {
+        if (size == 3) {
             assertTrue("Second interceptor should be LoggingInterceptor",
                        client.interceptors().get(1) instanceof LoggingInterceptor);
-            assertTrue("Third interceptor should be ErrorInterceptor",
-                       client.interceptors().get(2) instanceof ErrorInterceptor);
         }
     }
 }
