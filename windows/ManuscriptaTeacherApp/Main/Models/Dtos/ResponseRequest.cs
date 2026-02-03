@@ -23,11 +23,6 @@ public class ResponseRequest
     public string QuestionId { get; set; } = string.Empty;
 
     /// <summary>
-    /// The material ID (informational, per API Contract §2.3).
-    /// </summary>
-    public string? MaterialId { get; set; }
-
-    /// <summary>
     /// The device ID the response is from.
     /// Per Validation Rules §2C(1)(d).
     /// </summary>
