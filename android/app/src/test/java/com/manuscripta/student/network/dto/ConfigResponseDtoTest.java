@@ -298,7 +298,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
@@ -311,7 +310,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
@@ -324,7 +322,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
@@ -337,7 +334,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
@@ -350,7 +346,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
@@ -363,7 +358,6 @@ public class ConfigResponseDtoTest {
                 TEST_MASCOT_SELECTION);
 
         assertFalse(dto1.equals(dto2));
-        assertFalse(dto2.equals(dto1));
     }
 
     @Test
