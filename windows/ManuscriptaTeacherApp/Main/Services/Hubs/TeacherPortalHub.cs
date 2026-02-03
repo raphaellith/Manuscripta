@@ -616,7 +616,7 @@ public class TeacherPortalHub : Hub
         if (response != null)
         {
             // Trigger dispatch per §3DA(2)(b) via Session Interaction §7
-            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
         }
     }
 
@@ -638,7 +638,7 @@ public class TeacherPortalHub : Hub
             throw new HubException($"Response for feedback {feedbackId} not found");
 
         // Retry dispatch via TCP
-        await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+        await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
     }
 
     /// <summary>
