@@ -89,3 +89,36 @@ export interface DeviceStatusEntity {
     studentView: string;
     timestamp: number;
 }
+
+// ==========================================
+// Response Entities - FrontendWorkflowSpec §6
+// ==========================================
+
+/**
+ * Response entity per Validation Rules §2C(3).
+ */
+export interface ResponseEntity {
+    id: string;
+    questionId: string;
+    deviceId: string;
+    responseContent: string;
+    timestamp: string;
+    isCorrect?: boolean;
+}
+
+/**
+ * Feedback status per AdditionalValidationRules §3AE.
+ */
+export type FeedbackStatus = 'PROVISIONAL' | 'READY' | 'DELIVERED';
+
+/**
+ * Feedback entity per AdditionalValidationRules §3AE.
+ */
+export interface FeedbackEntity {
+    id: string;
+    responseId: string;
+    text: string | null;
+    marks: number | null;
+    status: FeedbackStatus;
+}
+

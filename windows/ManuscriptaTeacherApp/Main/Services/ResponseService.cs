@@ -187,6 +187,9 @@ public class ResponseService : IResponseService
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);
+
+        // Auto-marking logic per FrontendWorkflowSpecifications
+        PerformAutoMarking(response, question);
     }
 
     /// <summary>
@@ -205,6 +208,29 @@ public class ResponseService : IResponseService
         {
             throw new InvalidOperationException(
                 $"Response type {response.GetType().Name} does not match question type {question.GetType().Name}.");
+        }
+    }
+
+    /// <summary>
+    /// Performs auto-marking by comparing response against correct answer.
+    /// Sets IsCorrect property on the response.
+    /// </summary>
+    private void PerformAutoMarking(ResponseEntity response, QuestionEntity question)
+    {
+        if (question is MultipleChoiceQuestionEntity mcq && response is MultipleChoiceResponseEntity mcr)
+        {
+            if (mcq.CorrectAnswerIndex.HasValue)
+            {
+                mcr.IsCorrect = mcr.AnswerIndex == mcq.CorrectAnswerIndex.Value;
+            }
+        }
+        else if (question is WrittenAnswerQuestionEntity waq && response is WrittenAnswerResponseEntity war)
+        {
+            if (!string.IsNullOrEmpty(waq.CorrectAnswer))
+            {
+                // Exact match marking for written answers
+                war.IsCorrect = war.Answer == waq.CorrectAnswer;
+            }
         }
     }
 

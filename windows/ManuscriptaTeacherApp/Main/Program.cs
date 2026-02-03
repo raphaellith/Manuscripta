@@ -57,7 +57,10 @@ builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
-builder.Services.AddSignalR()
+builder.Services.AddSignalR(hubOptions =>
+{
+    hubOptions.EnableDetailedErrors = true;
+})
     .AddJsonProtocol(options =>
     {
         options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());

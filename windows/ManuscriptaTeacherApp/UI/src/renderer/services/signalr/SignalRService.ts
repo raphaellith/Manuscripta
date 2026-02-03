@@ -8,6 +8,8 @@ import type {
     AttachmentEntity,
     PairedDeviceEntity,
     DeviceStatusEntity,
+    ResponseEntity,
+    FeedbackEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -15,6 +17,7 @@ import type {
     InternalCreateQuestionDto,
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
+    InternalCreateFeedbackDto,
 } from "../../models";
 
 /**
@@ -358,7 +361,90 @@ class SignalRService {
     public async deleteAttachment(id: string): Promise<void> {
         await this.connection.invoke("DeleteAttachment", id);
     }
+
+    // ==========================================
+    // Response Methods - NetworkingAPISpec §1(1)(i)
+    // ==========================================
+
+    /**
+     * Retrieves all responses.
+     * Per NetworkingAPISpec §1(1)(i)(i).
+     */
+    public async getAllResponses(): Promise<ResponseEntity[]> {
+        return await this.connection.invoke<ResponseEntity[]>("GetAllResponses");
+    }
+
+    /**
+     * Retrieves all responses under a question.
+     * Per NetworkingAPISpec §1(1)(i)(ii).
+     */
+    public async getResponsesUnderQuestion(questionId: string): Promise<ResponseEntity[]> {
+        return await this.connection.invoke<ResponseEntity[]>("GetResponsesUnderQuestion", questionId);
+    }
+
+    // ==========================================
+    // Feedback Methods - NetworkingAPISpec §1(1)(h)
+    // ==========================================
+
+    /**
+     * Retrieves all feedbacks.
+     * Per NetworkingAPISpec §1(1)(h)(iv).
+     */
+    public async getAllFeedbacks(): Promise<FeedbackEntity[]> {
+        return await this.connection.invoke<FeedbackEntity[]>("GetAllFeedbacks");
+    }
+
+    /**
+     * Creates a new feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(i).
+     */
+    public async createFeedback(dto: InternalCreateFeedbackDto): Promise<FeedbackEntity> {
+        return await this.connection.invoke<FeedbackEntity>("CreateFeedback", dto);
+    }
+
+    /**
+     * Updates an existing feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(v).
+     */
+    public async updateFeedback(entity: FeedbackEntity): Promise<void> {
+        await this.connection.invoke("UpdateFeedback", entity);
+    }
+
+    /**
+     * Approves feedback for dispatch.
+     * Per NetworkingAPISpec §1(1)(h)(ii).
+     */
+    public async approveFeedback(feedbackId: string): Promise<void> {
+        await this.connection.invoke("ApproveFeedback", feedbackId);
+    }
+
+    /**
+     * Retries dispatch of feedback.
+     * Per NetworkingAPISpec §1(1)(h)(iii).
+     */
+    public async retryFeedbackDispatch(feedbackId: string): Promise<void> {
+        await this.connection.invoke("RetryFeedbackDispatch", feedbackId);
+    }
+
+    /**
+     * Subscribe to response refresh events.
+     * Per NetworkingAPISpec §2(1)(e)(i).
+     */
+    public onRefreshResponses(callback: () => void): () => void {
+        this.connection.on("RefreshResponses", callback);
+        return () => this.connection.off("RefreshResponses", callback);
+    }
+
+    /**
+     * Subscribe to feedback dispatch failure events.
+     * Per NetworkingAPISpec §2(1)(c)(i).
+     */
+    public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
+        this.connection.on("OnFeedbackDispatchFailed", callback);
+        return () => this.connection.off("OnFeedbackDispatchFailed", callback);
+    }
 }
 
 const signalRService = new SignalRService();
 export default signalRService;
+

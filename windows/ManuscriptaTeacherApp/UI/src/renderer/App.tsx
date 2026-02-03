@@ -10,6 +10,7 @@ import { Header } from './components/layout/Header';
 import { GlobalAlerts } from './components/layout/GlobalAlerts';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
 import { ClassroomPage } from './components/pages/ClassroomPage';
+import { ResponsesPage } from './components/pages/ResponsesPage';
 
 type View = 'dashboard' | 'lesson-library' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
 
@@ -50,6 +51,8 @@ const AppContent: React.FC = () => {
                 return <LessonLibraryPage />;
             case 'classroom-control':
                 return <ClassroomPage />;
+            case 'responses':
+                return <ResponsesPage />;
             default:
                 return (
                     <div className="text-center py-12">
