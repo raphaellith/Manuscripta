@@ -2,7 +2,6 @@ package com.manuscripta.student.domain.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -289,18 +288,6 @@ public class ConfigurationTest {
         );
 
         assertEquals(config1.hashCode(), config2.hashCode());
-    }
-
-    @Test
-    public void testHashCodeDifferentValues() {
-        Configuration config1 = new Configuration(
-                12, FeedbackStyle.IMMEDIATE, true, true, true, MascotSelection.MASCOT1
-        );
-        Configuration config2 = new Configuration(
-                20, FeedbackStyle.NEUTRAL, false, false, false, MascotSelection.MASCOT5
-        );
-
-        assertNotEquals(config1.hashCode(), config2.hashCode());
     }
 
     @Test

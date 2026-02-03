@@ -62,18 +62,6 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     /** The current device ID for config fetching. */
     private String deviceId;
 
-    /**
-     * Callback for when configuration refresh is triggered.
-     */
-    public interface ConfigRefreshCallback {
-        /**
-         * Called when configuration should be refreshed.
-         *
-         * @param deviceId The device ID to fetch configuration for
-         */
-        void onConfigRefreshRequested(@NonNull String deviceId);
-    }
-
     /** Callback for refresh requests. */
     private ConfigRefreshCallback refreshCallback;
 
@@ -94,20 +82,12 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
         this.tcpSocketManager.addMessageListener(this);
     }
 
-    /**
-     * Sets the device ID for configuration fetching.
-     *
-     * @param deviceId The device ID
-     */
+    @Override
     public void setDeviceId(@NonNull String deviceId) {
         this.deviceId = deviceId;
     }
 
-    /**
-     * Sets the callback for configuration refresh requests.
-     *
-     * @param callback The callback to invoke when refresh is needed
-     */
+    @Override
     public void setRefreshCallback(ConfigRefreshCallback callback) {
         this.refreshCallback = callback;
     }

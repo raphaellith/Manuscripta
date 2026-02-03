@@ -21,6 +21,19 @@ import com.manuscripta.student.domain.model.Configuration;
 public interface ConfigRepository {
 
     /**
+     * Callback for when configuration refresh is triggered by the server.
+     * Implementations can use this to react to REFRESH_CONFIG TCP messages.
+     */
+    interface ConfigRefreshCallback {
+        /**
+         * Called when configuration should be refreshed.
+         *
+         * @param deviceId The device ID to fetch configuration for
+         */
+        void onConfigRefreshRequested(@NonNull String deviceId);
+    }
+
+    /**
      * Fetches configuration from the server and stores it locally.
      * This method should be called when a REFRESH_CONFIG TCP signal is received.
      *
@@ -49,6 +62,21 @@ public interface ConfigRepository {
      * @return true if configuration exists, false otherwise
      */
     boolean hasStoredConfig();
+
+    /**
+     * Sets the device ID for configuration fetching.
+     *
+     * @param deviceId The device ID
+     */
+    void setDeviceId(@NonNull String deviceId);
+
+    /**
+     * Sets the callback for configuration refresh requests.
+     * The callback will be invoked when a REFRESH_CONFIG TCP message is received.
+     *
+     * @param callback The callback to invoke when refresh is needed
+     */
+    void setRefreshCallback(ConfigRefreshCallback callback);
 
     /**
      * Releases resources held by the repository.

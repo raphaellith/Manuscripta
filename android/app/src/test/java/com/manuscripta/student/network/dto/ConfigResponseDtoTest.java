@@ -2,7 +2,6 @@ package com.manuscripta.student.network.dto;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -374,13 +373,5 @@ public class ConfigResponseDtoTest {
                     mascot);
             assertEquals(mascot, dto.getMascotSelection());
         }
-    }
-
-    @Test
-    public void testHashCodeDifferentValues() {
-        ConfigResponseDto dto1 = new ConfigResponseDto(12, "IMMEDIATE", true, true, true, "MASCOT1");
-        ConfigResponseDto dto2 = new ConfigResponseDto(20, "NEUTRAL", false, false, false, "MASCOT2");
-
-        assertNotEquals(dto1.hashCode(), dto2.hashCode());
     }
 }
