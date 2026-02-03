@@ -100,6 +100,23 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
 
 
+### Section 3AE — Feedback
+
+(1) A feedback is represented by a `FeedbackEntity` class. In addition to those specified by Section 2F of `Validation Rules.md`, this class shall contain the following field —
+
+    (a) `Status` (enum FeedbackStatus). Possible values are:
+
+        (i) `PROVISIONAL` — Feedback exists but has not been approved by the teacher. Feedback in this status shall not be dispatched.
+
+        (ii) `READY` — Feedback has been approved and is awaiting dispatch or acknowledgement.
+
+        (iii) `DELIVERED` — Feedback has been dispatched and acknowledged by the student device.
+
+    The default value is `PROVISIONAL`.
+
+(2) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
+
+
 ## Section 3B - Attachment
 
 (1) An attachment is represented by an `AttachmentEntity` class. This class must contain the following attributes.

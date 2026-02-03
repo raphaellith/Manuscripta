@@ -87,11 +87,23 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) [DELETED]
         
-    (h) Methods for creating feedback.
+    (h) Methods for feedback.
 
         (i) `Task CreateFeedback(FeedbackEntity newFeedbackEntity)`: Receives data for a new feedback entity (without an assigned UUID), and creates the entity with an assigned UUID.
 
-    (i) Methods for sending AI assistant prompts. **To be confirmed.**
+        (ii) `Task ApproveFeedback(Guid feedbackId)`: Approves the specified feedback and triggers dispatch to the student device. See GenAISpec §3DA(2).
+
+        (iii) `Task RetryFeedbackDispatch(Guid feedbackId)`: Retries dispatch of feedback in `READY` status.
+
+        (iv) `Task<List<FeedbackEntity>> GetAllFeedbacks()`: Retrieves all feedback entities.
+
+        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged).
+
+    (i) Methods for retrieving responses.
+
+        (i) `Task<List<ResponseEntity>> GetAllResponses()`: Retrieves all responses.
+
+        (ii) `Task<List<ResponseEntity>> GetResponsesUnderQuestion(Guid questionId)`: Retrieves all responses associated with the question with the questionId.
 
     (j) Methods for updating app settings. **To be confirmed.**
 
@@ -124,13 +136,17 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired. The frontend shall use this notification as a signal to refresh the device grid per FrontendWorkflowSpec §5A(3A), and shall not directly use the payload to modify its local state.
 
-    (b) Handlers for creating responses.
+    (b) Handlers updating the responses page.
         
-        (i) `CreateResponse`, with parameter `ResponseEntity` (ResponseEntity): Creates a response entity.
+        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
 
-    (c) Handlers for retrieving AI assistant responses. **To be confirmed.**
+    (c) Handlers for feedback dispatch notifications.
 
-    (d) Handlers for alerts.
+        (i) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
+
+    (d) Handlers for retrieving AI assistant responses. **To be confirmed.**
+
+    (e) Handlers for alerts.
 
         (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand. The backend shall invoke this handler on receipt of a TCP `HAND_RAISED` message from the device.
 
