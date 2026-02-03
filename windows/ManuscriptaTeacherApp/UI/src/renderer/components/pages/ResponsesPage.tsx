@@ -104,8 +104,8 @@ const FeedbackInput: React.FC<{
                             setMarks(val);
                         }}
                         className={`w-20 p-2 text-sm border rounded focus:ring-1 outline-none ${maxScore && marks && parseInt(marks) > maxScore
-                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500 text-red-600'
-                                : 'border-gray-300 focus:border-brand-orange focus:ring-brand-orange'
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500 text-red-600'
+                            : 'border-gray-300 focus:border-brand-orange focus:ring-brand-orange'
                             }`}
                         placeholder={maxScore ? `/ ${maxScore}` : '—'}
                     />
@@ -267,15 +267,35 @@ export const ResponsesPage: React.FC = () => {
     }, [feedbacks]);
 
     // Feedback handlers
+    // Per FrontendWorkflowSpecifications §6A(7):
+    // - Only PROVISIONAL feedback can be edited
+    // - Clearing both fields (marks and text) triggers deletion
     const handleSaveFeedback = useCallback(async (responseId: string, marks: number | null, text: string | null, existingId?: string) => {
         try {
+            const bothEmpty = marks === null && (!text || text.trim() === '');
+
             if (existingId) {
                 const existing = feedbacks.find(f => f.id === existingId);
                 if (existing) {
-                    await signalRService.updateFeedback({ ...existing, marks, text });
-                    setFeedbacks(prev => prev.map(f => f.id === existingId ? { ...f, marks, text } : f));
+                    // Per §6A(7)(b): Only PROVISIONAL feedback can be edited
+                    if (existing.status !== 'PROVISIONAL') {
+                        console.warn('Cannot edit non-PROVISIONAL feedback');
+                        return;
+                    }
+
+                    // Per §6A(7)(a)(ii): Clearing both fields = delete
+                    if (bothEmpty) {
+                        await signalRService.deleteFeedback(existingId);
+                        setFeedbacks(prev => prev.filter(f => f.id !== existingId));
+                    } else {
+                        await signalRService.updateFeedback({ ...existing, marks, text });
+                        setFeedbacks(prev => prev.map(f => f.id === existingId ? { ...f, marks, text } : f));
+                    }
                 }
             } else {
+                // Don't create empty feedback
+                if (bothEmpty) return;
+
                 const newFeedback: InternalCreateFeedbackDto = {
                     responseId,
                     marks,

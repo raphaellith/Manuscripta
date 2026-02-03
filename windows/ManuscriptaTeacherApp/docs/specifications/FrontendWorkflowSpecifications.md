@@ -477,7 +477,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iii) if the question has a `MarkScheme` field, the mark scheme;
 
-        (iv) for each response to a question without a  `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback , automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
+        (iv) for each response to a question without a  `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback , automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
 
         (v) means to add the marks and feedbacks under the feedback entities to the dispatch queue, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
 
@@ -511,7 +511,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iii) if the question has a `MarkScheme` field, the mark scheme;
 
-        (iv) for a response to a question without a `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback, automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
+        (iv) for a response to a question without a `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback, automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
 
         (v) means to add the mark and feedback under the feedback entity to the dispatch queue, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
 
@@ -526,6 +526,22 @@ For a list of all server method and client handlers to be implemented for commun
     (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
 
     (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+
+(7) **Feedback Editing and Deletion Rules**
+
+    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
+
+        (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
+
+        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` rather than `UpdateFeedback`. This action deletes the provisional feedback.
+
+    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable.
+
+        (i) The frontend shall not display editing controls for feedback in these states.
+
+        (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
+
+    (c) **Rationale**: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalized assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.
 
 
 ## Section 7 - Functionalities for the "AI Assistant" tab

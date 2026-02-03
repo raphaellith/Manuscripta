@@ -405,9 +405,19 @@ class SignalRService {
     /**
      * Updates an existing feedback entity.
      * Per NetworkingAPISpec §1(1)(h)(v).
+     * Only PROVISIONAL feedback can be updated per §6A(7)(b)(ii).
      */
     public async updateFeedback(entity: FeedbackEntity): Promise<void> {
         await this.connection.invoke("UpdateFeedback", entity);
+    }
+
+    /**
+     * Deletes an existing feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(vi) and FrontendWorkflowSpecifications §6A(7)(a)(ii).
+     * Invoked when teacher clears both Text and Marks on a PROVISIONAL feedback.
+     */
+    public async deleteFeedback(feedbackId: string): Promise<void> {
+        await this.connection.invoke("DeleteFeedback", feedbackId);
     }
 
     /**

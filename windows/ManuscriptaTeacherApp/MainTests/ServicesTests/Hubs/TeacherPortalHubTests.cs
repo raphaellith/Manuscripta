@@ -1337,6 +1337,94 @@ public class TeacherPortalHubTests
         await Assert.ThrowsAsync<HubException>(() => _hub.RetryFeedbackDispatch(feedbackId));
     }
 
+    [Fact]
+    public async Task UpdateFeedback_NonProvisionalStatus_ThrowsHubException()
+    {
+        // Arrange - Per §6A(7)(b)(ii): Only PROVISIONAL feedback can be edited
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.READY };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated", 7);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+        Assert.Contains("PROVISIONAL", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(It.IsAny<FeedbackEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_DeliveredStatus_ThrowsHubException()
+    {
+        // Arrange - Per §6A(7)(b)(ii): DELIVERED feedback cannot be edited
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.DELIVERED };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated", 7);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_ProvisionalStatus_DeletesSuccessfully()
+    {
+        // Arrange - Per §6A(7)(a)(ii): PROVISIONAL feedback can be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+        _mockFeedbackRepository.Setup(r => r.DeleteAsync(feedbackId)).Returns(Task.CompletedTask);
+
+        // Act
+        await _hub.DeleteFeedback(feedbackId);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(feedbackId), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_ReadyStatus_ThrowsHubException()
+    {
+        // Arrange - Non-PROVISIONAL feedback cannot be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.READY };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        Assert.Contains("PROVISIONAL", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_DeliveredStatus_ThrowsHubException()
+    {
+        // Arrange - DELIVERED feedback cannot be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.DELIVERED };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_NotFound_ThrowsHubException()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync((FeedbackEntity?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        Assert.Contains("not found", exception.Message);
+    }
+
     #endregion
 
     #region Response Operations Tests

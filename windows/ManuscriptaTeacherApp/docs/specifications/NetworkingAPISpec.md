@@ -97,7 +97,9 @@ For a description of how these server methods and client handlers are expected t
 
         (iv) `Task<List<FeedbackEntity>> GetAllFeedbacks()`: Retrieves all feedback entities.
 
-        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged).
+        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). Per FrontendWorkflowSpecifications §6A(7)(b)(ii), this method shall reject updates if the feedback's Status is not `PROVISIONAL`.
+
+        (vi) `Task DeleteFeedback(Guid feedbackId)`: Deletes an existing feedback entity. Per FrontendWorkflowSpecifications §6A(7)(a)(ii), this is invoked when the teacher clears both Text and Marks on a `PROVISIONAL` feedback.
 
     (i) Methods for retrieving responses.
 

@@ -738,6 +738,7 @@ public class TeacherPortalHub : Hub
     /// <summary>
     /// Updates an existing feedback entity.
     /// Per NetworkingAPISpec §1(1)(h)(v).
+    /// Per FrontendWorkflowSpecifications §6A(7)(b)(ii): rejects updates if status is not PROVISIONAL.
     /// </summary>
     public async Task UpdateFeedback(FeedbackEntity entity)
     {
@@ -745,10 +746,32 @@ public class TeacherPortalHub : Hub
         if (existing == null)
             throw new HubException($"Feedback {entity.Id} not found");
 
+        // Per §6A(7)(b)(ii): Only PROVISIONAL feedback can be edited
+        if (existing.Status != FeedbackStatus.PROVISIONAL)
+            throw new HubException($"Feedback {entity.Id} cannot be edited: status is {existing.Status}, not PROVISIONAL");
+
         // Update allowed fields (marks and text), preserve status
         existing.Marks = entity.Marks;
         existing.Text = entity.Text;
         await _feedbackRepository.UpdateAsync(existing);
+    }
+
+    /// <summary>
+    /// Deletes an existing feedback entity.
+    /// Per NetworkingAPISpec §1(1)(h)(vi) and FrontendWorkflowSpecifications §6A(7)(a)(ii):
+    /// Invoked when teacher clears both Text and Marks on a PROVISIONAL feedback.
+    /// </summary>
+    public async Task DeleteFeedback(Guid feedbackId)
+    {
+        var existing = await _feedbackRepository.GetByIdAsync(feedbackId);
+        if (existing == null)
+            throw new HubException($"Feedback {feedbackId} not found");
+
+        // Only PROVISIONAL feedback can be deleted
+        if (existing.Status != FeedbackStatus.PROVISIONAL)
+            throw new HubException($"Feedback {feedbackId} cannot be deleted: status is {existing.Status}, not PROVISIONAL");
+
+        await _feedbackRepository.DeleteAsync(feedbackId);
     }
 
     #endregion
