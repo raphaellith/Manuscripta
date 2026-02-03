@@ -2,11 +2,8 @@ package com.manuscripta.student.network.interceptor;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
 
 import java.io.IOException;
 
@@ -28,8 +25,6 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for {@link LoggingInterceptor}.
  */
-@RunWith(RobolectricTestRunner.class)
-@Config(sdk = {28})
 public class LoggingInterceptorTest {
 
     @Mock
