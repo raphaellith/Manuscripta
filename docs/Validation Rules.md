@@ -177,6 +177,26 @@ If validation rules in API Contract are in contradiction to this document, this 
 
 
 
+### Section 2G - Data Validation Rules for `ConfigurationEntity`
+
+(1) A `ConfigurationEntity` object must have the following data fields to be considered valid:
+
+    (a) `TextSize` (Integer). Value must be between 5 and 50 (inclusive).
+    (b) `FeedbackStyle` (String). Possible values are:
+        (i) `IMMEDIATE` - Correct/Incorrect feedback is shown immediately.
+        (ii) `NEUTRAL` - Only "Response Submitted" confirmation is shown.
+    (c) `TtsEnabled` (Boolean).
+    (d) `AiScaffoldingEnabled` (Boolean).
+    (e) `SummarisationEnabled` (Boolean).
+    (f) `MascotSelection` (String). Possible values are:
+        (i) `NONE`
+        (ii) `MASCOT1` through `MASCOT5`
+
+(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+
+    (a) The values for `FeedbackStyle` and `MascotSelection` must match one of the allowed values specified in (1).
+
+
 ### Section 3 - ID Generation Policy
 
 (1) IDs of all data objects must be UUIDs.
