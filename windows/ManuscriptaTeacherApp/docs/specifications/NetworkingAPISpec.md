@@ -122,7 +122,7 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `UpdateSession`, with parameter `sessionEntity` (SessionEntity): Updates a session entity, identified by its `deviceId` and `materialId`.
 
-        (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired.
+        (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired. The frontend shall use this notification as a signal to refresh the device grid per FrontendWorkflowSpec §5A(3A), and shall not directly use the payload to modify its local state.
 
     (b) Handlers for creating responses.
         

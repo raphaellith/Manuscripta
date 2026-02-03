@@ -51,6 +51,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     public event EventHandler<DeviceStatusEventArgs>? StatusUpdateReceived;
     public event EventHandler<DeviceStatusEventArgs>? DeviceDisconnected;
     public event EventHandler<ControlTimeoutEventArgs>? ControlCommandTimedOut;
+    // New events per NetworkingAPISpec §2(1)
+    public event EventHandler<Guid>? HandRaisedReceived;
+    public event EventHandler<Guid>? DistributionTimedOut;
+    public event EventHandler<Guid>? FeedbackDeliveryTimedOut;
 
     public TcpPairingService(
         IOptions<NetworkSettings> settings,
@@ -92,20 +96,21 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromSeconds(1));
 
-            await AcceptClientsAsync(_cts.Token);
+            // Run client acceptance loop in background so we don't block the caller (Hub)
+            _ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
+
+            // Return immediately once listener is active
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("TCP listener stopped");
+            _isListening = false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in TCP listener");
-            throw;
-        }
-        finally
-        {
             _isListening = false;
+            throw;
         }
     }
 
@@ -314,6 +319,11 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 _logger.LogWarning("Timeout waiting for DISTRIBUTE_ACK from device {DeviceId}", deviceId);
                 // Report to console as per requirement
                 Console.WriteLine($"[ERROR] Distribution to device {deviceId} failed (Timeout)");
+                
+                if (Guid.TryParse(deviceId, out var guid))
+                {
+                    DistributionTimedOut?.Invoke(this, guid);
+                }
             }
         }
         finally
@@ -347,6 +357,11 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             {
                 _logger.LogWarning("Timeout waiting for FEEDBACK_ACK from device {DeviceId}", deviceId);
                 Console.WriteLine($"[ERROR] Feedback delivery to device {deviceId} failed (Timeout)");
+                
+                if (Guid.TryParse(deviceId, out var guid))
+                {
+                    FeedbackDeliveryTimedOut?.Invoke(this, guid);
+                }
             }
         }
         finally
@@ -480,6 +495,11 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             
             // 1. Signal teacher (Console for now)
             Console.WriteLine($"[ALERT] Student {deviceIdString} raised hand!");
+            
+            if (Guid.TryParse(deviceIdString, out var guid))
+            {
+                HandRaisedReceived?.Invoke(this, guid);
+            }
 
             // 2. Send HAND_ACK (0x06) + DeviceID
             var ackPayload = Encoding.UTF8.GetBytes(deviceIdString);
@@ -541,30 +561,17 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             var deviceId = PairingMessage.DecodePairingRequest(data);
             _logger.LogInformation("Received PAIRING_REQUEST from {ClientId}, DeviceId: {DeviceId}", clientId, deviceId);
 
-            // Create a scope to resolve the scoped IDeviceRegistryService
-            // This avoids the captive dependency issue (singleton depending on scoped service)
-            using var scope = _serviceProvider.CreateScope();
-            var deviceRegistry = scope.ServiceProvider.GetRequiredService<IDeviceRegistryService>();
+            // Note: Device registration (with name) happens via the HTTP endpoint per Pairing Process §2(2)(c).
+            // The TCP PAIRING_REQUEST just establishes the connection - we store it for future communication.
             
-            // Register the device
-            var isNewDevice = await deviceRegistry.RegisterDeviceAsync(deviceId);
-            
-            if (isNewDevice)
-            {
-                _logger.LogInformation("New device {DeviceId} registered via TCP", deviceId);
-            }
-            else
-            {
-                _logger.LogInformation("Device {DeviceId} re-paired via TCP", deviceId);
-            }
-
-            // Store connection mapping
+            // Store connection mapping for this device
             if (_connectedClients.TryGetValue(clientId, out var client)) 
             {
                 _deviceConnections.AddOrUpdate(deviceId.ToString(), client, (k, v) => client);
+                _logger.LogInformation("Stored TCP connection for device {DeviceId}", deviceId);
             }
 
-            // Send PAIRING_ACK
+            // Send PAIRING_ACK per Pairing Process §2(3)(a)
             var ackData = PairingMessage.EncodePairingAck();
             await stream.WriteAsync(ackData, 0, ackData.Length);
             
@@ -694,7 +701,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                     deviceId,
                     "DISCONNECTED",
                     0, null, null,
-                    DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
                 DeviceDisconnected?.Invoke(this, eventArgs);
 

@@ -22,26 +22,38 @@ public class PairedDeviceEntityTests
     }
 
     [Fact]
-    public void ConstructorWithDeviceId_SetsDeviceId()
+    public void ConstructorWithDeviceIdAndName_SetsProperties()
     {
         // Arrange
         var deviceId = Guid.NewGuid();
+        var name = "Test Device";
 
         // Act
-        var entity = new PairedDeviceEntity(deviceId);
+        var entity = new PairedDeviceEntity(deviceId, name);
 
         // Assert
         Assert.Equal(deviceId, entity.DeviceId);
+        Assert.Equal(name, entity.Name);
     }
 
     [Fact]
     public void ConstructorWithDeviceId_AcceptsEmptyGuid()
     {
         // Act
-        var entity = new PairedDeviceEntity(Guid.Empty);
+        var entity = new PairedDeviceEntity(Guid.Empty, "Test Device");
 
         // Assert
         Assert.Equal(Guid.Empty, entity.DeviceId);
+    }
+
+    [Fact]
+    public void ConstructorWithNullName_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new PairedDeviceEntity(deviceId, null!));
     }
 
     #endregion
@@ -67,7 +79,7 @@ public class PairedDeviceEntityTests
     {
         // Arrange
         var originalId = Guid.NewGuid();
-        var entity = new PairedDeviceEntity(originalId);
+        var entity = new PairedDeviceEntity(originalId, "Test Device");
         var newId = Guid.NewGuid();
 
         // Act
@@ -75,6 +87,19 @@ public class PairedDeviceEntityTests
 
         // Assert
         Assert.Equal(newId, entity.DeviceId);
+    }
+
+    [Fact]
+    public void Name_CanBeUpdated()
+    {
+        // Arrange
+        var entity = new PairedDeviceEntity(Guid.NewGuid(), "Original Name");
+
+        // Act
+        entity.Name = "Updated Name";
+
+        // Assert
+        Assert.Equal("Updated Name", entity.Name);
     }
 
     #endregion
@@ -86,8 +111,8 @@ public class PairedDeviceEntityTests
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        var entity1 = new PairedDeviceEntity(deviceId);
-        var entity2 = new PairedDeviceEntity(deviceId);
+        var entity1 = new PairedDeviceEntity(deviceId, "Device 1");
+        var entity2 = new PairedDeviceEntity(deviceId, "Device 2");
 
         // Assert - Default reference equality
         Assert.NotSame(entity1, entity2);
@@ -101,7 +126,7 @@ public class PairedDeviceEntityTests
 
         // Arrange
         var deviceId = Guid.NewGuid();
-        var entity = new PairedDeviceEntity(deviceId);
+        var entity = new PairedDeviceEntity(deviceId, "Test Device");
 
         // Assert
         Assert.Equal(deviceId, entity.DeviceId);

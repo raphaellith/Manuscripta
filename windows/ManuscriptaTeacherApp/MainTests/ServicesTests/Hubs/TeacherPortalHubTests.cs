@@ -11,6 +11,7 @@ using Main.Models.Enums;
 using Main.Services;
 using Main.Services.Hubs;
 using Main.Services.Repositories;
+using Main.Services.Network;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MainTests.ServicesTests.Hubs;
@@ -35,6 +36,11 @@ public class TeacherPortalHubTests
     private readonly Mock<IQuestionRepository> _mockQuestionRepository;
     private readonly Mock<ISourceDocumentRepository> _mockSourceDocumentRepository;
     private readonly Mock<IAttachmentRepository> _mockAttachmentRepository;
+    private readonly Mock<IUdpBroadcastService> _mockUdpBroadcastService;
+    private readonly Mock<ITcpPairingService> _mockTcpPairingService;
+    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistryService;
+    private readonly Mock<IDeviceStatusCacheService> _mockDeviceStatusCacheService;
+    private readonly Mock<IDistributionService> _mockDistributionService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -53,6 +59,11 @@ public class TeacherPortalHubTests
         _mockQuestionRepository = new Mock<IQuestionRepository>();
         _mockSourceDocumentRepository = new Mock<ISourceDocumentRepository>();
         _mockAttachmentRepository = new Mock<IAttachmentRepository>();
+        _mockUdpBroadcastService = new Mock<IUdpBroadcastService>();
+        _mockTcpPairingService = new Mock<ITcpPairingService>();
+        _mockDeviceRegistryService = new Mock<IDeviceRegistryService>();
+        _mockDeviceStatusCacheService = new Mock<IDeviceStatusCacheService>();
+        _mockDistributionService = new Mock<IDistributionService>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -68,7 +79,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object);
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object);
     }
 
     #region Constructor Tests
@@ -90,7 +106,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -110,7 +131,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -130,7 +156,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -150,7 +181,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -170,7 +206,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -190,7 +231,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -210,7 +256,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -230,7 +281,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -250,7 +306,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -270,7 +331,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -290,7 +356,12 @@ public class TeacherPortalHubTests
             null!,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -310,7 +381,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             null!,
             _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -330,7 +406,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             null!,
-            _mockAttachmentRepository.Object));
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     [Fact]
@@ -350,7 +431,12 @@ public class TeacherPortalHubTests
             _mockMaterialRepository.Object,
             _mockQuestionRepository.Object,
             _mockSourceDocumentRepository.Object,
-            null!));
+            null!,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object));
     }
 
     #endregion

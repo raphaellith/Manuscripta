@@ -296,7 +296,23 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity`;
 
-    (b) the frontend shall display the newly paired device in the device grid.
+    (b) the frontend shall refresh the device grid in accordance with subsection (3A).
+
+(3A) **Device Grid Refresh**
+
+    The frontend shall refresh the device grid by —
+
+    (a) calling `GetAllPairedDevices` and `GetAllDeviceStatuses` to retrieve the current state from the backend;
+
+    (b) replacing the locally stored device list and status map with the retrieved data.
+
+    (c) This refresh shall be triggered when —
+
+        (i) the frontend receives a `DevicePaired` notification per subsection (3)(a);
+
+        (ii) the frontend receives notification that devices have been unpaired;
+
+        (iii) the user navigates to the Classroom page (as already specified in §5(2)).
 
 (4) **Terminating the Pairing Process**
 
@@ -330,6 +346,15 @@ For a list of all server method and client handlers to be implemented for commun
         (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
 
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
+
+
+(4) **Device Renaming**
+
+    The frontend shall provide a means for the user to rename a paired device —
+
+    (a) by calling `Task UpdatePairedDevice(PairedDeviceEntity entity)` as defined in the Networking API Specification;
+
+    (b) the new name shall be persisted on the Windows device and shall not affect the Android device.
 
 
 ## Section 5C — Device Control
@@ -375,7 +400,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (1) **Definition**
 
-    For the purpose of this section, an "alert" shall be displayed as an appropriate banner.
+    For the purpose of this section, an "alert" shall be displayed as an appropriate banner. Alerts shall be displayed regardless of the tab the user is currently on.
 
 (2) **Help Request Alerts**
 
@@ -408,7 +433,6 @@ For a list of all server method and client handlers to be implemented for commun
 (7) **Feedback Delivery Failure Alerts**
 
     The frontend shall display an alert when the backend invokes the `FeedbackDeliveryFailed` client handler, as defined in s2(1)(d)(v) of the Networking API Specification. The alert shall identify the specific device(s) for which feedback delivery has failed.
-
 
 
 ## Section 6 - Functionalities for the "Responses" tab

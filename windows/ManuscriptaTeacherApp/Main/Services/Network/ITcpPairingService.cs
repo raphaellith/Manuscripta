@@ -72,5 +72,21 @@ public interface ITcpPairingService
     /// Per Session Interaction.md §6(2) and §6(3).
     /// </summary>
     event EventHandler<Models.Events.ControlTimeoutEventArgs>? ControlCommandTimedOut;
+
+    /// <summary>
+    /// Event raised when a HAND_RAISED (0x11) message is received.
+    /// Per Session Interaction.md §4A(1).
+    /// </summary>
+    event EventHandler<Guid>? HandRaisedReceived;
+
+    /// <summary>
+    /// Event raised when a distribution command times out (no DISTRIBUTE_ACK).
+    /// </summary>
+    event EventHandler<Guid>? DistributionTimedOut;
+
+    /// <summary>
+    /// Event raised when a feedback delivery command times out (no FEEDBACK_ACK).
+    /// </summary>
+    event EventHandler<Guid>? FeedbackDeliveryTimedOut;
 }
 

@@ -14,6 +14,11 @@
     <InternalsVisibleTo Include="MainTests" />
   </ItemGroup>
 
+  <!-- Exclude Testing directory in Release builds -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="Testing\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
