@@ -1368,6 +1368,77 @@ public class TeacherPortalHubTests
     }
 
     [Fact]
+    public async Task UpdateFeedback_BothTextAndMarksNull_ThrowsHubException()
+    {
+        // Arrange - Per Validation Rules §2F(1)(b): at least one of Text or Marks must be provided
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        // Use parameterless constructor and object initializer to simulate deserialized entity that bypassed validation
+        var updatedFeedback = new FeedbackEntity { Id = feedbackId, Text = null, Marks = null };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+        Assert.Contains("2F(1)(b)", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(It.IsAny<FeedbackEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_EmptyTextAndNullMarks_ThrowsHubException()
+    {
+        // Arrange - Empty/whitespace text should also be rejected
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        // Use parameterless constructor and object initializer to simulate deserialized entity that bypassed validation
+        var updatedFeedback = new FeedbackEntity { Id = feedbackId, Text = "   ", Marks = null };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_TextOnlyProvided_Succeeds()
+    {
+        // Arrange - Text only is valid per §2F(1)(b)
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Original", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated text", null);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act
+        await _hub.UpdateFeedback(updatedFeedback);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(existingFeedback), Times.Once);
+        Assert.Equal("Updated text", existingFeedback.Text);
+        Assert.Null(existingFeedback.Marks);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_MarksOnlyProvided_Succeeds()
+    {
+        // Arrange - Marks only is valid per §2F(1)(b)
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Original", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), null, 10);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act
+        await _hub.UpdateFeedback(updatedFeedback);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(existingFeedback), Times.Once);
+        Assert.Null(existingFeedback.Text);
+        Assert.Equal(10, existingFeedback.Marks);
+    }
+    [Fact]
     public async Task DeleteFeedback_ProvisionalStatus_DeletesSuccessfully()
     {
         // Arrange - Per §6A(7)(a)(ii): PROVISIONAL feedback can be deleted

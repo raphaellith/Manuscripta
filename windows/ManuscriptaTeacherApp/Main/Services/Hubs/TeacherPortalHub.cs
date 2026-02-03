@@ -739,6 +739,7 @@ public class TeacherPortalHub : Hub
     /// Updates an existing feedback entity.
     /// Per NetworkingAPISpec §1(1)(h)(v).
     /// Per FrontendWorkflowSpecifications §6A(7)(b)(ii): rejects updates if status is not PROVISIONAL.
+    /// Per Validation Rules §2F(1)(b): at least one of Text or Marks must be provided.
     /// </summary>
     public async Task UpdateFeedback(FeedbackEntity entity)
     {
@@ -749,6 +750,12 @@ public class TeacherPortalHub : Hub
         // Per §6A(7)(b)(ii): Only PROVISIONAL feedback can be edited
         if (existing.Status != FeedbackStatus.PROVISIONAL)
             throw new HubException($"Feedback {entity.Id} cannot be edited: status is {existing.Status}, not PROVISIONAL");
+
+        // Per Validation Rules §2F(1)(b): At least one of Text or Marks must be provided
+        var hasText = !string.IsNullOrWhiteSpace(entity.Text);
+        var hasMarks = entity.Marks.HasValue;
+        if (!hasText && !hasMarks)
+            throw new HubException($"Feedback {entity.Id} update rejected: at least one of Text or Marks must be provided (Validation Rules §2F(1)(b))");
 
         // Update allowed fields (marks and text), preserve status
         existing.Marks = entity.Marks;
