@@ -158,6 +158,9 @@ public class ResponseService : IResponseService
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);
+
+        // Auto-marking logic per FrontendWorkflowSpecifications
+        PerformAutoMarking(response, question);
     }
 
     /// <summary>
@@ -213,10 +216,17 @@ public class ResponseService : IResponseService
 
     /// <summary>
     /// Performs auto-marking by comparing response against correct answer.
-    /// Sets IsCorrect property on the response.
+    /// Per Session Interaction §4(2): preserves the Android client's IsCorrect value
+    /// when available for student-teacher consistency; falls back to server-side
+    /// calculation when the client did not provide one.
     /// </summary>
     private void PerformAutoMarking(ResponseEntity response, QuestionEntity question)
     {
+        // If Android client already evaluated (per Session Interaction §4(2)), preserve it
+        if (response.IsCorrect.HasValue)
+            return;
+
+        // Fall back to server-side evaluation
         if (question is MultipleChoiceQuestionEntity mcq
             && response is MultipleChoiceResponseEntity mcr
             && mcq.CorrectAnswerIndex.HasValue)
