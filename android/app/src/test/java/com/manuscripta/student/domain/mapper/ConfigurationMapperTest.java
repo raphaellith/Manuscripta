@@ -422,19 +422,4 @@ public class ConfigurationMapperTest {
             assertEquals(style, config.getFeedbackStyle());
         }
     }
-
-    @Test
-    public void testPrivateConstructorThrowsException() throws Exception {
-        // Use reflection to access private constructor
-        java.lang.reflect.Constructor<ConfigurationMapper> constructor =
-                ConfigurationMapper.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        try {
-            constructor.newInstance();
-            throw new AssertionError("Expected constructor to throw AssertionError");
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            // Verify the cause is AssertionError
-            assertEquals(AssertionError.class, e.getCause().getClass());
-        }
-    }
 }

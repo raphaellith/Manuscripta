@@ -114,8 +114,8 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
 
     @Override
     public void fetchAndStoreConfig(@NonNull String deviceId) throws Exception {
-        if (deviceId == null || deviceId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Device ID cannot be null or empty");
+        if (deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be empty");
         }
 
         // Fetch config from server via HTTP
@@ -242,8 +242,10 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     }
 
     /**
-     * Cleans up resources. Should be called when the repository is no longer needed.
+     * Releases resources held by the repository.
+     * Unregisters the TCP message listener to prevent memory leaks.
      */
+    @Override
     public void destroy() {
         tcpSocketManager.removeMessageListener(this);
     }

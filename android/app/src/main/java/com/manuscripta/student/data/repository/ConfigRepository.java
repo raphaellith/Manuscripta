@@ -13,6 +13,10 @@ import com.manuscripta.student.domain.model.Configuration;
  *
  * <p>Per API Contract §3.4, the REFRESH_CONFIG (0x03) TCP message triggers
  * a re-fetch of the configuration.</p>
+ *
+ * <p><b>Lifecycle Management:</b> Implementations should clean up resources
+ * (e.g., unregister listeners) when the repository is no longer needed.
+ * Call {@link #destroy()} to release resources.</p>
  */
 public interface ConfigRepository {
 
@@ -45,4 +49,13 @@ public interface ConfigRepository {
      * @return true if configuration exists, false otherwise
      */
     boolean hasStoredConfig();
+
+    /**
+     * Releases resources held by the repository.
+     * Should be called when the repository is no longer needed (e.g., during
+     * application shutdown or when the singleton scope is being destroyed).
+     *
+     * <p>After calling this method, the repository should not be used.</p>
+     */
+    void destroy();
 }
