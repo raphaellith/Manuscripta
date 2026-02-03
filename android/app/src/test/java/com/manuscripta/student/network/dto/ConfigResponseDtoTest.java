@@ -289,6 +289,84 @@ public class ConfigResponseDtoTest {
     }
 
     @Test
+    public void testEqualsNullVsNonNullTextSize() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(null, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
+    public void testEqualsNullVsNonNullFeedbackStyle() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(TEST_TEXT_SIZE, null,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
+    public void testEqualsNullVsNonNullTtsEnabled() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                null, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
+    public void testEqualsNullVsNonNullAiScaffoldingEnabled() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, null, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
+    public void testEqualsNullVsNonNullSummarisationEnabled() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, null,
+                TEST_MASCOT_SELECTION);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
+    public void testEqualsNullVsNonNullMascotSelection() {
+        ConfigResponseDto dto1 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                null);
+        ConfigResponseDto dto2 = new ConfigResponseDto(TEST_TEXT_SIZE, TEST_FEEDBACK_STYLE,
+                TEST_TTS_ENABLED, TEST_AI_SCAFFOLDING_ENABLED, TEST_SUMMARISATION_ENABLED,
+                TEST_MASCOT_SELECTION);
+
+        assertFalse(dto1.equals(dto2));
+        assertFalse(dto2.equals(dto1));
+    }
+
+    @Test
     public void testHashCodeConsistency() {
         ConfigResponseDto dto = new ConfigResponseDto(
                 TEST_TEXT_SIZE,

@@ -61,6 +61,8 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     private final TcpSocketManager tcpSocketManager;
     /** The current device ID for config fetching. */
     private String deviceId;
+    /** Flag indicating whether the repository has been destroyed. */
+    private volatile boolean destroyed = false;
 
     /** Callback for refresh requests. */
     private ConfigRefreshCallback refreshCallback;
@@ -94,8 +96,9 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
 
     @Override
     public void fetchAndStoreConfig(@NonNull String deviceId) throws Exception {
-        if (deviceId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Device ID cannot be empty");
+        checkNotDestroyed();
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be null or empty");
         }
 
         // Fetch config from server via HTTP
@@ -224,9 +227,29 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     /**
      * Releases resources held by the repository.
      * Unregisters the TCP message listener to prevent memory leaks.
+     *
+     * <p>This method should be called when the repository is no longer needed,
+     * typically during application shutdown. After calling this method,
+     * the repository should not be used for any operations.</p>
+     *
+     * <p>Calling any method after destroy() will result in an
+     * {@link IllegalStateException}.</p>
      */
     @Override
     public void destroy() {
+        destroyed = true;
         tcpSocketManager.removeMessageListener(this);
+        Log.i(TAG, "ConfigRepositoryImpl destroyed");
+    }
+
+    /**
+     * Checks that the repository has not been destroyed.
+     *
+     * @throws IllegalStateException if the repository has been destroyed
+     */
+    private void checkNotDestroyed() {
+        if (destroyed) {
+            throw new IllegalStateException("ConfigRepository has been destroyed");
+        }
     }
 }
