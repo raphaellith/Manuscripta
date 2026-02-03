@@ -94,6 +94,34 @@ public class ConfigurationTest {
     }
 
     @Test
+    public void testConstructor_nullFeedbackStyle_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Configuration(
+                        12,
+                        null,
+                        true, true, true,
+                        MascotSelection.MASCOT1
+                )
+        );
+        assertEquals("FeedbackStyle cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void testConstructor_nullMascotSelection_throwsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new Configuration(
+                        12,
+                        FeedbackStyle.IMMEDIATE,
+                        true, true, true,
+                        null
+                )
+        );
+        assertEquals("MascotSelection cannot be null", exception.getMessage());
+    }
+
+    @Test
     public void testCreateDefault() {
         Configuration config = Configuration.createDefault();
 

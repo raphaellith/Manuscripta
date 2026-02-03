@@ -97,8 +97,8 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     @Override
     public void fetchAndStoreConfig(@NonNull String deviceId) throws Exception {
         checkNotDestroyed();
-        if (deviceId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Device ID cannot be empty");
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be null or empty");
         }
 
         // Fetch config from server via HTTP
