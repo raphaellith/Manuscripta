@@ -9,6 +9,7 @@
 
 # AI coding agent instructions (personal configuration)
 .github/copilot-instructions.md
+.agent/
 
 #########################
 # Android
@@ -204,6 +205,8 @@ _ReSharper*/
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+.pytest_cache/
 
 # JetBrains IDEs
 .idea/
@@ -225,6 +228,12 @@ __pycache__/
 
 # Windows shortcuts
 *.lnk
+
+#########################
+# Node / JavaScript
+#########################
+node_modules/
+.webpack/
 
 #########################
 # macOS
