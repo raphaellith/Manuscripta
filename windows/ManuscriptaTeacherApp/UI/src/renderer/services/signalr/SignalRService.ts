@@ -440,8 +440,8 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(c)(i).
      */
     public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
-        this.connection.on("OnFeedbackDispatchFailed", callback);
-        return () => this.connection.off("OnFeedbackDispatchFailed", callback);
+        this.connection.on("FeedbackDeliveryFailed", callback);
+        return () => this.connection.off("FeedbackDeliveryFailed", callback);
     }
 }
 
