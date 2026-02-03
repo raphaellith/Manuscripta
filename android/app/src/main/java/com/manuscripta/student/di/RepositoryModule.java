@@ -1,10 +1,15 @@
 package com.manuscripta.student.di;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.ConfigRepository;
+import com.manuscripta.student.data.repository.ConfigRepositoryImpl;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
 import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
 import com.manuscripta.student.data.repository.FeedbackRepository;
@@ -21,6 +26,7 @@ import javax.inject.Singleton;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
+import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.components.SingletonComponent;
 
 /**
@@ -128,5 +134,33 @@ public class RepositoryModule {
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager) {
         return new FeedbackRepositoryImpl(feedbackDao, apiService, tcpSocketManager);
+    }
+
+    /**
+     * Provides the SharedPreferences instance for configuration storage.
+     *
+     * @param context Application context
+     * @return SharedPreferences instance
+     */
+    @Provides
+    @Singleton
+    public SharedPreferences provideSharedPreferences(@ApplicationContext Context context) {
+        return context.getSharedPreferences("manuscripta_config", Context.MODE_PRIVATE);
+    }
+
+    /**
+     * Provides the ConfigRepository implementation.
+     *
+     * @param preferences      The SharedPreferences instance
+     * @param apiService       The ApiService instance
+     * @param tcpSocketManager The TcpSocketManager instance
+     * @return ConfigRepository instance
+     */
+    @Provides
+    @Singleton
+    public ConfigRepository provideConfigRepository(SharedPreferences preferences,
+                                                    ApiService apiService,
+                                                    TcpSocketManager tcpSocketManager) {
+        return new ConfigRepositoryImpl(preferences, apiService, tcpSocketManager);
     }
 }
