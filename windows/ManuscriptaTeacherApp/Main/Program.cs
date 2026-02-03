@@ -59,7 +59,7 @@ builder.Services.AddHostedService<HubEventBridge>();
 builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
 {
-    hubOptions.EnableDetailedErrors = true;
+    hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
 })
     .AddJsonProtocol(options =>
     {
