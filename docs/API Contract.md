@@ -113,8 +113,12 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
-      "KioskMode": true, // Final configuration to be determined
-      "TextSize": "medium"
+      "TextSize": 12,
+      "FeedbackStyle": "IMMEDIATE",
+      "TtsEnabled": true,
+      "AiScaffoldingEnabled": true,
+      "SummarisationEnabled": true,
+      "MascotSelection": "MASCOT1"
     }
     ```
 
