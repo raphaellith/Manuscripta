@@ -1,9 +1,10 @@
 package com.manuscripta.student.di;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.manuscripta.student.BuildConfig;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
@@ -71,7 +72,11 @@ public class NetworkModuleTest {
             }
         }
 
-        assertTrue("OkHttpClient should have LoggingInterceptor", hasLoggingInterceptor);
+        if (BuildConfig.DEBUG) {
+            assertTrue("OkHttpClient should have LoggingInterceptor in debug builds", hasLoggingInterceptor);
+        } else {
+            assertFalse("OkHttpClient should not have LoggingInterceptor in release builds", hasLoggingInterceptor);
+        }
     }
 
     @Test
