@@ -296,7 +296,23 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity`;
 
-    (b) the frontend shall display the newly paired device in the device grid.
+    (b) the frontend shall refresh the device grid in accordance with subsection (3A).
+
+(3A) **Device Grid Refresh**
+
+    The frontend shall refresh the device grid by —
+
+    (a) calling `GetAllPairedDevices` and `GetAllDeviceStatuses` to retrieve the current state from the backend;
+
+    (b) replacing the locally stored device list and status map with the retrieved data.
+
+    (c) This refresh shall be triggered when —
+
+        (i) the frontend receives a `DevicePaired` notification per subsection (3)(a);
+
+        (ii) the frontend receives notification that devices have been unpaired;
+
+        (iii) the user navigates to the Classroom page (as already specified in §5(2)).
 
 (4) **Terminating the Pairing Process**
 

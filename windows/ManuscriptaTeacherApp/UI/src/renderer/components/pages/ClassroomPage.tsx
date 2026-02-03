@@ -4,7 +4,7 @@
  * Replaces legacy ClassroomControl component.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Card } from '../common/Card';
 import { useAppContext } from '../../state/AppContext';
 import { useAlertContext } from '../../state/AlertContext';
@@ -116,19 +116,37 @@ export const ClassroomPage: React.FC = () => {
         setPairedDevices(devices);
     }, [devices, setPairedDevices]);
 
+    // Refresh device grid - per FrontendWorkflowSpec §5A(3A)
+    const refreshDeviceGrid = useCallback(async () => {
+        try {
+            const [pairedDevices, statuses] = await Promise.all([
+                signalRService.getAllPairedDevices(),
+                signalRService.getAllDeviceStatuses()
+            ]);
+            setDevices(pairedDevices);
+            setDeviceStatuses(new Map(statuses.map(s => [s.deviceId, s])));
+        } catch (error) {
+            console.error('Failed to refresh device grid:', error);
+            addAlert('control_failed', undefined, 'Failed to refresh device data');
+        }
+    }, [addAlert]);
+
+    // Debounced refresh to avoid rapid successive API calls
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const debouncedRefresh = useCallback(() => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+        debounceTimeoutRef.current = setTimeout(() => {
+            refreshDeviceGrid();
+        }, 150);
+    }, [refreshDeviceGrid]);
+
     // Load initial device data and register handlers
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                const [pairedDevices, statuses] = await Promise.all([
-                    signalRService.getAllPairedDevices(),
-                    signalRService.getAllDeviceStatuses()
-                ]);
-                setDevices(pairedDevices);
-                setDeviceStatuses(new Map(statuses.map(s => [s.deviceId, s])));
-            } catch (error) {
-                console.error('Failed to load classroom data:', error);
-                addAlert('control_failed', undefined, 'Failed to load device data');
+                await refreshDeviceGrid();
             } finally {
                 setIsLoading(false);
             }
@@ -142,16 +160,10 @@ export const ClassroomPage: React.FC = () => {
             // Note: Alert for disconnection is handled by AlertContext
         });
 
-        const unsubPaired = signalRService.onDevicePaired((device) => {
-            setDevices(prev => [...prev, device]);
-            setDeviceStatuses(prev => new Map(prev).set(device.deviceId, {
-                deviceId: device.deviceId,
-                status: 'IDLE',
-                batteryLevel: 100,
-                currentMaterialId: '',
-                studentView: '',
-                timestamp: Date.now()
-            }));
+        // Per FrontendWorkflowSpec §5A(3A)(c)(i) and NetworkingAPISpec §2(1)(a)(iii):
+        // Use notification as signal to refresh, do not directly use payload
+        const unsubPaired = signalRService.onDevicePaired(() => {
+            debouncedRefresh();
         });
 
         // Handler for distribution completion - clear deploying state
@@ -168,8 +180,11 @@ export const ClassroomPage: React.FC = () => {
             unsubStatus();
             unsubPaired();
             unsubDistributionFailed();
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
         };
-    }, [addAlert]);
+    }, [addAlert, refreshDeviceGrid, debouncedRefresh]);
 
     // Get status for a device
     const getDeviceStatus = useCallback((deviceId: string): DeviceStatus => {
@@ -242,7 +257,8 @@ export const ClassroomPage: React.FC = () => {
         if (selectedDeviceIds.length === 0) return;
         try {
             await signalRService.unpairDevices(selectedDeviceIds);
-            setDevices(prev => prev.filter(d => !selectedDeviceIds.includes(d.deviceId)));
+            // Per FrontendWorkflowSpec §5A(3A)(c)(ii): refresh after unpair
+            await refreshDeviceGrid();
             setSelectedDeviceIds([]);
         } catch (error) {
             console.error('Unpair failed:', error);
