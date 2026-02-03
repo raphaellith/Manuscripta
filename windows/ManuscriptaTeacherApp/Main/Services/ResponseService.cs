@@ -217,20 +217,18 @@ public class ResponseService : IResponseService
     /// </summary>
     private void PerformAutoMarking(ResponseEntity response, QuestionEntity question)
     {
-        if (question is MultipleChoiceQuestionEntity mcq && response is MultipleChoiceResponseEntity mcr)
+        if (question is MultipleChoiceQuestionEntity mcq
+            && response is MultipleChoiceResponseEntity mcr
+            && mcq.CorrectAnswerIndex.HasValue)
         {
-            if (mcq.CorrectAnswerIndex.HasValue)
-            {
-                mcr.IsCorrect = mcr.AnswerIndex == mcq.CorrectAnswerIndex.Value;
-            }
+            mcr.IsCorrect = mcr.AnswerIndex == mcq.CorrectAnswerIndex.Value;
         }
-        else if (question is WrittenAnswerQuestionEntity waq && response is WrittenAnswerResponseEntity war)
+        else if (question is WrittenAnswerQuestionEntity waq
+                 && response is WrittenAnswerResponseEntity war
+                 && !string.IsNullOrEmpty(waq.CorrectAnswer))
         {
-            if (!string.IsNullOrEmpty(waq.CorrectAnswer))
-            {
-                // Exact match marking for written answers
-                war.IsCorrect = war.Answer == waq.CorrectAnswer;
-            }
+            // Exact match marking for written answers
+            war.IsCorrect = war.Answer == waq.CorrectAnswer;
         }
     }
 

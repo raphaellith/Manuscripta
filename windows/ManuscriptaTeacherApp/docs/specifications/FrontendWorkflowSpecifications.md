@@ -449,7 +449,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (i) on entry to the responses tab; or
         
-        (ii) when the `RefreshResponses` client handler is invoked by the backend, as defined in s2(1)(e)(i) of the Networking API Specification.
+        (ii) when the `RefreshResponses` client handler is invoked by the backend, as defined in s2(1)(b)(i) of the Networking API Specification.
 
 (4) **Display of responses on class-level**
 
