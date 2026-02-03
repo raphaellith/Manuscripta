@@ -67,8 +67,6 @@ public class Configuration {
      * @param summarisationEnabled Whether summarisation is enabled
      * @param mascotSelection      The selected mascot
      * @throws IllegalArgumentException if textSize is outside valid range
-     * @throws IllegalArgumentException if feedbackStyle is null
-     * @throws IllegalArgumentException if mascotSelection is null
      */
     public Configuration(int textSize,
                          @NonNull FeedbackStyle feedbackStyle,
@@ -80,12 +78,6 @@ public class Configuration {
             throw new IllegalArgumentException(
                     "TextSize must be between " + MIN_TEXT_SIZE + " and " + MAX_TEXT_SIZE
                             + ", got: " + textSize);
-        }
-        if (feedbackStyle == null) {
-            throw new IllegalArgumentException("FeedbackStyle cannot be null");
-        }
-        if (mascotSelection == null) {
-            throw new IllegalArgumentException("MascotSelection cannot be null");
         }
 
         this.textSize = textSize;

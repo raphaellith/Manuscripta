@@ -174,4 +174,22 @@ public class ConfigRepositoryImplTest {
         repository.destroy();
         repository.fetchAndStoreConfig(TEST_DEVICE_ID);
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testGetConfigAfterDestroy() {
+        repository.destroy();
+        repository.getConfig();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testClearConfigAfterDestroy() {
+        repository.destroy();
+        repository.clearConfig();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testHasStoredConfigAfterDestroy() {
+        repository.destroy();
+        repository.hasStoredConfig();
+    }
 }

@@ -97,8 +97,8 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     @Override
     public void fetchAndStoreConfig(@NonNull String deviceId) throws Exception {
         checkNotDestroyed();
-        if (deviceId == null || deviceId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Device ID cannot be null or empty");
+        if (deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be empty");
         }
 
         // Fetch config from server via HTTP
@@ -125,6 +125,7 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     @Override
     @NonNull
     public Configuration getConfig() {
+        checkNotDestroyed();
         if (!hasStoredConfig()) {
             return Configuration.createDefault();
         }
@@ -167,6 +168,7 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
 
     @Override
     public void clearConfig() {
+        checkNotDestroyed();
         SharedPreferences.Editor editor = preferences.edit();
         editor.remove(KEY_TEXT_SIZE);
         editor.remove(KEY_FEEDBACK_STYLE);
@@ -182,6 +184,7 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
 
     @Override
     public boolean hasStoredConfig() {
+        checkNotDestroyed();
         return preferences.getBoolean(KEY_HAS_CONFIG, false);
     }
 
