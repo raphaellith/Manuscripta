@@ -46,9 +46,9 @@ This is specified in `API Contract.md` §2.5.
 
 (5) The Android client must, on successful receipt of materials from the REST API endpoint defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message with the `batchId` as the operand, as defined in `API Contract.md` §3.6.
 
-(6) Upon receipt of a `DISTRIBUTE_ACK` message, the Windows client shall deem the corresponding distribution batch as delivered.
+(5A) Upon receipt of a `DISTRIBUTE_ACK` message, the Windows client shall deem the corresponding distribution batch as delivered.
 
-(7) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message —
+(6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message —
 
     (a) The Windows client shall deem the corresponding distribution batch as timed out.
 
