@@ -178,12 +178,13 @@ Used to distribute materials to devices. See `Session Interaction.md` §3 for th
 **Note:** This endpoint returns a "distribution bundle" of materials and questions. The Android client creates a separate `SessionEntity` for each material received (see `Session Interaction.md` §5).
 
 #### Get Distribution Bundle
-Retrieves materials and questions assigned to a specific device.
+Retrieves materials and questions assigned to a specific distribution batch.
 
--   **Endpoint:** `GET /distribution/{deviceId}`
+-   **Endpoint:** `GET /distribution/{batchId}`
 -   **Response:** `200 OK`
     ```json
     {
+      "batchId": "batch-uuid",
       "materials": [
         // Array of MaterialEntity objects as defined in Validation Rules.md §2A
       ],
@@ -192,23 +193,24 @@ Retrieves materials and questions assigned to a specific device.
       ]
     }
     ```
--   **Error Response:** `404 Not Found` (if no materials available for deviceId)
+-   **Error Response:** `404 Not Found` (if batchId is invalid or expired)
 
 
 ### 2.6. Returning Feedback (Server -> Client via TCP trigger)
 
-Retrieves all available feedback for responses previously submitted by a specific student device.
+Retrieves all feedback included in a specific feedback batch.
 
--   **Endpoint:** `GET /feedback/{deviceId}`
+-   **Endpoint:** `GET /feedback/{batchId}`
 -   **Response:** `200 OK`
     ```json
     {
+      "batchId": "batch-uuid",
       "feedback": [
         // Array of FeedbackEntity objects as defined in Validation Rules.md §2F
-      ],
+      ]
     }
     ```
--   **Error Response:** `404 Not Found` (if no feedback available for deviceId)
+-   **Error Response:** `404 Not Found` (if batchId is invalid or expired)
 
 
 ## 3. Binary Protocol (TCP & UDP)
@@ -250,9 +252,21 @@ See §1.1 for detailed format.
 | `0x02` | UNLOCK_SCREEN | None | Unlocks the student's screen |
 | `0x03` | REFRESH_CONFIG | None | Triggers tablet to re-fetch configuration via HTTP |
 | `0x04` | UNPAIR | None | Unpairs the device |
-| `0x05` | DISTRIBUTE_MATERIAL | None | Instructs device to fetch materials for a session |
+| `0x05` | DISTRIBUTE_MATERIAL | Batch ID (UTF-8 string) | Instructs device to fetch materials for the specified batch |
 | `0x06` | HAND_ACK | Device ID (UTF-8 string) | Acknowledges receipt of HAND_RAISED message |
-| `0x07` | RETURN_FEEDBACK | None | Instructs device to retrieve feedback for a response |
+| `0x07` | RETURN_FEEDBACK | Batch ID (UTF-8 string) | Instructs device to retrieve feedback for the specified batch |
+
+**Example: Distribute Material Message**
+```
+Byte 0: 0x05 (DISTRIBUTE_MATERIAL opcode)
+Bytes 1-N: "batch-uuid-string" (UTF-8 encoded batch ID)
+```
+
+**Example: Return Feedback Message**
+```
+Byte 0: 0x07 (RETURN_FEEDBACK opcode)
+Bytes 1-N: "batch-uuid-string" (UTF-8 encoded batch ID)
+```
 
 ### 3.5. TCP Pairing Messages
 
@@ -287,8 +301,8 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
-| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{deviceId}` |
-| `0x13` | FEEDBACK_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of feedback via HTTP `GET /feedback/{deviceId}` |
+| `0x12` | DISTRIBUTE_ACK | Batch ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{batchId}` |
+| `0x13` | FEEDBACK_ACK | Batch ID (UTF-8 string) | Acknowledges successful receipt of feedback via HTTP `GET /feedback/{batchId}` |
 
 **Example: Status Update Message**
 ```
@@ -324,8 +338,8 @@ This section documents explicit and implicit acknowledgement mechanisms for TCP 
 |---------|-----|----------|
 | `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
 | `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
-| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
-| `RETURN_FEEDBACK (0x07)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
+| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client (with batchId), Client → Server (with batchId) |
+| `RETURN_FEEDBACK (0x07)` | `FEEDBACK_ACK (0x13)` | Server → Client (with batchId), Client → Server (with batchId) |
 
 #### Implicit ACKs
 

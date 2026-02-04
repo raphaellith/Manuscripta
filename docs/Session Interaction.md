@@ -26,22 +26,33 @@ This document specifies the process through which the two clients communicate du
 
 ## Section 3: Distributing Materials
 
-(1) The Windows client distributes materials by sending a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`), as specified in `API Contract.md` §3.4, to the Android device(s) which are the intended recipients.
+(1) When the Windows client initiates material distribution to one or more devices, it shall —
 
-(2) The Android client must, on receipt of the message specified in (1), call `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5, to retrieve the distribution bundle (materials and questions).
+    (a) For each target device, create a distribution batch associating a unique batch identifier with the materials to be distributed.
+
+    (b) Send a TCP `DISTRIBUTE_MATERIAL` message (opcode `0x05`) to each target device, with the `batchId` as the operand, as specified in `API Contract.md` §3.4.
+
+(2) The Android client must, on receipt of the message specified in (1)(b), call `GET /distribution/{batchId}` as specified in `API Contract.md` §2.5, to retrieve the distribution bundle (materials and questions).
 
 (3) For each material received in the distribution bundle, the Android client creates a separate `SessionEntity` in the `RECEIVED` state, associating that device with that material.
 
 (4) The Windows client must provide a REST API endpoint which:
 
-    (i) Takes a DeviceId as an input.
-    (ii) Returns, if any, material entities and their related questions.
+    (i) Takes a batchId as an input.
+
+    (ii) Returns, if any, material entities and their related questions associated with that batch.
 
 This is specified in `API Contract.md` §2.5.
 
-(5) The Android client must, on successful receipt of materials from the REST API end point defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message as defined in `API Contract.md` §3.6.
+(5) The Android client must, on successful receipt of materials from the REST API endpoint defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message with the `batchId` as the operand, as defined in `API Contract.md` §3.6.
 
-(6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message, it shall indicate to the user (teacher) that the distribution to that specific device has failed.
+(6) Upon receipt of a `DISTRIBUTE_ACK` message, the Windows client shall deem the corresponding distribution batch as delivered.
+
+(7) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message —
+
+    (a) The Windows client shall deem the corresponding distribution batch as timed out.
+
+    (b) The Windows client shall indicate to the user (teacher) that the distribution to that specific device has failed, identifying the specific materials in the batch.
 
 ## Section 4: Submitting a Response
 
@@ -129,12 +140,28 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 ## Section 7: Returning Feedback
 
-(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x07`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
+(1) When the Windows client initiates feedback delivery to a device, it shall —
 
-(2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
+    (a) Create a feedback batch associating a unique batch identifier with the feedback items to be delivered.
+
+    (b) Send a TCP `RETURN_FEEDBACK` message (opcode `0x07`) to the target device, with the `batchId` as the operand, as specified in `API Contract.md` §3.4.
+
+(2) The Android client must, on receipt of the message specified in (1)(b), call `GET /feedback/{batchId}` as specified in `API Contract.md` §2.6, to retrieve all feedback in that batch.
 
 (3) For each feedback received from the endpoint in (2), the Android client must create a separate `FeedbackEntity`.
 
-(4) The Android client must, on successful receipt of feedback from the REST API endpoint defined in (2), send a TCP `FEEDBACK_ACK` (0x13) message, as defined in `API Contract.md` §3.6, to the Windows client.
+(4) The Android client must, on successful receipt of feedback from the REST API endpoint defined in (2), send a TCP `FEEDBACK_ACK` (0x13) message with the `batchId` as the operand, as defined in `API Contract.md` §3.6, to the Windows client.
 
-(5) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message from a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message, it shall indicate to the user (teacher) that it has failed to return feedback to that specific device.
+(5) Upon receipt of a `FEEDBACK_ACK` message, the Windows client shall —
+
+    (a) Deem the corresponding feedback batch as delivered.
+
+    (b) Transition all `FeedbackEntity` items in that batch from `READY` to `DELIVERED` status.
+
+(6) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message from a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message —
+
+    (a) The Windows client shall deem the corresponding feedback batch as timed out.
+
+    (b) The Windows client shall indicate to the user (teacher) that it has failed to return feedback to that specific device.
+
+    (c) The Windows client shall notify the frontend of each failed feedback item, enabling the frontend to provide retry options.
