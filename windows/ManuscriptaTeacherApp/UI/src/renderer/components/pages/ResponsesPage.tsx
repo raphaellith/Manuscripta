@@ -205,37 +205,27 @@ export const ResponsesPage: React.FC = () => {
 
     // Derived data - materials with responses per §6(4)(a)
     const materialsWithResponses = useMemo(() => {
-        const materialIds = new Set(responses.map(r => {
-            // Need to find question to get materialId
-            const allMaterials: MaterialEntity[] = [];
-            unitCollections.forEach(uc => {
-                getUnitsForCollection(uc.id).forEach(u => {
-                    getLessonsForUnit(u.id).forEach(l => {
-                        getMaterialsForLesson(l.id).forEach(m => allMaterials.push(m));
-                    });
-                });
-            });
-            // Find which material contains this response's question
-            for (const m of allMaterials) {
-                const questions = getQuestionsForMaterial(m.id);
-                if (questions.some(q => q.id === r.questionId)) {
-                    return m.id;
-                }
-            }
-            return null;
-        }).filter(Boolean));
+        // Build a set of question IDs that have at least one response
+        const responseQuestionIds = new Set(responses.map(r => r.questionId));
 
-        const allMaterials: MaterialEntity[] = [];
+        const materialsWithAnyResponse: MaterialEntity[] = [];
+
+        // Traverse the content hierarchy once and collect materials
+        // that contain at least one question with a response.
         unitCollections.forEach(uc => {
             getUnitsForCollection(uc.id).forEach(u => {
                 getLessonsForUnit(u.id).forEach(l => {
                     getMaterialsForLesson(l.id).forEach(m => {
-                        if (materialIds.has(m.id)) allMaterials.push(m);
+                        const questions = getQuestionsForMaterial(m.id);
+                        if (questions.some(q => responseQuestionIds.has(q.id))) {
+                            materialsWithAnyResponse.push(m);
+                        }
                     });
                 });
             });
         });
-        return allMaterials;
+
+        return materialsWithAnyResponse;
     }, [responses, unitCollections, getUnitsForCollection, getLessonsForUnit, getMaterialsForLesson, getQuestionsForMaterial]);
 
     // Devices with responses per §6(6)(a)
