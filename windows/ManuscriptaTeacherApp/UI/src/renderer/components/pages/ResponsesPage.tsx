@@ -72,6 +72,9 @@ const FeedbackInput: React.FC<{
     const [marks, setMarks] = useState<string>(feedback?.marks?.toString() ?? '');
     const [text, setText] = useState<string>(feedback?.text ?? '');
 
+    // Per §6A(7)(b)(i): Only PROVISIONAL feedback can be edited
+    const isEditable = !feedback || feedback.status === 'PROVISIONAL';
+
     const debouncedMarks = useDebounce(marks, 1000);
     const debouncedText = useDebounce(text, 1000);
     const lastSavedRef = useRef({ marks: feedback?.marks?.toString() ?? '', text: feedback?.text ?? '' });
@@ -98,12 +101,13 @@ const FeedbackInput: React.FC<{
                         min={0}
                         max={maxScore}
                         value={marks}
+                        disabled={!isEditable}
                         onChange={(e) => {
                             const val = e.target.value;
                             if (maxScore && val !== '' && parseInt(val) > maxScore) return; // Prevent exceeding maxScore
                             setMarks(val);
                         }}
-                        className={`w-20 p-2 text-sm border rounded focus:ring-1 outline-none ${maxScore && marks && parseInt(marks) > maxScore
+                        className={`w-20 p-2 text-sm border rounded focus:ring-1 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed ${maxScore && marks && parseInt(marks) > maxScore
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500 text-red-600'
                             : 'border-gray-300 focus:border-brand-orange focus:ring-brand-orange'
                             }`}
@@ -122,9 +126,10 @@ const FeedbackInput: React.FC<{
                 <label className="text-sm font-medium text-gray-600 block mb-1">Feedback:</label>
                 <textarea
                     value={text}
+                    disabled={!isEditable}
                     onChange={(e) => setText(e.target.value)}
                     rows={2}
-                    className="w-full p-2 text-sm border border-gray-300 rounded focus:border-brand-orange focus:ring-1 focus:ring-brand-orange outline-none resize-none"
+                    className="w-full p-2 text-sm border border-gray-300 rounded focus:border-brand-orange focus:ring-1 focus:ring-brand-orange outline-none resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     placeholder="Add feedback comment..."
                 />
             </div>
