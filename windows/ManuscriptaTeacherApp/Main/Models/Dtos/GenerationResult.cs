@@ -13,4 +13,10 @@ public class GenerationResult
     /// Optional. A list of validation issues that could not be automatically resolved.
     /// </summary>
     public List<ValidationWarning>? Warnings { get; set; }
+
+    /// <summary>
+    /// Optional. A list of UUIDs for QuestionEntity objects created during worksheet generation.
+    /// See AdditionalValidationRules.md §3AC(2)(b).
+    /// </summary>
+    public List<Guid>? CreatedQuestionIds { get; set; }
 }

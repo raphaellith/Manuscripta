@@ -75,6 +75,7 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<Feedba
 builder.Services.AddSingleton<FeedbackQueueService>();
 builder.Services.AddScoped<EmbeddingStatusService>();
 builder.Services.AddScoped<OutputValidationService>();
+builder.Services.AddScoped<QuestionExtractionService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
