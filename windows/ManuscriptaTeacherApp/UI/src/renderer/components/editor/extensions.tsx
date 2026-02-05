@@ -89,9 +89,13 @@ export const AttachmentImage = Node.create({
                 // Check if selection is at/near an image node
                 const { state } = this.editor;
                 const { selection } = state;
-                const node = state.doc.nodeAt(selection.from - 1);
-                if (node?.type.name === 'image') {
-                    return true; // Prevent default behavior
+                const pos = selection.from - 1;
+                // Bounds check to prevent Position -1 error
+                if (pos >= 0) {
+                    const node = state.doc.nodeAt(pos);
+                    if (node?.type.name === 'image') {
+                        return true; // Prevent default behavior
+                    }
                 }
                 return false;
             },
@@ -271,13 +275,14 @@ interface QuestionRefAttrs {
     questionType?: 'MULTIPLE_CHOICE' | 'WRITTEN_ANSWER';
     options?: string[];
     correctAnswer?: number | string;
+    markScheme?: string;
     maxScore?: number;
     materialType?: 'READING' | 'WORKSHEET' | 'POLL';
 }
 
 const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
     const attrs = node.attrs as QuestionRefAttrs;
-    const { id, questionText, questionType, options, correctAnswer, maxScore, materialType } = attrs;
+    const { id, questionText, questionType, options, correctAnswer, markScheme, maxScore, materialType } = attrs;
 
     const handleEdit = () => {
         window.dispatchEvent(new CustomEvent('question-edit', {
@@ -382,6 +387,14 @@ const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => 
                     <p className="text-sm text-blue-800">{correctAnswer}</p>
                 </div>
             )}
+
+            {/* Mark scheme for AI-marking */}
+            {questionType === 'WRITTEN_ANSWER' && markScheme && (
+                <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded">
+                    <p className="text-xs text-purple-600 font-medium mb-1">Mark Scheme (AI-marking):</p>
+                    <p className="text-sm text-purple-800 whitespace-pre-wrap">{markScheme}</p>
+                </div>
+            )}
         </NodeViewWrapper>
     );
 };
@@ -401,6 +414,7 @@ export const QuestionRef = Node.create({
             questionType: { default: 'MULTIPLE_CHOICE' },
             options: { default: [] },
             correctAnswer: { default: null },
+            markScheme: { default: null },
             maxScore: { default: 1 },
             materialType: { default: 'WORKSHEET' },
         };
@@ -676,9 +690,13 @@ export const PdfEmbed = Node.create({
             Backspace: () => {
                 const { state } = this.editor;
                 const { selection } = state;
-                const node = state.doc.nodeAt(selection.from - 1);
-                if (node?.type.name === 'pdfEmbed') {
-                    return true; // Prevent default behavior
+                const pos = selection.from - 1;
+                // Bounds check to prevent Position -1 error
+                if (pos >= 0) {
+                    const node = state.doc.nodeAt(pos);
+                    if (node?.type.name === 'pdfEmbed') {
+                        return true; // Prevent default behavior
+                    }
                 }
                 return false;
             },

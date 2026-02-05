@@ -45,10 +45,17 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
         typeof question?.correctAnswer === 'string' ? question.correctAnswer : ''
     );
     const [maxScore, setMaxScore] = useState<number>(question?.maxScore || 1);
-    // Auto-marking toggle for written answer questions
-    const [autoMarking, setAutoMarking] = useState<boolean>(
-        typeof question?.correctAnswer === 'string' && question.correctAnswer.length > 0
-    );
+
+    // Marking method for written answer per s4C(2A)(c)
+    // 'none' = no auto-marking, 'exact' = exact match, 'ai' = AI-marking
+    type MarkingMethod = 'none' | 'exact' | 'ai';
+    const getInitialMarkingMethod = (): MarkingMethod => {
+        if (question?.markScheme) return 'ai';
+        if (typeof question?.correctAnswer === 'string' && question.correctAnswer.length > 0) return 'exact';
+        return 'none';
+    };
+    const [markingMethod, setMarkingMethod] = useState<MarkingMethod>(getInitialMarkingMethod());
+    const [markScheme, setMarkScheme] = useState<string>(question?.markScheme || '');
 
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -64,7 +71,15 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
             setCorrectAnswerIndex(typeof question?.correctAnswer === 'number' ? question.correctAnswer : -1);
             setCorrectAnswer(typeof question?.correctAnswer === 'string' ? question.correctAnswer : '');
             setMaxScore(question?.maxScore || 1);
-            setAutoMarking(typeof question?.correctAnswer === 'string' && question.correctAnswer.length > 0);
+            // Determine initial marking method
+            if (question?.markScheme) {
+                setMarkingMethod('ai');
+            } else if (typeof question?.correctAnswer === 'string' && question.correctAnswer.length > 0) {
+                setMarkingMethod('exact');
+            } else {
+                setMarkingMethod('none');
+            }
+            setMarkScheme(question?.markScheme || '');
             setHasChanges(false);
             setError(null);
         }
@@ -80,18 +95,22 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
             const originalWrittenCorrectAnswer = typeof question?.correctAnswer === 'string'
                 ? question.correctAnswer
                 : '';
+            const originalMarkScheme = question?.markScheme || '';
 
             const changed =
                 questionText !== question?.questionText ||
                 JSON.stringify(options) !== JSON.stringify(question?.options) ||
                 (questionType === 'MULTIPLE_CHOICE' && correctAnswerIndex !== originalMcCorrectAnswer) ||
-                (questionType === 'WRITTEN_ANSWER' && correctAnswer !== originalWrittenCorrectAnswer) ||
+                (questionType === 'WRITTEN_ANSWER' && (
+                    correctAnswer !== originalWrittenCorrectAnswer ||
+                    markScheme !== originalMarkScheme
+                )) ||
                 maxScore !== question?.maxScore;
             setHasChanges(changed);
         } else {
             setHasChanges(true); // New question always has "changes"
         }
-    }, [questionText, options, correctAnswerIndex, correctAnswer, maxScore, questionType, question, isEditing]);
+    }, [questionText, options, correctAnswerIndex, correctAnswer, markScheme, maxScore, questionType, question, isEditing]);
 
     // Validation per s4C(3)(b1)(ii)
     const isValid = useCallback(() => {
@@ -161,10 +180,18 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
                 mappedCorrectIndex = entryIndex >= 0 ? entryIndex : undefined;
             }
 
-            // For written answer, only include correctAnswer if autoMarking is enabled
-            const writtenCorrectAnswer = autoMarking && correctAnswer.trim()
-                ? correctAnswer.trim()
-                : undefined;
+            // For written answer per s4C(2A)(c)
+            // - 'exact' mode: store correctAnswer
+            // - 'ai' mode: store markScheme (correctAnswer should be undefined per s2E(2)(b))
+            // - 'none' mode: no auto-marking
+            let writtenCorrectAnswer: string | undefined = undefined;
+            let writtenMarkScheme: string | undefined = undefined;
+
+            if (markingMethod === 'exact' && correctAnswer.trim()) {
+                writtenCorrectAnswer = correctAnswer.trim();
+            } else if (markingMethod === 'ai' && markScheme.trim()) {
+                writtenMarkScheme = markScheme.trim();
+            }
 
             const questionEntity: QuestionEntity = {
                 id: question?.id || generateTempId(),
@@ -176,6 +203,7 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
                     ? mappedCorrectIndex
                     : writtenCorrectAnswer,
                 maxScore: maxScore > 0 ? maxScore : 1,
+                markScheme: questionType === 'WRITTEN_ANSWER' ? writtenMarkScheme : undefined,
             };
 
             await onSave(questionEntity);
@@ -324,43 +352,100 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
                         </div>
                     )}
 
-                    {/* Written Answer */}
+                    {/* Written Answer - per s4C(2A)(c) */}
                     {questionType === 'WRITTEN_ANSWER' && (
-                        <div className="space-y-3">
-                            {/* Auto-marking toggle */}
-                            <div className="flex items-center gap-3">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={autoMarking}
-                                        onChange={(e) => setAutoMarking(e.target.checked)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-orange"></div>
+                        <div className="space-y-4">
+                            {/* Marking Method Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Auto-marking Method
                                 </label>
-                                <span className="text-sm font-medium text-gray-700">
-                                    Enable Auto-marking
-                                </span>
-                            </div>
-                            <p className="text-xs text-gray-500">
-                                {autoMarking
-                                    ? 'Responses will be automatically evaluated against the correct answer.'
-                                    : 'Responses will require manual grading.'}
-                            </p>
+                                <div className="space-y-2">
+                                    {/* No auto-marking */}
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="markingMethod"
+                                            checked={markingMethod === 'none'}
+                                            onChange={() => setMarkingMethod('none')}
+                                            className="text-brand-orange"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700">Manual Grading</span>
+                                            <p className="text-xs text-gray-500">Responses will require manual evaluation by the teacher.</p>
+                                        </div>
+                                    </label>
 
-                            {/* Correct Answer field - only shown when auto-marking is enabled */}
-                            {autoMarking && (
+                                    {/* Exact match - per s4C(2A)(c)(i) */}
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="markingMethod"
+                                            checked={markingMethod === 'exact'}
+                                            onChange={() => setMarkingMethod('exact')}
+                                            className="text-brand-orange"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700">Exact Match</span>
+                                            <p className="text-xs text-gray-500">Evaluated by the student tablet against an expected answer.</p>
+                                        </div>
+                                    </label>
+
+                                    {/* AI-marking - per s4C(2A)(c)(ii) */}
+                                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="markingMethod"
+                                            checked={markingMethod === 'ai'}
+                                            onChange={() => setMarkingMethod('ai')}
+                                            className="text-brand-orange"
+                                        />
+                                        <div className="flex-1">
+                                            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                                AI-Marking
+                                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">✨ AI</span>
+                                            </span>
+                                            <p className="text-xs text-gray-500">Evaluated by the AI using a mark scheme you provide.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Exact Match Answer Field - per s4C(2A)(c)(i) */}
+                            {markingMethod === 'exact' && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Correct Answer
+                                        Expected Answer
                                     </label>
                                     <textarea
                                         value={correctAnswer}
                                         onChange={(e) => setCorrectAnswer(e.target.value)}
-                                        placeholder="Enter the correct answer for auto-marking..."
+                                        placeholder="Enter the exact answer that will be compared against student responses..."
                                         rows={3}
                                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-orange"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Student responses will be compared against this answer on their tablet.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* AI-Marking Mark Scheme Field - per s4C(2A)(c)(ii) */}
+                            {markingMethod === 'ai' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Mark Scheme
+                                    </label>
+                                    <textarea
+                                        value={markScheme}
+                                        onChange={(e) => setMarkScheme(e.target.value)}
+                                        placeholder="Describe how the AI should evaluate responses. Include criteria for full marks, partial marks, etc..."
+                                        rows={4}
+                                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        The AI will use this mark scheme to evaluate and score student responses.
+                                    </p>
                                 </div>
                             )}
                         </div>

@@ -13,6 +13,7 @@ public record InternalCreateQuestionDto(
     List<string>? Options = null,           // Required for MULTIPLE_CHOICE
     int? CorrectAnswerIndex = null,         // For MULTIPLE_CHOICE (null = auto-marking disabled)
     string? CorrectAnswer = null,           // For WRITTEN_ANSWER (null = auto-marking disabled)
+    string? MarkScheme = null,              // Per §2E(1)(a) - for AI-marking
     int? MaxScore = null);
 
 /// <summary>
@@ -27,4 +28,5 @@ public record InternalUpdateQuestionDto(
     List<string>? Options = null,
     int? CorrectAnswerIndex = null,         // For MULTIPLE_CHOICE (null = auto-marking disabled)
     string? CorrectAnswer = null,           // For WRITTEN_ANSWER (null = auto-marking disabled)
+    string? MarkScheme = null,              // Per §2E(1)(a) - for AI-marking
     int? MaxScore = null);

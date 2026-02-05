@@ -56,4 +56,38 @@ public class WrittenAnswerQuestionEntityTests
         // Assert
         Assert.Equal(string.Empty, entity.CorrectAnswer);
     }
+
+    [Fact]
+    public void Constructor_WithMarkScheme_CreatesEntity()
+    {
+        // Per AdditionalValidationRules §2E(1)(a): MarkScheme for AI-marking
+        // Arrange
+        var id = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var markScheme = "Award 1 mark for correct answer, 0.5 marks for partial.";
+
+        // Act
+        var entity = new WrittenAnswerQuestionEntity(id, materialId, "Question?", null, markScheme);
+
+        // Assert
+        Assert.Null(entity.CorrectAnswer);  // CorrectAnswer should be null when using MarkScheme
+        Assert.Equal(markScheme, entity.MarkScheme);
+    }
+
+    [Fact]
+    public void Constructor_WithMaxScoreAndMarkScheme_CreatesEntity()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var markScheme = "Full marks for comprehensive answer.";
+        var maxScore = 5;
+
+        // Act
+        var entity = new WrittenAnswerQuestionEntity(id, materialId, "Question?", null, markScheme, maxScore);
+
+        // Assert
+        Assert.Equal(markScheme, entity.MarkScheme);
+        Assert.Equal(maxScore, entity.MaxScore);
+    }
 }

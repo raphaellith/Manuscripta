@@ -431,4 +431,81 @@ public class QuestionServiceTests
         Assert.Equal("DeleteResponses", callOrder[0]);
         Assert.Equal("DeleteQuestion", callOrder[1]);
     }
+
+    [Fact]
+    public async Task CreateQuestionAsync_WrittenAnswerWithBothMarkSchemeAndCorrectAnswer_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2E(2)(b): Cannot have both MarkScheme and CorrectAnswer
+        var materialId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Worksheet", "Content");
+        var question = new WrittenAnswerQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "Question?",
+            "Correct Answer",     // Has CorrectAnswer
+            "Mark Scheme Text"    // Also has MarkScheme - should fail
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateQuestionAsync(question));
+        Assert.Contains("MarkScheme", exception.Message);
+        Assert.Contains("CorrectAnswer", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateQuestionAsync_WrittenAnswerWithMarkSchemeOnly_Success()
+    {
+        // Arrange - Having only MarkScheme (no CorrectAnswer) is valid per §2E(2)(b)
+        var materialId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Worksheet", "Content");
+        var question = new WrittenAnswerQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "Question?",
+            null,                 // No CorrectAnswer
+            "Mark Scheme Text"    // Only MarkScheme
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.AddAsync(It.IsAny<QuestionEntity>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateQuestionAsync(question);
+
+        // Assert
+        Assert.NotNull(result);
+        _mockQuestionRepo.Verify(r => r.AddAsync(question), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_WrittenAnswerWithBothMarkSchemeAndCorrectAnswer_ThrowsInvalidOperationException()
+    {
+        // Arrange - Rule 2E(2)(b): Cannot have both MarkScheme and CorrectAnswer
+        var materialId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(materialId, _testLessonId, "Worksheet", "Content");
+        var question = new WrittenAnswerQuestionEntity(
+            Guid.NewGuid(),
+            materialId,
+            "Question?",
+            "Correct Answer",     // Has CorrectAnswer
+            "Mark Scheme Text"    // Also has MarkScheme - should fail
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(question.Id))
+            .ReturnsAsync(question);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateQuestionAsync(question));
+        Assert.Contains("MarkScheme", exception.Message);
+        Assert.Contains("CorrectAnswer", exception.Message);
+    }
 }

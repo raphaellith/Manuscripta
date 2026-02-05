@@ -70,6 +70,8 @@ public class QuestionService : IQuestionService
     /// Validates a question according to business rules:
     /// - 2B(3)(a): Questions must reference a Material which is not a reading material
     /// - 2B(3)(b): Written Questions must not be associated with Polls and Quizzes
+    /// - 2E(2)(a): MULTIPLE_CHOICE questions must not have MarkScheme
+    /// - 2E(2)(b): Cannot have both MarkScheme and CorrectAnswer simultaneously
     /// </summary>
     private async Task ValidateQuestionAsync(QuestionEntity question)
     {
@@ -85,10 +87,14 @@ public class QuestionService : IQuestionService
             throw new InvalidOperationException("Questions cannot be associated with reading materials.");
 
         // Rule 2B(3)(b): Written Questions must not be associated with Polls
-        if (question is WrittenAnswerQuestionEntity)
+        if (question is WrittenAnswerQuestionEntity wa)
         {
             if (material.MaterialType == MaterialType.POLL)
                 throw new InvalidOperationException("Written answer questions cannot be associated with polls.");
+
+            // Rule 2E(2)(b): Cannot have both MarkScheme and CorrectAnswer simultaneously
+            if (!string.IsNullOrEmpty(wa.MarkScheme) && !string.IsNullOrEmpty(wa.CorrectAnswer))
+                throw new InvalidOperationException("Question cannot have both MarkScheme and CorrectAnswer.");
         }
     }
 
