@@ -477,28 +477,29 @@ sequenceDiagram
 
 ## Appendix C — Material Encoding Reference for LLM Prompts
 
-The following condensed reference shall be included in material generation prompts:
+The following condensed reference shall be included in material generation prompts. Only include the "Questions" section in a prompt when generating worksheets.
 
 ---
 
-**Markdown Syntax Supported:**
-- Headers: `#`, `##`, `###` (max H3)
-- Bold: `**text**`, Italic: `*text*`
-- Lists: `- item` or `1. item`
+**Markdown syntax supported:**
+- H1 to H3 headers: `#`, `##`, `###`
+- Avoid using H4 headers.
+- Bold text: `**text**`
+- Italic text: `*text*`
+- Unordered lists: `- item`
+- Ordered lists: `1. item`
 - Tables: `| col | col |` with `|---|---|` separator
-- LaTeX: `$inline$` or `$$block$$`
-- Code blocks: triple backticks with optional language
+- LaTeX: `$inline mode$` or `$$display mode$$`
+- Code blocks: triple backticks with optional language identifier
 - Blockquotes: `> text`
 
-**Custom Markers:**
+**Custom markers:**
 - Centred text: `!!! center` followed by indented content
 - PDF embed: `!!! pdf id="uuid"` (do not generate; attachments pre-exist)
 - Question embed: `!!! question id="uuid"` (do not generate; use question-draft)
 
-**Question Drafts (worksheets only):**
-Questions must be one of exactly two types: `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist.
-
-For worksheets, embed questions inline using:
+**Questions:**
+Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content.
 
 ```
 !!! question-draft type="MULTIPLE_CHOICE"
@@ -520,14 +521,10 @@ For worksheets, embed questions inline using:
     max_score: 4
 ```
 
-**Correct Answers vs Mark Schemes (WRITTEN_ANSWER only):**
-- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Short, factual answers only.
+For questions of type `WRITTEN_ANSWER`, optionally include at most one of the attributes `correct_answer` and `mark_scheme`. Never include both attributes in the same question. If neither attributes are included, the question requires manual marking.
+- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Only include short factual answers.
 - `mark_scheme`: Use for open-ended questions requiring judgement (e.g., "Explain why..."). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
-- Use one or the other, never both. If omitted, the question requires manual marking.
 
-**Multiple Choice:**
-- `correct`: 0-based index of the correct option. If omitted, no auto-marking occurs.
-
-Place questions at natural break points after relevant content.
+For questions of type `MULTIPLE_CHOICE`, optionally include the attribute `correct`, which stores the zero-based index of the correct option. If this attribute is not included, the question will not be auto-marked.
 
 ---

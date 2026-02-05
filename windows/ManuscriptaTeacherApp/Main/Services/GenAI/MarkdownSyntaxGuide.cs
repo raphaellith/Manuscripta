@@ -11,72 +11,58 @@ public static class MarkdownSyntaxGuide
     /// <param name="includeQuestionSyntax">If true, includes the question embedding syntax guide.</param>
     public static string Get(bool includeQuestionSyntax = false)
     {
-        var baseGuide = @"Prefix Level 1 headers with one octothorpe (`#`). Example:
-# Header
+        var baseGuide = @"
+**Markdown syntax supported:**
+- H1 to H3 headers: `#`, `##`, `###`
+- Avoid using H4 headers.
+- Bold text: `**text**`
+- Italic text: `*text*`
+- Unordered lists: `- item`
+- Ordered lists: `1. item`
+- Tables: `| col | col |` with `|---|---|` separator
+- LaTeX: `$inline mode$` or `$$display mode$$`
+- Code blocks: triple backticks with optional language identifier
+- Blockquotes: `> text`
 
-Prefix Level 2 headers with two octothorpes (`##`). Example:
-## Header
-
-Prefix Level 3 headers with three octothorpes (`###`). Example:
-### Header
-
-Avoid using headers of level 4 or above.
-
-Format text in bold by adding two asterisks (or two underscores) before and after the text. Example:
-**text**
-__text__
-
-Format text in italics by adding one asterisk (or one underscore) before and after the text. Example:
-*text*
-_text_
-
-Prefix each item of an unordered list with one hyphen (or one asterisk). Example:
-- item
-* item
-
-Prefix each item of an ordered list with sequential numbering. Example:
-1. item
-2. item
-
-Format tables with GitHub-flavoured Markdown syntax. Separate headers and data rows with pipes ('|'). Follow the header row with a separator row of dashes (`---`). Specify column alignment using colons in the separator row, with `:---` for left alignment, `:---:` for centre alignment, and `---:` for right alignment.
-
-Format mathematical LaTeX expressions in inline mode by adding one dollar sign (`$`) before and after the expression. Example:
-$x$
-
-Format mathematical LaTeX expressions in display mode by adding two dollar signs (`$$`) before and after the expression. Example:
-$$x$$
-
-Format preformatted code blocks by adding three backticks before and after the block. Example:
-```language
-code content
-```
-The language identifier (e.g., `python`, `javascript`) is optional and may be used for syntax highlighting.
-
-Prefix each line of a blockquote with one greater-than symbol (`>`).
-
-Insert horizontal rules with a line containing three or more hyphens (`---`).
-
-Embed images using the syntax
-![alt text](/attachments/{{attachment-uuid}})
-where {{attachment-uuid}} is the UUID of the attachment.
-
-Embed PDF documents using the syntax
-!!! pdf id=""{{pdf-attachment-uuid}}""
-where {{pdf-attachment-uuid}} is the UUID of the document.
-
-Centre text using the following syntax.
-```
-!!! center
-    This text will be centred.
-```";
+**Custom markers:**
+- Centred text: `!!! center` followed by indented content
+- PDF embed: `!!! pdf id""uuid""` (do not generate; attachments pre-exist)
+- Question embed: `!!! question id=""uuid""` (do not generate; use question-draft)
+";
 
         if (includeQuestionSyntax)
         {
             baseGuide += @"
 
-Embed questions using the syntax
-!!! question id=""{{question-uuid}}""
-where {{question-uuid}} is the UUID of the question.";
+**Questions:**
+Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content.
+
+```
+!!! question-draft type=""MULTIPLE_CHOICE""
+    text: ""Question text""
+    options:
+      - ""Option A""
+      - ""Option B""
+    correct: 0
+    max_score: 1
+
+!!! question-draft type=""WRITTEN_ANSWER""
+    text: ""Question text""
+    correct_answer: ""exact expected answer""
+    max_score: 2
+
+!!! question-draft type=""WRITTEN_ANSWER""
+    text: ""Question text""
+    mark_scheme: ""Marking criteria for AI grading""
+    max_score: 4
+```
+
+For questions of type `WRITTEN_ANSWER`, optionally include at most one of the attributes `correct_answer` and `mark_scheme`. Never include both attributes in the same question. If neither attributes are included, the question requires manual marking.
+- `correct_answer`: Use for questions with a single exact expected answer (e.g., ""What is 2+2?"" → ""4""). The student device auto-marks by exact match. Only include short factual answers.
+- `mark_scheme`: Use for open-ended questions requiring judgement (e.g., ""Explain why...""). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
+
+For questions of type `MULTIPLE_CHOICE`, optionally include the attribute `correct`, which stores the zero-based index of the correct option. If this attribute is not included, the question will not be auto-marked.
+";
         }
 
         return baseGuide;
