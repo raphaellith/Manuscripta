@@ -141,7 +141,12 @@ Avoid American English.
 
 
 MARKDOWN SYNTAX:
+
+---
+
 {markdownSyntaxGuide}
+
+---
 
 
 SOURCE DOCUMENT CONTEXT:
