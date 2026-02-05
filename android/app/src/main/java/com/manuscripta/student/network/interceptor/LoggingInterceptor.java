@@ -56,21 +56,21 @@ public class LoggingInterceptor implements Interceptor {
         // Log request details
         logRequest(request);
 
-        // Execute request and measure time
-        long startTime = System.currentTimeMillis();
+        // Execute request and measure time using monotonic clock
+        long startNs = System.nanoTime();
         Response response;
         try {
             response = chain.proceed(request);
         } catch (IOException e) {
-            long duration = System.currentTimeMillis() - startTime;
+            long durationMs = (System.nanoTime() - startNs) / 1_000_000L;
             Log.e(TAG, String.format("Request failed after %dms: %s %s - %s",
-                    duration, request.method(), request.url(), e.getMessage()));
+                    durationMs, request.method(), request.url(), e.getMessage()));
             throw e;
         }
-        long duration = System.currentTimeMillis() - startTime;
+        long durationMs = (System.nanoTime() - startNs) / 1_000_000L;
 
-        // Log response details and return reconstructed response
-        return logResponse(response, duration);
+        // Log response details
+        return logResponse(response, durationMs);
     }
 
     /**
@@ -96,7 +96,9 @@ public class LoggingInterceptor implements Interceptor {
         if (request.body() != null) {
             try {
                 long contentLength = request.body().contentLength();
-                if (contentLength > MAX_BODY_SIZE) {
+                if (contentLength < 0) {
+                    Log.d(TAG, "│ Body: <unknown length, skipped>");
+                } else if (contentLength > MAX_BODY_SIZE) {
                     Log.d(TAG, String.format("│ Body: <too large to log: %d bytes>", contentLength));
                 } else {
                     Buffer buffer = new Buffer();
@@ -113,11 +115,12 @@ public class LoggingInterceptor implements Interceptor {
 
     /**
      * Logs response details including status code, headers, body, and duration.
-     * Sensitive headers are redacted for security.
+     * Sensitive headers are redacted for security. The response body is logged via
+     * {@code peekBody} so that the original body remains intact and readable by callers.
      *
      * @param response The HTTP response
      * @param duration Request duration in milliseconds
-     * @return Response with reconstructed body (if body was logged)
+     * @return The original response with its body left unread
      */
     @NonNull
     private Response logResponse(@NonNull Response response, long duration) {

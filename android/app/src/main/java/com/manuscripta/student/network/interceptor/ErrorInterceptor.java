@@ -14,9 +14,10 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * OkHttp interceptor that provides standardized error handling.
+ * OkHttp interceptor that provides standardized error logging.
  * Logs HTTP errors (4xx and 5xx status codes) with detailed information
- * to help debug API communication issues.
+ * to help debug API communication issues. Error response bodies are logged
+ * only in debug builds to avoid leaking sensitive data in production.
  */
 public class ErrorInterceptor implements Interceptor {
 
