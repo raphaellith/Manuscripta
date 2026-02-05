@@ -142,9 +142,7 @@ For a description of how these server methods and client handlers are expected t
         
         (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
 
-    (c) Handlers for feedback dispatch notifications.
-
-        (i) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
+    (c) [DELETED]
 
     (d) Handlers for retrieving AI assistant responses. **To be confirmed.**
 
