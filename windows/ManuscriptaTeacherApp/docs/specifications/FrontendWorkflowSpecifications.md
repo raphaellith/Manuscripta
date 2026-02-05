@@ -274,7 +274,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (7) [DELETED]
 
-*Explanatory note: See Sections 5A-5D for detailed specifications regarding the Classroom tab.*
+[Explanatory note: See Sections 5A-5D for detailed specifications regarding the Classroom tab.]
 
 ## Section 5A — Device Pairing
 
@@ -479,7 +479,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) for each response to a question without a  `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback , automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
 
-        (v) means to add the marks and feedbacks under the feedback entities to the dispatch queue, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
+        (v) means to add the marks and feedbacks under the feedback entities for dispatch, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
 
         (vi) an indicator if a response's feedback has status `READY` but not yet `DELIVERED` (per AdditionalValidationRules §3AE).
 
@@ -513,7 +513,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) for a response to a question without a `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback, automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
 
-        (v) means to add the mark and feedback under the feedback entity to the dispatch queue, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
+        (v) means to add the mark and feedback under the feedback entity for dispatch, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
 
         (vi) an indicator if a response's feedback has status `READY` but not yet `DELIVERED` (per AdditionalValidationRules §3AE);
 
