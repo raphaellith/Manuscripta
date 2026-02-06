@@ -3,6 +3,7 @@ package com.manuscripta.student.di;
 import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
@@ -67,17 +68,31 @@ public class RepositoryModule {
     }
 
     /**
+     * Provides the QuestionDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return QuestionDao instance
+     */
+    @Provides
+    @Singleton
+    public QuestionDao provideQuestionDao(ManuscriptaDatabase database) {
+        return database.questionDao();
+    }
+
+    /**
      * Provides the ResponseRepository implementation.
      *
      * @param responseDao The ResponseDao instance
+     * @param questionDao The QuestionDao instance for materialId lookups
      * @param apiService  The ApiService instance for network sync
      * @return ResponseRepository instance
      */
     @Provides
     @Singleton
     public ResponseRepository provideResponseRepository(ResponseDao responseDao,
+                                                         QuestionDao questionDao,
                                                          ApiService apiService) {
-        return new ResponseRepositoryImpl(responseDao, apiService);
+        return new ResponseRepositoryImpl(responseDao, questionDao, apiService);
     }
 
     /**

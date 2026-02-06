@@ -5,7 +5,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
+import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.ResponseEntity;
 import com.manuscripta.student.domain.mapper.ResponseMapper;
 import com.manuscripta.student.domain.model.Response;
@@ -72,12 +74,14 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      * Creates a new ResponseRepositoryImpl with the given DAO and API service.
      *
      * @param responseDao The DAO for response persistence
+     * @param questionDao The DAO for question lookups
      * @param apiService  The API service for network operations
      */
     @Inject
     public ResponseRepositoryImpl(@NonNull ResponseDao responseDao,
+                                   @NonNull QuestionDao questionDao,
                                    @NonNull ApiService apiService) {
-        this(responseDao, new NetworkSyncEngine(apiService));
+        this(responseDao, new NetworkSyncEngine(apiService, questionDao));
     }
 
     /**
@@ -350,17 +354,25 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         /** The API service for network operations. */
         private final ApiService apiService;
 
+        /** The DAO for question lookups to retrieve materialId. */
+        private final QuestionDao questionDao;
+
         /**
-         * Creates a NetworkSyncEngine with the given API service.
+         * Creates a NetworkSyncEngine with the given API service and question DAO.
          *
-         * @param apiService The API service for network operations
-         * @throws IllegalArgumentException if apiService is null
+         * @param apiService  The API service for network operations
+         * @param questionDao The DAO for question lookups
+         * @throws IllegalArgumentException if apiService or questionDao is null
          */
-        NetworkSyncEngine(@NonNull ApiService apiService) {
+        NetworkSyncEngine(@NonNull ApiService apiService, @NonNull QuestionDao questionDao) {
             if (apiService == null) {
                 throw new IllegalArgumentException("ApiService cannot be null");
             }
+            if (questionDao == null) {
+                throw new IllegalArgumentException("QuestionDao cannot be null");
+            }
             this.apiService = apiService;
+            this.questionDao = questionDao;
         }
 
         @Override
@@ -368,9 +380,16 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             try {
                 // Convert ResponseEntity -> Response (domain) -> ResponseDto (network)
                 Response domainResponse = ResponseMapper.toDomain(entity);
-                // MaterialId is null because ResponseEntity doesn't contain it
-                // The server can derive it from questionId if needed
-                ResponseDto dto = ResponseMapper.toDto(domainResponse, null);
+                
+                // Look up the materialId from the question
+                // Per API Contract §2.4, MaterialId should be included in the response
+                String materialId = null;
+                QuestionEntity question = questionDao.getById(entity.getQuestionId());
+                if (question != null) {
+                    materialId = question.getMaterialId();
+                }
+                
+                ResponseDto dto = ResponseMapper.toDto(domainResponse, materialId);
 
                 // Execute HTTP POST /responses
                 retrofit2.Response<Void> response = apiService.submitResponse(dto).execute();
@@ -402,7 +421,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      * Default implementation of SyncEngine.
      * Throws UnsupportedOperationException until network sync is implemented.
      *
-     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/TBD">Issue: Implement Response Network Sync</a>
+     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/202">Issue #202: Implement Response Network Sync</a>
      * @deprecated Replaced by NetworkSyncEngine. Kept for testing purposes.
      */
     @Deprecated

@@ -7,12 +7,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
-import com.manuscripta.student.data.local.SessionDao;
-import com.manuscripta.student.data.repository.SessionRepository;
-import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
+import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
+import com.manuscripta.student.data.repository.SessionRepository;
+import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
 
 import org.junit.Before;
@@ -27,6 +28,7 @@ public class RepositoryModuleTest {
     private ManuscriptaDatabase mockDatabase;
     private SessionDao mockSessionDao;
     private ResponseDao mockResponseDao;
+    private QuestionDao mockQuestionDao;
     private ApiService mockApiService;
 
     @Before
@@ -35,6 +37,7 @@ public class RepositoryModuleTest {
         mockDatabase = mock(ManuscriptaDatabase.class);
         mockSessionDao = mock(SessionDao.class);
         mockResponseDao = mock(ResponseDao.class);
+        mockQuestionDao = mock(QuestionDao.class);
         mockApiService = mock(ApiService.class);
     }
 
@@ -67,8 +70,19 @@ public class RepositoryModuleTest {
     }
 
     @Test
+    public void testProvideQuestionDao_returnsDao() {
+        when(mockDatabase.questionDao()).thenReturn(mockQuestionDao);
+
+        com.manuscripta.student.data.local.QuestionDao result = repositoryModule.provideQuestionDao(mockDatabase);
+
+        assertNotNull(result);
+        verify(mockDatabase).questionDao();
+    }
+
+    @Test
     public void testProvideResponseRepository_returnsRepository() {
-        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao, mockApiService);
+        ResponseRepository result = repositoryModule.provideResponseRepository(
+                mockResponseDao, mockQuestionDao, mockApiService);
 
         assertNotNull(result);
         assertTrue(result instanceof ResponseRepositoryImpl);
