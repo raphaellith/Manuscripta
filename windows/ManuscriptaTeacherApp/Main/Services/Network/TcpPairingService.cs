@@ -55,6 +55,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     public event EventHandler<Guid>? HandRaisedReceived;
     public event EventHandler<Guid>? DistributionTimedOut;
     public event EventHandler<Guid>? FeedbackDeliveryTimedOut;
+    public event EventHandler<IEnumerable<Guid>>? FeedbackAckReceived;
 
     public TcpPairingService(
         IOptions<NetworkSettings> settings,
@@ -295,6 +296,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _distributionAcks = new();
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _feedbackAcks = new();
+    private readonly ConcurrentDictionary<string, List<Guid>> _pendingFeedbacks = new();
 
     public async Task SendDistributeMaterialAsync(string deviceId)
     {
@@ -336,22 +338,24 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     /// Sends RETURN_FEEDBACK (0x07) to device and waits for FEEDBACK_ACK.
     /// Per Session Interaction.md §7 and API Contract.md §3.4.
     /// </summary>
-    public async Task SendReturnFeedbackAsync(string deviceId)
+    public async Task SendReturnFeedbackAsync(string deviceId, IEnumerable<Guid> feedbackIds)
     {
         var tcs = new TaskCompletionSource<bool>();
         _feedbackAcks[deviceId] = tcs;
+        _pendingFeedbacks[deviceId] = feedbackIds.ToList();
 
         try
         {
             await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
-            _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId}", deviceId);
+            _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId} for {Count} feedbacks", deviceId, _pendingFeedbacks[deviceId].Count);
 
-            // Wait for 30 seconds for ACK (similar to distribution)
+            // Wait for 30 seconds for ACK (per Session Interaction §7(5))
             var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));
 
             if (completedTask == tcs.Task && tcs.Task.Result)
             {
                 _logger.LogInformation("Received FEEDBACK_ACK for device {DeviceId}", deviceId);
+                // ACK event is fired in HandleFeedbackAck
             }
             else
             {
@@ -367,6 +371,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         finally
         {
             _feedbackAcks.TryRemove(deviceId, out _);
+            _pendingFeedbacks.TryRemove(deviceId, out _);
         }
     }
 
@@ -535,6 +540,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     /// <summary>
     /// Handles FEEDBACK_ACK (0x13) messages from Android devices.
     /// Per API Contract.md §3.6: acknowledges successful receipt of feedback via HTTP.
+    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED.
     /// </summary>
     private void HandleFeedbackAck(byte[] data)
     {
@@ -546,6 +552,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             if (_feedbackAcks.TryGetValue(deviceIdString, out var tcs))
             {
                 tcs.TrySetResult(true);
+            }
+
+            // Fire event with pending feedback IDs for status transition
+            if (_pendingFeedbacks.TryGetValue(deviceIdString, out var feedbackIds) && feedbackIds.Count > 0)
+            {
+                _logger.LogInformation("Firing FeedbackAckReceived for {Count} feedbacks from {DeviceId}", feedbackIds.Count, deviceIdString);
+                FeedbackAckReceived?.Invoke(this, feedbackIds);
             }
         }
         catch (Exception ex)

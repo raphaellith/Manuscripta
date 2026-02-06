@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.SignalR;
 using Main.Services.Network;
 using Main.Models.Events;
 using Main.Models.Entities;
+using Main.Models.Enums;
 using Main.Services.Hubs;
+using Main.Services.Repositories;
 
 namespace Main.Services;
 
@@ -15,6 +17,7 @@ public class HubEventBridge : IHostedService, IDisposable
     private readonly ITcpPairingService _tcpPairingService;
     private readonly IDeviceRegistryService _deviceRegistryService;
     private readonly IHubContext<TeacherPortalHub> _hubContext;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HubEventBridge> _logger;
     private bool _disposed;
 
@@ -22,11 +25,13 @@ public class HubEventBridge : IHostedService, IDisposable
         ITcpPairingService tcpPairingService,
         IDeviceRegistryService deviceRegistryService,
         IHubContext<TeacherPortalHub> hubContext,
+        IServiceProvider serviceProvider,
         ILogger<HubEventBridge> logger)
     {
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -41,6 +46,7 @@ public class HubEventBridge : IHostedService, IDisposable
         _tcpPairingService.ControlCommandTimedOut += OnControlCommandTimedOut;
         _tcpPairingService.DistributionTimedOut += OnDistributionTimedOut;
         _tcpPairingService.FeedbackDeliveryTimedOut += OnFeedbackDeliveryTimedOut;
+        _tcpPairingService.FeedbackAckReceived += OnFeedbackAckReceived;
 
         // Subscribe to Registry events
         _deviceRegistryService.DevicePaired += OnDevicePaired;
@@ -59,6 +65,7 @@ public class HubEventBridge : IHostedService, IDisposable
         _tcpPairingService.ControlCommandTimedOut -= OnControlCommandTimedOut;
         _tcpPairingService.DistributionTimedOut -= OnDistributionTimedOut;
         _tcpPairingService.FeedbackDeliveryTimedOut -= OnFeedbackDeliveryTimedOut;
+        _tcpPairingService.FeedbackAckReceived -= OnFeedbackAckReceived;
 
         _deviceRegistryService.DevicePaired -= OnDevicePaired;
 
@@ -153,6 +160,30 @@ public class HubEventBridge : IHostedService, IDisposable
     {
         // Per FrontendWorkflowSpecifications §5A(3)(a)
         await _hubContext.Clients.All.SendAsync("DevicePaired", e);
+    }
+
+    private void OnFeedbackAckReceived(object? sender, IEnumerable<Guid> feedbackIds)
+        => FireAndForget(() => HandleFeedbackAckReceivedAsync(feedbackIds), "FeedbackAckReceived");
+
+    /// <summary>
+    /// Handles FEEDBACK_ACK reception by transitioning feedbacks to DELIVERED.
+    /// Per GenAISpec §3DA(3).
+    /// </summary>
+    internal async Task HandleFeedbackAckReceivedAsync(IEnumerable<Guid> feedbackIds)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var feedbackRepository = scope.ServiceProvider.GetRequiredService<IFeedbackRepository>();
+
+        foreach (var feedbackId in feedbackIds)
+        {
+            var feedback = await feedbackRepository.GetByIdAsync(feedbackId);
+            if (feedback != null && feedback.Status == FeedbackStatus.READY)
+            {
+                feedback.Status = FeedbackStatus.DELIVERED;
+                await feedbackRepository.UpdateAsync(feedback);
+                _logger.LogInformation("Feedback {FeedbackId} transitioned to DELIVERED", feedbackId);
+            }
+        }
     }
 
     private async void FireAndForget(Func<Task> action, string context)

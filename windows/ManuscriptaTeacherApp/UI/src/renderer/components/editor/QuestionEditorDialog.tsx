@@ -18,6 +18,14 @@ interface QuestionEditorDialogProps {
 
 const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+const getSafeCorrectAnswerIndex = (val: string | number | undefined | null): number => {
+    if (val === undefined || val === null) return -1;
+    if (typeof val === 'number') return val;
+    if (val === '') return -1;
+    const parsed = parseInt(val);
+    return !isNaN(parsed) ? parsed : -1;
+};
+
 export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
     isOpen,
     materialId,
@@ -39,7 +47,7 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
     );
     // -1 means no correct answer selected (for auto-marking disabled)
     const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number>(
-        typeof question?.correctAnswer === 'number' ? question.correctAnswer : -1
+        getSafeCorrectAnswerIndex(question?.correctAnswer)
     );
     const [correctAnswer, setCorrectAnswer] = useState<string>(
         typeof question?.correctAnswer === 'string' ? question.correctAnswer : ''
@@ -68,7 +76,7 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
             setQuestionType(question?.questionType || (materialType === 'POLL' ? 'MULTIPLE_CHOICE' : 'MULTIPLE_CHOICE'));
             setQuestionText(question?.questionText || '');
             setOptions(question?.options || ['', '']);
-            setCorrectAnswerIndex(typeof question?.correctAnswer === 'number' ? question.correctAnswer : -1);
+            setCorrectAnswerIndex(getSafeCorrectAnswerIndex(question?.correctAnswer));
             setCorrectAnswer(typeof question?.correctAnswer === 'string' ? question.correctAnswer : '');
             setMaxScore(question?.maxScore || 1);
             // Determine initial marking method
@@ -89,9 +97,7 @@ export const QuestionEditorDialog: React.FC<QuestionEditorDialogProps> = ({
     useEffect(() => {
         if (isEditing) {
             // Normalize the original correct answer for comparison
-            const originalMcCorrectAnswer = typeof question?.correctAnswer === 'number'
-                ? question.correctAnswer
-                : -1;
+            const originalMcCorrectAnswer = getSafeCorrectAnswerIndex(question?.correctAnswer);
             const originalWrittenCorrectAnswer = typeof question?.correctAnswer === 'string'
                 ? question.correctAnswer
                 : '';

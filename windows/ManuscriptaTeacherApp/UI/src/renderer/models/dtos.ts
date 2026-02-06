@@ -62,3 +62,9 @@ export interface InternalCreateAttachmentDto {
     fileBaseName: string;
     fileExtension: string;
 }
+
+export interface InternalCreateFeedbackDto {
+    responseId: string;
+    text: string | null;
+    marks: number | null;
+}

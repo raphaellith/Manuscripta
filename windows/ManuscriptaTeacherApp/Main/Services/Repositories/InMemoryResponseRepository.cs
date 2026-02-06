@@ -16,6 +16,11 @@ public class InMemoryResponseRepository : IResponseRepository
 {
     private readonly ConcurrentDictionary<Guid, ResponseEntity> _responses = new();
 
+    public Task<IEnumerable<ResponseEntity>> GetAllAsync()
+    {
+        return Task.FromResult<IEnumerable<ResponseEntity>>(_responses.Values.ToList());
+    }
+
     public Task<ResponseEntity?> GetByIdAsync(Guid id)
     {
         _responses.TryGetValue(id, out var response);

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Main.Controllers;
@@ -7,6 +8,7 @@ using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Services;
 using Main.Services.Repositories;
+using Main.Services.Hubs;
 using Xunit;
 
 namespace MainTests.ControllersTests;
@@ -19,6 +21,7 @@ public class ResponseControllerTests
 {
     private readonly Mock<IResponseService> _mockResponseService;
     private readonly Mock<IQuestionRepository> _mockQuestionRepository;
+    private readonly Mock<IHubContext<TeacherPortalHub>> _mockHubContext;
     private readonly Mock<ILogger<ResponseController>> _mockLogger;
     private readonly ResponseController _controller;
 
@@ -31,10 +34,12 @@ public class ResponseControllerTests
     {
         _mockResponseService = new Mock<IResponseService>();
         _mockQuestionRepository = new Mock<IQuestionRepository>();
+        _mockHubContext = new Mock<IHubContext<TeacherPortalHub>>();
         _mockLogger = new Mock<ILogger<ResponseController>>();
         _controller = new ResponseController(
             _mockResponseService.Object,
             _mockQuestionRepository.Object,
+            _mockHubContext.Object,
             _mockLogger.Object);
     }
 
@@ -44,21 +49,28 @@ public class ResponseControllerTests
     public void Constructor_NullResponseService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(null!, _mockQuestionRepository.Object, _mockLogger.Object));
+            new ResponseController(null!, _mockQuestionRepository.Object, _mockHubContext.Object, _mockLogger.Object));
     }
 
     [Fact]
     public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(_mockResponseService.Object, null!, _mockLogger.Object));
+            new ResponseController(_mockResponseService.Object, null!, _mockHubContext.Object, _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullHubContext_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ResponseController(_mockResponseService.Object, _mockQuestionRepository.Object, null!, _mockLogger.Object));
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ResponseController(_mockResponseService.Object, _mockQuestionRepository.Object, null!));
+            new ResponseController(_mockResponseService.Object, _mockQuestionRepository.Object, _mockHubContext.Object, null!));
     }
 
     #endregion

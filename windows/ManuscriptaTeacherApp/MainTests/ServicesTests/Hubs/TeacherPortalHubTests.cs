@@ -7,12 +7,15 @@ using Main.Models.Dtos;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
+using Main.Models.Entities.Responses;
 using Main.Models.Enums;
 using Main.Services;
 using Main.Services.Hubs;
 using Main.Services.Repositories;
 using Main.Services.Network;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace MainTests.ServicesTests.Hubs;
 
@@ -41,6 +44,9 @@ public class TeacherPortalHubTests
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistryService;
     private readonly Mock<IDeviceStatusCacheService> _mockDeviceStatusCacheService;
     private readonly Mock<IDistributionService> _mockDistributionService;
+    private readonly Mock<IFeedbackRepository> _mockFeedbackRepository;
+    private readonly Mock<IResponseRepository> _mockResponseRepository;
+    private readonly Mock<ILogger<TeacherPortalHub>> _mockLogger;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -64,6 +70,9 @@ public class TeacherPortalHubTests
         _mockDeviceRegistryService = new Mock<IDeviceRegistryService>();
         _mockDeviceStatusCacheService = new Mock<IDeviceStatusCacheService>();
         _mockDistributionService = new Mock<IDistributionService>();
+        _mockFeedbackRepository = new Mock<IFeedbackRepository>();
+        _mockResponseRepository = new Mock<IResponseRepository>();
+        _mockLogger = new Mock<ILogger<TeacherPortalHub>>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -84,7 +93,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object);
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object);
     }
 
     #region Constructor Tests
@@ -111,7 +123,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -136,7 +151,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -161,7 +179,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -186,7 +207,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -211,7 +235,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -236,7 +263,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -261,7 +291,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -286,7 +319,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -311,7 +347,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -336,7 +375,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -361,7 +403,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -386,7 +431,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -411,7 +459,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     [Fact]
@@ -436,7 +487,10 @@ public class TeacherPortalHubTests
             _mockTcpPairingService.Object,
             _mockDeviceRegistryService.Object,
             _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object));
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object));
     }
 
     #endregion
@@ -962,6 +1016,526 @@ public class TeacherPortalHubTests
 
         // Assert
         _mockAttachmentService.Verify(s => s.DeleteAsync(id), Times.Once);
+    }
+
+    #endregion
+
+    #region Device Operations Tests
+
+    [Fact]
+    public async Task PairDevices_StartsUdpAndTcpServices()
+    {
+        // Act
+        await _hub.PairDevices();
+
+        // Assert
+        _mockUdpBroadcastService.Verify(s => s.StartBroadcastingAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockTcpPairingService.Verify(s => s.StartListeningAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task StopPairing_StopsUdpAndTcpServices()
+    {
+        // Act
+        await _hub.StopPairing();
+
+        // Assert
+        _mockUdpBroadcastService.Verify(s => s.StopBroadcasting(), Times.Once);
+        _mockTcpPairingService.Verify(s => s.StopListening(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllPairedDevices_ReturnsFromRegistry()
+    {
+        // Arrange
+        var devices = new List<PairedDeviceEntity>
+        {
+            new(Guid.NewGuid(), "Device 1"),
+            new(Guid.NewGuid(), "Device 2")
+        };
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(devices);
+
+        // Act
+        var result = await _hub.GetAllPairedDevices();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllDeviceStatuses_ReturnsFromCache()
+    {
+        // Arrange
+        var statuses = new List<DeviceStatusEntity>
+        {
+            new DeviceStatusEntity()
+        };
+        _mockDeviceStatusCacheService.Setup(s => s.GetAllStatuses())
+            .Returns(statuses);
+
+        // Act
+        var result = await _hub.GetAllDeviceStatuses();
+
+        // Assert
+        Assert.Single(result);
+        _mockDeviceStatusCacheService.Verify(s => s.GetAllStatuses(), Times.Once);
+    }
+
+    [Fact]
+    public async Task LockDevices_CallsSendLockScreenForEachDevice()
+    {
+        // Arrange
+        var deviceIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+
+        // Act
+        await _hub.LockDevices(deviceIds);
+
+        // Assert
+        foreach (var id in deviceIds)
+        {
+            _mockTcpPairingService.Verify(s => s.SendLockScreenAsync(id.ToString()), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task UnlockDevices_CallsSendUnlockScreenForEachDevice()
+    {
+        // Arrange
+        var deviceIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+
+        // Act
+        await _hub.UnlockDevices(deviceIds);
+
+        // Assert
+        foreach (var id in deviceIds)
+        {
+            _mockTcpPairingService.Verify(s => s.SendUnlockScreenAsync(id.ToString()), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task DeployMaterial_CallsDistributionServiceAndSendsToDevices()
+    {
+        // Arrange
+        var materialId = Guid.NewGuid();
+        var deviceIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+
+        // Act
+        await _hub.DeployMaterial(materialId, deviceIds);
+
+        // Assert - verifies each device gets material assigned and TCP notification
+        foreach (var id in deviceIds)
+        {
+            _mockDistributionService.Verify(s => s.AssignMaterialsToDeviceAsync(id, It.IsAny<IEnumerable<Guid>>()), Times.Once);
+            _mockTcpPairingService.Verify(s => s.SendDistributeMaterialAsync(id.ToString()), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task UnpairDevices_CallsSendUnpairForEachDevice()
+    {
+        // Arrange
+        var deviceIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+
+        // Act
+        await _hub.UnpairDevices(deviceIds);
+
+        // Assert
+        foreach (var id in deviceIds)
+        {
+            _mockTcpPairingService.Verify(s => s.SendUnpairAsync(id.ToString()), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task UpdatePairedDevice_CallsRegistryUpdate()
+    {
+        // Arrange
+        var device = new PairedDeviceEntity(Guid.NewGuid(), "Updated Name");
+
+        // Act
+        await _hub.UpdatePairedDevice(device);
+
+        // Assert
+        _mockDeviceRegistryService.Verify(s => s.UpdateAsync(device), Times.Once);
+    }
+
+    #endregion
+
+    #region Feedback Operations Tests
+
+    [Fact]
+    public async Task CreateFeedback_ValidDto_ReturnsWithAssignedId()
+    {
+        // Arrange
+        var responseId = Guid.NewGuid();
+        var dto = new InternalCreateFeedbackDto
+        {
+            ResponseId = responseId,
+            Text = "Good work!",
+            Marks = 8
+        };
+        var response = new WrittenAnswerResponseEntity(Guid.NewGuid(), Guid.NewGuid(), responseId, "Answer");
+        _mockResponseRepository.Setup(r => r.GetByIdAsync(responseId)).ReturnsAsync(response);
+
+        // Act
+        var result = await _hub.CreateFeedback(dto);
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.Equal(FeedbackStatus.PROVISIONAL, result.Status);
+        _mockFeedbackRepository.Verify(r => r.AddAsync(It.IsAny<FeedbackEntity>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateFeedback_NonExistentResponse_ThrowsHubException()
+    {
+        // Arrange
+        var dto = new InternalCreateFeedbackDto
+        {
+            ResponseId = Guid.NewGuid(),
+            Text = "Feedback"
+        };
+        _mockResponseRepository.Setup(r => r.GetByIdAsync(dto.ResponseId)).ReturnsAsync((ResponseEntity?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.CreateFeedback(dto));
+    }
+
+    [Fact]
+    public async Task CreateFeedback_NoTextOrMarks_ThrowsHubException()
+    {
+        // Arrange
+        var responseId = Guid.NewGuid();
+        var dto = new InternalCreateFeedbackDto
+        {
+            ResponseId = responseId,
+            Text = null,
+            Marks = null
+        };
+        var response = new WrittenAnswerResponseEntity(Guid.NewGuid(), Guid.NewGuid(), responseId, "Answer");
+        _mockResponseRepository.Setup(r => r.GetByIdAsync(responseId)).ReturnsAsync(response);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.CreateFeedback(dto));
+    }
+
+    [Fact]
+    public async Task GetAllFeedbacks_ReturnsFromRepository()
+    {
+        // Arrange
+        var feedbacks = new List<FeedbackEntity>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "Good", 5),
+            new(Guid.NewGuid(), Guid.NewGuid(), "Excellent", 10)
+        };
+        _mockFeedbackRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(feedbacks);
+
+        // Act
+        var result = await _hub.GetAllFeedbacks();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        _mockFeedbackRepository.Verify(r => r.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_CallsRepository()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Original", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated", 7);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act
+        await _hub.UpdateFeedback(updatedFeedback);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(existingFeedback), Times.Once);
+        Assert.Equal("Updated", existingFeedback.Text);
+        Assert.Equal(7, existingFeedback.Marks);
+    }
+
+    [Fact]
+    public async Task ApproveFeedback_ValidProvisional_SetsReadyAndDispatches()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, responseId, "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var response = new WrittenAnswerResponseEntity(Guid.NewGuid(), Guid.NewGuid(), deviceId, "Answer");
+
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+        _mockResponseRepository.Setup(r => r.GetByIdAsync(responseId)).ReturnsAsync(response);
+
+        // Act
+        await _hub.ApproveFeedback(feedbackId);
+
+        // Assert
+        Assert.Equal(FeedbackStatus.READY, feedback.Status);
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(feedback), Times.Once);
+        _mockTcpPairingService.Verify(s => s.SendReturnFeedbackAsync(deviceId.ToString(), It.IsAny<IEnumerable<Guid>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApproveFeedback_NotFound_ThrowsHubException()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync((FeedbackEntity?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.ApproveFeedback(feedbackId));
+    }
+
+    [Fact]
+    public async Task ApproveFeedback_NotProvisional_ThrowsHubException()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.READY };
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.ApproveFeedback(feedbackId));
+    }
+
+    [Fact]
+    public async Task RetryFeedbackDispatch_ValidReady_Dispatches()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, responseId, "Text", 5) { Status = FeedbackStatus.READY };
+        var response = new WrittenAnswerResponseEntity(Guid.NewGuid(), Guid.NewGuid(), deviceId, "Answer");
+
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+        _mockResponseRepository.Setup(r => r.GetByIdAsync(responseId)).ReturnsAsync(response);
+
+        // Act
+        await _hub.RetryFeedbackDispatch(feedbackId);
+
+        // Assert
+        _mockTcpPairingService.Verify(s => s.SendReturnFeedbackAsync(deviceId.ToString(), It.IsAny<IEnumerable<Guid>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RetryFeedbackDispatch_NotReady_ThrowsHubException()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.RetryFeedbackDispatch(feedbackId));
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_NonProvisionalStatus_ThrowsHubException()
+    {
+        // Arrange - Per §6A(7)(b)(ii): Only PROVISIONAL feedback can be edited
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.READY };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated", 7);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+        Assert.Contains("PROVISIONAL", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(It.IsAny<FeedbackEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_DeliveredStatus_ThrowsHubException()
+    {
+        // Arrange - Per §6A(7)(b)(ii): DELIVERED feedback cannot be edited
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.DELIVERED };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated", 7);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_BothTextAndMarksNull_ThrowsHubException()
+    {
+        // Arrange - Per Validation Rules §2F(1)(b): at least one of Text or Marks must be provided
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        // Use parameterless constructor and object initializer to simulate deserialized entity that bypassed validation
+        var updatedFeedback = new FeedbackEntity { Id = feedbackId, Text = null, Marks = null };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+        Assert.Contains("2F(1)(b)", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(It.IsAny<FeedbackEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_EmptyTextAndNullMarks_ThrowsHubException()
+    {
+        // Arrange - Empty/whitespace text should also be rejected
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        // Use parameterless constructor and object initializer to simulate deserialized entity that bypassed validation
+        var updatedFeedback = new FeedbackEntity { Id = feedbackId, Text = "   ", Marks = null };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.UpdateFeedback(updatedFeedback));
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_TextOnlyProvided_Succeeds()
+    {
+        // Arrange - Text only is valid per §2F(1)(b)
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Original", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Updated text", null);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act
+        await _hub.UpdateFeedback(updatedFeedback);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(existingFeedback), Times.Once);
+        Assert.Equal("Updated text", existingFeedback.Text);
+        Assert.Null(existingFeedback.Marks);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_MarksOnlyProvided_Succeeds()
+    {
+        // Arrange - Marks only is valid per §2F(1)(b)
+        var feedbackId = Guid.NewGuid();
+        var existingFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Original", 5) { Status = FeedbackStatus.PROVISIONAL };
+        var updatedFeedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), null, 10);
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(existingFeedback);
+
+        // Act
+        await _hub.UpdateFeedback(updatedFeedback);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.UpdateAsync(existingFeedback), Times.Once);
+        Assert.Null(existingFeedback.Text);
+        Assert.Equal(10, existingFeedback.Marks);
+    }
+    [Fact]
+    public async Task DeleteFeedback_ProvisionalStatus_DeletesSuccessfully()
+    {
+        // Arrange - Per §6A(7)(a)(ii): PROVISIONAL feedback can be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.PROVISIONAL };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+        _mockFeedbackRepository.Setup(r => r.DeleteAsync(feedbackId)).Returns(Task.CompletedTask);
+
+        // Act
+        await _hub.DeleteFeedback(feedbackId);
+
+        // Assert
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(feedbackId), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_ReadyStatus_ThrowsHubException()
+    {
+        // Arrange - Non-PROVISIONAL feedback cannot be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.READY };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        Assert.Contains("PROVISIONAL", exception.Message);
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_DeliveredStatus_ThrowsHubException()
+    {
+        // Arrange - DELIVERED feedback cannot be deleted
+        var feedbackId = Guid.NewGuid();
+        var feedback = new FeedbackEntity(feedbackId, Guid.NewGuid(), "Text", 5) { Status = FeedbackStatus.DELIVERED };
+        
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        _mockFeedbackRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteFeedback_NotFound_ThrowsHubException()
+    {
+        // Arrange
+        var feedbackId = Guid.NewGuid();
+        _mockFeedbackRepository.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync((FeedbackEntity?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HubException>(() => _hub.DeleteFeedback(feedbackId));
+        Assert.Contains("not found", exception.Message);
+    }
+
+    #endregion
+
+    #region Response Operations Tests
+
+    [Fact]
+    public async Task GetAllResponses_ReturnsFromRepository()
+    {
+        // Arrange
+        var responses = new List<ResponseEntity>
+        {
+            new WrittenAnswerResponseEntity(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Answer 1"),
+            new MultipleChoiceResponseEntity(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 2)
+        };
+        _mockResponseRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(responses);
+
+        // Act
+        var result = await _hub.GetAllResponses();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        _mockResponseRepository.Verify(r => r.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetResponsesUnderQuestion_ReturnsFromRepository()
+    {
+        // Arrange
+        var questionId = Guid.NewGuid();
+        var responses = new List<ResponseEntity>
+        {
+            new WrittenAnswerResponseEntity(Guid.NewGuid(), questionId, Guid.NewGuid(), "Answer")
+        };
+        _mockResponseRepository.Setup(r => r.GetByQuestionIdAsync(questionId)).ReturnsAsync(responses);
+
+        // Act
+        var result = await _hub.GetResponsesUnderQuestion(questionId);
+
+        // Assert
+        Assert.Single(result);
+        _mockResponseRepository.Verify(r => r.GetByQuestionIdAsync(questionId), Times.Once);
     }
 
     #endregion

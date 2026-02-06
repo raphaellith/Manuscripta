@@ -61,3 +61,25 @@ This document defines the specifications for classes enabling the `Main` compone
 
     (a) `public async Task<string> GenerateFeedback(QuestionEntity question, ResponseEntity response)`: Generates feedback for a student's response to a question.
 
+
+### Section 3DA — Feedback Approval Workflow
+
+(1) A `FeedbackEntity` with status `PROVISIONAL` shall not be dispatched to the student device.
+
+(2) Upon teacher approval of feedback —
+
+    (a) the status shall transition from `PROVISIONAL` to `READY`.
+
+    (b) the backend shall trigger dispatch immediately via the mechanism specified in Session Interaction Specification §7.
+
+(3) Upon receipt of a `FEEDBACK_ACK` message from the student device (per Session Interaction Specification §7(4)) —
+
+    (a) the status shall transition from `READY` to `DELIVERED`.
+
+(4) If the backend does not receive a `FEEDBACK_ACK` message within 30 seconds of sending `RETURN_FEEDBACK` (per Session Interaction Specification §7(5)) —
+
+    (a) the backend shall notify the frontend via the SignalR handler `OnFeedbackDispatchFailed(Guid feedbackId, Guid deviceId)`.
+
+    (b) the `FeedbackEntity` shall remain in `READY` status.
+
+    (c) the teacher may retry dispatch by invoking `RetryFeedbackDispatch(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(iii)).

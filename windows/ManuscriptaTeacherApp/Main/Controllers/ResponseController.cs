@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Globalization;
 
 using Main.Models.Dtos;
@@ -6,6 +7,7 @@ using Main.Models.Entities.Responses;
 using Main.Models.Entities.Questions;
 using Main.Services;
 using Main.Services.Repositories;
+using Main.Services.Hubs;
 
 namespace Main.Controllers;
 
@@ -19,15 +21,18 @@ public class ResponseController : ControllerBase
 {
     private readonly IResponseService _responseService;
     private readonly IQuestionRepository _questionRepository;
+    private readonly IHubContext<TeacherPortalHub> _hubContext;
     private readonly ILogger<ResponseController> _logger;
 
     public ResponseController(
         IResponseService responseService,
         IQuestionRepository questionRepository,
+        IHubContext<TeacherPortalHub> hubContext,
         ILogger<ResponseController> logger)
     {
         _responseService = responseService ?? throw new ArgumentNullException(nameof(responseService));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
+        _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -61,6 +66,9 @@ public class ResponseController : ControllerBase
             
             _logger.LogInformation("Response {ResponseId} submitted for question {QuestionId}", 
                 request.Id, request.QuestionId);
+
+            // Notify frontend to refresh responses per Session Interaction §4
+            await _hubContext.Clients.All.SendAsync("RefreshResponses");
 
             // Per API Contract §2.3: Return 201 Created with empty body
             return StatusCode(StatusCodes.Status201Created, new { });
@@ -123,6 +131,9 @@ public class ResponseController : ControllerBase
             await _responseService.CreateResponseBatchAsync(entities);
 
             _logger.LogInformation("Batch of {Count} responses submitted successfully", request.Responses.Count);
+
+            // Notify frontend to refresh responses per Session Interaction §4
+            await _hubContext.Clients.All.SendAsync("RefreshResponses");
 
             // Per API Contract §2.3: Return 201 Created
             return StatusCode(StatusCodes.Status201Created, new { });

@@ -484,6 +484,154 @@ public class ResponseServiceTests
         _mockResponseRepo.Verify(r => r.DeleteAsync(responseId), Times.Once);
     }
 
+    #region Auto-Marking Tests
+
+    [Fact]
+    public async Task CreateResponseAsync_AndroidClientProvidesIsCorrect_PreservesValue()
+    {
+        // Arrange - Per Session Interaction §4(2): Android may evaluate and set IsCorrect
+        var questionId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Question",
+            new List<string> { "A", "B", "C" }, 1);
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), 0, null, true); // Android says correct
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert - Server should NOT override Android's evaluation
+        Assert.True(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_MultipleChoiceCorrectAnswer_SetsIsCorrectTrue()
+    {
+        // Arrange - MCQ with correct answer, no Android evaluation
+        var questionId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Question",
+            new List<string> { "A", "B", "C" }, 1); // Correct answer is index 1
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), 1); // Student chose index 1
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert
+        Assert.True(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_MultipleChoiceIncorrectAnswer_SetsIsCorrectFalse()
+    {
+        // Arrange - MCQ with wrong answer, no Android evaluation
+        var questionId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Question",
+            new List<string> { "A", "B", "C" }, 1); // Correct answer is index 1
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), 0); // Student chose index 0
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert
+        Assert.False(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_MultipleChoiceNoCorrectAnswer_IsCorrectRemainsNull()
+    {
+        // Arrange - MCQ without correct answer defined (no auto-marking)
+        var questionId = Guid.NewGuid();
+        var question = new MultipleChoiceQuestionEntity(
+            questionId, Guid.NewGuid(), "Question",
+            new List<string> { "A", "B", "C" }, null); // No correct answer
+        var response = new MultipleChoiceResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), 1);
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert - No auto-marking when no correct answer defined
+        Assert.Null(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_WrittenAnswerExactMatch_SetsIsCorrectTrue()
+    {
+        // Arrange - Written answer matching CorrectAnswer exactly
+        var questionId = Guid.NewGuid();
+        var question = new WrittenAnswerQuestionEntity(
+            questionId, Guid.NewGuid(), "Question", "42");
+        var response = new WrittenAnswerResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), "42");
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert
+        Assert.True(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_WrittenAnswerNoMatch_SetsIsCorrectFalse()
+    {
+        // Arrange - Written answer NOT matching CorrectAnswer
+        var questionId = Guid.NewGuid();
+        var question = new WrittenAnswerQuestionEntity(
+            questionId, Guid.NewGuid(), "Question", "42");
+        var response = new WrittenAnswerResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), "41");
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert
+        Assert.False(result.IsCorrect);
+    }
+
+    [Fact]
+    public async Task CreateResponseAsync_WrittenAnswerNoCorrectAnswer_IsCorrectRemainsNull()
+    {
+        // Arrange - Written answer question without CorrectAnswer (no auto-marking)
+        var questionId = Guid.NewGuid();
+        var question = new WrittenAnswerQuestionEntity(
+            questionId, Guid.NewGuid(), "Question", null); // No correct answer
+        var response = new WrittenAnswerResponseEntity(
+            Guid.NewGuid(), questionId, Guid.NewGuid(), "Student answer");
+
+        _mockQuestionRepo.Setup(r => r.GetByIdAsync(questionId)).ReturnsAsync(question);
+        _mockResponseRepo.Setup(r => r.AddAsync(It.IsAny<ResponseEntity>())).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.CreateResponseAsync(response);
+
+        // Assert - No auto-marking when no correct answer defined
+        Assert.Null(result.IsCorrect);
+    }
+
+    #endregion
+
     #region Batch Tests
 
     [Fact]

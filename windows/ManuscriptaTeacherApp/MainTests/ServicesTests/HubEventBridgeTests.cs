@@ -17,6 +17,7 @@ public class HubEventBridgeTests
     private readonly Mock<IHubContext<TeacherPortalHub>> _mockHubContext;
     private readonly Mock<IHubClients> _mockClients;
     private readonly Mock<IClientProxy> _mockClientProxy;
+    private readonly Mock<IServiceProvider> _mockServiceProvider;
     private readonly Mock<ILogger<HubEventBridge>> _mockLogger;
     private readonly HubEventBridge _hubEventBridge;
 
@@ -33,12 +34,14 @@ public class HubEventBridgeTests
         _mockHubContext.Setup(h => h.Clients).Returns(_mockClients.Object);
         _mockClients.Setup(c => c.All).Returns(_mockClientProxy.Object);
 
+        _mockServiceProvider = new Mock<IServiceProvider>();
         _mockLogger = new Mock<ILogger<HubEventBridge>>();
 
         _hubEventBridge = new HubEventBridge(
             _mockTcpService.Object,
             _mockRegistryService.Object,
             _mockHubContext.Object,
+            _mockServiceProvider.Object,
             _mockLogger.Object);
     }
 

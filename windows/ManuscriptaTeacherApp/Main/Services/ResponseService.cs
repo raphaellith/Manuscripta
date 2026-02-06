@@ -158,6 +158,9 @@ public class ResponseService : IResponseService
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);
+
+        // Auto-marking logic per FrontendWorkflowSpecifications
+        PerformAutoMarking(response, question);
     }
 
     /// <summary>
@@ -187,6 +190,9 @@ public class ResponseService : IResponseService
 
         // Additional validation: ensure response type matches question type
         ValidateResponseTypeMatchesQuestion(response, question);
+
+        // Auto-marking logic per FrontendWorkflowSpecifications
+        PerformAutoMarking(response, question);
     }
 
     /// <summary>
@@ -205,6 +211,34 @@ public class ResponseService : IResponseService
         {
             throw new InvalidOperationException(
                 $"Response type {response.GetType().Name} does not match question type {question.GetType().Name}.");
+        }
+    }
+
+    /// <summary>
+    /// Performs auto-marking by comparing response against correct answer.
+    /// Per Session Interaction §4(2): preserves the Android client's IsCorrect value
+    /// when available for student-teacher consistency; falls back to server-side
+    /// calculation when the client did not provide one.
+    /// </summary>
+    private void PerformAutoMarking(ResponseEntity response, QuestionEntity question)
+    {
+        // If Android client already evaluated (per Session Interaction §4(2)), preserve it
+        if (response.IsCorrect.HasValue)
+            return;
+
+        // Fall back to server-side evaluation
+        if (question is MultipleChoiceQuestionEntity mcq
+            && response is MultipleChoiceResponseEntity mcr
+            && mcq.CorrectAnswerIndex.HasValue)
+        {
+            mcr.IsCorrect = mcr.AnswerIndex == mcq.CorrectAnswerIndex.Value;
+        }
+        else if (question is WrittenAnswerQuestionEntity waq
+                 && response is WrittenAnswerResponseEntity war
+                 && !string.IsNullOrEmpty(waq.CorrectAnswer))
+        {
+            // Exact match marking for written answers
+            war.IsCorrect = war.Answer == waq.CorrectAnswer;
         }
     }
 

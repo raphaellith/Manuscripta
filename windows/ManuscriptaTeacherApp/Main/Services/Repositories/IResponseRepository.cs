@@ -6,6 +6,7 @@ namespace Main.Services.Repositories;
 
 public interface IResponseRepository
 {
+    Task<IEnumerable<ResponseEntity>> GetAllAsync();
     Task<ResponseEntity?> GetByIdAsync(Guid id);
     Task<IEnumerable<ResponseEntity>> GetByQuestionIdAsync(Guid questionId);
     Task AddAsync(ResponseEntity entity);

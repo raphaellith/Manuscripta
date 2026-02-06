@@ -56,6 +56,11 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
+builder.Services.AddControllers();
+builder.Services.AddSignalR(hubOptions =>
+{
+    hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
