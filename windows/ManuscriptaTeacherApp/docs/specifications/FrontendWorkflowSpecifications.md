@@ -510,6 +510,16 @@ For a list of all server method and client handlers to be implemented for commun
         
         (ii) when the `RefreshResponses` client handler is invoked by the backend, as defined in s2(1)(b)(i) of the Networking API Specification.
 
+(3A) **Refresh of Feedback**
+
+    (a) Feedback shall be refreshed by calling `GetAllFeedbacks()` s1(1)(h)(iv) of the Networking API Specification.
+
+    (b) The frontend shall refresh feedback —
+
+        (i) when responses are refreshed, by the virtue of paragraph (3)(b); or
+
+        (ii) after each `UpdateFeedback` call [to ascertain that feedback has been appropriately submitted].
+
 (4) **Display of responses on class-level**
 
     The frontend shall -

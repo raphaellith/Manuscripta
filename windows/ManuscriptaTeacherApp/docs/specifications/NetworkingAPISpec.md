@@ -160,7 +160,7 @@ For a description of how these server methods and client handlers are expected t
 
     (b) Handlers updating the responses page.
         
-        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
+        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received, or a feedback changes state.
 
     (c) [DELETED]
 
