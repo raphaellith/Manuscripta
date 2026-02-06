@@ -94,6 +94,12 @@ For a description of how these server methods and client handlers are expected t
         (ii) `Task ApproveFeedback(Guid feedbackId)`: Approves the specified feedback and triggers dispatch to the student device. See GenAISpec §3DA(2).
 
         (iii) `Task RetryFeedbackDispatch(Guid feedbackId)`: Retries dispatch of feedback in `READY` status.
+        
+        (iv) `Task<List<FeedbackEntity>> GetAllFeedbacks()`: Retrieves all feedback entities.
+
+        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). Per FrontendWorkflowSpecifications §6A(7)(b)(ii), this method shall reject updates if the feedback's Status is not `PROVISIONAL`.
+
+        (vi) `Task DeleteFeedback(Guid feedbackId)`: Deletes an existing feedback entity. Per FrontendWorkflowSpecifications §6A(7)(a)(ii), this is invoked when the teacher clears both Text and Marks on a `PROVISIONAL` feedback.
 
     (i) Methods for GenAI functionalities, as specified in GenAISpec.
 
@@ -110,8 +116,12 @@ For a description of how these server methods and client handlers are expected t
         (vi) `Task QueueForAiGeneration(Guid responseId)`: Adds or re-adds the specified response to the AI feedback generation queue. See GenAISpec §3D(5).
 
         (vii) `Task RetryEmbedding(Guid sourceDocumentId)`: Re-queues a source document with `FAILED` status for indexing. See GenAISpec §3A(7).
+        
+    (j) Methods for retrieving responses.
 
-    (j) Methods for updating app settings. **To be confirmed.**
+        (i) `Task<List<ResponseEntity>> GetAllResponses()`: Retrieves all responses.
+
+        (ii) `Task<List<ResponseEntity>> GetResponsesUnderQuestion(Guid questionId)`: Retrieves all responses associated with the question with the questionId.
 
     (k) CRUD methods for source documents.
 
@@ -142,11 +152,13 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `UpdateSession`, with parameter `sessionEntity` (SessionEntity): Updates a session entity, identified by its `deviceId` and `materialId`.
 
-        (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired.
+        (iii) `DevicePaired`, with parameter `pairedDeviceEntity` (PairedDeviceEntity): Notifies the frontend that a new device has been paired. The frontend shall use this notification as a signal to refresh the device grid per FrontendWorkflowSpec §5A(3A), and shall not directly use the payload to modify its local state.
 
-    (b) Handlers for creating responses.
+    (b) Handlers updating the responses page.
         
-        (i) `CreateResponse`, with parameter `ResponseEntity` (ResponseEntity): Creates a response entity.
+        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
+
+    (c) [DELETED]
 
     (c) Handlers for AI feedback notifications.
 

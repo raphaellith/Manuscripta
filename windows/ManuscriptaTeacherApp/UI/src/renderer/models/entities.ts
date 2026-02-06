@@ -58,3 +58,67 @@ export interface AttachmentEntity {
     fileBaseName: string;
     fileExtension: string;
 }
+
+// ==========================================
+// Classroom Entities - FrontendWorkflowSpec §5
+// ==========================================
+
+/**
+ * Paired device entity per Pairing Process §2(2)(c).
+ * Contains device ID and user-friendly name.
+ */
+export interface PairedDeviceEntity {
+    deviceId: string;
+    name: string;
+}
+
+/**
+ * Device status values per Validation Rules §2E(1)(b).
+ */
+export type DeviceStatus = 'ON_TASK' | 'IDLE' | 'LOCKED' | 'DISCONNECTED';
+
+/**
+ * Device status entity per Session Interaction §4(2).
+ * Contains current status and metadata for a paired device.
+ */
+export interface DeviceStatusEntity {
+    deviceId: string;
+    status: DeviceStatus;
+    batteryLevel: number;
+    currentMaterialId: string;
+    studentView: string;
+    timestamp: number;
+}
+
+// ==========================================
+// Response Entities - FrontendWorkflowSpec §6
+// ==========================================
+
+/**
+ * Response entity per Validation Rules §2C(3).
+ */
+export interface ResponseEntity {
+    id: string;
+    questionId: string;
+    deviceId: string;
+    responseContent: string;
+    timestamp: string;
+    isCorrect?: boolean;
+}
+
+/**
+ * Feedback status per AdditionalValidationRules §3AE.
+ */
+export type FeedbackStatus = 'PROVISIONAL' | 'READY' | 'DELIVERED';
+
+/**
+ * Feedback entity per AdditionalValidationRules §3AE.
+ */
+export interface FeedbackEntity {
+    id: string;
+    responseId: string;
+    text: string | null;
+    marks: number | null;
+    status: FeedbackStatus;
+}
+

@@ -40,6 +40,8 @@ This document defines the structure of the Windows app, and the directories and 
         | |- Network/
         | |- Repositories/
         | |- Hubs/
+        |- Testing/
+        | |- Simulation/
         |- Controllers/
         ```
 
@@ -69,6 +71,12 @@ This document defines the structure of the Windows app, and the directories and 
 
     This shall be referred to as the 'Controller layer'.
 
+    (f) The `Testing` directory shall contain code used exclusively for testing, simulation, and development purposes. It shall not be included in production builds where possible.
+
+        (i) `Simulation/`. This directory shall contain controllers and services for simulating backend behavior (e.g., `SimulationController`). These controllers shall facilitate testing of the `UI` component without physical devices.
+
+
+
 (2) **Hierarchy of Layers**
 
     (a) In this subsection -
@@ -90,6 +98,10 @@ This document defines the structure of the Windows app, and the directories and 
     (c) The Service layer should be functionally complete in relation to any downstream layer. That is to say, the service layer should remove the need of any downstream layer to access any upstream layers directly.
 
     (d) The Service layer, collectively with all upstream layers, must enforce all constraints defined in the Validation Rules.
+
+    (e) Code within the `Testing` directory may access all other layers to facilitate simulation and state manipulation. However, production code (Controllers, Services, Models) must never depend on code within the `Testing` directory.
+
+
 
 ## Section 2B - Directory Structure of `UI`
 

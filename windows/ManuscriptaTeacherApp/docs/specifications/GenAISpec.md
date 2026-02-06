@@ -6,7 +6,6 @@ This document defines the specifications for the Windows application's backend g
 
 Frontend workflows interacting with these functionalities are defined in FrontendWorkflowSpecifications §4AA, §4B, and §4C.
 
----
 
 ## Section 1 — General Principles
 
@@ -36,8 +35,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
     (a) the backend may fall back to a smaller model (`granite4`).
 
     (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
-
----
+    
 
 ## Section 2 — Document Chunking and Vector Storage
 
@@ -75,7 +73,6 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (c) the default value of K shall be 5.
 
----
 
 ## Section 3 — Backend GenAI Workflows
 

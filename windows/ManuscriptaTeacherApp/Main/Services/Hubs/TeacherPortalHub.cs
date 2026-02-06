@@ -3,8 +3,10 @@ using Main.Models.Dtos;
 using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
+using Main.Models.Entities.Responses;
 using Main.Models.Enums;
 using Main.Services.Repositories;
+using Main.Services.Network;
 
 namespace Main.Services.Hubs;
 
@@ -28,6 +30,18 @@ public class TeacherPortalHub : Hub
     private readonly IQuestionRepository _questionRepository;
     private readonly ISourceDocumentRepository _sourceDocumentRepository;
     private readonly IAttachmentRepository _attachmentRepository;
+    
+    // Classroom dependencies - NetworkingAPISpec §1(1)(e)-(g)
+    private readonly IUdpBroadcastService _udpBroadcastService;
+    private readonly ITcpPairingService _tcpPairingService;
+    private readonly IDeviceRegistryService _deviceRegistryService;
+    private readonly IDeviceStatusCacheService _deviceStatusCacheService;
+    private readonly IDistributionService _distributionService;
+
+    // Feedback dependencies - NetworkingAPISpec §1(1)(h)
+    private readonly IFeedbackRepository _feedbackRepository;
+    private readonly IResponseRepository _responseRepository;
+    private readonly ILogger<TeacherPortalHub> _logger;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -43,7 +57,15 @@ public class TeacherPortalHub : Hub
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository,
         ISourceDocumentRepository sourceDocumentRepository,
-        IAttachmentRepository attachmentRepository)
+        IAttachmentRepository attachmentRepository,
+        IUdpBroadcastService udpBroadcastService,
+        ITcpPairingService tcpPairingService,
+        IDeviceRegistryService deviceRegistryService,
+        IDeviceStatusCacheService deviceStatusCacheService,
+        IDistributionService distributionService,
+        IFeedbackRepository feedbackRepository,
+        IResponseRepository responseRepository,
+        ILogger<TeacherPortalHub> logger)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -59,6 +81,14 @@ public class TeacherPortalHub : Hub
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
+        _udpBroadcastService = udpBroadcastService ?? throw new ArgumentNullException(nameof(udpBroadcastService));
+        _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
+        _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
+        _deviceStatusCacheService = deviceStatusCacheService ?? throw new ArgumentNullException(nameof(deviceStatusCacheService));
+        _distributionService = distributionService ?? throw new ArgumentNullException(nameof(distributionService));
+        _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -444,6 +474,311 @@ public class TeacherPortalHub : Hub
     public async Task DeleteAttachment(Guid id)
     {
         await _attachmentService.DeleteAsync(id);
+    }
+
+    #endregion
+
+    #region Classroom Methods - NetworkingAPISpec §1(1)(e)-(g)
+
+    /// <summary>
+    /// Initiates device pairing by starting UDP broadcast and TCP listener.
+    /// Per Pairing Process §2(1): Windows broadcasts UDP discovery message.
+    /// Per Pairing Process §2(2)(b): Android responds via TCP PAIRING_REQUEST.
+    /// </summary>
+    public async Task PairDevices()
+    {
+        // 1. Start UDP broadcast per Pairing Process §2(1)
+        await _udpBroadcastService.StartBroadcastingAsync(CancellationToken.None);
+        
+        // 2. Start TCP listener for PAIRING_REQUEST per Pairing Process §2(2)(b)
+        await _tcpPairingService.StartListeningAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Stops the pairing process by stopping both UDP broadcast and TCP listener.
+    /// </summary>
+    public Task StopPairing()
+    {
+        _udpBroadcastService.StopBroadcasting();
+        _tcpPairingService.StopListening();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Retrieves all paired devices.
+    /// Per NetworkingAPISpec §1(1)(e)(ii).
+    /// </summary>
+    public async Task<List<PairedDeviceEntity>> GetAllPairedDevices()
+    {
+        var devices = await _deviceRegistryService.GetAllAsync();
+        return devices.ToList();
+    }
+
+    /// <summary>
+    /// Retrieves all device statuses.
+    /// Per NetworkingAPISpec §1(1)(e)(iii).
+    /// </summary>
+    public Task<List<DeviceStatusEntity>> GetAllDeviceStatuses()
+    {
+        var statuses = _deviceStatusCacheService.GetAllStatuses();
+        return Task.FromResult(statuses.ToList());
+    }
+
+    /// <summary>
+    /// Locks the specified devices.
+    /// Per NetworkingAPISpec §1(1)(f)(i).
+    /// </summary>
+    public async Task LockDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendLockScreenAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Unlocks the specified devices.
+    /// Per NetworkingAPISpec §1(1)(f)(ii).
+    /// </summary>
+    public async Task UnlockDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendUnlockScreenAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Deploys a material to the specified devices.
+    /// Per NetworkingAPISpec §1(1)(g)(i).
+    /// </summary>
+    public async Task DeployMaterial(Guid materialId, List<Guid> deviceIds)
+    {
+        // Step 1: Assign material to each target device per Session Interaction §3
+        foreach (var deviceId in deviceIds)
+        {
+            await _distributionService.AssignMaterialsToDeviceAsync(deviceId, new[] { materialId });
+        }
+
+        // Step 2: Send TCP trigger to each device
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendDistributeMaterialAsync(deviceId.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Unpairs the specified devices.
+    /// Per FrontendWorkflowSpecifications §5A(5).
+    /// </summary>
+    public async Task UnpairDevices(List<Guid> deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await _tcpPairingService.SendUnpairAsync(deviceId.ToString());
+            // Registry removal is handled by TcpPairingService.SendUnpairAsync per Pairing Process §3(2)
+            _deviceStatusCacheService.RemoveDevice(deviceId);
+        }
+    }
+
+    /// <summary>
+    /// Updates a paired device entity (e.g., for renaming).
+    /// Per FrontendWorkflowSpec §5B(4).
+    /// </summary>
+    public async Task UpdatePairedDevice(PairedDeviceEntity entity)
+    {
+        await _deviceRegistryService.UpdateAsync(entity);
+    }
+
+    #endregion
+
+    #region Feedback Methods - NetworkingAPISpec §1(1)(h)
+
+    /// <summary>
+    /// Approves feedback and triggers dispatch to the student device.
+    /// Per NetworkingAPISpec §1(1)(h)(ii) and GenAISpec §3DA(2).
+    /// </summary>
+    public async Task ApproveFeedback(Guid feedbackId)
+    {
+        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+        if (feedback == null)
+            throw new HubException($"Feedback {feedbackId} not found");
+
+        if (feedback.Status != FeedbackStatus.PROVISIONAL)
+            throw new HubException($"Feedback {feedbackId} is not in PROVISIONAL status");
+
+        // Transition to READY per §3DA(2)(a)
+        feedback.Status = FeedbackStatus.READY;
+        await _feedbackRepository.UpdateAsync(feedback);
+
+        // Get response to find device ID for dispatch
+        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
+        if (response != null)
+        {
+            // Trigger dispatch per §3DA(2)(b) via Session Interaction §7
+            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
+        }
+    }
+
+    /// <summary>
+    /// Retries dispatch of feedback in READY status.
+    /// Per NetworkingAPISpec §1(1)(h)(iii) and GenAISpec §3DA(4)(c).
+    /// </summary>
+    public async Task RetryFeedbackDispatch(Guid feedbackId)
+    {
+        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+        if (feedback == null)
+            throw new HubException($"Feedback {feedbackId} not found");
+
+        if (feedback.Status != FeedbackStatus.READY)
+            throw new HubException($"Cannot retry dispatch for feedback with status {feedback.Status}. Only READY feedback can be retried.");
+
+        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
+        if (response == null)
+            throw new HubException($"Response for feedback {feedbackId} not found");
+
+        // Retry dispatch via TCP
+        await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
+    }
+
+    /// <summary>
+    /// Retrieves all responses.
+    /// Per NetworkingAPISpec §1(1)(i)(i).
+    /// </summary>
+    public async Task<List<InternalResponseDto>> GetAllResponses()
+    {
+        var responses = await _responseRepository.GetAllAsync();
+        return responses.Select(MapToDto).ToList();
+    }
+
+    /// <summary>
+    /// Retrieves all responses associated with a question.
+    /// Per NetworkingAPISpec §1(1)(i)(ii).
+    /// </summary>
+    public async Task<List<InternalResponseDto>> GetResponsesUnderQuestion(Guid questionId)
+    {
+        var responses = await _responseRepository.GetByQuestionIdAsync(questionId);
+        return responses.Select(MapToDto).ToList();
+    }
+
+    private InternalResponseDto MapToDto(ResponseEntity entity)
+    {
+        return new InternalResponseDto
+        {
+            Id = entity.Id,
+            QuestionId = entity.QuestionId,
+            DeviceId = entity.DeviceId,
+            Timestamp = entity.Timestamp,
+            IsCorrect = entity.IsCorrect,
+            ResponseContent = entity switch
+            {
+                MultipleChoiceResponseEntity mc => mc.AnswerIndex.ToString(),
+                WrittenAnswerResponseEntity wa => wa.Answer,
+                _ => string.Empty
+            }
+        };
+    }
+
+    /// <summary>
+    /// Retrieves all feedback entities.
+    /// Per NetworkingAPISpec §1(1)(h)(iv).
+    /// </summary>
+    public async Task<List<FeedbackEntity>> GetAllFeedbacks()
+    {
+        var feedbacks = await _feedbackRepository.GetAllAsync();
+        return feedbacks.ToList();
+    }
+
+    /// <summary>
+    /// Creates a new feedback entity.
+    /// Per NetworkingAPISpec §1(1)(h)(i).
+    /// </summary>
+    public async Task<FeedbackEntity> CreateFeedback(InternalCreateFeedbackDto dto)
+    {
+        _logger.LogInformation("CreateFeedback called with content: Text={Text}, Marks={Marks}, ResponseId={ResponseId}", dto.Text, dto.Marks, dto.ResponseId);
+        
+        try
+        {
+            // 1. Validate target response exists
+            var response = await _responseRepository.GetByIdAsync(dto.ResponseId);
+            if (response == null)
+            {
+                _logger.LogWarning("CreateFeedback failed: Response {ResponseId} not found", dto.ResponseId);
+                throw new HubException($"Response {dto.ResponseId} not found");
+            }
+
+            // 2. Validate content per §2F(1)(b)
+            if (string.IsNullOrWhiteSpace(dto.Text) && dto.Marks == null)
+            {
+                _logger.LogWarning("CreateFeedback failed: Validation error (no text/marks)");
+                throw new HubException("At least one of Text or Marks must be provided.");
+            }
+
+            // 3. Create fresh entity with new ID per §1(1)(h)(i)
+            // Backend assigns UUID per spec.
+            var entity = new FeedbackEntity(
+                Guid.NewGuid(), 
+                dto.ResponseId, 
+                dto.Text, 
+                dto.Marks
+            );
+            // Status defaults to PROVISIONAL in constructor
+
+            await _feedbackRepository.AddAsync(entity);
+            _logger.LogInformation("CreateFeedback success: Created Feedback {FeedbackId}", entity.Id);
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CreateFeedback threw exception");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing feedback entity.
+    /// Per NetworkingAPISpec §1(1)(h)(v).
+    /// Per FrontendWorkflowSpecifications §6A(7)(b)(ii): rejects updates if status is not PROVISIONAL.
+    /// Per Validation Rules §2F(1)(b): at least one of Text or Marks must be provided.
+    /// </summary>
+    public async Task UpdateFeedback(FeedbackEntity entity)
+    {
+        var existing = await _feedbackRepository.GetByIdAsync(entity.Id);
+        if (existing == null)
+            throw new HubException($"Feedback {entity.Id} not found");
+
+        // Per §6A(7)(b)(ii): Only PROVISIONAL feedback can be edited
+        if (existing.Status != FeedbackStatus.PROVISIONAL)
+            throw new HubException($"Feedback {entity.Id} cannot be edited: status is {existing.Status}, not PROVISIONAL");
+
+        // Per Validation Rules §2F(1)(b): At least one of Text or Marks must be provided
+        var hasText = !string.IsNullOrWhiteSpace(entity.Text);
+        var hasMarks = entity.Marks.HasValue;
+        if (!hasText && !hasMarks)
+            throw new HubException($"Feedback {entity.Id} update rejected: at least one of Text or Marks must be provided (Validation Rules §2F(1)(b))");
+
+        // Update allowed fields (marks and text), preserve status
+        existing.Marks = entity.Marks;
+        existing.Text = entity.Text;
+        await _feedbackRepository.UpdateAsync(existing);
+    }
+
+    /// <summary>
+    /// Deletes an existing feedback entity.
+    /// Per NetworkingAPISpec §1(1)(h)(vi) and FrontendWorkflowSpecifications §6A(7)(a)(ii):
+    /// Invoked when teacher clears both Text and Marks on a PROVISIONAL feedback.
+    /// </summary>
+    public async Task DeleteFeedback(Guid feedbackId)
+    {
+        var existing = await _feedbackRepository.GetByIdAsync(feedbackId);
+        if (existing == null)
+            throw new HubException($"Feedback {feedbackId} not found");
+
+        // Only PROVISIONAL feedback can be deleted
+        if (existing.Status != FeedbackStatus.PROVISIONAL)
+            throw new HubException($"Feedback {feedbackId} cannot be deleted: status is {existing.Status}, not PROVISIONAL");
+
+        await _feedbackRepository.DeleteAsync(feedbackId);
     }
 
     #endregion

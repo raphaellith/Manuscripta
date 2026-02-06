@@ -53,7 +53,9 @@ public interface ITcpPairingService
     /// Sends a RETURN_FEEDBACK (0x07) command to the specified device and waits for FEEDBACK_ACK.
     /// Per Session Interaction.md §7 and API Contract.md §3.4.
     /// </summary>
-    Task SendReturnFeedbackAsync(string deviceId);
+    /// <param name="deviceId">Target device ID.</param>
+    /// <param name="feedbackIds">Feedback entity IDs being sent to this device.</param>
+    Task SendReturnFeedbackAsync(string deviceId, IEnumerable<Guid> feedbackIds);
 
     /// <summary>
     /// Event raised when a device status update (STATUS_UPDATE 0x10) is received.
@@ -72,5 +74,27 @@ public interface ITcpPairingService
     /// Per Session Interaction.md §6(2) and §6(3).
     /// </summary>
     event EventHandler<Models.Events.ControlTimeoutEventArgs>? ControlCommandTimedOut;
+
+    /// <summary>
+    /// Event raised when a HAND_RAISED (0x11) message is received.
+    /// Per Session Interaction.md §4A(1).
+    /// </summary>
+    event EventHandler<Guid>? HandRaisedReceived;
+
+    /// <summary>
+    /// Event raised when a distribution command times out (no DISTRIBUTE_ACK).
+    /// </summary>
+    event EventHandler<Guid>? DistributionTimedOut;
+
+    /// <summary>
+    /// Event raised when a feedback delivery command times out (no FEEDBACK_ACK).
+    /// </summary>
+    event EventHandler<Guid>? FeedbackDeliveryTimedOut;
+
+    /// <summary>
+    /// Event raised when FEEDBACK_ACK is received, containing the feedback IDs that were acknowledged.
+    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED.
+    /// </summary>
+    event EventHandler<IEnumerable<Guid>>? FeedbackAckReceived;
 }
 
