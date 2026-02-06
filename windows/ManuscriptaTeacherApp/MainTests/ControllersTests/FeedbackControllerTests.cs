@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Main.Controllers;
@@ -223,4 +225,64 @@ public class FeedbackControllerTests
     }
 
     #endregion
+}
+
+/// <summary>
+/// Integration tests for FeedbackController JSON serialisation compliance.
+/// Verifies AdditionalValidationRules.md Section 1A(1): PascalCase field names.
+/// </summary>
+public class FeedbackControllerSerialisationTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly Guid _testDeviceId = Guid.NewGuid();
+    private readonly Guid _testResponseId = Guid.NewGuid();
+    private readonly Guid _testQuestionId = Guid.NewGuid();
+
+    public FeedbackControllerSerialisationTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task GetFeedback_FieldNames_ArePascalCase()
+    {
+        // Arrange - Per s1A(1): Fields serialised in PascalCase
+        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!", marks: 5);
+        var response = new WrittenAnswerResponseEntity(_testResponseId, _testQuestionId, _testDeviceId, "Answer");
+
+        var mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        mockFeedbackRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new[] { feedback });
+
+        var mockResponseRepo = new Mock<IResponseRepository>();
+        mockResponseRepo.Setup(r => r.GetByIdAsync(_testResponseId)).ReturnsAsync(response);
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var feedbackDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IFeedbackRepository));
+                if (feedbackDescriptor != null) services.Remove(feedbackDescriptor);
+                services.AddSingleton(mockFeedbackRepo.Object);
+
+                var responseDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IResponseRepository));
+                if (responseDescriptor != null) services.Remove(responseDescriptor);
+                services.AddSingleton(mockResponseRepo.Object);
+            });
+        }).CreateClient();
+
+        // Act
+        var httpResponse = await client.GetAsync($"/api/v1/feedback/{_testDeviceId}");
+        var content = await httpResponse.Content.ReadAsStringAsync();
+
+        // Assert - Field names should be PascalCase
+        Assert.Contains("\"Id\"", content);
+        Assert.Contains("\"ResponseId\"", content);
+        Assert.Contains("\"Text\"", content);
+        Assert.Contains("\"Marks\"", content);
+        
+        // Verify NOT camelCase
+        Assert.DoesNotContain("\"responseId\"", content);
+        Assert.DoesNotContain("\"text\":", content);
+        Assert.DoesNotContain("\"marks\":", content);
+    }
 }

@@ -56,10 +56,21 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
-builder.Services.AddControllers();
+// Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
+        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
         options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
