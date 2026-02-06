@@ -8,6 +8,7 @@ import android.net.NetworkRequest;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -17,6 +18,8 @@ import java.net.URL;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import dagger.hilt.android.qualifiers.ApplicationContext;
 
 /**
  * Utility class for monitoring network connectivity and server reachability.
@@ -54,7 +57,7 @@ public class ConnectionManager {
      * @throws IllegalArgumentException if context is null
      */
     @Inject
-    public ConnectionManager(@NonNull Context context) {
+    public ConnectionManager(@ApplicationContext @NonNull Context context) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }
@@ -73,7 +76,7 @@ public class ConnectionManager {
             @Override
             public void onAvailable(@NonNull Network network) {
                 Log.d(TAG, "Network available: " + network);
-                isConnected.postValue(true);
+                isConnected.postValue(checkCurrentConnection());
             }
 
             @Override
@@ -94,7 +97,11 @@ public class ConnectionManager {
                 Log.d(TAG, "Network capabilities changed - Internet: " + hasInternet
                         + ", Validated: " + validated);
 
-                isConnected.postValue(hasInternet && validated);
+                // Only update if this is the active network
+                Network activeNetwork = connectivityManager.getActiveNetwork();
+                if (network.equals(activeNetwork)) {
+                    isConnected.postValue(hasInternet && validated);
+                }
             }
         };
 
@@ -126,10 +133,15 @@ public class ConnectionManager {
      * Checks if a specific server is reachable via HTTP.
      * Performs a HEAD request to the server URL to verify connectivity.
      *
-     * @param serverUrl The server URL to check (e.g., "https://api.example.com")
+     * <p><strong>Warning:</strong> This method performs a blocking network operation and must
+     * not be called from the main thread. Calling from the main thread may result in
+     * NetworkOnMainThreadException or ANR (Application Not Responding). Execute this method
+     * on a background thread using AsyncTask, ExecutorService, or Kotlin Coroutines.</p>
+     *
+     * @param serverUrl The server URL to check (e.g., "https://api.example.com"), or null
      * @return true if server is reachable, false otherwise
      */
-    public boolean isServerReachable(@NonNull String serverUrl) {
+    public boolean isServerReachable(@Nullable String serverUrl) {
         if (serverUrl == null || serverUrl.isEmpty()) {
             Log.w(TAG, "Server URL is null or empty");
             return false;
@@ -140,16 +152,16 @@ public class ConnectionManager {
             return false;
         }
 
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(serverUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("HEAD");
             connection.setConnectTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setReadTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setInstanceFollowRedirects(false);
 
             int responseCode = connection.getResponseCode();
-            connection.disconnect();
 
             boolean reachable = (responseCode >= 200 && responseCode < 500);
             Log.d(TAG, "Server reachability check: " + serverUrl
@@ -162,6 +174,10 @@ public class ConnectionManager {
         } catch (Exception e) {
             Log.e(TAG, "Error checking server reachability: " + e.getMessage(), e);
             return false;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 

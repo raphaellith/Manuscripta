@@ -1,7 +1,9 @@
 package com.manuscripta.student.utils;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,9 +17,11 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -31,6 +35,9 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {28})
 public class ConnectionManagerTest {
+
+    @Rule
+    public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
     @Mock
     private Context mockContext;
@@ -268,7 +275,7 @@ public class ConnectionManagerTest {
     }
 
     @Test
-    public void testIsServerReachable_nullProtocolException_returnsFalse() {
+    public void testIsServerReachable_malformedUrl_returnsFalse() {
         // Mock network as available
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
         when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
@@ -280,8 +287,7 @@ public class ConnectionManagerTest {
 
         connectionManager = new ConnectionManager(mockContext);
 
-        // Pass a URL that will throw RuntimeException (general Exception catch)
-        // This tests the generic Exception handler
+        // Pass a URL that will throw MalformedURLException
         boolean reachable = connectionManager.isServerReachable("://invalid");
 
         assertFalse(reachable);
@@ -363,6 +369,7 @@ public class ConnectionManagerTest {
         // Should return the same instance
         assertNotNull(state1);
         assertNotNull(state2);
+        assertSame(state1, state2);
     }
 
     @Test
@@ -393,12 +400,22 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
+        // Mock a connected network for the callback
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(true);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(true);
+
         // Trigger onAvailable
         callback.onAvailable(mockNetwork);
 
-        // LiveData should be updated to true
-        // Note: We can't easily verify postValue was called, but we've covered the code path
-        assertNotNull(callback);
+        // Verify LiveData is updated to true
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertTrue(state.getValue());
     }
 
     @Test
@@ -422,12 +439,14 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
-        // Trigger onLost
+        // Trigger onLost - mock no active network afterwards
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
         callback.onLost(mockNetwork);
 
-        // Code path covered
-        assertNotNull(callback);
+        // Verify LiveData is updated to false
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertFalse(state.getValue());
     }
 
     @Test
@@ -444,6 +463,9 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
+        // Mock this network as the active network
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+
         // Create mock capabilities with internet and validated
         when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
                 .thenReturn(true);
@@ -453,8 +475,10 @@ public class ConnectionManagerTest {
         // Trigger onCapabilitiesChanged
         callback.onCapabilitiesChanged(mockNetwork, mockCapabilities);
 
-        // Code path covered
-        assertNotNull(callback);
+        // Verify LiveData is updated to true
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertTrue(state.getValue());
     }
 
     @Test
@@ -471,6 +495,9 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
+        // Mock this network as the active network
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+
         // Create mock capabilities without internet
         when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
                 .thenReturn(false);
@@ -480,8 +507,10 @@ public class ConnectionManagerTest {
         // Trigger onCapabilitiesChanged
         callback.onCapabilitiesChanged(mockNetwork, mockCapabilities);
 
-        // Code path covered
-        assertNotNull(callback);
+        // Verify LiveData is updated to false
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertFalse(state.getValue());
     }
 
     @Test
@@ -498,6 +527,9 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
+        // Mock this network as the active network
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+
         // Create mock capabilities with neither internet nor validation
         when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
                 .thenReturn(false);
@@ -507,8 +539,10 @@ public class ConnectionManagerTest {
         // Trigger onCapabilitiesChanged
         callback.onCapabilitiesChanged(mockNetwork, mockCapabilities);
 
-        // Code path covered
-        assertNotNull(callback);
+        // Verify LiveData is updated to false
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertFalse(state.getValue());
     }
 
     @Test
@@ -525,6 +559,9 @@ public class ConnectionManagerTest {
 
         ConnectivityManager.NetworkCallback callback = callbackCaptor.getValue();
 
+        // Mock this network as the active network
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+
         // Create mock capabilities without validation
         when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
                 .thenReturn(true);
@@ -534,8 +571,10 @@ public class ConnectionManagerTest {
         // Trigger onCapabilitiesChanged
         callback.onCapabilitiesChanged(mockNetwork, mockCapabilities);
 
-        // Code path covered
-        assertNotNull(callback);
+        // Verify LiveData is updated to false
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        assertNotNull(state.getValue());
+        assertFalse(state.getValue());
     }
 
     // ========== Exception handling tests ==========
