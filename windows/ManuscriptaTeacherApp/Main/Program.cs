@@ -68,9 +68,11 @@ builder.Services.AddControllers()
 builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
-        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
-        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
-        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
+        // SignalR is internal to the Windows app (backend ↔ Electron frontend).
+        // Per Validation Rules s1(6), internal implementation may use another case where justifiable.
+        // camelCase is idiomatic for the TypeScript frontend consuming these payloads.
+        options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Enum members serialised as SCREAMING_SNAKE_CASE strings per s1A(1)
         options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
