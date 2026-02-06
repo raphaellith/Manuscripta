@@ -1,5 +1,6 @@
 package com.manuscripta.student.data.local;
 
+import androidx.room.AutoMigration;
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
 
@@ -23,8 +24,11 @@ import com.manuscripta.student.data.model.SessionEntity;
         DeviceStatusEntity.class,
         FeedbackEntity.class
     },
-    version = 8,
-    exportSchema = false
+    version = 9,
+    autoMigrations = {
+        @AutoMigration(from = 8, to = 9)
+    },
+    exportSchema = true
 )
 public abstract class ManuscriptaDatabase extends RoomDatabase {
 

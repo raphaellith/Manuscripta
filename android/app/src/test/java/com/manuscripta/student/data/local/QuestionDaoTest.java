@@ -42,7 +42,6 @@ public class QuestionDaoTest {
         Context context = ApplicationProvider.getApplicationContext();
         database = Room.inMemoryDatabaseBuilder(context, ManuscriptaDatabase.class)
                 .allowMainThreadQueries()
-                .fallbackToDestructiveMigration()
                 .build();
         materialDao = database.materialDao();
         questionDao = database.questionDao();

@@ -34,6 +34,6 @@ public class DatabaseModule {
                 context,
                 ManuscriptaDatabase.class,
                 "manuscripta_database"
-        ).fallbackToDestructiveMigration().build();
+        ).build();
     }
 }

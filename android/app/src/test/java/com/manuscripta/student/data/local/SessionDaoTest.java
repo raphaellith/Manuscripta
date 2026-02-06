@@ -41,7 +41,6 @@ public class SessionDaoTest {
         Context context = ApplicationProvider.getApplicationContext();
         database = Room.inMemoryDatabaseBuilder(context, ManuscriptaDatabase.class)
                 .allowMainThreadQueries()
-                .fallbackToDestructiveMigration()
                 .build();
         materialDao = database.materialDao();
         sessionDao = database.sessionDao();
