@@ -45,9 +45,17 @@ public class NetworkModule {
     @Provides
     @Singleton
     public OkHttpClient provideOkHttpClient() {
-        // Stub device ID provider - replace with real implementation when device ID is available
-        // Example: () -> Settings.Secure.getString(context.getContentResolver(),
-        //                                           Settings.Secure.ANDROID_ID)
+        // TODO: Replace stub DeviceIdProvider with a real implementation that retrieves
+        // the actual device ID. This is required for device identification in API requests.
+        // The device ID should be obtained from one of these sources:
+        // 1. Settings.Secure.ANDROID_ID for hardware-specific identifier
+        // 2. A generated UUID stored in SharedPreferences for app-specific identifier
+        // 3. A device ID obtained during the pairing process
+        // Until implemented, AuthInterceptor will not add the X-Device-ID header.
+        // Example implementation:
+        //   @Inject Context context;
+        //   () -> Settings.Secure.getString(context.getContentResolver(),
+        //                                   Settings.Secure.ANDROID_ID)
         AuthInterceptor.DeviceIdProvider deviceIdProvider = () -> null;
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
