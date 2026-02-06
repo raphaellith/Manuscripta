@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,12 +51,12 @@ public class RetryInterceptorTest {
         }
 
         TestableRetryInterceptor(int maxRetries, long initialBackoffMs,
-                                  long maxBackoffMs, double backoffMultiplier) {
-            super(maxRetries, initialBackoffMs, maxBackoffMs, backoffMultiplier);
+                                  long maxBackoffMs, double backoffMultiplier, double jitterFactor) {
+            super(maxRetries, initialBackoffMs, maxBackoffMs, backoffMultiplier, jitterFactor);
         }
 
         @Override
-        protected void sleep(long millis) {
+        protected void sleep(long millis) throws IOException {
             sleepCallCount++;
             lastSleepDuration = millis;
             // Don't actually sleep in tests
@@ -92,58 +91,72 @@ public class RetryInterceptorTest {
         assertEquals(1000L, interceptor.getInitialBackoffMs());
         assertEquals(32000L, interceptor.getMaxBackoffMs());
         assertEquals(2.0, interceptor.getBackoffMultiplier(), 0.001);
+        assertEquals(0.25, interceptor.getJitterFactor(), 0.001);
     }
 
     @Test
     public void testConstructor_customValid_succeeds() {
-        RetryInterceptor interceptor = new RetryInterceptor(5, 2000L, 64000L, 3.0);
+        RetryInterceptor interceptor = new RetryInterceptor(5, 2000L, 64000L, 3.0, 0.5);
 
         assertNotNull(interceptor);
         assertEquals(5, interceptor.getMaxRetries());
         assertEquals(2000L, interceptor.getInitialBackoffMs());
         assertEquals(64000L, interceptor.getMaxBackoffMs());
         assertEquals(3.0, interceptor.getBackoffMultiplier(), 0.001);
+        assertEquals(0.5, interceptor.getJitterFactor(), 0.001);
     }
 
     @Test
     public void testConstructor_negativeMaxRetries_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(-1, 1000L, 32000L, 2.0));
+                () -> new RetryInterceptor(-1, 1000L, 32000L, 2.0, 0.25));
     }
 
     @Test
     public void testConstructor_zeroInitialBackoff_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 0L, 32000L, 2.0));
+                () -> new RetryInterceptor(3, 0L, 32000L, 2.0, 0.25));
     }
 
     @Test
     public void testConstructor_negativeInitialBackoff_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, -1000L, 32000L, 2.0));
+                () -> new RetryInterceptor(3, -1000L, 32000L, 2.0, 0.25));
     }
 
     @Test
     public void testConstructor_maxBackoffLessThanInitial_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 2000L, 1000L, 2.0));
+                () -> new RetryInterceptor(3, 2000L, 1000L, 2.0, 0.25));
     }
 
     @Test
     public void testConstructor_backoffMultiplierOne_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 1000L, 32000L, 1.0));
+                () -> new RetryInterceptor(3, 1000L, 32000L, 1.0, 0.25));
     }
 
     @Test
     public void testConstructor_backoffMultiplierLessThanOne_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 1000L, 32000L, 0.5));
+                () -> new RetryInterceptor(3, 1000L, 32000L, 0.5, 0.25));
+    }
+
+    @Test
+    public void testConstructor_negativeJitterFactor_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new RetryInterceptor(3, 1000L, 32000L, 2.0, -0.1));
+    }
+
+    @Test
+    public void testConstructor_jitterFactorGreaterThanOne_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new RetryInterceptor(3, 1000L, 32000L, 2.0, 1.5));
     }
 
     @Test
     public void testConstructor_zeroMaxRetries_succeeds() {
-        RetryInterceptor interceptor = new RetryInterceptor(0, 1000L, 32000L, 2.0);
+        RetryInterceptor interceptor = new RetryInterceptor(0, 1000L, 32000L, 2.0, 0.25);
 
         assertNotNull(interceptor);
         assertEquals(0, interceptor.getMaxRetries());
@@ -184,8 +197,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_500InternalServerError_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(500, "Internal Server Error"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -200,8 +213,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_502BadGateway_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(502, "Bad Gateway");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(502, "Bad Gateway"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -214,8 +227,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_503ServiceUnavailable_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(503, "Service Unavailable");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(503, "Service Unavailable"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -228,8 +241,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_504GatewayTimeout_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(504, "Gateway Timeout");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(504, "Gateway Timeout"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -244,8 +257,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_400BadRequest_noRetry() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(400, "Bad Request");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(400, "Bad Request"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -258,8 +271,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_401Unauthorized_noRetry() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(401, "Unauthorized");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(401, "Unauthorized"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -272,8 +285,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_404NotFound_noRetry() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(404, "Not Found");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(404, "Not Found"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -288,8 +301,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_408RequestTimeout_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(408, "Request Timeout");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(408, "Request Timeout"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -302,8 +315,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_429TooManyRequests_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(429, "Too Many Requests");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(429, "Too Many Requests"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -369,7 +382,8 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_doublesBackoff() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        // Use zero jitter for deterministic testing
+        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 32000L, 2.0, 0.0);
 
         long next = interceptor.calculateNextBackoff(1000L);
 
@@ -378,7 +392,8 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_respectsMaxBackoff() {
-        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 5000L, 2.0);
+        // Use zero jitter for deterministic testing
+        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 5000L, 2.0, 0.0);
 
         long next = interceptor.calculateNextBackoff(4000L);
 
@@ -387,7 +402,8 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_customMultiplier() {
-        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 100000L, 3.0);
+        // Use zero jitter for deterministic testing
+        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 100000L, 3.0, 0.0);
 
         long next = interceptor.calculateNextBackoff(1000L);
 
@@ -395,16 +411,27 @@ public class RetryInterceptorTest {
     }
 
     @Test
+    public void testCalculateNextBackoff_withJitter() {
+        // Use 25% jitter
+        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 32000L, 2.0, 0.25);
+
+        long next = interceptor.calculateNextBackoff(1000L);
+
+        // Should be 2000 + jitter (0 to 500), so between 2000 and 2500
+        assertTrue(next >= 2000L && next <= 2500L);
+    }
+
+    @Test
     public void testIntercept_exponentialBackoffProgression() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(3, 1000L, 32000L, 2.0);
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(3, 1000L, 32000L, 2.0, 0.0);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(500, "Internal Server Error"));
 
         interceptor.intercept(mockChain);
 
         // Verify sleep was called 3 times with increasing durations
         assertEquals(3, interceptor.getSleepCallCount());
-        // Last sleep should be 4000ms (1000 * 2^2)
+        // Last sleep should be 4000ms (1000 * 2^2) with no jitter
         assertEquals(4000L, interceptor.getLastSleepDuration());
     }
 
@@ -412,9 +439,9 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_customMaxRetries_respectsLimit() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(1, 1000L, 32000L, 2.0);
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(1, 1000L, 32000L, 2.0, 0.25);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(500, "Internal Server Error"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -427,9 +454,9 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_zeroMaxRetries_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(0, 1000L, 32000L, 2.0);
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(0, 1000L, 32000L, 2.0, 0.25);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(invocation -> createResponse(500, "Internal Server Error"));
 
         Response response = interceptor.intercept(mockChain);
 

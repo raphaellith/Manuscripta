@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
 import java.io.IOException;
+import java.util.Random;
 
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -19,7 +20,8 @@ import okhttp3.Response;
  * <p>Retry behavior:</p>
  * <ul>
  *   <li>5xx errors: Retry with exponential backoff</li>
- *   <li>4xx errors: Fail immediately (client errors)</li>
+ *   <li>4xx errors: Fail immediately (client errors), except for transient errors
+ *       (e.g., 408 Request Timeout, 429 Too Many Requests) which may be retried</li>
  *   <li>Network errors (IOException): Retry with exponential backoff</li>
  * </ul>
  */
@@ -40,6 +42,12 @@ public class RetryInterceptor implements Interceptor {
     /** Default backoff multiplier for exponential growth. */
     private static final double DEFAULT_BACKOFF_MULTIPLIER = 2.0;
 
+    /** Default jitter factor (0.0-1.0) for adding randomness to backoff. */
+    private static final double DEFAULT_JITTER_FACTOR = 0.25;
+
+    /** Random number generator for jitter. */
+    private final Random random;
+
     /** Maximum number of retry attempts. */
     private final int maxRetries;
 
@@ -52,12 +60,15 @@ public class RetryInterceptor implements Interceptor {
     /** Backoff multiplier for exponential growth. */
     private final double backoffMultiplier;
 
+    /** Jitter factor (0.0-1.0) for adding randomness to backoff delays. */
+    private final double jitterFactor;
+
     /**
      * Creates a RetryInterceptor with default retry policy.
      */
     public RetryInterceptor() {
         this(DEFAULT_MAX_RETRIES, DEFAULT_INITIAL_BACKOFF_MS,
-                DEFAULT_MAX_BACKOFF_MS, DEFAULT_BACKOFF_MULTIPLIER);
+                DEFAULT_MAX_BACKOFF_MS, DEFAULT_BACKOFF_MULTIPLIER, DEFAULT_JITTER_FACTOR);
     }
 
     /**
@@ -67,10 +78,11 @@ public class RetryInterceptor implements Interceptor {
      * @param initialBackoffMs   Initial backoff delay in milliseconds
      * @param maxBackoffMs       Maximum backoff delay in milliseconds
      * @param backoffMultiplier  Backoff multiplier for exponential growth
+     * @param jitterFactor       Jitter factor (0.0-1.0) for adding randomness
      * @throws IllegalArgumentException if parameters are invalid
      */
     public RetryInterceptor(int maxRetries, long initialBackoffMs,
-                             long maxBackoffMs, double backoffMultiplier) {
+                             long maxBackoffMs, double backoffMultiplier, double jitterFactor) {
         if (maxRetries < 0) {
             throw new IllegalArgumentException("maxRetries must be non-negative");
         }
@@ -84,11 +96,16 @@ public class RetryInterceptor implements Interceptor {
         if (backoffMultiplier <= 1.0) {
             throw new IllegalArgumentException("backoffMultiplier must be > 1.0");
         }
+        if (jitterFactor < 0.0 || jitterFactor > 1.0) {
+            throw new IllegalArgumentException("jitterFactor must be between 0.0 and 1.0");
+        }
 
         this.maxRetries = maxRetries;
         this.initialBackoffMs = initialBackoffMs;
         this.maxBackoffMs = maxBackoffMs;
         this.backoffMultiplier = backoffMultiplier;
+        this.jitterFactor = jitterFactor;
+        this.random = new Random();
     }
 
     /**
@@ -179,15 +196,23 @@ public class RetryInterceptor implements Interceptor {
     }
 
     /**
-     * Calculates the next backoff delay using exponential backoff.
+     * Calculates the next backoff delay using exponential backoff with jitter.
+     * Jitter helps prevent the thundering herd problem by adding randomness to retry timing.
      *
      * @param currentBackoff The current backoff delay
-     * @return The next backoff delay, capped at maxBackoffMs
+     * @return The next backoff delay with jitter applied, capped at maxBackoffMs
      */
     @VisibleForTesting
     long calculateNextBackoff(long currentBackoff) {
+        // Calculate exponential backoff
         long nextBackoff = (long) (currentBackoff * backoffMultiplier);
-        return Math.min(nextBackoff, maxBackoffMs);
+        nextBackoff = Math.min(nextBackoff, maxBackoffMs);
+        
+        // Add jitter: random value between 0 and (nextBackoff * jitterFactor)
+        long jitterRange = (long) (nextBackoff * jitterFactor);
+        long jitter = (long) (random.nextDouble() * jitterRange);
+        
+        return nextBackoff + jitter;
     }
 
     /**
@@ -195,14 +220,16 @@ public class RetryInterceptor implements Interceptor {
      * This method is protected to allow testing without actual delays.
      *
      * @param millis The duration to sleep in milliseconds
+     * @throws IOException if sleep is interrupted
      */
     @VisibleForTesting
-    protected void sleep(long millis) {
+    protected void sleep(long millis) throws IOException {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Log.w(TAG, "Sleep interrupted during backoff");
+            Log.w(TAG, "Sleep interrupted during backoff", e);
+            throw new IOException("Sleep interrupted during backoff", e);
         }
     }
 
@@ -244,5 +271,15 @@ public class RetryInterceptor implements Interceptor {
     @VisibleForTesting
     double getBackoffMultiplier() {
         return backoffMultiplier;
+    }
+
+    /**
+     * Gets the jitter factor.
+     *
+     * @return Jitter factor
+     */
+    @VisibleForTesting
+    double getJitterFactor() {
+        return jitterFactor;
     }
 }
