@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -259,7 +260,7 @@ public class SessionEndHandlerTest {
 
         handler.cancelAllActiveSessions();
 
-        verify(mockListener, never()).onSessionsEnded(0);
+        verify(mockListener, never()).onSessionsEnded(anyInt());
     }
 
     // ========== onMessageReceived tests ==========

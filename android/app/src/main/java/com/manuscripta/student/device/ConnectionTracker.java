@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
-import com.manuscripta.student.data.model.DeviceStatus;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
 import com.manuscripta.student.network.tcp.ConnectionState;
 import com.manuscripta.student.network.tcp.TcpMessage;
