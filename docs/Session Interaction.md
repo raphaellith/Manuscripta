@@ -38,15 +38,19 @@ This document specifies the process through which the two clients communicate du
 
 (4) The Windows client must provide a REST API endpoint which:
 
-    (i) Takes a batchId as an input.
+    (a) Takes a batchId as an input.
 
-    (ii) Returns, if any, material entities and their related questions associated with that batch.
+    (b) Returns, if any, material entities and their related questions associated with that batch.
 
 This is specified in `API Contract.md` §2.5.
 
 (5) The Android client must, on successful receipt of materials from the REST API endpoint defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message with the `batchId` as the operand, as defined in `API Contract.md` §3.6.
 
-(5A) Upon receipt of a `DISTRIBUTE_ACK` message, the Windows client shall deem the corresponding distribution batch as delivered.
+(5A) Upon receipt of a `DISTRIBUTE_ACK` message, the Windows client shall —
+
+    (a) deem the corresponding distribution batch as delivered; and
+    
+    (b) not include materials and questions in that batch from further distributions, unless dispatched again by the user.
 
 (6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message —
 
@@ -154,9 +158,11 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 (5) Upon receipt of a `FEEDBACK_ACK` message, the Windows client shall —
 
-    (a) Deem the corresponding feedback batch as delivered.
+    (a) deem the corresponding feedback batch as delivered;
 
-    (b) Transition all `FeedbackEntity` items in that batch from `READY` to `DELIVERED` status.
+    (b) transition all `FeedbackEntity` items in that batch from `READY` to `DELIVERED` status; and
+
+    (c) not include feedback in that batch from further distributions, unless dispatched again by the user.
 
 (6) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message from a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message —
 
