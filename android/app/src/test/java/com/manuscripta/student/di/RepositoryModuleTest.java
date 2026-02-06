@@ -121,7 +121,8 @@ public class RepositoryModuleTest {
     public void testProvideFileStorageManager_returnsFileStorageManager() {
         // Mock the context chain and filesDir
         when(mockContext.getApplicationContext()).thenReturn(mockContext);
-        when(mockContext.getFilesDir()).thenReturn(new java.io.File("/tmp"));
+        when(mockContext.getFilesDir())
+                .thenReturn(new java.io.File(System.getProperty("java.io.tmpdir")));
 
         FileStorageManager result = repositoryModule.provideFileStorageManager(mockContext);
 
@@ -131,6 +132,10 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideMaterialRepository_returnsRepository() {
+        // Stub getAll() to avoid NullPointerException when MaterialRepositoryImpl
+        // constructor calls refreshMaterialsLiveData() which reads from the DAO
+        when(mockMaterialDao.getAll()).thenReturn(new java.util.ArrayList<>());
+
         MaterialRepository result =
                 repositoryModule.provideMaterialRepository(mockMaterialDao, mockFileStorageManager);
 

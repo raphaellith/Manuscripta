@@ -69,9 +69,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * are only compile-time hints in Java and do not prevent null values at runtime.
      * This defensive approach ensures fail-fast behaviour for invalid constructor calls.</p>
      *
-     * <p>The constructor calls {@link #refreshMaterialsLiveData()} to initialize LiveData
-     * with existing materials. This is safe because all fields are assigned before the call
-     * and the DAO read operation has no side effects.</p>
+     * <p>The constructor initialises LiveData asynchronously on a background thread to avoid
+     * Room's "Cannot access database on the main thread" restriction when this singleton
+     * is injected during app start.</p>
      *
      * @param materialDao        The DAO for material persistence
      * @param fileStorageManager The file storage manager for attachments
@@ -90,9 +90,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         this.fileStorageManager = fileStorageManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
-        // Initialize LiveData with existing materials from database.
-        // Safe to call here as all fields are initialized and getAll() is a pure read.
-        refreshMaterialsLiveData();
+        // Initialize LiveData with existing materials from database without blocking the main thread.
+        // Run the potentially blocking DAO call on a background thread to avoid Room main-thread access.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                refreshMaterialsLiveData();
+            }
+        }).start();
     }
 
     @Override

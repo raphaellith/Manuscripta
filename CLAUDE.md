@@ -19,7 +19,7 @@ Before any implementation work, read relevant documentation in `/docs/`:
 | Document | Description |
 |----------|-------------|
 | `Android System Design.md` | System architecture audit with ERD, sequence diagrams, state machines |
-| `Github Conventions.md` | Branch naming, PR/issue conventions, documentation versioning |
+| `GitHub Conventions.md` | Branch naming, PR/issue conventions, documentation versioning |
 
 ### Source Files
 
