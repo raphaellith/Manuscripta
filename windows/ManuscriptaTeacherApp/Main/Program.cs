@@ -60,7 +60,7 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
-})
+});
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
