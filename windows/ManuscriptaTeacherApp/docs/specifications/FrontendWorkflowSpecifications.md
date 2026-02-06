@@ -618,11 +618,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(vi)) rather than `UpdateFeedback`. This action deletes the provisional feedback.
 
-    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable.
-
-        (i) The frontend shall not display editing controls for feedback in these states.
-
-        (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
+    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable. The frontend shall not display editing controls for feedback in these states.
 
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
