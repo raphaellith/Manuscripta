@@ -381,7 +381,7 @@ public class ErrorInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(code)
                 .message(message)
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
     }
 
@@ -399,7 +399,7 @@ public class ErrorInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(code)
                 .message(message)
-                .body(ResponseBody.create(body, MediaType.parse("application/json")))
+                .body(ResponseBody.create(MediaType.parse("application/json"), body))
                 .build();
     }
 }
