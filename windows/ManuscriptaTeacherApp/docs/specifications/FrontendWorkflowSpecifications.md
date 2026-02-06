@@ -588,7 +588,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
 
-(1A) If R corresponds to an existing feedback (F) in `PROVISIONAL` state, the frontend shall provide means for the teacher to send R to the generation queue. R shall be added to the AI generation queue by invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)). The teacher shall be warned that F will be overwritten, and be asked for confirmation.
+(1A) If a response (R) corresponds to an existing feedback (F) in `PROVISIONAL` state, the frontend shall provide means for the teacher to send R to the generation queue. R shall be added to the AI generation queue by invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)). The teacher shall be warned that F will be overwritten, and be asked for confirmation.
 
 (2) When the teacher clicks "Release Feedback", the frontend shall invoke `ApproveFeedback(feedbackId)` (NetworkingAPISpec §1(1)(h)(ii)).
 
