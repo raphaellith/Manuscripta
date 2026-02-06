@@ -291,9 +291,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (b) This operation shall have no effect if —
 
-        (i) if the response is not currently queued; or
+        (i) the response is not currently queued; or
 
-        (ii) if the response is currently being generated, this operation shall have no effect.
+        (ii) the response is currently being generated.
 
 (8) Upon successful AI feedback generation —
 
