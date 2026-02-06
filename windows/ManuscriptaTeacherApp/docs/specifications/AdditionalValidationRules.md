@@ -24,6 +24,14 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (6) For the purpose of this document, "contain" in relation to a data field means "contain a non-null value for".
 
+## Section 1A - Serialisation
+
+(1) Pursuant to Validation Rules s1(6), fields in JSON objects shall be serialised in PascalCase, whilst enum members shall be serialised in SCREAMING_SNAKE_CASE.
+
+(2) Unless otherwise specified, any fields defined in this document shall not appear in the data transfer objects used in communication with the android client.
+
+(3) Care must be taken to ensure polymorphic classes[, such as Materials, Questions and Responses] are appropriately serialised, such that they appear in a composition-like manner as specified in the Validation Rules.
+
 ## Section 2 - Entity classes for Each Hierarchical Level
 
 ### Section 2A - Unit Collection
@@ -67,8 +75,6 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
 
-(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
-
 
 ### Section 2E - Question
 
@@ -81,8 +87,6 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) A `QuestionEntity` object of type `MULTIPLE_CHOICE` must not have a `MarkScheme` defined in (1)(a).
 
     (b) A `QuestionEntity` object may not simultaneously contain `MarkScheme` and `CorrectAnswer` fields.
-
-(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
 ## Section 3 - Entity classes Not Belonging to the Material Hierarchy

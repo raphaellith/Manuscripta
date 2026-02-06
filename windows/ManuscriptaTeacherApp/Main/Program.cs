@@ -61,8 +61,21 @@ builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
 })
+// Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
+        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
         options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
