@@ -1,4 +1,4 @@
-package com.manuscripta.student.network;
+package com.manuscripta.student.network.dto;
 
 import com.google.gson.annotations.SerializedName;
 

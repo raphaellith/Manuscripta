@@ -6,6 +6,7 @@ import com.manuscripta.student.network.dto.BatchResponseDto;
 import com.manuscripta.student.network.dto.ConfigResponseDto;
 import com.manuscripta.student.network.dto.DeviceInfoDto;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
+import com.manuscripta.student.network.dto.FeedbackResponse;
 import com.manuscripta.student.network.dto.ResponseDto;
 
 import okhttp3.ResponseBody;
