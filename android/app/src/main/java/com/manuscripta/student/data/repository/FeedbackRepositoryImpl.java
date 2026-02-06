@@ -9,8 +9,8 @@ import com.manuscripta.student.data.model.FeedbackEntity;
 import com.manuscripta.student.domain.mapper.FeedbackMapper;
 import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
-import com.manuscripta.student.network.FeedbackDto;
-import com.manuscripta.student.network.FeedbackResponse;
+import com.manuscripta.student.network.dto.FeedbackDto;
+import com.manuscripta.student.network.dto.FeedbackResponse;
 import com.manuscripta.student.network.tcp.core.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
