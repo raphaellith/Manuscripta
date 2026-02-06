@@ -116,6 +116,10 @@ For a description of how these server methods and client handlers are expected t
         (vi) `Task QueueForAiGeneration(Guid responseId)`: Adds or re-adds the specified response to the AI feedback generation queue. See GenAISpec §3D(5).
 
         (vii) `Task RetryEmbedding(Guid sourceDocumentId)`: Re-queues a source document with `FAILED` status for indexing. See GenAISpec §3A(7).
+
+        (viii) `Task PrioritiseFeedbackGeneration(Guid responseId)`: Moves the specified response to the front of the AI feedback generation queue. See GenAISpec §3D(8A).
+
+        (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
         
     (j) Methods for retrieving responses.
 

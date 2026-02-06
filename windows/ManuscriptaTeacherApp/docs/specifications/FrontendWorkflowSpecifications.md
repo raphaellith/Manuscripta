@@ -580,47 +580,16 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 6A — Response Review and Feedback Workflow
 
-(6) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(i)) —
+(1) If no `FeedbackEntity` corresponding to a response (R) exists and the question R is related to satisfies GenAISpec §3D(1), the frontend shall —
 
-    (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
+    (a) if R is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator, and disable edits for that response.
 
-    (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+    (b) provide a "Write Manually" option. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created.
 
-(7) **Feedback Editing and Deletion Rules**
+    (b1) if R corresponds to an existing feedback (F) in `PROVISIONAL`, provide means for the teacher to send R to the generation queue, and add R to the AI generation queue by invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)).
+    The teacher shall be warned that F will be overwritten, and be asked for confirmation.
 
-    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
-
-        (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
-
-        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` rather than `UpdateFeedback`. This action deletes the provisional feedback.
-
-    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable.
-
-        (i) The frontend shall not display editing controls for feedback in these states.
-
-        (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
-
-    [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalized assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
-
-## Section 6A — Response Review and Feedback Workflow
-
-(1) When the teacher selects a response for review, the frontend shall —
-
-    (a) if a `FeedbackEntity` exists with status `PROVISIONAL` —
-
-        (i) display the feedback content for review and editing.
-
-        (ii) provide a "Release Feedback" button.
-
-    (b) if no `FeedbackEntity` exists and the question satisfies GenAISpec §3D(1) —
-
-        (i) if the response is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator.
-
-        (ii) provide a "Write Manually" option. Upon saving manual feedback, the response shall be removed from the queue per GenAISpec §3D(6).
-
-        (iii) provide a "Prioritise" option if the response is queued.
-
-    (c) if the question does not have a `MarkScheme`, provide a manual feedback entry interface.
+    (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
 
 (2) When the teacher clicks "Release Feedback", the frontend shall invoke `ApproveFeedback(feedbackId)` (NetworkingAPISpec §1(1)(h)(ii)).
 
@@ -628,15 +597,35 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall display an error message indicating that AI feedback generation has failed.
 
-    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration`.
+    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)).
 
-    (c) the frontend shall provide a "Write Manually" option.
+(4) [DELETED]
 
-(4) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
+(5) [DELETED]
+
+(6) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
 
     (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
 
     (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+
+(7) **Feedback Editing and Deletion Rules**
+
+    Subject to subsection (1) above —
+
+    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
+
+        (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
+
+        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(vi)) rather than `UpdateFeedback`. This action deletes the provisional feedback.
+
+    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable.
+
+        (i) The frontend shall not display editing controls for feedback in these states.
+
+        (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
+
+    [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
 
 ## Section 7 - Functionalities for the "AI Assistant" tab
