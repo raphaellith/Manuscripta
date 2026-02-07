@@ -108,11 +108,10 @@ public class OutputValidationServiceTests
         Assert.DoesNotContain($"!!! question id=\"{missingQuestionId}\"", result.Content);
         Assert.DoesNotContain("!!! question 1234-invalid", result.Content);
         Assert.DoesNotContain($"!!! pdf id=\"{missingPdfId}\"", result.Content);
-        
+
         Assert.DoesNotContain($"![img](/attachments/{missingAttachmentId})", result.Content);
         Assert.EndsWith("```", result.Content.TrimEnd());
 
-        Assert.NotNull(result.Warnings);
-        Assert.Contains(result.Warnings!, w => w.ErrorType == "MALFORMED_MARKER");
+        Assert.Null(result.Warnings);
     }
 }
