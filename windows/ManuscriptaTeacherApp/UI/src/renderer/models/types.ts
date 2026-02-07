@@ -1,10 +1,4 @@
-export type View = 'dashboard' | 'lesson-library' | 'lesson-creator' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
-
-export interface Message {
-  id: number;
-  text: string;
-  sender: 'user' | 'ai';
-}
+export type View = 'lesson-library' | 'lesson-creator' | 'classroom-control' | 'responses' | 'settings';
 
 export type ContentType = 'Reading' | 'Worksheet' | 'Quiz' | 'PDF';
 
