@@ -144,7 +144,7 @@ For a description of how these server methods and client handlers are expected t
 
     (c) [DELETED]
 
-    (d) Handlers for retrieving AI assistant responses. **To be confirmed.**
+    (d) [DELETED]
 
     (e) Handlers for alerts.
 
