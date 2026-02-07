@@ -6,6 +6,10 @@ import type {
     MaterialEntity,
     QuestionEntity,
     AttachmentEntity,
+    PairedDeviceEntity,
+    DeviceStatusEntity,
+    ResponseEntity,
+    FeedbackEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -13,6 +17,7 @@ import type {
     InternalCreateQuestionDto,
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
+    InternalCreateFeedbackDto,
 } from "../../models";
 
 /**
@@ -196,50 +201,137 @@ class SignalRService {
     }
 
     // ==========================================
-    // Classroom Methods - Frontend Workflow Spec §5
-    // (Stub implementations - backend not yet implemented)
+    // Classroom Methods - FrontendWorkflowSpec §5
     // ==========================================
 
+    /**
+     * Initiates device pairing by starting UDP broadcast and TCP listener.
+     * Per FrontendWorkflowSpec §5A(2)(a).
+     */
     public async pairDevices(): Promise<void> {
-        // TODO: Implement when backend PairDevices method is available
-        console.warn('pairDevices: Not yet implemented');
         await this.connection.invoke("PairDevices");
     }
 
+    /**
+     * Stops the pairing process.
+     * Per FrontendWorkflowSpec §5A(4)(a).
+     */
+    public async stopPairing(): Promise<void> {
+        await this.connection.invoke("StopPairing");
+    }
+
+    /**
+     * Retrieves all paired devices.
+     * Per FrontendWorkflowSpec §5(2)(i).
+     */
     public async getAllPairedDevices(): Promise<PairedDeviceEntity[]> {
-        // TODO: Implement when backend is available
-        console.warn('getAllPairedDevices: Not yet implemented');
         return await this.connection.invoke<PairedDeviceEntity[]>("GetAllPairedDevices");
     }
 
+    /**
+     * Retrieves all device statuses.
+     * Per FrontendWorkflowSpec §5(2)(ii).
+     */
     public async getAllDeviceStatuses(): Promise<DeviceStatusEntity[]> {
-        // TODO: Implement when backend is available
-        console.warn('getAllDeviceStatuses: Not yet implemented');
         return await this.connection.invoke<DeviceStatusEntity[]>("GetAllDeviceStatuses");
     }
 
+    /**
+     * Locks selected devices.
+     * Per FrontendWorkflowSpec §5C(2).
+     */
     public async lockDevices(deviceIds: string[]): Promise<void> {
-        // TODO: Implement when backend is available
-        console.warn('lockDevices: Not yet implemented');
         await this.connection.invoke("LockDevices", deviceIds);
     }
 
+    /**
+     * Unlocks selected devices.
+     * Per FrontendWorkflowSpec §5C(2).
+     */
     public async unlockDevices(deviceIds: string[]): Promise<void> {
-        // TODO: Implement when backend is available
-        console.warn('unlockDevices: Not yet implemented');
         await this.connection.invoke("UnlockDevices", deviceIds);
     }
 
-    public async deployMaterial(materialId: string): Promise<void> {
-        // TODO: Implement when backend is available
-        console.warn('deployMaterial: Not yet implemented');
-        await this.connection.invoke("DeployMaterial", materialId);
+    /**
+     * Deploys material to selected devices.
+     * Per FrontendWorkflowSpec §5C(3)(b).
+     */
+    public async deployMaterial(materialId: string, deviceIds: string[]): Promise<void> {
+        await this.connection.invoke("DeployMaterial", materialId, deviceIds);
     }
 
-    public async finishMaterial(materialId: string): Promise<void> {
-        // TODO: Implement when backend is available
-        console.warn('finishMaterial: Not yet implemented');
-        await this.connection.invoke("FinishMaterial", materialId);
+    /**
+     * Unpairs selected devices.
+     * Per FrontendWorkflowSpec §5A(5).
+     */
+    public async unpairDevices(deviceIds: string[]): Promise<void> {
+        await this.connection.invoke("UnpairDevices", deviceIds);
+    }
+
+    /**
+     * Updates a paired device (e.g., rename).
+     * Per FrontendWorkflowSpec §5B(4).
+     */
+    public async updatePairedDevice(entity: PairedDeviceEntity): Promise<void> {
+        await this.connection.invoke("UpdatePairedDevice", entity);
+    }
+
+    // ==========================================
+    // Client Handler Subscriptions - NetworkingAPISpec §2(1)
+    // ==========================================
+
+    /**
+     * Subscribe to device status updates.
+     * Per NetworkingAPISpec §2(1)(a).
+     */
+    public onDeviceStatusUpdate(callback: (status: DeviceStatusEntity) => void): () => void {
+        this.connection.on("UpdateDeviceStatus", callback);
+        return () => this.connection.off("UpdateDeviceStatus", callback);
+    }
+
+    /**
+     * Subscribe to new device paired events.
+     * Per NetworkingAPISpec §2(1)(b).
+     */
+    public onDevicePaired(callback: (device: PairedDeviceEntity) => void): () => void {
+        this.connection.on("DevicePaired", callback);
+        return () => this.connection.off("DevicePaired", callback);
+    }
+
+    /**
+     * Subscribe to hand raised events.
+     * Per NetworkingAPISpec §2(1)(d)(i).
+     */
+    public onHandRaised(callback: (deviceId: string) => void): () => void {
+        this.connection.on("HandRaised", callback);
+        return () => this.connection.off("HandRaised", callback);
+    }
+
+    /**
+     * Subscribe to distribution failure events.
+     * Per NetworkingAPISpec §2(1)(d)(ii).
+     */
+    public onDistributionFailed(callback: (deviceId: string) => void): () => void {
+        this.connection.on("DistributionFailed", callback);
+        return () => this.connection.off("DistributionFailed", callback);
+    }
+
+    /**
+     * Subscribe to remote control failure events.
+     * Per NetworkingAPISpec §2(1)(d)(iii).
+     */
+    public onRemoteControlFailed(callback: (payload: { deviceId: string; command: string }) => void): () => void {
+        this.connection.on("RemoteControlFailed", callback);
+        return () => this.connection.off("RemoteControlFailed", callback);
+    }
+
+    /**
+     * Subscribe to feedback delivery failure events.
+     * Per NetworkingAPISpec §2(1)(d)(v).
+     */
+    public onFeedbackDeliveryFailed(callback: (deviceId: string) => void): () => void {
+        this.connection.on("FeedbackDeliveryFailed", callback);
+        return () => this.connection.off("FeedbackDeliveryFailed", callback);
     }
 
     // ==========================================
@@ -269,20 +361,100 @@ class SignalRService {
     public async deleteAttachment(id: string): Promise<void> {
         await this.connection.invoke("DeleteAttachment", id);
     }
-}
 
-// Stub types for classroom functionality (to be moved to models when implemented)
-interface PairedDeviceEntity {
-    id: string;
-    deviceId: string;
-    deviceName?: string;
-}
+    // ==========================================
+    // Response Methods - NetworkingAPISpec §1(1)(i)
+    // ==========================================
 
-interface DeviceStatusEntity {
-    deviceId: string;
-    status: 'ON_TASK' | 'IDLE' | 'LOCKED' | 'DISCONNECTED';
-    batteryLevel?: number;
+    /**
+     * Retrieves all responses.
+     * Per NetworkingAPISpec §1(1)(i)(i).
+     */
+    public async getAllResponses(): Promise<ResponseEntity[]> {
+        return await this.connection.invoke<ResponseEntity[]>("GetAllResponses");
+    }
+
+    /**
+     * Retrieves all responses under a question.
+     * Per NetworkingAPISpec §1(1)(i)(ii).
+     */
+    public async getResponsesUnderQuestion(questionId: string): Promise<ResponseEntity[]> {
+        return await this.connection.invoke<ResponseEntity[]>("GetResponsesUnderQuestion", questionId);
+    }
+
+    // ==========================================
+    // Feedback Methods - NetworkingAPISpec §1(1)(h)
+    // ==========================================
+
+    /**
+     * Retrieves all feedbacks.
+     * Per NetworkingAPISpec §1(1)(h)(iv).
+     */
+    public async getAllFeedbacks(): Promise<FeedbackEntity[]> {
+        return await this.connection.invoke<FeedbackEntity[]>("GetAllFeedbacks");
+    }
+
+    /**
+     * Creates a new feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(i).
+     */
+    public async createFeedback(dto: InternalCreateFeedbackDto): Promise<FeedbackEntity> {
+        return await this.connection.invoke<FeedbackEntity>("CreateFeedback", dto);
+    }
+
+    /**
+     * Updates an existing feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(v).
+     * Only PROVISIONAL feedback can be updated per §6A(7)(b)(ii).
+     */
+    public async updateFeedback(entity: FeedbackEntity): Promise<void> {
+        await this.connection.invoke("UpdateFeedback", entity);
+    }
+
+    /**
+     * Deletes an existing feedback entity.
+     * Per NetworkingAPISpec §1(1)(h)(vi) and FrontendWorkflowSpecifications §6A(7)(a)(ii).
+     * Invoked when teacher clears both Text and Marks on a PROVISIONAL feedback.
+     */
+    public async deleteFeedback(feedbackId: string): Promise<void> {
+        await this.connection.invoke("DeleteFeedback", feedbackId);
+    }
+
+    /**
+     * Approves feedback for dispatch.
+     * Per NetworkingAPISpec §1(1)(h)(ii).
+     */
+    public async approveFeedback(feedbackId: string): Promise<void> {
+        await this.connection.invoke("ApproveFeedback", feedbackId);
+    }
+
+    /**
+     * Retries dispatch of feedback.
+     * Per NetworkingAPISpec §1(1)(h)(iii).
+     */
+    public async retryFeedbackDispatch(feedbackId: string): Promise<void> {
+        await this.connection.invoke("RetryFeedbackDispatch", feedbackId);
+    }
+
+    /**
+     * Subscribe to response refresh events.
+     * Per NetworkingAPISpec §2(1)(e)(i).
+     */
+    public onRefreshResponses(callback: () => void): () => void {
+        this.connection.on("RefreshResponses", callback);
+        return () => this.connection.off("RefreshResponses", callback);
+    }
+
+    /**
+     * Subscribe to feedback dispatch failure events.
+     * Per NetworkingAPISpec §2(1)(c)(i).
+     */
+    public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
+        this.connection.on("FeedbackDeliveryFailed", callback);
+        return () => this.connection.off("FeedbackDeliveryFailed", callback);
+    }
 }
 
 const signalRService = new SignalRService();
 export default signalRService;
+

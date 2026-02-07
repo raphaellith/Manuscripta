@@ -16,6 +16,13 @@ public class PairedDeviceEntity
     public Guid DeviceId { get; set; }
 
     /// <summary>
+    /// The user-friendly name of the device, provided during pairing.
+    /// Per Pairing Process Specification s2(2)(c).
+    /// </summary>
+    [Required]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
     /// Creates a new PairedDeviceEntity.
     /// </summary>
     public PairedDeviceEntity()
@@ -23,11 +30,13 @@ public class PairedDeviceEntity
     }
 
     /// <summary>
-    /// Creates a new PairedDeviceEntity with the specified device ID.
+    /// Creates a new PairedDeviceEntity with the specified device ID and name.
     /// </summary>
     /// <param name="deviceId">The device's unique identifier.</param>
-    public PairedDeviceEntity(Guid deviceId)
+    /// <param name="name">The user-friendly device name.</param>
+    public PairedDeviceEntity(Guid deviceId, string name)
     {
         DeviceId = deviceId;
+        Name = name ?? throw new ArgumentNullException(nameof(name));
     }
 }

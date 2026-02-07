@@ -12,70 +12,87 @@ namespace Main.Services;
 /// </summary>
 public class DeviceRegistryService : IDeviceRegistryService
 {
-    private readonly MainDbContext _context;
+    // Short-term persistence per PersistenceAndCascadingRules §1(2)
+    // Uses thread-safe in-memory storage
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, PairedDeviceEntity> _devices = new();
     private readonly ILogger<DeviceRegistryService> _logger;
 
-    public DeviceRegistryService(MainDbContext context, ILogger<DeviceRegistryService> logger)
+    public DeviceRegistryService(ILogger<DeviceRegistryService> logger)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
-    public async Task<bool> RegisterDeviceAsync(Guid deviceId)
+    public Task<PairedDeviceEntity?> RegisterDeviceAsync(Guid deviceId, string name)
     {
-        var existingDevice = await _context.PairedDevices
-            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
-
-        if (existingDevice != null)
+        if (_devices.ContainsKey(deviceId))
         {
             _logger.LogInformation("Device {DeviceId} re-paired (already existed)", deviceId);
-            return false;
+            return Task.FromResult<PairedDeviceEntity?>(null);
         }
 
-        // New device - create pairing record per Pairing Process §2(4)
-        // Wrap in try-catch to handle race conditions where another request
-        // registers the same device between our check and save
-        var newDevice = new PairedDeviceEntity(deviceId);
-        try
+        var newDevice = new PairedDeviceEntity(deviceId, name);
+        if (_devices.TryAdd(deviceId, newDevice))
         {
-            _context.PairedDevices.Add(newDevice);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Device {DeviceId} paired successfully", deviceId);
-            return true;
+            _logger.LogInformation("Device {DeviceId} ({Name}) paired successfully", deviceId, name);
+            DevicePaired?.Invoke(this, newDevice);
+            return Task.FromResult<PairedDeviceEntity?>(newDevice);
         }
-        catch (DbUpdateException ex)
-        {
-            // Likely a duplicate due to race condition - DeviceId is primary key
-            _logger.LogWarning(ex, "Device {DeviceId} registration failed due to duplicate (race condition)", deviceId);
-            return false;
-        }
+        
+        // Race condition
+        _logger.LogWarning("Device {DeviceId} registration failed due to duplicate (race condition)", deviceId);
+        return Task.FromResult<PairedDeviceEntity?>(null);
     }
 
     /// <inheritdoc />
-    public async Task<bool> IsDevicePairedAsync(Guid deviceId)
+    public Task<bool> IsDevicePairedAsync(Guid deviceId)
     {
-        return await _context.PairedDevices
-            .AnyAsync(d => d.DeviceId == deviceId);
+        return Task.FromResult(_devices.ContainsKey(deviceId));
     }
 
     /// <inheritdoc />
-    public async Task<bool> UnregisterDeviceAsync(Guid deviceId)
+    public Task<bool> UnregisterDeviceAsync(Guid deviceId)
     {
-        var device = await _context.PairedDevices
-            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
-
-        if (device == null)
+        if (_devices.TryRemove(deviceId, out _))
         {
-            _logger.LogInformation("Device {DeviceId} not found in registry, nothing to remove", deviceId);
-            return false;
+            _logger.LogInformation("Device {DeviceId} unpaired and removed from registry", deviceId);
+            return Task.FromResult(true);
         }
 
-        _context.PairedDevices.Remove(device);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Device {DeviceId} unpaired and removed from registry", deviceId);
-        return true;
+        _logger.LogInformation("Device {DeviceId} not found in registry, nothing to remove", deviceId);
+        return Task.FromResult(false);
     }
+
+    /// <inheritdoc />
+    public Task<IEnumerable<PairedDeviceEntity>> GetAllAsync()
+    {
+        return Task.FromResult<IEnumerable<PairedDeviceEntity>>(_devices.Values.ToList());
+    }
+
+    /// <inheritdoc />
+    public Task UpdateAsync(PairedDeviceEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        if (_devices.TryGetValue(entity.DeviceId, out var existingDevice))
+        {
+            // Create a new instance with updated properties and attempt an atomic update
+            var updatedDevice = new PairedDeviceEntity(existingDevice.DeviceId, entity.Name);
+
+            if (_devices.TryUpdate(entity.DeviceId, updatedDevice, existingDevice))
+            {
+                _logger.LogInformation("Device {DeviceId} updated (name: {Name})", entity.DeviceId, entity.Name);
+                return Task.CompletedTask;
+            }
+
+            _logger.LogWarning("Device {DeviceId} update failed due to concurrent modification", entity.DeviceId);
+            throw new InvalidOperationException($"Device {entity.DeviceId} update conflict due to concurrent modification");
+        }
+
+        _logger.LogWarning("Device {DeviceId} not found for update", entity.DeviceId);
+        throw new InvalidOperationException($"Device {entity.DeviceId} not found");
+    }
+
+    /// <inheritdoc />
+    public event EventHandler<PairedDeviceEntity>? DevicePaired;
 }

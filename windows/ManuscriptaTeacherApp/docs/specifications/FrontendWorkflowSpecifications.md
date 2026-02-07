@@ -333,7 +333,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (7) [DELETED]
 
-*Explanatory note: See Sections 5A-5D for detailed specifications regarding the Classroom tab.*
+[Explanatory note: See Sections 5A-5D for detailed specifications regarding the Classroom tab.]
 
 ## Section 5A — Device Pairing
 
@@ -355,7 +355,23 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the backend shall invoke the `DevicePaired` client handler with the newly created `PairedDeviceEntity`;
 
-    (b) the frontend shall display the newly paired device in the device grid.
+    (b) the frontend shall refresh the device grid in accordance with subsection (3A).
+
+(3A) **Device Grid Refresh**
+
+    The frontend shall refresh the device grid by —
+
+    (a) calling `GetAllPairedDevices` and `GetAllDeviceStatuses` to retrieve the current state from the backend;
+
+    (b) replacing the locally stored device list and status map with the retrieved data.
+
+    (c) This refresh shall be triggered when —
+
+        (i) the frontend receives a `DevicePaired` notification per subsection (3)(a);
+
+        (ii) the frontend receives notification that devices have been unpaired;
+
+        (iii) the user navigates to the Classroom page (as already specified in §5(2)).
 
 (4) **Terminating the Pairing Process**
 
@@ -389,6 +405,15 @@ For a list of all server method and client handlers to be implemented for commun
         (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
 
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
+
+
+(4) **Device Renaming**
+
+    The frontend shall provide a means for the user to rename a paired device —
+
+    (a) by calling `Task UpdatePairedDevice(PairedDeviceEntity entity)` as defined in the Networking API Specification;
+
+    (b) the new name shall be persisted on the Windows device and shall not affect the Android device.
 
 
 ## Section 5C — Device Control
@@ -471,30 +496,109 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 6 - Functionalities for the "Responses" tab
 
-(1) When the backend creates a response entity, it must call the frontend handler `CreateResponse` with the newly created `ResponseEntity` as the argument.
+(1) [DELETED]
 
 (2) When the frontend creates a new feedback entity, it must call the server method `Task CreateFeedback(FeedbackEntity newFeedbackEntity)` with the newly created feedback entity as the argument.
 
+(3) **Refresh of Responses**
+
+    (a) Responses shall be refreshed by calling `Task GetAllResponses()` as defined in s1(1)(i)(i) of the Networking API Specification.
+
+    (b) The frontend shall refresh responses -
+
+        (i) on entry to the responses tab; or
+        
+        (ii) when the `RefreshResponses` client handler is invoked by the backend, as defined in s2(1)(b)(i) of the Networking API Specification.
+
+(3A) **Refresh of Feedback**
+
+    (a) Feedback shall be refreshed by calling `GetAllFeedbacks()` s1(1)(h)(iv) of the Networking API Specification.
+
+    (b) The frontend shall refresh feedback —
+
+        (i) when responses are refreshed, by the virtue of paragraph (3)(b); or
+
+        (ii) after each `UpdateFeedback` call [to ascertain that feedback has been appropriately submitted].
+
+(4) **Display of responses on class-level**
+
+    The frontend shall -
+
+    (a) provide a material selection dropdown menu containing only materials with corresponding response entities.
+
+    (b) when a material is selected, display the list of questions in the material in the manner specified in paragraphs (c)-(d).
+
+    (c) in the case of a multiple choice question, display —
+
+        (i) the question text and maximum score;
+
+        (ii) the list of choices, and the distribution of responses for each choice, both in percentage and absolute number;
+
+        (iii) if the question contains a `CorrectAnswer` field, highlight of the correct answer in green; and
+
+        (iv) the "display name" of tablets which selected each choice, in a pop-up upon clicking each choice.
+
+    (d) in the case of a written answer question, display -
+
+        (i) the question text and maximum score;
+
+        (ii) the list of responses and the "display name" of tablets which submitted each response; 
+
+        (iii) if the question has a `MarkScheme` field, the mark scheme;
+
+        (iv) for each response to a question without a  `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback , automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
+
+        (v) means to add the marks and feedbacks under the feedback entities for dispatch, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
+
+        (vi) an indicator if a response's feedback has status `READY` but not yet `DELIVERED` (per AdditionalValidationRules §3AE).
+
+        (vii) for each response with a CorrectAnswer field, whether that answer is correct.
+    
+(5) **Display of Responses on Device-level**
+
+    The frontend shall —
+
+    (a) provide a device selection dropdown menu containing only devices with corresponding response entities, using their display names.
+
+    (b) when a device is selected, provide a dropdown menu of materials with corresponding response entities from that device.
+
+    (c) when a material is selected, display the list of questions in the material in the manner specified in paragraphs (d)-(e).
+
+    (d) in the case of a multiple choice question, display —
+
+        (i) the question text and maximum score;
+
+        (ii) the list of choices, and the response selected for that device; and
+
+        (iii) if the question contains a `CorrectAnswer` field, highlight of the correct answer in green.
+
+    (e) in the case of a written answer question, display -
+
+        (i) the question text and maximum score;
+
+        (ii) the response from the selected device;
+
+        (iii) if the question has a `MarkScheme` field, the mark scheme;
+
+        (iv) for a response to a question without a `CorrectAnswer` field, means to enter the mark awarded for that response, and means to add a textual feedback, automatically saving the mark and/or textual feedback by creating or updating the feedback entity, at most 1 second after each change. Editing is subject to the rules in §6A(7). The feedback entity shall be in PROVISIONAL state before dispatch in paragraph (v) takes place; 
+
+        (v) means to add the mark and feedback under the feedback entity for dispatch, setting the status to `READY` (AdditionalValidationRules §3AE(1)(a)(ii));
+
+        (vi) an indicator if a response's feedback has status `READY` but not yet `DELIVERED` (per AdditionalValidationRules §3AE);
+
+        (vii) for a response to a question with a `CorrectAnswer` field, the correct answer, and whether that response is correct.
 
 ## Section 6A — Response Review and Feedback Workflow
 
-(1) When the teacher selects a response for review, the frontend shall —
+(1) If no `FeedbackEntity` corresponding to a response (R) exists and the question R is related to satisfies GenAISpec §3D(1), the frontend shall —
 
-    (a) if a `FeedbackEntity` exists with status `PROVISIONAL` —
+    (a) if R is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator, and disable edits for that response.
 
-        (i) display the feedback content for review and editing.
+    (b) provide a "Write Manually" option. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created.
 
-        (ii) provide a "Release Feedback" button.
+    (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
 
-    (b) if no `FeedbackEntity` exists and the question satisfies GenAISpec §3D(1) —
-
-        (i) if the response is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator.
-
-        (ii) provide a "Write Manually" option. Upon saving manual feedback, the response shall be removed from the queue per GenAISpec §3D(6).
-
-        (iii) provide a "Prioritise" option if the response is queued.
-
-    (c) if the question does not have a `MarkScheme`, provide a manual feedback entry interface.
+(1A) If a response (R) corresponds to an existing feedback (F) in `PROVISIONAL` state, the frontend shall provide means for the teacher to send R to the generation queue. R shall be added to the AI generation queue by invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)). The teacher shall be warned that F will be overwritten, and be asked for confirmation.
 
 (2) When the teacher clicks "Release Feedback", the frontend shall invoke `ApproveFeedback(feedbackId)` (NetworkingAPISpec §1(1)(h)(ii)).
 
@@ -502,15 +606,31 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall display an error message indicating that AI feedback generation has failed.
 
-    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration`.
+    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)).
 
-    (c) the frontend shall provide a "Write Manually" option.
+(4) [DELETED]
 
-(4) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
+(5) [DELETED]
+
+(6) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
 
     (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
 
     (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+
+(7) **Feedback Editing and Deletion Rules**
+
+    Subject to subsection (1) above —
+
+    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
+
+        (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
+
+        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(vi)) rather than `UpdateFeedback`. This action deletes the provisional feedback.
+
+    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable. The frontend shall not display editing controls for feedback in these states.
+
+    [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
 
 ## Section 7 - Functionalities for the "AI Assistant" tab

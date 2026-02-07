@@ -88,6 +88,8 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 ## 2. HTTP Endpoints (Content & Config)
 
+**General Validation:** All HTTP endpoints accepting request bodies must validate incoming DTOs against `Validation Rules.md`. If validation fails, the endpoint shall return HTTP Status **400 (Bad Request)** per `Validation Rules.md` §1A(3).
+
 ### 2.1. Lesson Materials (Server -> Client)
 
 **DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
@@ -107,7 +109,7 @@ Downloads specific attachment files referenced within material content.
 Tablet configuration is an object associated with lesson materials but handled separately to allow dynamic updates.
 
 #### Get Configuration
--   **Endpoint:** `GET /config`
+-   **Endpoint:** `GET /config/{deviceId}`
 -   **Response:** `200 OK`
     ```json
     {
@@ -143,17 +145,7 @@ Used during the pairing handshake to register a student device with the teacher 
 Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
--   **Body:**
-    ```json
-    {
-      "Id": "resp-uuid-generated-by-client",
-      "QuestionId": "q-uuid-1",
-      "MaterialId": "mat-uuid-1",
-      "StudentId": "device-id-or-student-uuid",
-      "Answer": "3",
-      "Timestamp": "2023-10-27T10:05:00Z"
-    }
-    ```
+-   **Body:** A JSON object representing a `ResponseEntity` as defined in `Validation Rules.md` §2C.
 -   **Response:** `201 Created`
     ```json
     {} // Empty 201 to confirm submission
@@ -167,7 +159,7 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
     ```json
     {
       "Responses": [
-        // Array of response objects as above
+        // Array of ResponseEntity objects as defined in Validation Rules.md §2C
       ]
     }
     ```
@@ -362,7 +354,7 @@ All data models in this contract must conform to Validation Rules.md. This docum
 ### 4.2. Material Types
 See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
--   `QUIZ`: Interactive questions with immediate feedback.
+
 -   `WORKSHEET`: Content for reading and annotation.
 -   `POLL`: Quick class voting.
 

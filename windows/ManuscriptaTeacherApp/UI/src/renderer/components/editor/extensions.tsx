@@ -355,28 +355,31 @@ const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => 
             {/* Multiple choice options */}
             {questionType === 'MULTIPLE_CHOICE' && options && options.length > 0 && (
                 <div className="space-y-2 ml-2">
-                    {options.map((option, index) => (
-                        <div
-                            key={index}
-                            className={`flex items-center gap-2 p-2 rounded ${correctAnswer === index
-                                ? 'bg-green-100 border border-green-300'
-                                : 'bg-white border border-gray-200'
-                                }`}
-                        >
-                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium ${correctAnswer === index
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gray-200 text-gray-600'
-                                }`}>
-                                {String.fromCharCode(65 + index)}
-                            </span>
-                            <span className={correctAnswer === index ? 'text-green-800' : 'text-gray-700'}>
-                                {option}
-                            </span>
-                            {correctAnswer === index && (
-                                <span className="ml-auto text-green-600 text-xs">✓ Correct</span>
-                            )}
-                        </div>
-                    ))}
+                    {options.map((option, index) => {
+                        const isCorrect = String(correctAnswer) === String(index);
+                        return (
+                            <div
+                                key={index}
+                                className={`flex items-center gap-2 p-2 rounded ${isCorrect
+                                    ? 'bg-green-100 border border-green-300'
+                                    : 'bg-white border border-gray-200'
+                                    }`}
+                            >
+                                <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium ${isCorrect
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-gray-200 text-gray-600'
+                                    }`}>
+                                    {String.fromCharCode(65 + index)}
+                                </span>
+                                <span className={isCorrect ? 'text-green-800' : 'text-gray-700'}>
+                                    {option}
+                                </span>
+                                {isCorrect && (
+                                    <span className="ml-auto text-green-600 text-xs">✓ Correct</span>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

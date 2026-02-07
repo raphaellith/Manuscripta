@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
+using Main.Models.Dtos;
 using Main.Services;
 
 namespace Main.Controllers;
@@ -67,10 +68,12 @@ public class DistributionController : ControllerBase
                 parsedDeviceId);
 
             // Per API Contract §2.5: Response format
+            // Per AdditionalValidationRules s1A(2): Use Android DTOs to exclude Windows-only fields
+            // Per AdditionalValidationRules s1A(3): Flat composition-like structure
             return Ok(new
             {
-                materials = bundle.Materials,
-                questions = bundle.Questions
+                materials = bundle.Materials.Select(AndroidMaterialDto.FromEntity),
+                questions = bundle.Questions.Select(AndroidQuestionDto.FromEntity)
             });
         }
         catch (Exception ex)

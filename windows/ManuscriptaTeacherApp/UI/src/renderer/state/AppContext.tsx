@@ -10,6 +10,7 @@ import type {
     UnitEntity,
     LessonEntity,
     MaterialEntity,
+    QuestionEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -24,6 +25,7 @@ interface AppState {
     units: UnitEntity[];
     lessons: LessonEntity[];
     materials: MaterialEntity[];
+    questions: QuestionEntity[];
 }
 
 interface AppContextValue extends AppState {
@@ -48,6 +50,7 @@ interface AppContextValue extends AppState {
     getUnitsForCollection: (collectionId: string) => UnitEntity[];
     getLessonsForUnit: (unitId: string) => LessonEntity[];
     getMaterialsForLesson: (lessonId: string) => MaterialEntity[];
+    getQuestionsForMaterial: (materialId: string) => QuestionEntity[];
 
     refreshData: () => Promise<void>;
 }
@@ -75,6 +78,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         units: [],
         lessons: [],
         materials: [],
+        questions: [],
     });
 
     const fetchAllData = useCallback(async () => {
@@ -92,6 +96,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 signalRService.getAllMaterials(),
             ]);
 
+            // Fetch questions for all materials
+            const questionsArrays = await Promise.all(
+                materials.map(m => signalRService.getQuestionsUnderMaterial(m.id))
+            );
+            const questions = questionsArrays.flat();
+
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -99,6 +109,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 units,
                 lessons,
                 materials,
+                questions,
             }));
         } catch (err) {
             console.error('Failed to fetch data:', err);
@@ -271,6 +282,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const getMaterialsForLesson = (lessonId: string) =>
         state.materials.filter(m => m.lessonId === lessonId);
 
+    const getQuestionsForMaterial = (materialId: string) =>
+        state.questions.filter(q => q.materialId === materialId);
+
     const value: AppContextValue = {
         ...state,
         createUnitCollection,
@@ -288,6 +302,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,
+        getQuestionsForMaterial,
         refreshData: fetchAllData,
     };
 

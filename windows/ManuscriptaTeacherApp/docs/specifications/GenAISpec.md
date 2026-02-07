@@ -6,7 +6,6 @@ This document defines the specifications for the Windows application's backend g
 
 Frontend workflows interacting with these functionalities are defined in FrontendWorkflowSpecifications §4AA, §4B, and §4C.
 
----
 
 ## Section 1 — General Principles
 
@@ -80,7 +79,6 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (c) the default value of K shall be 5.
 
----
 
 ## Section 3 — Backend GenAI Workflows
 
@@ -279,9 +277,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (a) `Task QueueForAiGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(vi))
 
-(6) When the teacher creates or saves feedback manually for a response —
+(6) A response shall be removed from the generation queue —
 
-    (a) that response shall be removed from the generation queue, if present.
+    (a) when the frontend explicitly requests removal by invoking `Task RemoveFromAiGenerationQueue(Guid responseId)` (NetworkingAPISpec §1(1)(i)(ix)); or
+
+    (b) automatically when a `FeedbackEntity` is created or updated for that response.
 
 (7) Upon failure of AI feedback generation —
 
@@ -290,6 +290,16 @@ Frontend workflows interacting with these functionalities are defined in Fronten
     (b) the backend shall notify the frontend immediately via the SignalR handler `OnFeedbackGenerationFailed(Guid responseId, string error)`.
 
     (c) the teacher may retry by invoking `QueueForAiGeneration`.
+
+(8A) The frontend may request to prioritise a queued response by invoking `Task PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)).
+
+    (a) Upon invocation, the backend shall move the specified response to the front of the generation queue, making it the next response to be processed.
+
+    (b) This operation shall have no effect if —
+
+        (i) the response is not currently queued; or
+
+        (ii) the response is currently being generated.
 
 (8) Upon successful AI feedback generation —
 

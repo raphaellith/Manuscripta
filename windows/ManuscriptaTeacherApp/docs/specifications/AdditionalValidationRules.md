@@ -24,6 +24,14 @@ This document defines the hierarchical system for grouping and organising Materi
 
 (6) For the purpose of this document, "contain" in relation to a data field means "contain a non-null value for".
 
+## Section 1A - Serialisation
+
+(1) Pursuant to Validation Rules s1(6), fields in JSON objects shall be serialised in PascalCase, whilst enum members shall be serialised in SCREAMING_SNAKE_CASE.
+
+(2) Unless otherwise specified, any fields defined in this document shall not appear in the data transfer objects used in communication with the android client.
+
+(3) Care must be taken to ensure polymorphic classes[, such as Materials, Questions and Responses] are appropriately serialised, such that they appear in a composition-like manner as specified in the Validation Rules.
+
 ## Section 2 - Entity classes for Each Hierarchical Level
 
 ### Section 2A - Unit Collection
@@ -67,8 +75,6 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
 
-(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
-
 
 ### Section 2E - Question
 
@@ -81,8 +87,6 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) A `QuestionEntity` object of type `MULTIPLE_CHOICE` must not have a `MarkScheme` defined in (1)(a).
 
     (b) A `QuestionEntity` object may not simultaneously contain `MarkScheme` and `CorrectAnswer` fields.
-
-(3) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
 ## Section 3 - Entity classes Not Belonging to the Material Hierarchy
@@ -172,6 +176,23 @@ This document defines the hierarchical system for grouping and organising Materi
 (2) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
+### Section 3AE — Feedback
+
+(1) A feedback is represented by a `FeedbackEntity` class. In addition to those specified by Section 2F of `Validation Rules.md`, this class shall contain the following field —
+
+    (a) `Status` (enum FeedbackStatus). Possible values are:
+
+        (i) `PROVISIONAL` — Feedback exists but has not been approved by the teacher. Feedback in this status shall not be dispatched.
+
+        (ii) `READY` — Feedback has been approved and is awaiting dispatch or acknowledgement.
+
+        (iii) `DELIVERED` — Feedback has been dispatched and acknowledged by the student device.
+
+    The default value is `PROVISIONAL`.
+
+(2) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
+
+
 ## Section 3B - Attachment
 
 (1) An attachment is represented by an `AttachmentEntity` class. This class must contain the following attributes.
@@ -194,6 +215,8 @@ This document defines the hierarchical system for grouping and organising Materi
         (ii) `jpeg`.
 
         (iii) `pdf`.
+
+        (iv) `jpg`.
 
     (c) There must exist a file in the directory `%AppData%\ManuscriptaTeacherApp\Attachments` whose file base name matches the UUID of the `AttachmentEntity` and whose file extension matches the `FileExtension` specified in 1(c).
 

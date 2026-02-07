@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ContentHeader } from './ContentHeader';
-import { Card } from './Card';
+import { Card } from '../renderer/components/common/Card';
 
 const ageGroupLevels = [
     { value: 0, label: "4-6" },

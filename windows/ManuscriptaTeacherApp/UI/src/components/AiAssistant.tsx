@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Message } from '../types';
 import { ContentHeader } from './ContentHeader';
-import { Card } from './Card';
+import { Card } from '../renderer/components/common/Card';
 
 const initialMessages: Message[] = [
     { id: 1, sender: 'ai', text: "Hi Jon! I'm your AI teaching assistant. I can help with lesson planning, differentiation strategies, and generating content. How can I assist you today?" }

@@ -41,7 +41,7 @@ builder.Services.AddSingleton<ChromaClient>(sp =>
 });
 
 // Register pairing and device services
-builder.Services.AddScoped<IDeviceRegistryService, DeviceRegistryService>();
+builder.Services.AddSingleton<IDeviceRegistryService, DeviceRegistryService>();
 builder.Services.AddScoped<DeviceIdValidator>();
 
 // Register repository services for hub
@@ -61,6 +61,7 @@ builder.Services.AddScoped<IUnitService, UnitService>();
 builder.Services.AddScoped<ILessonService, LessonService>();
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<IResponseService, ResponseService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
@@ -83,18 +84,39 @@ builder.Services.AddScoped<QuestionExtractionService>();
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
 builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
+builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
+builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
 // NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
+builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
+builder.Services.AddSignalR(hubOptions =>
+{
+    hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
+// Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // s1A(1): Fields serialised in PascalCase (null = preserve original C# casing)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        // s1A(1): Enum members serialised as SCREAMING_SNAKE_CASE strings
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
+        // SignalR is internal to the Windows app (backend ↔ Electron frontend).
+        // Per Validation Rules s1(6), internal implementation may use another case where justifiable.
+        // camelCase is idiomatic for the TypeScript frontend consuming these payloads.
+        options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Enum members serialised as SCREAMING_SNAKE_CASE strings per s1A(1)
         options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
