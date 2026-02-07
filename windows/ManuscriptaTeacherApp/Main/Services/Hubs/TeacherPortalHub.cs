@@ -623,53 +623,6 @@ public class TeacherPortalHub : Hub
     #region Feedback Methods - NetworkingAPISpec §1(1)(h)
 
     /// <summary>
-    /// Approves feedback and triggers dispatch to the student device.
-    /// Per NetworkingAPISpec §1(1)(h)(ii) and GenAISpec §3DA(2).
-    /// </summary>
-    public async Task ApproveFeedback(Guid feedbackId)
-    {
-        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
-        if (feedback == null)
-            throw new HubException($"Feedback {feedbackId} not found");
-
-        if (feedback.Status != FeedbackStatus.PROVISIONAL)
-            throw new HubException($"Feedback {feedbackId} is not in PROVISIONAL status");
-
-        // Transition to READY per §3DA(2)(a)
-        feedback.Status = FeedbackStatus.READY;
-        await _feedbackRepository.UpdateAsync(feedback);
-
-        // Get response to find device ID for dispatch
-        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
-        if (response != null)
-        {
-            // Trigger dispatch per §3DA(2)(b) via Session Interaction §7
-            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
-        }
-    }
-
-    /// <summary>
-    /// Retries dispatch of feedback in READY status.
-    /// Per NetworkingAPISpec §1(1)(h)(iii) and GenAISpec §3DA(4)(c).
-    /// </summary>
-    public async Task RetryFeedbackDispatch(Guid feedbackId)
-    {
-        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
-        if (feedback == null)
-            throw new HubException($"Feedback {feedbackId} not found");
-
-        if (feedback.Status != FeedbackStatus.READY)
-            throw new HubException($"Cannot retry dispatch for feedback with status {feedback.Status}. Only READY feedback can be retried.");
-
-        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
-        if (response == null)
-            throw new HubException($"Response for feedback {feedbackId} not found");
-
-        // Retry dispatch via TCP
-        await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
-    }
-
-    /// <summary>
     /// Retrieves all responses.
     /// Per NetworkingAPISpec §1(1)(i)(i).
     /// </summary>
@@ -967,7 +920,9 @@ public class TeacherPortalHub : Hub
             }
 
             // Retry dispatch via TCP
-            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+            await _tcpPairingService.SendReturnFeedbackAsync(
+                response.DeviceId.ToString(),
+                new[] { feedback.Id });
         }
         catch (Exception ex)
         {

@@ -113,7 +113,9 @@ public class FeedbackQueueService
             {
                 // Send RETURN_FEEDBACK message to the device
                 // This will trigger the Android device to retrieve feedback via GET /feedback/{deviceId}
-                await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString());
+                await _tcpPairingService.SendReturnFeedbackAsync(
+                    response.DeviceId.ToString(),
+                    new[] { feedback.Id });
             }
             else
             {
