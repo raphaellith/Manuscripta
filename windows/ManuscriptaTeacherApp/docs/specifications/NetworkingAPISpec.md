@@ -97,7 +97,7 @@ For a description of how these server methods and client handlers are expected t
         
         (iv) `Task<List<FeedbackEntity>> GetAllFeedbacks()`: Retrieves all feedback entities.
 
-        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). Per FrontendWorkflowSpecifications §6A(7)(b)(ii), this method shall reject updates if the feedback's Status is not `PROVISIONAL`.
+        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). This method shall reject updates if the feedback's Status is not `PROVISIONAL`.
 
         (vi) `Task DeleteFeedback(Guid feedbackId)`: Deletes an existing feedback entity. Per FrontendWorkflowSpecifications §6A(7)(a)(ii), this is invoked when the teacher clears both Text and Marks on a `PROVISIONAL` feedback.
 
@@ -116,6 +116,10 @@ For a description of how these server methods and client handlers are expected t
         (vi) `Task QueueForAiGeneration(Guid responseId)`: Adds or re-adds the specified response to the AI feedback generation queue. See GenAISpec §3D(5).
 
         (vii) `Task RetryEmbedding(Guid sourceDocumentId)`: Re-queues a source document with `FAILED` status for indexing. See GenAISpec §3A(7).
+
+        (viii) `Task PrioritiseFeedbackGeneration(Guid responseId)`: Moves the specified response to the front of the AI feedback generation queue. See GenAISpec §3D(8A).
+
+        (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
         
     (j) Methods for retrieving responses.
 
@@ -156,7 +160,7 @@ For a description of how these server methods and client handlers are expected t
 
     (b) Handlers updating the responses page.
         
-        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
+        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received, or a feedback changes state.
 
     (c) [DELETED]
 
