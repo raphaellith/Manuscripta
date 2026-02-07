@@ -633,11 +633,7 @@ For a list of all server method and client handlers to be implemented for commun
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
 
-## Section 7 - Functionalities for the "AI Assistant" tab
 
-**To be confirmed.**
-
-
-## Section 8 - Functionalities for the "Settings" tab
+## Section 7 - Functionalities for the "Settings" tab
 
 **To be confirmed.**
