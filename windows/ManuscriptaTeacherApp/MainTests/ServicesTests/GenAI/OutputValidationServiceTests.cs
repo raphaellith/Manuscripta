@@ -1,0 +1,117 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Main.Data;
+using Main.Models.Dtos;
+using Main.Models.Entities;
+using Main.Models.Enums;
+using Main.Services;
+using Main.Services.GenAI;
+using Microsoft.EntityFrameworkCore;
+using Moq;
+using Xunit;
+
+namespace MainTests.ServicesTests.GenAI;
+
+public class OutputValidationServiceTests
+{
+    private static MainDbContext BuildDbContext()
+    {
+        var options = new DbContextOptionsBuilder<MainDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new MainDbContext(options);
+    }
+
+    [Fact]
+    public async Task ValidateAndRefineAsync_NoWarnings_ReturnsContentUnchanged()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var content = "# Title\nSimple content without markers.";
+
+        var result = await service.ValidateAndRefineAsync(content, "model", useFallback: true);
+
+        Assert.Equal(content, result.Content);
+        Assert.Null(result.Warnings);
+    }
+
+    [Fact]
+    public async Task ValidateAndRefineAsync_DeterministicFixes_NormalizeAndRemoveInvalidReferences()
+    {
+        using var dbContext = BuildDbContext();
+        var materialId = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
+
+        dbContext.Materials.Add(new MaterialDataEntity
+        {
+            Id = materialId,
+            LessonId = lessonId,
+            MaterialType = MaterialType.WORKSHEET,
+            Title = "Title",
+            Content = "Content",
+            Timestamp = DateTime.UtcNow
+        });
+
+        var validQuestionId = Guid.NewGuid();
+        var missingQuestionId = Guid.NewGuid();
+
+        dbContext.Questions.Add(new QuestionDataEntity
+        {
+            Id = validQuestionId,
+            MaterialId = materialId,
+            QuestionText = "Question",
+            QuestionType = QuestionType.WRITTEN_ANSWER
+        });
+
+        var validAttachmentId = Guid.NewGuid();
+        var validPdfId = Guid.NewGuid();
+        var missingAttachmentId = Guid.NewGuid();
+        var missingPdfId = Guid.NewGuid();
+
+        dbContext.Attachments.AddRange(
+            new AttachmentEntity(validAttachmentId, materialId, "image", "png"),
+            new AttachmentEntity(validPdfId, materialId, "handout", "pdf")
+        );
+
+        await dbContext.SaveChangesAsync();
+
+        var fileService = new Mock<IFileService>();
+        var fileExists = new HashSet<Guid> { validAttachmentId, validPdfId };
+
+        fileService.Setup(fs => fs.GetAttachmentFilePath(It.IsAny<Guid>(), It.IsAny<string>()))
+            .Returns<Guid, string>((id, ext) => $"/tmp/{id}.{ext}");
+        fileService.Setup(fs => fs.FileExists(It.IsAny<string>()))
+            .Returns<string>(path => fileExists.Any(id => path.Contains(id.ToString(), StringComparison.Ordinal)));
+
+        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var content = $@"#### Too Deep\n\n" +
+                      $"!!! question id=\"{validQuestionId}\"\n" +
+                      $"!!! question id=\"{missingQuestionId}\"\n" +
+                      "!!! question 1234-invalid\n" +
+                      $"!!! pdf id=\"{validPdfId}\"\n" +
+                      $"!!! pdf id=\"{missingPdfId}\"\n" +
+                      $"![img](/attachments/{validAttachmentId})\n" +
+                      $"![img](/attachments/{missingAttachmentId})\n" +
+                      "```csharp\nvar x = 1;\n";
+
+        var result = await service.ValidateAndRefineAsync(content, "model", useFallback: false);
+
+        Assert.Contains("### Too Deep", result.Content);
+        Assert.Contains($"!!! question id=\"{validQuestionId}\"", result.Content);
+        Assert.DoesNotContain($"!!! question id=\"{missingQuestionId}\"", result.Content);
+        Assert.Contains("!!! question 1234-invalid", result.Content);
+        Assert.Contains($"!!! pdf id=\"{validPdfId}\"", result.Content);
+        Assert.DoesNotContain($"!!! pdf id=\"{missingPdfId}\"", result.Content);
+        Assert.Contains($"![img](/attachments/{validAttachmentId})", result.Content);
+        Assert.DoesNotContain($"![img](/attachments/{missingAttachmentId})", result.Content);
+        Assert.EndsWith("```", result.Content.TrimEnd());
+
+        Assert.NotNull(result.Warnings);
+        Assert.Contains(result.Warnings!, w => w.ErrorType == "MALFORMED_MARKER");
+    }
+}
