@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
@@ -49,7 +48,7 @@ public class ResponseServiceTests
             _mockHubContext.Object,
             _mockTcpPairingService.Object,
             _mockResponseRepo.Object);
-        var feedbackGenerationService = CreateNoOpFeedbackGenerationService();
+        var feedbackGenerationService = new StubFeedbackGenerationService();
         _service = new ResponseService(
             _mockResponseRepo.Object, 
             _mockQuestionRepo.Object, 
@@ -59,12 +58,10 @@ public class ResponseServiceTests
             feedbackGenerationService);
     }
 
-    #pragma warning disable SYSLIB0050
-    private static FeedbackGenerationService CreateNoOpFeedbackGenerationService()
+    private sealed class StubFeedbackGenerationService : IFeedbackGenerationService
     {
-        return (FeedbackGenerationService)FormatterServices.GetUninitializedObject(typeof(FeedbackGenerationService));
+        public bool ShouldGenerateFeedback(QuestionEntity question) => false;
     }
-    #pragma warning restore SYSLIB0050
 
     [Fact]
     public async Task CreateResponseAsync_ValidMultipleChoiceResponse_Success()

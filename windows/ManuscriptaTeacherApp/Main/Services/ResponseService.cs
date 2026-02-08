@@ -21,7 +21,7 @@ public class ResponseService : IResponseService
     private readonly IQuestionRepository _questionRepository;
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly FeedbackQueueService _feedbackQueueService;
-    private readonly FeedbackGenerationService _feedbackGenerationService;
+    private readonly IFeedbackGenerationService _feedbackGenerationService;
     private readonly DeviceIdValidator _deviceIdValidator;
 
     public ResponseService(
@@ -30,7 +30,7 @@ public class ResponseService : IResponseService
         IFeedbackRepository feedbackRepository,
         DeviceIdValidator deviceIdValidator,
         FeedbackQueueService feedbackQueueService,
-        FeedbackGenerationService feedbackGenerationService)
+        IFeedbackGenerationService feedbackGenerationService)
     {
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));

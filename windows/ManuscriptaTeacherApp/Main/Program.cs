@@ -78,6 +78,8 @@ builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
 builder.Services.AddScoped<MaterialGenerationService>();
 builder.Services.AddScoped<ContentModificationService>();
 builder.Services.AddSingleton<FeedbackGenerationService>();
+builder.Services.AddSingleton<IFeedbackGenerationService>(
+    provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddHostedService(provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddSingleton<FeedbackQueueService>();
 builder.Services.AddScoped<EmbeddingStatusService>();

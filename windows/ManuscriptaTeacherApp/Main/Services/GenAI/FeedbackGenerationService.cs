@@ -15,7 +15,7 @@ namespace Main.Services.GenAI;
 /// Handles AI-powered feedback generation for student responses.
 /// See GenAISpec.md §3D.
 /// </summary>
-public class FeedbackGenerationService : IHostedService
+public class FeedbackGenerationService : IHostedService, IFeedbackGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly FeedbackQueueService _queueService;
