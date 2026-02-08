@@ -44,6 +44,14 @@ interface ElectronAPI {
      * @returns Destination path
      */
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) => Promise<string>;
+
+    /**
+     * Listen for backend state changes from main process.
+     * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
+     * @param callback - Function to call when backend state changes
+     * @returns Function to remove the listener
+     */
+    onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => () => void;
 }
 
 declare global {

@@ -51,4 +51,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) =>
         ipcRenderer.invoke('save-attachment-from-base64', base64Data, uuid, extension),
+
+    /**
+     * Listen for backend state changes from main process.
+     * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
+     * @param callback - Function to call when backend state changes
+     * @returns Function to remove the listener
+     */
+    onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => {
+        const listener = (_event: Electron.IpcRendererEvent, state: 'reconnecting' | 'connected') => {
+            callback(state);
+        };
+        ipcRenderer.on('backend-state-change', listener);
+        return () => {
+            ipcRenderer.removeListener('backend-state-change', listener);
+        };
+    },
 });

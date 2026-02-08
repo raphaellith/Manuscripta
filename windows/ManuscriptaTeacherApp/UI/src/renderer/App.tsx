@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { AppProvider, useAppContext } from './state/AppContext';
+import { AppProvider, useAppContext, BackendProcessState } from './state/AppContext';
 import { AlertProvider } from './state/AlertContext';
 import { Header } from './components/layout/Header';
 import { GlobalAlerts } from './components/layout/GlobalAlerts';
@@ -15,8 +15,30 @@ import { ResponsesPage } from './components/pages/ResponsesPage';
 type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
 const AppContent: React.FC = () => {
-    const { isLoading, error, isConnected, refreshData } = useAppContext();
+    const { isLoading, error, isConnected, backendState, refreshData } = useAppContext();
     const [activeView, setActiveView] = useState<View>('lesson-library');
+
+    /**
+     * Render connection status indicator.
+     * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i): Display reconnecting indicator.
+     */
+    const renderConnectionStatus = () => {
+        // Backend reconnecting takes precedence (per §2ZA(6)(c)(i))
+        if (backendState === 'reconnecting') {
+            return (
+                <div className="absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                    <div className="animate-spin h-3 w-3 border-2 border-yellow-700 border-t-transparent rounded-full"></div>
+                    Reconnecting...
+                </div>
+            );
+        }
+        // SignalR connection status
+        return (
+            <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {isConnected ? '● Connected' : '○ Disconnected'}
+            </div>
+        );
+    };
 
     const renderView = () => {
         if (isLoading) {
@@ -67,10 +89,8 @@ const AppContent: React.FC = () => {
             {/* Global alerts - per FrontendWorkflowSpec §5D(1) */}
             <GlobalAlerts />
 
-            {/* Connection status indicator */}
-            <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {isConnected ? '● Connected' : '○ Disconnected'}
-            </div>
+            {/* Connection status indicator - per §2ZA(6)(c)(i) */}
+            {renderConnectionStatus()}
 
             {/* Floating Header Wrapper */}
             <div className="absolute top-0 left-0 w-full z-40 pointer-events-none">
