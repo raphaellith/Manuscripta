@@ -37,6 +37,8 @@ export class BackendProcessManager {
     private restartAttempts = 0;
     private restartDelay = 1000; // Initial delay: 1 second
     private lastSuccessfulStart: number | null = null;
+    private restartWindowStart: number | null = null; // Per §2ZA(6)(d): Track 5-minute window
+    private healthMonitorInterval: NodeJS.Timeout | null = null; // Health monitoring for external processes
     private onReadyCallbacks: Array<() => void> = [];
     private onErrorCallbacks: Array<(error: string) => void> = [];
     private onStateChangeCallbacks: Array<(state: BackendState) => void> = [];
@@ -45,6 +47,7 @@ export class BackendProcessManager {
     // Configuration per §2ZA(5)(d) and §2ZA(6)(d)
     private readonly MAX_STARTUP_WAIT_MS = 30000; // 30 seconds
     private readonly HEALTH_POLL_INTERVAL_MS = 500; // 500 milliseconds
+    private readonly HEALTH_MONITOR_INTERVAL_MS = 5000; // 5 seconds - for monitoring external processes
     private readonly MAX_RESTART_ATTEMPTS = 5;
     private readonly RESTART_WINDOW_MS = 300000; // 5 minutes
     private readonly STABLE_UPTIME_MS = 60000; // 60 seconds
@@ -91,6 +94,38 @@ export class BackendProcessManager {
                 resolve(false);
             });
         });
+    }
+
+    /**
+     * Starts health monitoring for externally-started backend processes.
+     * Since we don't have a process handle for externally-started backends,
+     * we must poll the health endpoint to detect when they go down.
+     */
+    private startHealthMonitoring(): void {
+        this.stopHealthMonitoring(); // Clear any existing monitor
+        
+        this.healthMonitorInterval = setInterval(async () => {
+            if (this.isShuttingDown || this.state !== BackendState.RUNNING) {
+                return;
+            }
+            
+            const healthy = await this.probeHealth();
+            if (!healthy && this.state === BackendState.RUNNING) {
+                console.log('Health monitor detected backend is no longer responding');
+                this.stopHealthMonitoring();
+                this.handleUnexpectedExit();
+            }
+        }, this.HEALTH_MONITOR_INTERVAL_MS);
+    }
+
+    /**
+     * Stops health monitoring.
+     */
+    private stopHealthMonitoring(): void {
+        if (this.healthMonitorInterval) {
+            clearInterval(this.healthMonitorInterval);
+            this.healthMonitorInterval = null;
+        }
     }
 
     /**
@@ -158,12 +193,25 @@ export class BackendProcessManager {
      * Per FrontendWorkflowSpecifications §2ZA(6)(b).
      */
     private async handleUnexpectedExit(): Promise<void> {
+        const now = Date.now();
+
         // Check if we've had stable uptime - reset backoff if so
         // Per §2ZA(6)(b)(iii)
         if (this.lastSuccessfulStart && 
-            Date.now() - this.lastSuccessfulStart >= this.STABLE_UPTIME_MS) {
+            now - this.lastSuccessfulStart >= this.STABLE_UPTIME_MS) {
             this.restartAttempts = 0;
             this.restartDelay = 1000;
+            this.restartWindowStart = null;
+        }
+
+        // Per §2ZA(6)(d): Track restart attempts within 5-minute window
+        if (this.restartWindowStart === null) {
+            this.restartWindowStart = now;
+        } else if (now - this.restartWindowStart > this.RESTART_WINDOW_MS) {
+            // Window expired, reset counter
+            this.restartAttempts = 0;
+            this.restartDelay = 1000;
+            this.restartWindowStart = now;
         }
 
         this.restartAttempts++;
@@ -171,7 +219,7 @@ export class BackendProcessManager {
         // Per §2ZA(6)(d): Check if max attempts exceeded within window
         if (this.restartAttempts > this.MAX_RESTART_ATTEMPTS) {
             this.setState(BackendState.FAILED);
-            this.notifyError('Backend failed to start after multiple attempts. Please restart the application.');
+            this.notifyError('Application failed to start after multiple attempts. Please restart the application.');
             return;
         }
 
@@ -206,6 +254,9 @@ export class BackendProcessManager {
             console.log('Backend already running, skipping spawn');
             this.lastSuccessfulStart = Date.now();
             this.setState(BackendState.RUNNING);
+            // Start health monitoring since we don't have a process handle
+            // This allows us to detect when an externally-started backend goes down
+            this.startHealthMonitoring();
             this.notifyReady();
             return;
         }
@@ -245,6 +296,7 @@ export class BackendProcessManager {
      */
     public async stop(): Promise<void> {
         this.isShuttingDown = true;
+        this.stopHealthMonitoring();
         
         if (!this.process) {
             this.setState(BackendState.STOPPED);
