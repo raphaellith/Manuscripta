@@ -153,7 +153,8 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 
 app.MapControllers();
-app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/hub");
+// Per FrontendWorkflowSpecifications §1(1)(a) and §2(1)(a)
+app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 
 app.Run();
 

@@ -22,9 +22,9 @@ import type {
 
 /**
  * SignalR hub URL.
- * Per FrontendWorkflowSpecifications §2ZA(8)(a)(iii).
+ * Per FrontendWorkflowSpecifications §1(1)(a) and §2(2)(d).
  */
-const SIGNALR_HUB_URL = "http://localhost:5910/hub";
+const SIGNALR_HUB_URL = "http://localhost:5910/TeacherPortalHub";
 
 /**
  * Custom retry policy that retries indefinitely with capped exponential backoff.

@@ -22,9 +22,9 @@ export const BACKEND_HEALTH_URL = `${BACKEND_URL}/`;
 
 /**
  * The SignalR hub URL.
- * Per FrontendWorkflowSpecifications §2(2)(d).
+ * Per FrontendWorkflowSpecifications §1(1)(a) and §2(2)(d).
  */
-export const SIGNALR_HUB_URL = `${BACKEND_URL}/hub`;
+export const SIGNALR_HUB_URL = `${BACKEND_URL}/TeacherPortalHub`;
 
 /**
  * The WebSocket URL for SignalR (used in CSP).
