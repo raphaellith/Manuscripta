@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -231,14 +232,14 @@ public class FeedbackControllerTests
 /// Integration tests for FeedbackController JSON serialisation compliance.
 /// Verifies AdditionalValidationRules.md Section 1A(1): PascalCase field names.
 /// </summary>
-public class FeedbackControllerSerialisationTests : IClassFixture<WebApplicationFactory<Program>>
+public class FeedbackControllerSerialisationTests : IClassFixture<TestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory _factory;
     private readonly Guid _testDeviceId = Guid.NewGuid();
     private readonly Guid _testResponseId = Guid.NewGuid();
     private readonly Guid _testQuestionId = Guid.NewGuid();
 
-    public FeedbackControllerSerialisationTests(WebApplicationFactory<Program> factory)
+    public FeedbackControllerSerialisationTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
     }

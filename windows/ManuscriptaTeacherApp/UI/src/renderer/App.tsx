@@ -12,7 +12,7 @@ import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
 import { ClassroomPage } from './components/pages/ClassroomPage';
 import { ResponsesPage } from './components/pages/ResponsesPage';
 
-type View = 'dashboard' | 'lesson-library' | 'classroom-control' | 'responses' | 'ai-assistant' | 'settings';
+type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
 const AppContent: React.FC = () => {
     const { isLoading, error, isConnected, refreshData } = useAppContext();
