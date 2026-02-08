@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
@@ -8,6 +9,10 @@ using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Services;
 using Main.Services.Repositories;
+using Main.Services.GenAI;
+using Main.Services.Hubs;
+using Main.Services.Network;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MainTests.ServicesTests;
 
@@ -17,6 +22,8 @@ public class ResponseServiceTests
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
+    private readonly Mock<IHubContext<TeacherPortalHub>> _mockHubContext;
+    private readonly Mock<ITcpPairingService> _mockTcpPairingService;
     private readonly DeviceIdValidator _deviceIdValidator;
     private readonly ResponseService _service;
 
@@ -26,6 +33,8 @@ public class ResponseServiceTests
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockFeedbackRepo = new Mock<IFeedbackRepository>();
         _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
+        _mockHubContext = new Mock<IHubContext<TeacherPortalHub>>();
+        _mockTcpPairingService = new Mock<ITcpPairingService>();
         
         // Default: all devices are valid (paired)
         _mockDeviceRegistry.Setup(r => r.IsDevicePairedAsync(It.IsAny<Guid>()))
@@ -36,12 +45,26 @@ public class ResponseServiceTests
             .ReturnsAsync(false);
         
         _deviceIdValidator = new DeviceIdValidator(_mockDeviceRegistry.Object);
+        var feedbackQueueService = new FeedbackQueueService(
+            _mockHubContext.Object,
+            _mockTcpPairingService.Object,
+            _mockResponseRepo.Object);
+        var feedbackGenerationService = CreateNoOpFeedbackGenerationService();
         _service = new ResponseService(
             _mockResponseRepo.Object, 
             _mockQuestionRepo.Object, 
             _mockFeedbackRepo.Object,
-            _deviceIdValidator);
+            _deviceIdValidator,
+            feedbackQueueService,
+            feedbackGenerationService);
     }
+
+    #pragma warning disable SYSLIB0050
+    private static FeedbackGenerationService CreateNoOpFeedbackGenerationService()
+    {
+        return (FeedbackGenerationService)FormatterServices.GetUninitializedObject(typeof(FeedbackGenerationService));
+    }
+    #pragma warning restore SYSLIB0050
 
     [Fact]
     public async Task CreateResponseAsync_ValidMultipleChoiceResponse_Success()

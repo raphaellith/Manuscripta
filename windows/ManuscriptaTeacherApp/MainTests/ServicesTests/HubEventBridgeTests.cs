@@ -56,7 +56,7 @@ public class HubEventBridgeTests
         
         // Trigger StatusUpdateReceived
         var eventArgs = new DeviceStatusEventArgs("device1", "ON_TASK", 80, "mat1", "view1", 123456);
-        _mockTcpService.Raise(s => s.StatusUpdateReceived += null, null, eventArgs);
+        _mockTcpService.Raise(s => s.StatusUpdateReceived += null, new object(), eventArgs);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -76,7 +76,7 @@ public class HubEventBridgeTests
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var deviceId = Guid.NewGuid();
 
-        _mockTcpService.Raise(s => s.HandRaisedReceived += null, null, deviceId);
+        _mockTcpService.Raise(s => s.HandRaisedReceived += null, new object(), deviceId);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -92,7 +92,7 @@ public class HubEventBridgeTests
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var deviceId = Guid.NewGuid();
 
-        _mockTcpService.Raise(s => s.DistributionTimedOut += null, null, deviceId);
+        _mockTcpService.Raise(s => s.DistributionTimedOut += null, new object(), deviceId);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -108,7 +108,7 @@ public class HubEventBridgeTests
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var device = new PairedDeviceEntity(Guid.NewGuid(), "Device 1");
 
-        _mockRegistryService.Raise(s => s.DevicePaired += null, null, device);
+        _mockRegistryService.Raise(s => s.DevicePaired += null, new object(), device);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -127,7 +127,7 @@ public class HubEventBridgeTests
         
         // Act - raise event
         var deviceId = Guid.NewGuid();
-        _mockTcpService.Raise(s => s.HandRaisedReceived += null, null, deviceId);
+        _mockTcpService.Raise(s => s.HandRaisedReceived += null, new object(), deviceId);
 
         // Assert - should NOT be called again
         _mockClientProxy.Verify(
