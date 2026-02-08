@@ -4,13 +4,14 @@ on:
   push:
     paths:
       - 'windows/ManuscriptaTeacherApp/Main/**'
-      - 'windows/Main/**'
+      - 'windows/ManuscriptaTeacherApp/MainTests/**'
   pull_request:
     branches:
       - 'windows-app'
       - 'main'
     paths:
       - 'windows/ManuscriptaTeacherApp/Main/**'
+      - 'windows/ManuscriptaTeacherApp/MainTests/**'
 
 jobs:
   build-and-test:
