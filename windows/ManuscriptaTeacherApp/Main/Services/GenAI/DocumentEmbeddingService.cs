@@ -14,7 +14,7 @@ namespace Main.Services.GenAI;
 /// Handles source document indexing for semantic retrieval.
 /// See GenAISpec.md §3A.
 /// </summary>
-public class DocumentEmbeddingService
+public class DocumentEmbeddingService : IEmbeddingService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly ChromaClient _chromaClient;

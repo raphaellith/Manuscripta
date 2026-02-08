@@ -54,7 +54,7 @@ public class TeacherPortalHubTests
     private readonly ContentModificationService _contentModificationService;
     private readonly EmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
-    private readonly DocumentEmbeddingService _documentEmbeddingService;
+    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -85,7 +85,7 @@ public class TeacherPortalHubTests
         _materialGenerationService = CreateUninitialized<MaterialGenerationService>();
         _contentModificationService = CreateUninitialized<ContentModificationService>();
         _embeddingStatusService = CreateUninitialized<EmbeddingStatusService>();
-        _documentEmbeddingService = CreateUninitialized<DocumentEmbeddingService>();
+        _mockEmbeddingService = new Mock<IEmbeddingService>();
         _feedbackQueueService = new FeedbackQueueService(
             _mockHubContext.Object,
             _mockTcpPairingService.Object,
@@ -203,6 +203,7 @@ public class TeacherPortalHubTests
         IFeedbackRepository? feedbackRepository = null,
         IResponseRepository? responseRepository = null,
         ILogger<TeacherPortalHub>? logger = null,
+        IEmbeddingService? embeddingService = null,
         bool allowNulls = false)
     {
         var resolvedUnitCollectionService = allowNulls ? unitCollectionService : unitCollectionService ?? _mockUnitCollectionService.Object;
@@ -227,6 +228,7 @@ public class TeacherPortalHubTests
         var resolvedFeedbackRepository = allowNulls ? feedbackRepository : feedbackRepository ?? _mockFeedbackRepository.Object;
         var resolvedResponseRepository = allowNulls ? responseRepository : responseRepository ?? _mockResponseRepository.Object;
         var resolvedLogger = allowNulls ? logger : logger ?? _mockLogger.Object;
+        var resolvedEmbeddingService = allowNulls ? embeddingService : embeddingService ?? _mockEmbeddingService.Object;
 
         return new TeacherPortalHub(
             resolvedUnitCollectionService!,
@@ -255,7 +257,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
-            _documentEmbeddingService);
+            resolvedEmbeddingService!);
     }
 
     #pragma warning disable SYSLIB0050

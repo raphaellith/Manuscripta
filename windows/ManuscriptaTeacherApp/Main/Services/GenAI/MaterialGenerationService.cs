@@ -10,7 +10,7 @@ namespace Main.Services.GenAI;
 public class MaterialGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly DocumentEmbeddingService _embeddingService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string PrimaryModel = "qwen3:8b";
@@ -18,7 +18,7 @@ public class MaterialGenerationService
 
     public MaterialGenerationService(
         OllamaClientService ollamaClient,
-        DocumentEmbeddingService embeddingService,
+        IEmbeddingService embeddingService,
         OutputValidationService validationService)
     {
         _ollamaClient = ollamaClient;

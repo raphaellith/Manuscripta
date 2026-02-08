@@ -10,14 +10,14 @@ namespace Main.Services.GenAI;
 public class ContentModificationService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly DocumentEmbeddingService _embeddingService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string ModificationModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
-        DocumentEmbeddingService embeddingService,
+        IEmbeddingService embeddingService,
         OutputValidationService validationService)
     {
         _ollamaClient = ollamaClient;

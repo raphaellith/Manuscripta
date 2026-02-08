@@ -5,7 +5,6 @@ using Xunit;
 using Main.Models.Entities;
 using Main.Services;
 using Main.Services.Repositories;
-using System.Runtime.Serialization;
 using Main.Services.GenAI;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +20,7 @@ public class SourceDocumentServiceTests
     private readonly Mock<ISourceDocumentRepository> _mockSourceDocumentRepo;
     private readonly Mock<ILogger<SourceDocumentService>> _mockLogger;
     private readonly Mock<IUnitCollectionRepository> _mockUnitCollectionRepo;
+    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly SourceDocumentService _service;
 
     public SourceDocumentServiceTests()
@@ -28,10 +28,14 @@ public class SourceDocumentServiceTests
         _mockSourceDocumentRepo = new Mock<ISourceDocumentRepository>();
         _mockLogger = new Mock<ILogger<SourceDocumentService>>();
         _mockUnitCollectionRepo = new Mock<IUnitCollectionRepository>();
+        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockEmbeddingService
+            .Setup(s => s.IndexSourceDocumentAsync(It.IsAny<SourceDocumentEntity>()))
+            .Returns(Task.CompletedTask);
         _service = new SourceDocumentService(
             _mockSourceDocumentRepo.Object,
             _mockUnitCollectionRepo.Object,
-            CreateNoOpEmbeddingService(),
+            _mockEmbeddingService.Object,
             _mockLogger.Object);
     }
 
@@ -41,14 +45,14 @@ public class SourceDocumentServiceTests
     public void Constructor_NullSourceDocumentRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new SourceDocumentService(null!, _mockUnitCollectionRepo.Object, CreateNoOpEmbeddingService(), _mockLogger.Object));
+            new SourceDocumentService(null!, _mockUnitCollectionRepo.Object, _mockEmbeddingService.Object, _mockLogger.Object));
     }
 
     [Fact]
     public void Constructor_NullUnitCollectionRepository_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new SourceDocumentService(_mockSourceDocumentRepo.Object, null!, CreateNoOpEmbeddingService(), _mockLogger.Object));
+            new SourceDocumentService(_mockSourceDocumentRepo.Object, null!, _mockEmbeddingService.Object, _mockLogger.Object));
     }
 
     #endregion
@@ -141,8 +145,8 @@ public class SourceDocumentServiceTests
     #endregion
 
     #region DeleteAsync Tests
-    [Fact(Skip = "Requires live embedding infrastructure (Chroma/Ollama) for DocumentEmbeddingService.")]
-    public async Task DeleteAsync_CallsRepository()
+    [Fact]
+    public async Task DeleteAsync_CallsRepositoryAndEmbeddingRemoval()
     {
         // Arrange
         // Cascade deletion is handled by database FK constraints
@@ -150,19 +154,16 @@ public class SourceDocumentServiceTests
         var sourceDocumentId = Guid.NewGuid();
         _mockSourceDocumentRepo.Setup(r => r.DeleteAsync(sourceDocumentId))
             .Returns(Task.CompletedTask);
+        _mockEmbeddingService.Setup(s => s.RemoveSourceDocumentAsync(sourceDocumentId))
+            .Returns(Task.CompletedTask);
 
         // Act
         await _service.DeleteAsync(sourceDocumentId);
 
         // Assert
         _mockSourceDocumentRepo.Verify(r => r.DeleteAsync(sourceDocumentId), Times.Once);
+        _mockEmbeddingService.Verify(s => s.RemoveSourceDocumentAsync(sourceDocumentId), Times.Once);
     }
 
     #endregion
-    #pragma warning disable SYSLIB0050
-    private static DocumentEmbeddingService CreateNoOpEmbeddingService()
-    {
-        return (DocumentEmbeddingService)FormatterServices.GetUninitializedObject(typeof(DocumentEmbeddingService));
-    }
-    #pragma warning restore SYSLIB0050
 }

@@ -74,7 +74,7 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 // Register GenAI services
 // See GenAISpec.md §3(1) and §3(2)
 builder.Services.AddSingleton<OllamaClientService>();
-builder.Services.AddScoped<DocumentEmbeddingService>();
+builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
 builder.Services.AddScoped<MaterialGenerationService>();
 builder.Services.AddScoped<ContentModificationService>();
 builder.Services.AddSingleton<FeedbackGenerationService>();
@@ -155,7 +155,7 @@ using (var scope = app.Services.CreateScope())
     // DbInitializer.Initialize(context);
 
     // Initialize embedding startup handler per GenAISpec.md §3A(8)
-    var embeddingService = services.GetRequiredService<Main.Services.GenAI.DocumentEmbeddingService>();
+    var embeddingService = services.GetRequiredService<Main.Services.GenAI.IEmbeddingService>();
     await embeddingService.InitializeFailedEmbeddingsAsync();
 
     // Orphan file removal per PersistenceAndCascadingRules §3

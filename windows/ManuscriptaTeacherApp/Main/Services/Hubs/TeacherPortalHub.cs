@@ -47,7 +47,7 @@ public class TeacherPortalHub : Hub
     private readonly ContentModificationService _contentModificationService;
     private readonly EmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
-    private readonly DocumentEmbeddingService _documentEmbeddingService;
+    private readonly IEmbeddingService _documentEmbeddingService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -76,7 +76,7 @@ public class TeacherPortalHub : Hub
         ContentModificationService contentModificationService,
         EmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
-        DocumentEmbeddingService documentEmbeddingService)
+        IEmbeddingService documentEmbeddingService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
