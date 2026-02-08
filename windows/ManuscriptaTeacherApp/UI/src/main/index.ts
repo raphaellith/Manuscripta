@@ -149,9 +149,13 @@ const initializeApp = async (): Promise<void> => {
 
   // Set up backend process manager callbacks
   backendProcessManager.onReady(() => {
-    console.log('Backend is ready, creating main window');
-    // Per §2ZA(5)(c)(ii): Create main window and establish SignalR connection
-    createMainWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.log('Backend is ready, creating main window');
+      // Per §2ZA(5)(c)(ii): Create main window and establish SignalR connection
+      createMainWindow();
+    } else {
+      console.log('Backend is ready, main window already exists; skipping creation');
+    }
   });
 
   backendProcessManager.onError((error) => {
