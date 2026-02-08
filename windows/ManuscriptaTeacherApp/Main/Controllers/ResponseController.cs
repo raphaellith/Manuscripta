@@ -68,7 +68,11 @@ public class ResponseController : ControllerBase
                 request.Id, request.QuestionId);
 
             // Notify frontend to refresh responses per Session Interaction §4
-            await _hubContext.Clients.All.SendAsync("RefreshResponses");
+            var clients = _hubContext.Clients;
+            if (clients != null)
+            {
+                await clients.All.SendAsync("RefreshResponses");
+            }
 
             // Per API Contract §2.3: Return 201 Created with empty body
             return StatusCode(StatusCodes.Status201Created, new { });
@@ -133,7 +137,11 @@ public class ResponseController : ControllerBase
             _logger.LogInformation("Batch of {Count} responses submitted successfully", request.Responses.Count);
 
             // Notify frontend to refresh responses per Session Interaction §4
-            await _hubContext.Clients.All.SendAsync("RefreshResponses");
+            var clients = _hubContext.Clients;
+            if (clients != null)
+            {
+                await clients.All.SendAsync("RefreshResponses");
+            }
 
             // Per API Contract §2.3: Return 201 Created
             return StatusCode(StatusCodes.Status201Created, new { });

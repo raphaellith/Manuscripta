@@ -81,7 +81,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             return;
         }
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _cts.Token.Register(StopListening);
         _listener = new TcpListener(IPAddress.Any, _settings.TcpPort);
         
         try
@@ -98,7 +104,16 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 TimeSpan.FromSeconds(1));
 
             // Run client acceptance loop in background so we don't block the caller (Hub)
-            _ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
+            _ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token)
+                .ContinueWith(task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        _logger.LogError(task.Exception, "Error in TCP listener background task");
+                    }
+
+                    _isListening = false;
+                }, TaskScheduler.Default);
 
             // Return immediately once listener is active
         }

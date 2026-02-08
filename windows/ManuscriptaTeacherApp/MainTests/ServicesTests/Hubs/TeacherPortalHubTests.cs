@@ -99,85 +99,85 @@ public class TeacherPortalHubTests
     [Fact]
     public void Constructor_NullUnitCollectionService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(unitCollectionService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(unitCollectionService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullUnitService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(unitService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(unitService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullLessonService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(lessonService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(lessonService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullMaterialService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(materialService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(materialService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullQuestionService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(questionService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(questionService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullSourceDocumentService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(sourceDocumentService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(sourceDocumentService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullAttachmentService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(attachmentService: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(attachmentService: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullUnitCollectionRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(unitCollectionRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(unitCollectionRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullUnitRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(unitRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(unitRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullLessonRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(lessonRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(lessonRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullMaterialRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(materialRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(materialRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullQuestionRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(questionRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(questionRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullSourceDocumentRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(sourceDocumentRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(sourceDocumentRepository: null!, allowNulls: true));
     }
 
     [Fact]
     public void Constructor_NullAttachmentRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => CreateHub(attachmentRepository: null!));
+        Assert.Throws<ArgumentNullException>(() => CreateHub(attachmentRepository: null!, allowNulls: true));
     }
 
     private TeacherPortalHub CreateHub(
@@ -202,31 +202,55 @@ public class TeacherPortalHubTests
         IDistributionService? distributionService = null,
         IFeedbackRepository? feedbackRepository = null,
         IResponseRepository? responseRepository = null,
-        ILogger<TeacherPortalHub>? logger = null)
+        ILogger<TeacherPortalHub>? logger = null,
+        bool allowNulls = false)
     {
+        var resolvedUnitCollectionService = allowNulls ? unitCollectionService : unitCollectionService ?? _mockUnitCollectionService.Object;
+        var resolvedUnitService = allowNulls ? unitService : unitService ?? _mockUnitService.Object;
+        var resolvedLessonService = allowNulls ? lessonService : lessonService ?? _mockLessonService.Object;
+        var resolvedMaterialService = allowNulls ? materialService : materialService ?? _mockMaterialService.Object;
+        var resolvedQuestionService = allowNulls ? questionService : questionService ?? _mockQuestionService.Object;
+        var resolvedSourceDocumentService = allowNulls ? sourceDocumentService : sourceDocumentService ?? _mockSourceDocumentService.Object;
+        var resolvedAttachmentService = allowNulls ? attachmentService : attachmentService ?? _mockAttachmentService.Object;
+        var resolvedUnitCollectionRepository = allowNulls ? unitCollectionRepository : unitCollectionRepository ?? _mockUnitCollectionRepository.Object;
+        var resolvedUnitRepository = allowNulls ? unitRepository : unitRepository ?? _mockUnitRepository.Object;
+        var resolvedLessonRepository = allowNulls ? lessonRepository : lessonRepository ?? _mockLessonRepository.Object;
+        var resolvedMaterialRepository = allowNulls ? materialRepository : materialRepository ?? _mockMaterialRepository.Object;
+        var resolvedQuestionRepository = allowNulls ? questionRepository : questionRepository ?? _mockQuestionRepository.Object;
+        var resolvedSourceDocumentRepository = allowNulls ? sourceDocumentRepository : sourceDocumentRepository ?? _mockSourceDocumentRepository.Object;
+        var resolvedAttachmentRepository = allowNulls ? attachmentRepository : attachmentRepository ?? _mockAttachmentRepository.Object;
+        var resolvedUdpBroadcastService = allowNulls ? udpBroadcastService : udpBroadcastService ?? _mockUdpBroadcastService.Object;
+        var resolvedTcpPairingService = allowNulls ? tcpPairingService : tcpPairingService ?? _mockTcpPairingService.Object;
+        var resolvedDeviceRegistryService = allowNulls ? deviceRegistryService : deviceRegistryService ?? _mockDeviceRegistryService.Object;
+        var resolvedDeviceStatusCacheService = allowNulls ? deviceStatusCacheService : deviceStatusCacheService ?? _mockDeviceStatusCacheService.Object;
+        var resolvedDistributionService = allowNulls ? distributionService : distributionService ?? _mockDistributionService.Object;
+        var resolvedFeedbackRepository = allowNulls ? feedbackRepository : feedbackRepository ?? _mockFeedbackRepository.Object;
+        var resolvedResponseRepository = allowNulls ? responseRepository : responseRepository ?? _mockResponseRepository.Object;
+        var resolvedLogger = allowNulls ? logger : logger ?? _mockLogger.Object;
+
         return new TeacherPortalHub(
-            unitCollectionService ?? _mockUnitCollectionService.Object,
-            unitService ?? _mockUnitService.Object,
-            lessonService ?? _mockLessonService.Object,
-            materialService ?? _mockMaterialService.Object,
-            questionService ?? _mockQuestionService.Object,
-            sourceDocumentService ?? _mockSourceDocumentService.Object,
-            attachmentService ?? _mockAttachmentService.Object,
-            unitCollectionRepository ?? _mockUnitCollectionRepository.Object,
-            unitRepository ?? _mockUnitRepository.Object,
-            lessonRepository ?? _mockLessonRepository.Object,
-            materialRepository ?? _mockMaterialRepository.Object,
-            questionRepository ?? _mockQuestionRepository.Object,
-            sourceDocumentRepository ?? _mockSourceDocumentRepository.Object,
-            attachmentRepository ?? _mockAttachmentRepository.Object,
-            udpBroadcastService ?? _mockUdpBroadcastService.Object,
-            tcpPairingService ?? _mockTcpPairingService.Object,
-            deviceRegistryService ?? _mockDeviceRegistryService.Object,
-            deviceStatusCacheService ?? _mockDeviceStatusCacheService.Object,
-            distributionService ?? _mockDistributionService.Object,
-            feedbackRepository ?? _mockFeedbackRepository.Object,
-            responseRepository ?? _mockResponseRepository.Object,
-            logger ?? _mockLogger.Object,
+            resolvedUnitCollectionService!,
+            resolvedUnitService!,
+            resolvedLessonService!,
+            resolvedMaterialService!,
+            resolvedQuestionService!,
+            resolvedSourceDocumentService!,
+            resolvedAttachmentService!,
+            resolvedUnitCollectionRepository!,
+            resolvedUnitRepository!,
+            resolvedLessonRepository!,
+            resolvedMaterialRepository!,
+            resolvedQuestionRepository!,
+            resolvedSourceDocumentRepository!,
+            resolvedAttachmentRepository!,
+            resolvedUdpBroadcastService!,
+            resolvedTcpPairingService!,
+            resolvedDeviceRegistryService!,
+            resolvedDeviceStatusCacheService!,
+            resolvedDistributionService!,
+            resolvedFeedbackRepository!,
+            resolvedResponseRepository!,
+            resolvedLogger!,
             _materialGenerationService,
             _contentModificationService,
             _embeddingStatusService,

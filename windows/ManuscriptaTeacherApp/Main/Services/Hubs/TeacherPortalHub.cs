@@ -881,6 +881,11 @@ public class TeacherPortalHub : Hub
                 throw new HubException($"Feedback {feedbackId} not found");
             }
 
+            if (feedback.Status != FeedbackStatus.PROVISIONAL)
+            {
+                throw new HubException($"Feedback {feedbackId} cannot be approved: status is {feedback.Status}, not PROVISIONAL");
+            }
+
             // Approve feedback (transitions PROVISIONAL → READY and triggers dispatch)
             await _feedbackQueueService.ApproveFeedbackAsync(feedback);
 

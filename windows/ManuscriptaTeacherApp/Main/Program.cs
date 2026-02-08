@@ -15,7 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Start ChromaDB server if not already running
 // See GenAISpec.md §2(3)
-await StartChromaDbServerAsync(builder.Configuration);
+var autoStartChroma = builder.Configuration.GetValue("ChromaDB:AutoStart", true);
+if (autoStartChroma)
+{
+    await StartChromaDbServerAsync(builder.Configuration);
+}
 
 // Configure network settings from appsettings.json
 builder.Services.Configure<NetworkSettings>(
