@@ -215,20 +215,32 @@ app.on('window-all-closed', () => {
 });
 
 // Per FrontendWorkflowSpecifications §2ZA(7): Graceful shutdown
-app.on('will-quit', async (event) => {
-  event.preventDefault();
-  
-  try {
-    // Per §2ZA(7)(a): Stop the backend process gracefully
-    await backendProcessManager.stop();
-  } catch (err) {
-    console.error('Error stopping backend:', err);
-  }
-  
-  // Per §2ZA(7)(b): Ensure no orphaned processes
-  app.exit(0);
-});
+let isGracefulQuitInProgress = false;
 
+function handleWillQuit(event: Electron.Event) {
+  // Only intercept the first quit attempt; subsequent attempts proceed normally.
+  if (isGracefulQuitInProgress) {
+    return;
+  }
+
+  isGracefulQuitInProgress = true;
+  event.preventDefault();
+
+  (async () => {
+    try {
+      // Per §2ZA(7)(a): Stop the backend process gracefully
+      await backendProcessManager.stop();
+    } catch (err) {
+      console.error('Error stopping backend:', err);
+    } finally {
+      // After graceful shutdown, allow Electron's normal quit flow to proceed
+      app.removeListener('will-quit', handleWillQuit);
+      app.quit();
+    }
+  })();
+}
+
+app.on('will-quit', handleWillQuit);
 app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
