@@ -62,7 +62,8 @@ public class GenAIPromptBuilderTests
             materialType: "reading"
         );
 
-        Assert.DoesNotContain("question-draft", prompt);
+        Assert.DoesNotContain("**Questions:**", prompt);
+        Assert.DoesNotContain("!!! question-draft", prompt);
         Assert.Contains("MARKDOWN SYNTAX:", prompt);
         Assert.Contains("SOURCE DOCUMENT CONTEXT:", prompt);
     }
