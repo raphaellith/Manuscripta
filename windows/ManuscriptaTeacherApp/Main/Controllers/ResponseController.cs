@@ -69,7 +69,12 @@ public class ResponseController : ControllerBase
 
             // Notify frontend to refresh responses per Session Interaction §4
             var clients = _hubContext.Clients;
-            if (clients != null)
+            if (clients == null)
+            {
+                _logger.LogWarning("SignalR clients unavailable while sending RefreshResponses for response {ResponseId}",
+                    request.Id);
+            }
+            else
             {
                 await clients.All.SendAsync("RefreshResponses");
             }
@@ -138,7 +143,11 @@ public class ResponseController : ControllerBase
 
             // Notify frontend to refresh responses per Session Interaction §4
             var clients = _hubContext.Clients;
-            if (clients != null)
+            if (clients == null)
+            {
+                _logger.LogWarning("SignalR clients unavailable while sending RefreshResponses for batch response submission");
+            }
+            else
             {
                 await clients.All.SendAsync("RefreshResponses");
             }
