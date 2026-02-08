@@ -209,25 +209,62 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 
     During development, the backend and frontend may be run independently —
 
-    (a) The backend may be started via `dotnet run` from the `Main` directory.
+    (a) The backend may be started via `dotnet run` from the `Main` directory —
 
-    (b) The frontend may be started via `npm start` from the `UI` directory.
+    ```
+    cd windows/ManuscriptaTeacherApp/Main
+    dotnet run
+    ```
+
+    (b) The frontend may be started via `npm start` from the `UI` directory —
+
+    ```
+    cd windows/ManuscriptaTeacherApp/UI
+    npm start
+    ```
 
     (c) Per `FrontendWorkflowSpecifications.md` Section 2ZA(3)(b), the frontend shall detect an already-running backend and skip spawning a new process.
 
 (2) **Combined Development Build**
 
-    To test the combined build locally, developers shall —
+    To test the combined build locally, developers should —
 
-    (a) publish the backend to `UI/resources/backend/`;
+    (a) clean previous build artifacts —
 
-    (b) build the frontend installer;
+    ```
+    Remove-Item -Recurse -Force windows/ManuscriptaTeacherApp/UI/resources/backend/ -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force windows/ManuscriptaTeacherApp/UI/out/ -ErrorAction SilentlyContinue
+    ```
 
-    (c) install and run the generated installer to verify end-to-end functionality.
+    (b) publish the backend to `UI/resources/backend/` —
+
+    ```
+    dotnet publish windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj `
+        --configuration Release `
+        --runtime win-x64 `
+        --self-contained true `
+        --output windows/ManuscriptaTeacherApp/UI/resources/backend
+    ```
+
+    (c) install frontend dependencies —
+
+    ```
+    cd windows/ManuscriptaTeacherApp/UI
+    npm ci
+    ```
+
+    (d) build the frontend installer —
+
+    ```
+    cd windows/ManuscriptaTeacherApp/UI
+    npm run make
+    ```
+
+    (e) install and run the generated installer from the `UI/out/` directory to verify end-to-end functionality.
 
 (3) **Gitignore Configuration**
 
-    The following paths shall be excluded from version control —
+    The following paths should be excluded from version control —
 
     (a) `windows/ManuscriptaTeacherApp/UI/resources/backend/`
 

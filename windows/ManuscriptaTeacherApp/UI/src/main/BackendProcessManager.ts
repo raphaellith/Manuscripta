@@ -157,6 +157,7 @@ export class BackendProcessManager {
             stdio: ['ignore', 'pipe', 'pipe'],
             detached: false,
             windowsHide: true,
+            cwd: path.dirname(executablePath),
         });
 
         // Per §2ZA(3)(c)(iii): Capture stdout and stderr for diagnostics
