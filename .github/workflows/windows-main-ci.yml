@@ -27,10 +27,14 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj"
+        run: |
+          dotnet restore "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj"
+          dotnet restore "windows/ManuscriptaTeacherApp/MainTests/MainTests.csproj"
 
       - name: Build
-        run: dotnet build "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj" --configuration Release --no-restore
+        run: |
+          dotnet build "windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj" --configuration Release --no-restore
+          dotnet build "windows/ManuscriptaTeacherApp/MainTests/MainTests.csproj" --configuration Release --no-restore
 
       - name: Test with coverage
         run: |
@@ -40,14 +44,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: main-coverage
-          path: windows/ManuscriptaTeacherApp/Main/TestResults/**
+          path: windows/ManuscriptaTeacherApp/MainTests/TestResults/**
 
       - name: Publish test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: windows/ManuscriptaTeacherApp/Main/TestResults/**
+          path: windows/ManuscriptaTeacherApp/MainTests/TestResults/**
 
       - name: Notes
         run: |
