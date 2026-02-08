@@ -7,7 +7,7 @@ namespace Main.Services.GenAI;
 /// Handles AI-powered content modification (AI assistant).
 /// See GenAISpec.md §3C.
 /// </summary>
-public class ContentModificationService
+public class ContentModificationService : IContentModificationService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly IEmbeddingService _embeddingService;

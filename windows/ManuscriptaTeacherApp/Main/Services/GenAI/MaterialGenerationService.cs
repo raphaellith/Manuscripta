@@ -7,7 +7,7 @@ namespace Main.Services.GenAI;
 /// Handles AI-powered material generation for reading and worksheet content.
 /// See GenAISpec.md §3B.
 /// </summary>
-public class MaterialGenerationService
+public class MaterialGenerationService : IMaterialGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly IEmbeddingService _embeddingService;

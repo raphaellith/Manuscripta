@@ -75,14 +75,14 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 // See GenAISpec.md §3(1) and §3(2)
 builder.Services.AddSingleton<OllamaClientService>();
 builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
-builder.Services.AddScoped<MaterialGenerationService>();
-builder.Services.AddScoped<ContentModificationService>();
+builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
+builder.Services.AddScoped<IContentModificationService, ContentModificationService>();
 builder.Services.AddSingleton<FeedbackGenerationService>();
 builder.Services.AddSingleton<IFeedbackGenerationService>(
     provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddHostedService(provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddSingleton<FeedbackQueueService>();
-builder.Services.AddScoped<EmbeddingStatusService>();
+builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
 builder.Services.AddScoped<OutputValidationService>();
 builder.Services.AddScoped<QuestionExtractionService>();
 

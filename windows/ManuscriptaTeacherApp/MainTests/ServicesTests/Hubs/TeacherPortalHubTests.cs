@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
@@ -50,9 +49,9 @@ public class TeacherPortalHubTests
     private readonly Mock<IResponseRepository> _mockResponseRepository;
     private readonly Mock<ILogger<TeacherPortalHub>> _mockLogger;
     private readonly Mock<IHubContext<TeacherPortalHub>> _mockHubContext;
-    private readonly MaterialGenerationService _materialGenerationService;
-    private readonly ContentModificationService _contentModificationService;
-    private readonly EmbeddingStatusService _embeddingStatusService;
+    private readonly IMaterialGenerationService _materialGenerationService;
+    private readonly IContentModificationService _contentModificationService;
+    private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly TeacherPortalHub _hub;
@@ -82,9 +81,9 @@ public class TeacherPortalHubTests
         _mockResponseRepository = new Mock<IResponseRepository>();
         _mockLogger = new Mock<ILogger<TeacherPortalHub>>();
         _mockHubContext = new Mock<IHubContext<TeacherPortalHub>>();
-        _materialGenerationService = CreateUninitialized<MaterialGenerationService>();
-        _contentModificationService = CreateUninitialized<ContentModificationService>();
-        _embeddingStatusService = CreateUninitialized<EmbeddingStatusService>();
+        _materialGenerationService = new StubMaterialGenerationService();
+        _contentModificationService = new StubContentModificationService();
+        _embeddingStatusService = new StubEmbeddingStatusService();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _feedbackQueueService = new FeedbackQueueService(
             _mockHubContext.Object,
@@ -204,6 +203,9 @@ public class TeacherPortalHubTests
         IResponseRepository? responseRepository = null,
         ILogger<TeacherPortalHub>? logger = null,
         IEmbeddingService? embeddingService = null,
+        IMaterialGenerationService? materialGenerationService = null,
+        IContentModificationService? contentModificationService = null,
+        IEmbeddingStatusService? embeddingStatusService = null,
         bool allowNulls = false)
     {
         var resolvedUnitCollectionService = allowNulls ? unitCollectionService : unitCollectionService ?? _mockUnitCollectionService.Object;
@@ -229,6 +231,9 @@ public class TeacherPortalHubTests
         var resolvedResponseRepository = allowNulls ? responseRepository : responseRepository ?? _mockResponseRepository.Object;
         var resolvedLogger = allowNulls ? logger : logger ?? _mockLogger.Object;
         var resolvedEmbeddingService = allowNulls ? embeddingService : embeddingService ?? _mockEmbeddingService.Object;
+        var resolvedMaterialGenerationService = allowNulls ? materialGenerationService : materialGenerationService ?? _materialGenerationService;
+        var resolvedContentModificationService = allowNulls ? contentModificationService : contentModificationService ?? _contentModificationService;
+        var resolvedEmbeddingStatusService = allowNulls ? embeddingStatusService : embeddingStatusService ?? _embeddingStatusService;
 
         return new TeacherPortalHub(
             resolvedUnitCollectionService!,
@@ -253,19 +258,41 @@ public class TeacherPortalHubTests
             resolvedFeedbackRepository!,
             resolvedResponseRepository!,
             resolvedLogger!,
-            _materialGenerationService,
-            _contentModificationService,
-            _embeddingStatusService,
+                resolvedMaterialGenerationService!,
+                resolvedContentModificationService!,
+                resolvedEmbeddingStatusService!,
             _feedbackQueueService,
             resolvedEmbeddingService!);
     }
 
-    #pragma warning disable SYSLIB0050
-    private static T CreateUninitialized<T>() where T : class
+    private sealed class StubMaterialGenerationService : IMaterialGenerationService
     {
-        return (T)FormatterServices.GetUninitializedObject(typeof(T));
+        public Task<GenerationResult> GenerateReading(GenerationRequest request)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
     }
-    #pragma warning restore SYSLIB0050
+
+    private sealed class StubContentModificationService : IContentModificationService
+    {
+        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+    }
+
+    private sealed class StubEmbeddingStatusService : IEmbeddingStatusService
+    {
+        public Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
+        {
+            return Task.FromResult(EmbeddingStatus.PENDING);
+        }
+    }
 
     #endregion
 

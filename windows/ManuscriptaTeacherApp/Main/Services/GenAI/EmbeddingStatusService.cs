@@ -8,7 +8,7 @@ namespace Main.Services.GenAI;
 /// Provides embedding status query functionality.
 /// See GenAISpec.md §3E.
 /// </summary>
-public class EmbeddingStatusService
+public class EmbeddingStatusService : IEmbeddingStatusService
 {
     private readonly MainDbContext _dbContext;
 

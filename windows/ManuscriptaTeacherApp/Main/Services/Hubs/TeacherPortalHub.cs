@@ -43,9 +43,9 @@ public class TeacherPortalHub : Hub
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly IResponseRepository _responseRepository;
     private readonly ILogger<TeacherPortalHub> _logger;
-    private readonly MaterialGenerationService _materialGenerationService;
-    private readonly ContentModificationService _contentModificationService;
-    private readonly EmbeddingStatusService _embeddingStatusService;
+    private readonly IMaterialGenerationService _materialGenerationService;
+    private readonly IContentModificationService _contentModificationService;
+    private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
 
@@ -72,9 +72,9 @@ public class TeacherPortalHub : Hub
         IFeedbackRepository feedbackRepository,
         IResponseRepository responseRepository,
         ILogger<TeacherPortalHub> logger,
-        MaterialGenerationService materialGenerationService,
-        ContentModificationService contentModificationService,
-        EmbeddingStatusService embeddingStatusService,
+        IMaterialGenerationService materialGenerationService,
+        IContentModificationService contentModificationService,
+        IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
         IEmbeddingService documentEmbeddingService)
     {
