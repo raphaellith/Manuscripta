@@ -58,7 +58,6 @@ public class UdpBroadcastService : IUdpBroadcastService, IDisposable
         }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _cts.Token.Register(StopBroadcasting);
         _udpClient = new UdpClient();
         _udpClient.EnableBroadcast = true;
 
