@@ -22,20 +22,24 @@ const AppContent: React.FC = () => {
      * Render connection status indicator.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i): Display reconnecting indicator.
      */
-    const renderConnectionStatus = () => {
-        // Backend reconnecting takes precedence (per §2ZA(6)(c)(i))
+    /**
+     * Render application status indicator.
+     * Per FrontendWorkflowSpecifications §2ZA(4)(d): Avoid wording that implies frontend-backend separation.
+     */
+    const renderApplicationStatus = () => {
+        // Backend restarting takes precedence (per §2ZA(6)(c)(i))
         if (backendState === 'reconnecting') {
             return (
                 <div className="absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700 flex items-center gap-1">
                     <div className="animate-spin h-3 w-3 border-2 border-yellow-700 border-t-transparent rounded-full"></div>
-                    Reconnecting...
+                    Restarting...
                 </div>
             );
         }
-        // SignalR connection status
+        // Application readiness status
         return (
             <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {isConnected ? '● Connected' : '○ Disconnected'}
+                {isConnected ? '● Ready' : '○ Busy'}
             </div>
         );
     };
@@ -89,8 +93,8 @@ const AppContent: React.FC = () => {
             {/* Global alerts - per FrontendWorkflowSpec §5D(1) */}
             <GlobalAlerts />
 
-            {/* Connection status indicator - per §2ZA(6)(c)(i) */}
-            {renderConnectionStatus()}
+            {/* Application status indicator - per §2ZA(4)(d) and §2ZA(6)(c)(i) */}
+            {renderApplicationStatus()}
 
             {/* Floating Header Wrapper */}
             <div className="absolute top-0 left-0 w-full z-40 pointer-events-none">

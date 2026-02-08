@@ -175,9 +175,10 @@ const initializeApp = async (): Promise<void> => {
     } else if (state === BackendState.RUNNING && mainWindow) {
       mainWindow.webContents.send('backend-state-change', 'connected');
     } else if (state === BackendState.FAILED && mainWindow) {
+      // Per §2ZA(4)(d): Avoid wording that implies frontend-backend separation
       dialog.showErrorBox(
-        'Backend Connection Lost',
-        'The application backend has failed repeatedly. Please restart the application.'
+        'Application Error',
+        'The application encountered a problem and could not recover. Please restart the application.'
       );
     }
   });

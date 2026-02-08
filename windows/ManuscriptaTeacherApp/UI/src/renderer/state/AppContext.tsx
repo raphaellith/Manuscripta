@@ -138,11 +138,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 await fetchAllData();
             } catch (err) {
                 console.error('Failed to initialize connection:', err);
+                // Per §2ZA(4)(d): Avoid wording that implies frontend-backend separation
                 setState(prev => ({
                     ...prev,
                     isConnected: false,
                     isLoading: false,
-                    error: 'Unable to load your library. Please ensure the application is running and try again.',
+                    error: 'Unable to load your library. Please restart the application and try again.',
                 }));
             }
         };
