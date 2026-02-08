@@ -87,7 +87,6 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _cts.Token.Register(StopListening);
         _listener = new TcpListener(IPAddress.Any, _settings.TcpPort);
         
         try
