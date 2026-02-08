@@ -7,17 +7,17 @@ namespace Main.Services.GenAI;
 /// Handles AI-powered content modification (AI assistant).
 /// See GenAISpec.md §3C.
 /// </summary>
-public class ContentModificationService
+public class ContentModificationService : IContentModificationService
 {
     private readonly OllamaClientService _ollamaClient;
-    private readonly DocumentEmbeddingService _embeddingService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string ModificationModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
-        DocumentEmbeddingService embeddingService,
+        IEmbeddingService embeddingService,
         OutputValidationService validationService)
     {
         _ollamaClient = ollamaClient;

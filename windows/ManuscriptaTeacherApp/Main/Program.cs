@@ -15,7 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Start ChromaDB server if not already running
 // See GenAISpec.md §2(3)
-await StartChromaDbServerAsync(builder.Configuration);
+var autoStartChroma = builder.Configuration.GetValue("ChromaDB:AutoStart", true);
+if (autoStartChroma)
+{
+    await StartChromaDbServerAsync(builder.Configuration);
+}
 
 // Configure network settings from appsettings.json
 builder.Services.Configure<NetworkSettings>(
@@ -70,13 +74,15 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 // Register GenAI services
 // See GenAISpec.md §3(1) and §3(2)
 builder.Services.AddSingleton<OllamaClientService>();
-builder.Services.AddScoped<DocumentEmbeddingService>();
-builder.Services.AddScoped<MaterialGenerationService>();
-builder.Services.AddScoped<ContentModificationService>();
+builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
+builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
+builder.Services.AddScoped<IContentModificationService, ContentModificationService>();
 builder.Services.AddSingleton<FeedbackGenerationService>();
+builder.Services.AddSingleton<IFeedbackGenerationService>(
+    provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddHostedService(provider => provider.GetRequiredService<FeedbackGenerationService>());
 builder.Services.AddSingleton<FeedbackQueueService>();
-builder.Services.AddScoped<EmbeddingStatusService>();
+builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
 builder.Services.AddScoped<OutputValidationService>();
 builder.Services.AddScoped<QuestionExtractionService>();
 
@@ -153,9 +159,9 @@ if (!app.Environment.IsEnvironment("Testing"))
         context.Database.EnsureCreated();
         // DbInitializer.Initialize(context);
 
-        // Initialize embedding startup handler per GenAISpec.md §3A(8)
-        var embeddingService = services.GetRequiredService<Main.Services.GenAI.DocumentEmbeddingService>();
-        await embeddingService.InitializeFailedEmbeddingsAsync();
+    // Initialize embedding startup handler per GenAISpec.md §3A(8)
+    var embeddingService = services.GetRequiredService<Main.Services.GenAI.IEmbeddingService>();
+    await embeddingService.InitializeFailedEmbeddingsAsync();
 
         // Orphan file removal per PersistenceAndCascadingRules §3
         // Delete attachment files not linked to any entity

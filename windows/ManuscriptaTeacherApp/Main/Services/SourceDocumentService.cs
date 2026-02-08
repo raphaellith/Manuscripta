@@ -17,13 +17,13 @@ public class SourceDocumentService : ISourceDocumentService
 {
     private readonly ISourceDocumentRepository _repository;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
-    private readonly DocumentEmbeddingService _embeddingService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<SourceDocumentService> _logger;
 
     public SourceDocumentService(
         ISourceDocumentRepository repository,
         IUnitCollectionRepository unitCollectionRepository,
-        DocumentEmbeddingService embeddingService,
+        IEmbeddingService embeddingService,
         ILogger<SourceDocumentService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));

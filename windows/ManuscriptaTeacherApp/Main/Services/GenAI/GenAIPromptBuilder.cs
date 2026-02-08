@@ -5,13 +5,13 @@ namespace Main.Services.GenAI;
 /// <summary>
 /// Centralizes GenAI prompt construction for testability.
 /// </summary>
-internal static class GenAIPromptBuilder
+public static class GenAIPromptBuilder
 {
     /// <summary>
     /// Constructs the modification prompt.
     /// See GenAISpec.md §3C(2)(b) and Material Encoding Specification §4.
     /// </summary>
-    internal static string BuildModificationPrompt(
+    public static string BuildModificationPrompt(
         string selectedContent,
         string instruction,
         List<string> relevantChunks)
@@ -51,7 +51,7 @@ Modified content:";
     /// Constructs the generation prompt with context and requirements.
     /// See GenAISpec.md §3B(3)(c) and Material Encoding Specification §4.
     /// </summary>
-    internal static string BuildGenerationPrompt(
+    public static string BuildGenerationPrompt(
         string description,
         int readingAge,
         int actualAge,

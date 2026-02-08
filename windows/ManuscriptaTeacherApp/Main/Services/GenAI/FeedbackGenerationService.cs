@@ -15,7 +15,7 @@ namespace Main.Services.GenAI;
 /// Handles AI-powered feedback generation for student responses.
 /// See GenAISpec.md §3D.
 /// </summary>
-public class FeedbackGenerationService : IHostedService
+public class FeedbackGenerationService : IHostedService, IFeedbackGenerationService
 {
     private readonly OllamaClientService _ollamaClient;
     private readonly FeedbackQueueService _queueService;
@@ -60,14 +60,36 @@ public class FeedbackGenerationService : IHostedService
     /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_cancellationTokenSource != null)
+        var cancellationTokenSource = _cancellationTokenSource;
+        _cancellationTokenSource = null;
+
+        var processingTask = _processingTask;
+        _processingTask = null;
+
+        if (cancellationTokenSource != null)
         {
-            _cancellationTokenSource.Cancel();
-            if (_processingTask != null)
+            try
             {
-                await _processingTask;
+                cancellationTokenSource.Cancel();
             }
-            _cancellationTokenSource.Dispose();
+            catch (ObjectDisposedException)
+            {
+                // Shutdown may call StopAsync multiple times; ignore if already disposed.
+            }
+
+            if (processingTask != null)
+            {
+                try
+                {
+                    await processingTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when shutting down.
+                }
+            }
+
+            cancellationTokenSource.Dispose();
         }
     }
 

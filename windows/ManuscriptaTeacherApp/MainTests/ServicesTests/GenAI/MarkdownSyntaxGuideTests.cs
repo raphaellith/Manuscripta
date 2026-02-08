@@ -19,7 +19,8 @@ public class MarkdownSyntaxGuideTests
         var guide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: false);
 
         Assert.Contains("Markdown syntax supported", guide);
-        Assert.DoesNotContain("question-draft", guide);
+        Assert.DoesNotContain("**Questions:**", guide);
+        Assert.DoesNotContain("!!! question-draft", guide);
         Assert.DoesNotContain("MULTIPLE_CHOICE", guide);
     }
 

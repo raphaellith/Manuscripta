@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Main.Services.GenAI;
 using Xunit;
@@ -24,7 +25,7 @@ public class GenAIPromptBuilderTests
         );
 
         Assert.DoesNotContain("Relevant context from source documents:", prompt);
-        Assert.Contains("Original content:\nOriginal", prompt);
+        Assert.Contains($"Original content:{Environment.NewLine}Original", prompt);
         Assert.Contains("Instruction: Simplify", prompt);
     }
 
@@ -62,7 +63,8 @@ public class GenAIPromptBuilderTests
             materialType: "reading"
         );
 
-        Assert.DoesNotContain("question-draft", prompt);
+        Assert.DoesNotContain("**Questions:**", prompt);
+        Assert.DoesNotContain("!!! question-draft", prompt);
         Assert.Contains("MARKDOWN SYNTAX:", prompt);
         Assert.Contains("SOURCE DOCUMENT CONTEXT:", prompt);
     }
