@@ -33,7 +33,7 @@ jobs:
 
       - name: Test with coverage
         run: |
-          dotnet test "windows/ManuscriptaTeacherApp/Main" --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml /p:Threshold=90 /p:ThresholdType=line
+          dotnet test "windows/ManuscriptaTeacherApp/MainTests" --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml /p:Threshold=90 /p:ThresholdType=line
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
