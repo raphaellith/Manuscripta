@@ -3,7 +3,7 @@
 #
 # Triggers:
 #   - Manual dispatch (workflow_dispatch) with optional version override
-#   - GitHub release events (created/published)
+#   - GitHub release events (published only)
 #
 # Outputs:
 #   - windows-installer artifact (90-day retention)
@@ -19,7 +19,10 @@ on:
         required: false
         type: string
   release:
-    types: [created, published]
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   build:

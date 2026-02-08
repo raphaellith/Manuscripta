@@ -136,7 +136,9 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 
     (a) **manually**, via `workflow_dispatch`, allowing on-demand builds with optional version input;
 
-    (b) **on release**, when a GitHub release is created or published.
+    (b) **on release**, when a GitHub release is published.
+
+    [Explanatory Note: The workflow triggers on the `published` event only, not `created`, to avoid duplicate builds per release.]
 
 (3) **Workflow File Location**
 
