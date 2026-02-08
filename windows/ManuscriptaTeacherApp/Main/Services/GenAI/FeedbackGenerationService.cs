@@ -60,14 +60,36 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_cancellationTokenSource != null)
+        var cancellationTokenSource = _cancellationTokenSource;
+        _cancellationTokenSource = null;
+
+        var processingTask = _processingTask;
+        _processingTask = null;
+
+        if (cancellationTokenSource != null)
         {
-            _cancellationTokenSource.Cancel();
-            if (_processingTask != null)
+            try
             {
-                await _processingTask;
+                cancellationTokenSource.Cancel();
             }
-            _cancellationTokenSource.Dispose();
+            catch (ObjectDisposedException)
+            {
+                // Shutdown may call StopAsync multiple times; ignore if already disposed.
+            }
+
+            if (processingTask != null)
+            {
+                try
+                {
+                    await processingTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when shutting down.
+                }
+            }
+
+            cancellationTokenSource.Dispose();
         }
     }
 
