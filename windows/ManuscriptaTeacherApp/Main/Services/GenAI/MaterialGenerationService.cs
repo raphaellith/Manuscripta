@@ -87,7 +87,7 @@ public class MaterialGenerationService : IMaterialGenerationService
         );
 
         // §3B(3)(c): Construct prompt
-        var prompt = ConstructGenerationPrompt(
+        var prompt = GenAIPromptBuilder.BuildGenerationPrompt(
             request.Description,
             request.ReadingAge,
             request.ActualAge,
@@ -105,52 +105,4 @@ public class MaterialGenerationService : IMaterialGenerationService
         return result;
     }
 
-    /// <summary>
-    /// Constructs the generation prompt with context and requirements.
-    /// See GenAISpec.md §3B(3)(c) and Material Encoding Specification §4.
-    /// </summary>
-    private string ConstructGenerationPrompt(
-        string description,
-        int readingAge,
-        int actualAge,
-        int durationInMinutes,
-        List<string> relevantChunks,
-        string materialType)
-    {
-        var contextSection = relevantChunks.Count > 0
-            ? string.Join("\n\n", relevantChunks)
-            : "";
-
-        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: materialType == "worksheet");
-
-        return $@"
-TASK:
-Create an educational {materialType} material based on the material description and source document context provided below, obeying all listed restraints.
-
-
-MATERIAL DESCRIPTION:
-{description}
-
-
-RESTRAINTS:
-Adapt the material's reading level for students with a reading age of {readingAge} and an actual age of {actualAge}.
-Tailor the material's length so that students can complete the material in approximately {durationInMinutes} minutes.
-Format the material using the Markdown syntax described below.
-Use British English always.
-Avoid American English.
-
-
-MARKDOWN SYNTAX:
-
----
-
-{markdownSyntaxGuide}
-
----
-
-
-SOURCE DOCUMENT CONTEXT:
-{contextSection}
-";
-    }
 }

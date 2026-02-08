@@ -148,50 +148,54 @@ if (app.Environment.IsDevelopment())
 // Apply CORS policy
 app.UseCors("AllowElectron");
 
-using (var scope = app.Services.CreateScope())
+// Skip database initialization and orphan cleanup in Testing environment (for integration tests)
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var services = scope.ServiceProvider;
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
 
-    var context = services.GetRequiredService<MainDbContext>();
-    context.Database.EnsureCreated();
-    // DbInitializer.Initialize(context);
+        var context = services.GetRequiredService<MainDbContext>();
+        context.Database.EnsureCreated();
+        // DbInitializer.Initialize(context);
 
     // Initialize embedding startup handler per GenAISpec.md §3A(8)
     var embeddingService = services.GetRequiredService<Main.Services.GenAI.IEmbeddingService>();
     await embeddingService.InitializeFailedEmbeddingsAsync();
 
-    // Orphan file removal per PersistenceAndCascadingRules §3
-    // Delete attachment files not linked to any entity
-    var fileService = services.GetRequiredService<IFileService>();
-    var attachmentRepo = services.GetRequiredService<Main.Services.Repositories.IAttachmentRepository>();
-    
-    var attachmentsDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ManuscriptaTeacherApp",
-        "Attachments"
-    );
-    
-    if (Directory.Exists(attachmentsDir))
-    {
-        // Get all attachment entity IDs
-        var allAttachments = await attachmentRepo.GetAllAsync();
-        var validIds = new HashSet<string>(allAttachments.Select(a => a.Id.ToString().ToLowerInvariant()));
+        // Orphan file removal per PersistenceAndCascadingRules §3
+        // Delete attachment files not linked to any entity
+        var fileService = services.GetRequiredService<IFileService>();
+        var attachmentRepo = services.GetRequiredService<Main.Services.Repositories.IAttachmentRepository>();
         
-        // Scan directory for orphan files
-        foreach (var filePath in Directory.GetFiles(attachmentsDir))
+        var attachmentsDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ManuscriptaTeacherApp",
+            "Attachments"
+        );
+        
+        if (Directory.Exists(attachmentsDir))
         {
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            // File should be named as UUID
-            if (!validIds.Contains(fileName.ToLowerInvariant()))
+            // Get all attachment entity IDs
+            var allAttachments = await attachmentRepo.GetAllAsync();
+            var validIds = new HashSet<string>(allAttachments.Select(a => a.Id.ToString().ToLowerInvariant()));
+            
+            // Scan directory for orphan files
+            foreach (var filePath in Directory.GetFiles(attachmentsDir))
             {
-                try
+                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                // File should be named as UUID
+                if (!validIds.Contains(fileName.ToLowerInvariant()))
                 {
-                    fileService.DeleteFile(filePath);
-                    Console.WriteLine($"Deleted orphan attachment file: {fileName}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to delete orphan file {fileName}: {ex.Message}");
+                    try
+                    {
+                        fileService.DeleteFile(filePath);
+                        Console.WriteLine($"Deleted orphan attachment file: {fileName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete orphan file {fileName}: {ex.Message}");
+                    }
                 }
             }
         }

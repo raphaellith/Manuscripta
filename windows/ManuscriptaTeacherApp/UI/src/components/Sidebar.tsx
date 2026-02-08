@@ -8,22 +8,18 @@ interface SidebarProps {
 }
 
 const viewLabels: Record<View, string> = {
-  dashboard: 'Class Dashboard',
   'lesson-library': 'Lesson Library',
   'lesson-creator': 'Lesson Creator',
   'classroom-control': 'Classroom Control',
   responses: 'Responses',
-  'ai-assistant': 'AI Assistant',
   settings: 'Settings',
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   const sidebarItems: View[] = [
-    'dashboard',
     'lesson-library',
     'classroom-control',
     'responses',
-    'ai-assistant',
     'settings',
   ];
 

@@ -22,6 +22,8 @@ public class ResponseControllerTests
     private readonly Mock<IResponseService> _mockResponseService;
     private readonly Mock<IQuestionRepository> _mockQuestionRepository;
     private readonly Mock<IHubContext<TeacherPortalHub>> _mockHubContext;
+    private readonly Mock<IHubClients> _mockClients;
+    private readonly Mock<IClientProxy> _mockClientProxy;
     private readonly Mock<ILogger<ResponseController>> _mockLogger;
     private readonly ResponseController _controller;
 
@@ -34,7 +36,14 @@ public class ResponseControllerTests
     {
         _mockResponseService = new Mock<IResponseService>();
         _mockQuestionRepository = new Mock<IQuestionRepository>();
+        
+        // Setup Hub Context Mocks
         _mockHubContext = new Mock<IHubContext<TeacherPortalHub>>();
+        _mockClients = new Mock<IHubClients>();
+        _mockClientProxy = new Mock<IClientProxy>();
+        _mockHubContext.Setup(h => h.Clients).Returns(_mockClients.Object);
+        _mockClients.Setup(c => c.All).Returns(_mockClientProxy.Object);
+        
         _mockLogger = new Mock<ILogger<ResponseController>>();
         _controller = new ResponseController(
             _mockResponseService.Object,
