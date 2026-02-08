@@ -16,6 +16,10 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Section 3D(2)-(8A) and 3DA (queueing and dispatch lifecycle).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class FeedbackQueueServiceTests
 {
     private static bool MatchesDispatchFailedArgs(object?[] args, Guid feedbackId, Guid? deviceId, string? messageContains)
@@ -76,6 +80,10 @@ public class FeedbackQueueServiceTests
         return (hubContext, clientProxy);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(5) (queueing behavior for AI feedback generation).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void QueueForAiGeneration_DoesNotEnqueueDuplicates()
     {
@@ -96,6 +104,10 @@ public class FeedbackQueueServiceTests
         Assert.Null(second);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(6) (explicit queue removal).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void RemoveFromQueue_RemovesSpecificEntry()
     {
@@ -118,6 +130,10 @@ public class FeedbackQueueServiceTests
         Assert.Null(service.DequeueNext());
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3DA(1)-(2) (provisional feedback is not dispatched).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void ShouldDispatchFeedback_RespectsProvisionalStatus()
     {
@@ -138,6 +154,10 @@ public class FeedbackQueueServiceTests
         Assert.True(service.ShouldDispatchFeedback(feedback));
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3DA(2) (approve transitions to READY and triggers dispatch).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ApproveFeedbackAsync_ResponseExists_SendsReturnFeedback()
     {
@@ -166,6 +186,10 @@ public class FeedbackQueueServiceTests
             It.Is<IEnumerable<Guid>>(ids => ids.Contains(feedback.Id))), Times.Once);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3DA(4) (dispatch failure notifies frontend).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ApproveFeedbackAsync_ResponseMissing_NotifiesDispatchFailed()
     {
@@ -191,6 +215,10 @@ public class FeedbackQueueServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3DA(3) (feedback acknowledgement transitions to DELIVERED).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void MarkFeedbackDelivered_ReadyFeedback_MovesToDelivered()
     {
@@ -209,6 +237,10 @@ public class FeedbackQueueServiceTests
         Assert.Equal(FeedbackStatus.DELIVERED, feedback.Status);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3DA(4) (frontend notified on dispatch failure).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void HandleDispatchFailure_NotifiesFrontend()
     {

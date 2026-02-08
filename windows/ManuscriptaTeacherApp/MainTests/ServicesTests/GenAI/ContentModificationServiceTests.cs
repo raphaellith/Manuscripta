@@ -5,8 +5,16 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Section 3C (Content Modification).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class ContentModificationServiceTests
 {
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(iii) (optional context inclusion).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact(Skip = "ConstructModificationPrompt is private; prompt behavior should be tested via a public/internal API instead of reflection.")]  
     public void ConstructModificationPrompt_NoContext_DoesNotIncludeContextSection()  
     {  
@@ -15,6 +23,10 @@ public class ContentModificationServiceTests
         // Prompt construction should instead be verified indirectly through a public or internal API.  
     }  
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(iii) (context included when provided).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact(Skip = "ConstructModificationPrompt is private; prompt behavior should be tested via a public/internal API instead of reflection.")]  
     public void ConstructModificationPrompt_WithContext_IncludesContextSection()  
     {  

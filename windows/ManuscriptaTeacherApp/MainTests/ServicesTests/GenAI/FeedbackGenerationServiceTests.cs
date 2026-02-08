@@ -7,8 +7,16 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Section 3D(1) (feedback generation gating conditions).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class FeedbackGenerationServiceTests
 {
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(1)(a)-(b) (written answer with mark scheme).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void ShouldGenerateFeedback_WrittenAnswerWithMarkScheme_ReturnsTrue()
     {
@@ -30,6 +38,10 @@ public class FeedbackGenerationServiceTests
         Assert.True(service.ShouldGenerateFeedback(question));
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(1)(b) (missing mark scheme disables generation).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void ShouldGenerateFeedback_NoMarkScheme_ReturnsFalse()
     {

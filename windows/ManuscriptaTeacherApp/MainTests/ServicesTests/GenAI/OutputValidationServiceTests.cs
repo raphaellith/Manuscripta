@@ -14,6 +14,10 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Sections 3F-3G (validation and warnings).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class OutputValidationServiceTests
 {
     private static MainDbContext BuildDbContext()
@@ -39,6 +43,10 @@ public class OutputValidationServiceTests
         Assert.Null(result.Warnings);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3F(5) (deterministic fixes for markers/headers/blocks).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ValidateAndRefineAsync_DeterministicFixes_NormalizeAndRemoveInvalidReferences()
     {

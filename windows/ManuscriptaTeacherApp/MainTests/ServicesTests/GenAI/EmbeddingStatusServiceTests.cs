@@ -9,6 +9,10 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Section 3E (Embedding Status Query).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class EmbeddingStatusServiceTests
 {
     private static MainDbContext BuildDbContext()
@@ -29,6 +33,10 @@ public class EmbeddingStatusServiceTests
             service.GetEmbeddingStatus(Guid.NewGuid()));
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3A(2)(a) and 3E(2) (default pending status).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task GetEmbeddingStatus_NullStatus_ReturnsPending()
     {
@@ -44,6 +52,10 @@ public class EmbeddingStatusServiceTests
         Assert.Equal(EmbeddingStatus.PENDING, status);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3E(2) (return current status).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task GetEmbeddingStatus_WithStatus_ReturnsStatus()
     {

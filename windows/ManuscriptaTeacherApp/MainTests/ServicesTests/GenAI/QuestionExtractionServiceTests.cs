@@ -9,8 +9,16 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Section 3B(4) and Appendix C (question-draft parsing rules).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class QuestionExtractionServiceTests
 {
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3B(4)(a)-(c) (parse draft and replace with question marker).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ExtractAndCreateQuestionsAsync_MultipleChoice_ReplacesMarkerAndCreatesQuestion()
     {
@@ -46,6 +54,10 @@ public class QuestionExtractionServiceTests
         Assert.Empty(result.Warnings);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Appendix C (mutual exclusivity of correct_answer and mark_scheme).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ExtractAndCreateQuestionsAsync_WrittenAnswerWithBothAnswers_ProducesWarningAndRemovesMarker()
     {
@@ -67,6 +79,10 @@ public class QuestionExtractionServiceTests
         questionService.Verify(s => s.CreateQuestionAsync(It.IsAny<QuestionEntity>()), Times.Never);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Appendix C (invalid question types are rejected).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public async Task ExtractAndCreateQuestionsAsync_InvalidType_ProducesWarningAndRemovesMarker()
     {

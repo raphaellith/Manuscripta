@@ -3,8 +3,16 @@ using Xunit;
 
 namespace MainTests.ServicesTests.GenAI;
 
+/// <summary>
+/// Spec coverage: GenAISpec Appendix C (Material Encoding reference for prompts).
+/// See docs/specifications/GenAISpec.md.
+/// </summary>
 public class MarkdownSyntaxGuideTests
 {
+    /// <summary>
+    /// Spec coverage: GenAISpec Appendix C (omit Questions section for non-worksheet prompts).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void Get_WithoutQuestionSyntax_DoesNotIncludeQuestionDraftBlock()
     {
@@ -15,6 +23,10 @@ public class MarkdownSyntaxGuideTests
         Assert.DoesNotContain("MULTIPLE_CHOICE", guide);
     }
 
+    /// <summary>
+    /// Spec coverage: GenAISpec Appendix C (include Questions section for worksheet prompts).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
     [Fact]
     public void Get_WithQuestionSyntax_IncludesQuestionDraftBlockAndRules()
     {
