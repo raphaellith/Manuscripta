@@ -14,6 +14,9 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    // Per BuildAndDeploymentSpec §4(3)(b) and §7(1):
+    // Bundle the backend executable as an extra resource outside the ASAR archive
+    extraResource: ['./resources/backend'],
   },
   rebuildConfig: {},
   makers: [

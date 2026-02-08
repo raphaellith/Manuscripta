@@ -21,18 +21,59 @@ import type {
 } from "../../models";
 
 /**
+ * SignalR hub URL.
+ * Per FrontendWorkflowSpecifications §2ZA(8)(a)(iii).
+ */
+const SIGNALR_HUB_URL = "http://localhost:5910/hub";
+
+/**
+ * Custom retry policy that retries indefinitely with capped exponential backoff.
+ * Per FrontendWorkflowSpecifications §2(4)(a-b).
+ */
+class InfiniteRetryPolicy implements signalR.IRetryPolicy {
+    private readonly retryDelays = [0, 2000, 10000, 30000]; // 0s, 2s, 10s, 30s
+
+    nextRetryDelayInMilliseconds(retryContext: signalR.RetryContext): number | null {
+        // Per §2(4)(b): Use delays 0s, 2s, 10s, 30s, then repeat 30s indefinitely
+        if (retryContext.previousRetryCount < this.retryDelays.length) {
+            return this.retryDelays[retryContext.previousRetryCount];
+        }
+        // Continue with 30s delay indefinitely
+        return 30000;
+    }
+}
+
+/**
  * SignalR service for communication with Main backend.
  * Per NetworkingAPISpec §1(1).
  */
 class SignalRService {
     private connection: signalR.HubConnection;
+    private connectionStateCallbacks: Array<(state: signalR.HubConnectionState) => void> = [];
 
     constructor() {
+        // Per FrontendWorkflowSpecifications §2(4)(a): Custom retry policy that retries indefinitely
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5910/hub")
-            .withAutomaticReconnect()
+            .withUrl(SIGNALR_HUB_URL)
+            .withAutomaticReconnect(new InfiniteRetryPolicy())
             .configureLogging(signalR.LogLevel.Information)
             .build();
+
+        // Per §2(4)(c): Track connection state changes
+        this.connection.onreconnecting((error) => {
+            console.log("SignalR reconnecting:", error);
+            this.notifyConnectionStateChange(signalR.HubConnectionState.Reconnecting);
+        });
+
+        this.connection.onreconnected((connectionId) => {
+            console.log("SignalR reconnected:", connectionId);
+            this.notifyConnectionStateChange(signalR.HubConnectionState.Connected);
+        });
+
+        this.connection.onclose((error) => {
+            console.log("SignalR connection closed:", error);
+            this.notifyConnectionStateChange(signalR.HubConnectionState.Disconnected);
+        });
     }
 
     /**
@@ -52,6 +93,7 @@ class SignalRService {
                 }
                 await this.connection.start();
                 console.log("SignalR Connection Started.");
+                this.notifyConnectionStateChange(signalR.HubConnectionState.Connected);
                 return; // Success
             } catch (err) {
                 console.error(`SignalR connection attempt ${attempt}/${maxRetries} failed:`, err);
@@ -71,6 +113,24 @@ class SignalRService {
 
     public getConnectionState(): signalR.HubConnectionState {
         return this.connection.state;
+    }
+
+    /**
+     * Subscribe to connection state changes.
+     * Per FrontendWorkflowSpecifications §2(4)(c).
+     */
+    public onConnectionStateChange(callback: (state: signalR.HubConnectionState) => void): () => void {
+        this.connectionStateCallbacks.push(callback);
+        return () => {
+            const index = this.connectionStateCallbacks.indexOf(callback);
+            if (index > -1) {
+                this.connectionStateCallbacks.splice(index, 1);
+            }
+        };
+    }
+
+    private notifyConnectionStateChange(state: signalR.HubConnectionState): void {
+        this.connectionStateCallbacks.forEach(cb => cb(state));
     }
 
     // Generic handler registration
