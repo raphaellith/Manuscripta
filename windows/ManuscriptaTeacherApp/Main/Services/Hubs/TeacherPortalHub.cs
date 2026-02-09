@@ -44,6 +44,11 @@ public class TeacherPortalHub : Hub
     private readonly ILogger<TeacherPortalHub> _logger;
     private readonly IMaterialPdfService _materialPdfService;
 
+    // reMarkable dependencies - NetworkingAPISpec §1(1)(n)
+    private readonly IRmapiService _rmapiService;
+    private readonly IReMarkableDeviceRepository _remarkableDeviceRepository;
+    private readonly IReMarkableDeploymentService _remarkableDeploymentService;
+
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
         IUnitService unitService,
@@ -67,7 +72,10 @@ public class TeacherPortalHub : Hub
         IFeedbackRepository feedbackRepository,
         IResponseRepository responseRepository,
         ILogger<TeacherPortalHub> logger,
-        IMaterialPdfService materialPdfService)
+        IMaterialPdfService materialPdfService,
+        IRmapiService rmapiService,
+        IReMarkableDeviceRepository remarkableDeviceRepository,
+        IReMarkableDeploymentService remarkableDeploymentService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -92,6 +100,9 @@ public class TeacherPortalHub : Hub
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _materialPdfService = materialPdfService ?? throw new ArgumentNullException(nameof(materialPdfService));
+        _rmapiService = rmapiService ?? throw new ArgumentNullException(nameof(rmapiService));
+        _remarkableDeviceRepository = remarkableDeviceRepository ?? throw new ArgumentNullException(nameof(remarkableDeviceRepository));
+        _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -795,6 +806,125 @@ public class TeacherPortalHub : Hub
             throw new HubException($"Feedback {feedbackId} cannot be deleted: status is {existing.Status}, not PROVISIONAL");
 
         await _feedbackRepository.DeleteAsync(feedbackId);
+    }
+
+    #endregion
+
+    #region reMarkable Methods - NetworkingAPISpec §1(1)(n)
+
+    /// <summary>
+    /// Pairs a reMarkable device using a one-time code.
+    /// Per NetworkingAPISpec §1(1)(n)(i) and RemarkableIntegrationSpecification §3(2).
+    /// </summary>
+    public async Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)
+    {
+        // Per §3(2)(a): validate name
+        if (string.IsNullOrWhiteSpace(name))
+            throw new HubException("Device name cannot be empty.");
+        if (string.IsNullOrWhiteSpace(oneTimeCode))
+            throw new HubException("One-time code cannot be empty.");
+
+        // Per §2(1): check rmapi availability first
+        if (!await _rmapiService.CheckAvailabilityAsync())
+            throw new HubException("rmapi is not available. Please install it first.");
+
+        // Generate UUID for the device
+        var deviceId = Guid.NewGuid();
+        var configPath = _rmapiService.GetConfigPath(deviceId);
+
+        // Per §3(2)(b-c): authenticate with one-time code
+        var authSuccess = await _rmapiService.AuthenticateAsync(oneTimeCode, configPath);
+        if (!authSuccess)
+            throw new HubException("reMarkable authentication failed. Please check the one-time code and try again.");
+
+        // Per §3(2)(d): persist entity
+        var entity = new ReMarkableDeviceEntity(deviceId, name);
+        await _remarkableDeviceRepository.AddAsync(entity);
+
+        _logger.LogInformation("Paired reMarkable device {DeviceId} with name '{Name}'", deviceId, name);
+        return deviceId;
+    }
+
+    /// <summary>
+    /// Unpairs a reMarkable device.
+    /// Per NetworkingAPISpec §1(1)(n)(ii) and RemarkableIntegrationSpecification §3(4).
+    /// </summary>
+    public async Task UnpairReMarkableDevice(Guid deviceId)
+    {
+        // Per §3(4)(a): delete entity
+        await _remarkableDeviceRepository.DeleteAsync(deviceId);
+
+        // Per §3(4)(b): delete config file
+        var configPath = _rmapiService.GetConfigPath(deviceId);
+        if (File.Exists(configPath))
+        {
+            File.Delete(configPath);
+            _logger.LogInformation("Deleted rmapi config file for device {DeviceId}", deviceId);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves all paired reMarkable devices.
+    /// Per NetworkingAPISpec §1(1)(n)(iii).
+    /// </summary>
+    public async Task<List<ReMarkableDeviceEntity>> GetAllReMarkableDevices()
+    {
+        var devices = await _remarkableDeviceRepository.GetAllAsync();
+        return devices.ToList();
+    }
+
+    /// <summary>
+    /// Updates a reMarkable device entity.
+    /// Per NetworkingAPISpec §1(1)(n)(iv).
+    /// </summary>
+    public async Task UpdateReMarkableDevice(ReMarkableDeviceEntity entity)
+    {
+        await _remarkableDeviceRepository.UpdateAsync(entity);
+    }
+
+    /// <summary>
+    /// Checks whether rmapi is available and functional.
+    /// Per NetworkingAPISpec §1(1)(n)(v) and RemarkableIntegrationSpecification §2.
+    /// </summary>
+    public async Task<bool> CheckRmapiAvailability()
+    {
+        return await _rmapiService.CheckAvailabilityAsync();
+    }
+
+    /// <summary>
+    /// Downloads and installs rmapi.
+    /// Per NetworkingAPISpec §1(1)(n)(vi) and RemarkableIntegrationSpecification §2(4).
+    /// </summary>
+    public async Task<bool> InstallRmapi()
+    {
+        return await _rmapiService.InstallAsync();
+    }
+
+    /// <summary>
+    /// Deploys a material to the specified reMarkable devices.
+    /// Per NetworkingAPISpec §1(1)(n)(vii) and RemarkableIntegrationSpecification §4.
+    /// </summary>
+    public async Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)
+    {
+        // Per §4(1): check rmapi availability
+        if (!await _rmapiService.CheckAvailabilityAsync())
+            throw new HubException("rmapi is not available. Please install it first.");
+
+        var results = await _remarkableDeploymentService.DeployAsync(materialId, deviceIds);
+
+        // Per §4(5): invoke ReMarkableAuthInvalid client handler for auth failures
+        foreach (var result in results.Where(r => r.AuthFailed))
+        {
+            await Clients.Caller.SendAsync("ReMarkableAuthInvalid", result.DeviceId);
+        }
+
+        // Per §4(6): report other failures
+        var failures = results.Where(r => !r.Success && !r.AuthFailed).ToList();
+        if (failures.Any())
+        {
+            var messages = string.Join("; ", failures.Select(f => $"Device {f.DeviceId}: {f.ErrorMessage}"));
+            throw new HubException($"Deployment failed for some devices: {messages}");
+        }
     }
 
     #endregion

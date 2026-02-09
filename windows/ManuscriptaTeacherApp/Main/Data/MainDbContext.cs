@@ -35,6 +35,12 @@ public class MainDbContext : DbContext
     /// </summary>
     public DbSet<AttachmentEntity> Attachments { get; set; }
     
+    /// <summary>
+    /// Paired reMarkable devices.
+    /// Per PersistenceAndCascadingRules.md §1(1)(h).
+    /// </summary>
+    public DbSet<ReMarkableDeviceEntity> ReMarkableDevices { get; set; }
+    
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
     // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
@@ -135,6 +141,13 @@ public class MainDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(a => a.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure ReMarkableDeviceEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(h)
+        modelBuilder.Entity<ReMarkableDeviceEntity>(entity =>
+        {
+            entity.HasKey(e => e.DeviceId);
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.

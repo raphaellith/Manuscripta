@@ -42,6 +42,14 @@ builder.Services.AddSingleton<IFileService, FileService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
+// Register reMarkable services - NetworkingAPISpec §1(1)(n)
+builder.Services.AddScoped<Main.Services.Repositories.IReMarkableDeviceRepository, Main.Services.Repositories.EfReMarkableDeviceRepository>();
+builder.Services.AddSingleton<IRmapiService>(sp =>
+    new RmapiService(
+        sp.GetRequiredService<ILogger<RmapiService>>(),
+        new HttpClient()));
+builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
+
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
@@ -150,6 +158,37 @@ if (!app.Environment.IsEnvironment("Testing"))
                     catch (Exception ex)
                     {
                         Console.WriteLine($"Failed to delete orphan file {fileName}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        // Orphan rmapi config file removal per PersistenceAndCascadingRules §3(2)
+        var rmapiConfigDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ManuscriptaTeacherApp",
+            "rmapi"
+        );
+
+        if (Directory.Exists(rmapiConfigDir))
+        {
+            var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
+            var allDevices = await remarkableRepo.GetAllAsync();
+            var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+
+            foreach (var configFile in Directory.GetFiles(rmapiConfigDir, "*.conf"))
+            {
+                var fileDeviceId = Path.GetFileNameWithoutExtension(configFile).ToLowerInvariant();
+                if (!validDeviceIds.Contains(fileDeviceId))
+                {
+                    try
+                    {
+                        File.Delete(configFile);
+                        Console.WriteLine($"Deleted orphan rmapi config: {fileDeviceId}.conf");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete orphan rmapi config {fileDeviceId}: {ex.Message}");
                     }
                 }
             }
