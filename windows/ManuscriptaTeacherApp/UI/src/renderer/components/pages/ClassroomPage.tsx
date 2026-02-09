@@ -113,6 +113,10 @@ export const ClassroomPage: React.FC = () => {
     const [remarkableDevices, setRemarkableDevices] = useState<ReMarkableDeviceEntity[]>([]);
     const [selectedRemarkableIds, setSelectedRemarkableIds] = useState<string[]>([]);
 
+    // Stable ref for remarkableDevices — avoids circular useEffect dependency
+    const remarkableDevicesRef = useRef(remarkableDevices);
+    remarkableDevicesRef.current = remarkableDevices;
+
     // Pairing state
     const [isPairing, setIsPairing] = useState(false);
 
@@ -196,7 +200,7 @@ export const ClassroomPage: React.FC = () => {
 
         // §5F(3): subscribe to reMarkable auth invalid events
         const unsubRemarkableAuth = signalRService.onReMarkableAuthInvalid((deviceId) => {
-            const device = remarkableDevices.find(d => d.deviceId === deviceId);
+            const device = remarkableDevicesRef.current.find(d => d.deviceId === deviceId);
             addAlert('control_failed', undefined,
                 `reMarkable device "${device?.name ?? deviceId}" requires re-authentication. Please re-pair the device.`);
         });
@@ -210,7 +214,7 @@ export const ClassroomPage: React.FC = () => {
                 clearTimeout(debounceTimeoutRef.current);
             }
         };
-    }, [addAlert, refreshDeviceGrid, debouncedRefresh, remarkableDevices]);
+    }, [addAlert, refreshDeviceGrid, debouncedRefresh]);
 
     // Get status for a device
     const getDeviceStatus = useCallback((deviceId: string): DeviceStatus => {
