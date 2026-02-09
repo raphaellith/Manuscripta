@@ -48,10 +48,10 @@ public class MaterialPdfService : IMaterialPdfService
         var attachments = (await _attachmentRepository.GetByMaterialIdAsync(materialId)).ToList();
 
         // Build question lookup by ID
-        var questionLookup = questions.ToDictionary(q => q.Id.ToString());
+        var questionLookup = questions.ToDictionary(q => q.Id.ToString(), StringComparer.OrdinalIgnoreCase);
 
         // Build attachment lookup by ID
-        var attachmentLookup = attachments.ToDictionary(a => a.Id.ToString());
+        var attachmentLookup = attachments.ToDictionary(a => a.Id.ToString(), StringComparer.OrdinalIgnoreCase);
 
         // Configure QuestPDF license
         QuestPDF.Settings.License = LicenseType.Community;
