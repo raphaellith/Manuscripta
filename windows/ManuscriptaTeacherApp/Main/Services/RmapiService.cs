@@ -164,8 +164,8 @@ public class RmapiService : IRmapiService
 
         try
         {
-            // rmapi uses the one-time code for initial authentication
-            var result = await RunRmapiAsync($"--code {oneTimeCode}", configPath);
+            // rmapi expects the one-time code via stdin when using the -ni (non-interactive) flag
+            var result = await RunRmapiAsync("-ni", configPath, stdinInput: oneTimeCode);
             if (result.ExitCode == 0)
             {
                 _logger.LogInformation("reMarkable authentication succeeded for config {ConfigPath}", configPath);
@@ -268,7 +268,10 @@ public class RmapiService : IRmapiService
     /// <summary>
     /// Runs the rmapi executable with the given arguments.
     /// </summary>
-    private async Task<ProcessResult> RunRmapiAsync(string arguments, string? configPath)
+    /// <param name="arguments">Command-line arguments for rmapi.</param>
+    /// <param name="configPath">Optional config path set via RMAPI_CONFIG env var.</param>
+    /// <param name="stdinInput">Optional input to write to the process's standard input (e.g. one-time code).</param>
+    private async Task<ProcessResult> RunRmapiAsync(string arguments, string? configPath, string? stdinInput = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -277,6 +280,7 @@ public class RmapiService : IRmapiService
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = stdinInput != null,
             CreateNoWindow = true
         };
 
@@ -289,6 +293,13 @@ public class RmapiService : IRmapiService
 
         using var process = new Process { StartInfo = startInfo };
         process.Start();
+
+        // Write to stdin if input is provided (e.g. one-time auth code for -ni mode)
+        if (stdinInput != null)
+        {
+            await process.StandardInput.WriteLineAsync(stdinInput);
+            process.StandardInput.Close();
+        }
 
         var output = await process.StandardOutput.ReadToEndAsync();
         var error = await process.StandardError.ReadToEndAsync();
