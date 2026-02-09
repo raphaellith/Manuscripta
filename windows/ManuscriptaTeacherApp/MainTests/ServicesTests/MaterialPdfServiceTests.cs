@@ -30,6 +30,9 @@ public class MaterialPdfServiceTests
 
     public MaterialPdfServiceTests()
     {
+        // Configure QuestPDF license (normally done at app startup in Program.cs)
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        
         _mockMaterialRepo = new Mock<IMaterialRepository>();
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockAttachmentRepo = new Mock<IAttachmentRepository>();

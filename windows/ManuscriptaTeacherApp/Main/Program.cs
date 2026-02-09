@@ -96,6 +96,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Configure QuestPDF license once at startup (before any PDFs are generated)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();

@@ -54,9 +54,6 @@ public class MaterialPdfService : IMaterialPdfService
         // Build attachment lookup by ID
         var attachmentLookup = attachments.ToDictionary(a => a.Id.ToString(), StringComparer.OrdinalIgnoreCase);
 
-        // Configure QuestPDF license
-        QuestPDF.Settings.License = LicenseType.Community;
-
         // Split content at PDF embed markers
         var contentSegments = SplitContentAtPdfMarkers(
             material.Content ?? string.Empty, 
