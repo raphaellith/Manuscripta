@@ -270,9 +270,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) **Error Handling**
 
-    (a) If the server method throws an exception, the frontend shall display an error message to the user.
-
-    (b) If the material has unsaved changes, the frontend shall prompt the user to save before exporting, or proceed with the last saved version.
+    If the server method throws an exception, the frontend shall display an error message to the user.
 
 
 ## Section 5 - Functionalities for the "Classroom" tab
