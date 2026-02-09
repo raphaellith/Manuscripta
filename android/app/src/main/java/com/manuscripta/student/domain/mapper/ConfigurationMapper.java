@@ -8,6 +8,8 @@ import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.network.dto.ConfigResponseDto;
 
+import java.util.Locale;
+
 /**
  * Mapper class to convert between ConfigResponseDto (network layer) and Configuration (domain).
  * Provides bidirectional mapping for Clean Architecture separation.
@@ -101,7 +103,7 @@ public final class ConfigurationMapper {
             return Configuration.DEFAULT_FEEDBACK_STYLE;
         }
         try {
-            return FeedbackStyle.valueOf(feedbackStyle.toUpperCase());
+            return FeedbackStyle.valueOf(feedbackStyle.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return Configuration.DEFAULT_FEEDBACK_STYLE;
         }
@@ -130,7 +132,7 @@ public final class ConfigurationMapper {
             return Configuration.DEFAULT_MASCOT_SELECTION;
         }
         try {
-            return MascotSelection.valueOf(mascotSelection.toUpperCase());
+            return MascotSelection.valueOf(mascotSelection.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return Configuration.DEFAULT_MASCOT_SELECTION;
         }

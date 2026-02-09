@@ -192,4 +192,16 @@ public class ConfigRepositoryImplTest {
         repository.destroy();
         repository.hasStoredConfig();
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testSetDeviceIdAfterDestroy() {
+        repository.destroy();
+        repository.setDeviceId("new-device-id");
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testSetRefreshCallbackAfterDestroy() {
+        repository.destroy();
+        repository.setRefreshCallback(mock(ConfigRepository.ConfigRefreshCallback.class));
+    }
 }

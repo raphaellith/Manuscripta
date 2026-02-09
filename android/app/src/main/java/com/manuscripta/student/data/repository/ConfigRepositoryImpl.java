@@ -86,11 +86,13 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
 
     @Override
     public void setDeviceId(@NonNull String deviceId) {
+        checkNotDestroyed();
         this.deviceId = deviceId;
     }
 
     @Override
     public void setRefreshCallback(ConfigRefreshCallback callback) {
+        checkNotDestroyed();
         this.refreshCallback = callback;
     }
 
