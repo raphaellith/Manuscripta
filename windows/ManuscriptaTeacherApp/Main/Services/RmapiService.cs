@@ -164,8 +164,11 @@ public class RmapiService : IRmapiService
 
         try
         {
-            // rmapi expects the one-time code via stdin when using the -ni (non-interactive) flag
-            var result = await RunRmapiAsync("-ni", configPath, stdinInput: oneTimeCode);
+            // rmapi reads the one-time code from stdin via readCode() when no device token exists.
+            // The -ni flag must NOT be used here — it prevents code reading and aborts immediately.
+            // A post-auth command ("ls /") is passed so rmapi exits after authentication
+            // instead of entering the interactive shell.
+            var result = await RunRmapiAsync("ls /", configPath, stdinInput: oneTimeCode);
             if (result.ExitCode == 0)
             {
                 _logger.LogInformation("reMarkable authentication succeeded for config {ConfigPath}", configPath);
