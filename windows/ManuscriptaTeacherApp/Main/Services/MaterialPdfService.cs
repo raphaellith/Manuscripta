@@ -557,12 +557,6 @@ public class MaterialPdfService : IMaterialPdfService
             }
         }
 
-        // Cap reasonable max
-        if (blankLines > 20)
-        {
-            blankLines = 20;
-        }
-
         // Render blank lines for answers per §4(4)(a)
         for (int i = 0; i < blankLines; i++)
         {
