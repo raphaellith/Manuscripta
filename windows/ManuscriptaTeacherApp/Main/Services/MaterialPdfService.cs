@@ -4,6 +4,7 @@ using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services.Repositories;
+using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
 using PdfSharpCore.Pdf.IO;
 using QuestPDF.Fluent;
@@ -56,10 +57,176 @@ public class MaterialPdfService : IMaterialPdfService
         // Configure QuestPDF license
         QuestPDF.Settings.License = LicenseType.Community;
 
-        // Track PDF embeds for post-processing merge
-        var pdfEmbeds = new List<PdfEmbedInfo>();
+        // Split content at PDF embed markers
+        var contentSegments = SplitContentAtPdfMarkers(
+            material.Content ?? string.Empty, 
+            attachmentLookup);
 
-        // Generate document
+        // Generate PDFs for each segment and concatenate with external PDFs
+        var finalPdf = GenerateSegmentedPdf(material, contentSegments, questionLookup, attachmentLookup);
+
+        // Add page numbers at the end
+        return AddPageNumbers(finalPdf);
+    }
+
+    /// <summary>
+    /// Splits content at PDF embed markers, returning segments of content
+    /// alternating with PDF file paths.
+    /// </summary>
+    private List<ContentSegment> SplitContentAtPdfMarkers(
+        string content,
+        Dictionary<string, AttachmentEntity> attachmentLookup)
+    {
+        var segments = new List<ContentSegment>();
+        var pdfMarkerPattern = new Regex(@"^!!! pdf id=""([^""]+)""", RegexOptions.Multiline);
+        var matches = pdfMarkerPattern.Matches(content);
+        
+        var lastIndex = 0;
+        foreach (Match match in matches)
+        {
+            // Add content before this PDF marker
+            if (match.Index > lastIndex)
+            {
+                var textContent = content.Substring(lastIndex, match.Index - lastIndex);
+                segments.Add(new ContentSegment { Type = SegmentType.Content, Content = textContent });
+            }
+
+            // Add the PDF embed segment
+            var pdfId = match.Groups[1].Value;
+            if (attachmentLookup.TryGetValue(pdfId, out var attachment) && 
+                attachment.FileExtension.ToLowerInvariant() == "pdf")
+            {
+                var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
+                if (_fileService.FileExists(filePath))
+                {
+                    segments.Add(new ContentSegment 
+                    { 
+                        Type = SegmentType.PdfEmbed, 
+                        FilePath = filePath,
+                        FileName = attachment.FileBaseName
+                    });
+                }
+                else
+                {
+                    // PDF not found - add placeholder text
+                    segments.Add(new ContentSegment 
+                    { 
+                        Type = SegmentType.Content, 
+                        Content = $"\n\n[PDF attachment not found: {pdfId}]\n\n" 
+                    });
+                }
+            }
+            else
+            {
+                // Invalid reference - add placeholder text
+                segments.Add(new ContentSegment 
+                { 
+                    Type = SegmentType.Content, 
+                    Content = $"\n\n[PDF attachment not found: {pdfId}]\n\n" 
+                });
+            }
+
+            lastIndex = match.Index + match.Length;
+        }
+
+        // Add remaining content after the last marker
+        if (lastIndex < content.Length)
+        {
+            var textContent = content.Substring(lastIndex);
+            segments.Add(new ContentSegment { Type = SegmentType.Content, Content = textContent });
+        }
+
+        // If no segments were created (no content), add an empty segment
+        if (segments.Count == 0)
+        {
+            segments.Add(new ContentSegment { Type = SegmentType.Content, Content = string.Empty });
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// Generates a single PDF by rendering segments separately and concatenating
+    /// with external PDFs at the appropriate positions.
+    /// </summary>
+    private byte[] GenerateSegmentedPdf(
+        MaterialEntity material,
+        List<ContentSegment> segments,
+        Dictionary<string, QuestionEntity> questionLookup,
+        Dictionary<string, AttachmentEntity> attachmentLookup)
+    {
+        using var resultDocument = new PdfDocument();
+        var isFirstSegment = true;
+        var questionNumber = 0;
+
+        foreach (var segment in segments)
+        {
+            if (segment.Type == SegmentType.PdfEmbed)
+            {
+                // Per §3C(2): Insert external PDF pages
+                try
+                {
+                    using var externalStream = new FileStream(segment.FilePath!, FileMode.Open, FileAccess.Read);
+                    using var externalPdf = PdfReader.Open(externalStream, PdfDocumentOpenMode.Import);
+                    
+                    foreach (var page in externalPdf.Pages)
+                    {
+                        resultDocument.AddPage(page);
+                    }
+                }
+                catch
+                {
+                    // If we can't read the PDF, add an error page
+                    var errorPage = resultDocument.AddPage();
+                    using var gfx = XGraphics.FromPdfPage(errorPage);
+                    gfx.DrawString($"[Failed to load PDF: {segment.FileName}]", 
+                        new XFont("Arial", 12), XBrushes.Red, 
+                        new XPoint(100, 100));
+                }
+            }
+            else
+            {
+                // Render content segment using QuestPDF
+                var segmentPdfBytes = RenderContentSegment(
+                    material, 
+                    segment.Content ?? string.Empty, 
+                    isFirstSegment,
+                    questionLookup, 
+                    attachmentLookup,
+                    ref questionNumber);
+
+                // Add pages from this segment to the result
+                using var segmentStream = new MemoryStream(segmentPdfBytes);
+                using var segmentPdf = PdfReader.Open(segmentStream, PdfDocumentOpenMode.Import);
+                
+                foreach (var page in segmentPdf.Pages)
+                {
+                    resultDocument.AddPage(page);
+                }
+
+                isFirstSegment = false;
+            }
+        }
+
+        using var outputStream = new MemoryStream();
+        resultDocument.Save(outputStream);
+        return outputStream.ToArray();
+    }
+
+    /// <summary>
+    /// Renders a single content segment as a PDF using QuestPDF.
+    /// </summary>
+    private byte[] RenderContentSegment(
+        MaterialEntity material,
+        string content,
+        bool includeTitle,
+        Dictionary<string, QuestionEntity> questionLookup,
+        Dictionary<string, AttachmentEntity> attachmentLookup,
+        ref int questionNumber)
+    {
+        // Capture the current question number for use in the closure
+        var startQuestionNumber = questionNumber;
+        
         var document = Document.Create(container =>
         {
             container.Page(page =>
@@ -74,80 +241,69 @@ public class MaterialPdfService : IMaterialPdfService
                 // Header per §2(3)
                 page.Header().Element(container => RenderHeader(container));
 
-                // Footer per §2(4)
+                // Footer - space reserved, page numbers added in post-processing
                 page.Footer().Element(container => RenderFooter(container));
 
                 // Content
-                page.Content().Element(container => 
-                    RenderContent(container, material, questionLookup, attachmentLookup, pdfEmbeds));
+                page.Content().Element(contentContainer =>
+                {
+                    contentContainer.Column(column =>
+                    {
+                        column.Spacing(10);
+
+                        // Title block per §2(5) - only for first segment
+                        if (includeTitle)
+                        {
+                            column.Item().Text(material.Title).FontSize(24).Bold();
+                            column.Item().LineHorizontal(1).LineColor(Colors.Grey.Medium);
+                            column.Item().PaddingBottom(10);
+                        }
+
+                        // Render content (without PDF markers - they're already split out)
+                        var localQuestionNumber = startQuestionNumber;
+                        RenderContentWithMarkers(column, content, questionLookup, attachmentLookup, ref localQuestionNumber);
+                        startQuestionNumber = localQuestionNumber;
+                    });
+                });
             });
         });
 
-        var basePdfBytes = document.GeneratePdf();
+        // Update the caller's question number
+        questionNumber = startQuestionNumber;
 
-        // If no PDF embeds, return the base PDF directly
-        if (pdfEmbeds.Count == 0)
-        {
-            return basePdfBytes;
-        }
-
-        // Post-process: merge external PDFs at the placeholder positions
-        return MergePdfEmbeds(basePdfBytes, pdfEmbeds);
+        return document.GeneratePdf();
     }
 
     /// <summary>
-    /// Merges external PDF files into the base document at placeholder positions.
-    /// Per MaterialConversionSpecification §3C(2).
+    /// Adds page numbers to all pages of a PDF document.
+    /// Per MaterialConversionSpecification §2(4).
+    /// This is done post-processing to ensure all pages are correctly counted.
     /// </summary>
-    private static byte[] MergePdfEmbeds(byte[] basePdfBytes, List<PdfEmbedInfo> pdfEmbeds)
+    private static byte[] AddPageNumbers(byte[] pdfBytes)
     {
-        using var baseStream = new MemoryStream(basePdfBytes);
-        using var outputDocument = PdfReader.Open(baseStream, PdfDocumentOpenMode.Import);
-        using var resultDocument = new PdfDocument();
-
-        // Sort embeds by placeholder page number (descending to maintain indices)
-        var sortedEmbeds = pdfEmbeds.OrderBy(e => e.PlaceholderPageNumber).ToList();
-
-        // Track which pages are placeholders
-        var placeholderPages = new HashSet<int>(pdfEmbeds.Select(e => e.PlaceholderPageNumber));
-
-        var currentResultPage = 0;
-        for (var i = 0; i < outputDocument.PageCount; i++)
+        using var inputStream = new MemoryStream(pdfBytes);
+        using var document = PdfReader.Open(inputStream, PdfDocumentOpenMode.Modify);
+        
+        var totalPages = document.PageCount;
+        var font = new XFont("Arial", 10, XFontStyle.Regular);
+        
+        for (var i = 0; i < document.PageCount; i++)
         {
-            // Check if this is a placeholder page
-            var embed = sortedEmbeds.FirstOrDefault(e => e.PlaceholderPageNumber == i);
+            var page = document.Pages[i];
+            using var gfx = XGraphics.FromPdfPage(page);
             
-            if (embed != null)
-            {
-                // Insert the external PDF pages instead of the placeholder
-                try
-                {
-                    using var externalStream = new FileStream(embed.FilePath, FileMode.Open, FileAccess.Read);
-                    using var externalPdf = PdfReader.Open(externalStream, PdfDocumentOpenMode.Import);
-                    
-                    foreach (var externalPage in externalPdf.Pages)
-                    {
-                        resultDocument.AddPage(externalPage);
-                        currentResultPage++;
-                    }
-                }
-                catch (Exception)
-                {
-                    // If we can't read the external PDF, keep the placeholder page
-                    resultDocument.AddPage(outputDocument.Pages[i]);
-                    currentResultPage++;
-                }
-            }
-            else
-            {
-                // Regular page - copy it
-                resultDocument.AddPage(outputDocument.Pages[i]);
-                currentResultPage++;
-            }
+            var pageText = $"Page {i + 1} of {totalPages}";
+            var textWidth = gfx.MeasureString(pageText, font).Width;
+            
+            // Position at bottom center of page (20mm from bottom, centered)
+            var x = (page.Width.Point / 2) - (textWidth / 2);
+            var y = page.Height.Point - 40; // ~14mm from bottom
+            
+            gfx.DrawString(pageText, font, XBrushes.Black, new XPoint(x, y));
         }
-
+        
         using var outputStream = new MemoryStream();
-        resultDocument.Save(outputStream);
+        document.Save(outputStream);
         return outputStream.ToArray();
     }
 
@@ -182,51 +338,18 @@ public class MaterialPdfService : IMaterialPdfService
     }
 
     /// <summary>
-    /// Renders the page footer with page numbers.
+    /// Renders the page footer.
     /// Per MaterialConversionSpecification §2(4).
+    /// Note: Page numbers are added during post-processing to correctly count all pages.
     /// </summary>
     private static void RenderFooter(IContainer container)
     {
-        container.AlignCenter().Text(text =>
-        {
-            text.Span("Page ").FontSize(10);
-            text.CurrentPageNumber().FontSize(10);
-            text.Span(" of ").FontSize(10);
-            text.TotalPages().FontSize(10);
-        });
+        // Footer space reserved - page numbers are added in post-processing
+        container.Height(15);
     }
 
     /// <summary>
-    /// Renders the main content area.
-    /// Per MaterialConversionSpecification §2(5) and §3.
-    /// </summary>
-    private void RenderContent(
-        IContainer container,
-        MaterialEntity material,
-        Dictionary<string, QuestionEntity> questionLookup,
-        Dictionary<string, AttachmentEntity> attachmentLookup,
-        List<PdfEmbedInfo> pdfEmbeds)
-    {
-        container.Column(column =>
-        {
-            column.Spacing(10);
-
-            // Title block per §2(5)
-            column.Item().Text(material.Title).FontSize(24).Bold();
-            column.Item().LineHorizontal(1).LineColor(Colors.Grey.Medium);
-            column.Item().PaddingBottom(10);
-
-            // Render content with custom marker support
-            var content = material.Content ?? string.Empty;
-            var questionNumber = 0;
-
-            // Process content - split by custom markers and render segments
-            RenderContentWithMarkers(column, content, questionLookup, attachmentLookup, ref questionNumber, pdfEmbeds);
-        });
-    }
-
-    /// <summary>
-    /// Renders content with custom marker support.
+    /// Renders content with custom marker support (excluding PDF markers which are pre-processed).
     /// Pre-processes custom markers per MaterialConversionSpecification §1A(2).
     /// </summary>
     private void RenderContentWithMarkers(
@@ -234,16 +357,13 @@ public class MaterialPdfService : IMaterialPdfService
         string content,
         Dictionary<string, QuestionEntity> questionLookup,
         Dictionary<string, AttachmentEntity> attachmentLookup,
-        ref int questionNumber,
-        List<PdfEmbedInfo> pdfEmbeds)
+        ref int questionNumber)
     {
-        // Unified marker pattern to find all special markers in order
-        // We'll process content linearly, handling each marker type as we encounter it
+        // Pattern for markers (excluding PDF which is handled at higher level)
         var combinedPattern = new Regex(
             @"(!!! question id=""([^""]+)"")|" +  // Group 1,2: question marker
-            @"(!!! pdf id=""([^""]+)"")|" +       // Group 3,4: pdf marker
-            @"(!\[([^\]]*)\]\(/attachments/([^)]+)\))|" + // Group 5,6,7: image attachment
-            @"(!!! center\s*\n((?:    .+\n?)+))", // Group 8,9: center marker
+            @"(!\[([^\]]*)\]\(/attachments/([^)]+)\))|" + // Group 3,4,5: image attachment
+            @"(!!! center\s*\n((?:    .+\n?)+))", // Group 6,7: center marker
             RegexOptions.Multiline);
 
         var matches = combinedPattern.Matches(content);
@@ -268,32 +388,26 @@ public class MaterialPdfService : IMaterialPdfService
             }
             else if (match.Groups[3].Success)
             {
-                // PDF embed marker - per §3C
-                var pdfId = match.Groups[4].Value;
-                RenderPdfEmbed(column, pdfId, attachmentLookup, pdfEmbeds);
-            }
-            else if (match.Groups[5].Success)
-            {
-                // Image attachment - per §3B
-                var altText = match.Groups[6].Value;
-                var attachmentId = match.Groups[7].Value;
+                // Image attachment marker - per §3B
+                var altText = match.Groups[4].Value;
+                var attachmentId = match.Groups[5].Value;
                 RenderImageAttachment(column, attachmentId, altText, attachmentLookup);
             }
-            else if (match.Groups[8].Success)
+            else if (match.Groups[6].Success)
             {
                 // Center marker - per §3D(1)
-                var centeredContent = match.Groups[9].Value;
+                var centeredContent = match.Groups[7].Value;
                 RenderCenteredContent(column, centeredContent);
             }
 
             lastIndex = match.Index + match.Length;
         }
 
-        // Render remaining content after last marker
+        // Render remaining markdown after the last marker
         if (lastIndex < content.Length)
         {
-            var remainingContent = content.Substring(lastIndex);
-            RenderPureMarkdown(column, remainingContent);
+            var markdownSegment = content.Substring(lastIndex);
+            RenderPureMarkdown(column, markdownSegment);
         }
     }
 
@@ -318,7 +432,7 @@ public class MaterialPdfService : IMaterialPdfService
     /// <summary>
     /// Renders pure markdown without attachment references.
     /// Per MaterialConversionSpecification §3A.
-    /// Note: Custom markers (center, question, pdf) are handled by RenderContentWithMarkers.
+    /// Note: Custom markers (center, question, pdf) are handled separately.
     /// </summary>
     private static void RenderPureMarkdown(ColumnDescriptor column, string markdown)
     {
@@ -329,7 +443,7 @@ public class MaterialPdfService : IMaterialPdfService
     }
 
     /// <summary>
-    /// Renders an image attachment directly using QuestPDF.
+    /// Renders an image attachment.
     /// Per MaterialConversionSpecification §3B.
     /// </summary>
     private void RenderImageAttachment(
@@ -338,82 +452,41 @@ public class MaterialPdfService : IMaterialPdfService
         string altText,
         Dictionary<string, AttachmentEntity> attachmentLookup)
     {
-        if (attachmentLookup.TryGetValue(attachmentId, out var attachment))
+        if (!attachmentLookup.TryGetValue(attachmentId, out var attachment))
         {
-            // Only handle image attachments (png, jpeg, jpg)
-            var ext = attachment.FileExtension.ToLowerInvariant();
-            if (ext is "png" or "jpeg" or "jpg")
+            // Invalid reference per §3B(2)
+            column.Item().Background(Colors.Grey.Lighten3).Padding(10)
+                .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
+            return;
+        }
+
+        var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
+        if (!_fileService.FileExists(filePath))
+        {
+            // File not found per §3B(2)
+            column.Item().Background(Colors.Grey.Lighten3).Padding(10)
+                .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
+            return;
+        }
+
+        var ext = attachment.FileExtension.ToLowerInvariant();
+        if (ext is "png" or "jpg" or "jpeg" or "gif" or "bmp" or "webp")
+        {
+            // Per §3B(1)(a-b): Render image scaled to fit within page width
+            try
             {
-                var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
-                if (_fileService.FileExists(filePath))
-                {
-                    try
-                    {
-                        // Render image scaled to fit within content width per §3B(1)(a)-(b)
-                        column.Item().Element(container =>
-                        {
-                            container.Image(filePath).FitWidth();
-                        });
-                        return;
-                    }
-                    catch (Exception)
-                    {
-                        // Fall through to placeholder
-                    }
-                }
+                column.Item().Image(filePath).FitWidth();
+                return;
+            }
+            catch
+            {
+                // Fall through to error case
             }
         }
 
-        // Invalid reference or unsupported format per §3B(2)
+        // Unsupported format or error
         column.Item().Background(Colors.Grey.Lighten3).Padding(10)
             .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
-    }
-
-    /// <summary>
-    /// Renders an embedded PDF attachment.
-    /// Per MaterialConversionSpecification §3C.
-    /// Tracks the placeholder page for post-processing PDF merge.
-    /// </summary>
-    private void RenderPdfEmbed(
-        ColumnDescriptor column,
-        string pdfId,
-        Dictionary<string, AttachmentEntity> attachmentLookup,
-        List<PdfEmbedInfo> pdfEmbeds)
-    {
-        if (attachmentLookup.TryGetValue(pdfId, out var attachment))
-        {
-            var ext = attachment.FileExtension.ToLowerInvariant();
-            if (ext == "pdf")
-            {
-                var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
-                if (_fileService.FileExists(filePath))
-                {
-                    // Per §3C(2): Insert a placeholder page that will be replaced
-                    // Track this position for post-processing
-                    column.Item().PageBreak();
-                    
-                    // Track this embed for post-processing
-                    pdfEmbeds.Add(new PdfEmbedInfo
-                    {
-                        FilePath = filePath,
-                        PlaceholderPageNumber = pdfEmbeds.Count > 0 
-                            ? pdfEmbeds[^1].PlaceholderPageNumber + 1 
-                            : 1, // Will be recalculated after generation
-                        FileName = attachment.FileBaseName
-                    });
-                    
-                    // Empty placeholder page - will be replaced by actual PDF pages
-                    column.Item().MinHeight(1);
-                    
-                    column.Item().PageBreak();
-                    return;
-                }
-            }
-        }
-
-        // Invalid reference per §3C(3)
-        column.Item().Background(Colors.Grey.Lighten3).Padding(10)
-            .Text($"[PDF attachment not found: {pdfId}]").FontSize(10).Italic();
     }
 
     /// <summary>
@@ -432,17 +505,17 @@ public class MaterialPdfService : IMaterialPdfService
             return;
         }
 
-        column.Item().PaddingVertical(10).Column(questionColumn =>
+        column.Item().PaddingTop(10).Column(questionColumn =>
         {
-            // Question header per §4(2)
+            // Question header with number per §4(2)(a-b)
             questionColumn.Item().Row(row =>
             {
                 row.RelativeItem().Text(text =>
                 {
-                    text.Span($"Question {questionNumber}: ").Bold().FontSize(12);
-                    text.Span(question.QuestionText).Bold().FontSize(12);
+                    text.Span($"Question {questionNumber}. ").Bold();
+                    text.Span(question.QuestionText ?? string.Empty);
                 });
-
+                
                 // Max score per §4(2)(c)
                 if (question.MaxScore.HasValue)
                 {
@@ -450,36 +523,34 @@ public class MaterialPdfService : IMaterialPdfService
                 }
             });
 
-            // Render based on question type
-            switch (question.QuestionType)
+            // Render question type-specific content
+            if (question.QuestionType == QuestionType.MULTIPLE_CHOICE)
             {
-                case QuestionType.MULTIPLE_CHOICE:
-                    RenderMultipleChoiceQuestion(questionColumn, question as MultipleChoiceQuestionEntity);
-                    break;
-                case QuestionType.WRITTEN_ANSWER:
-                    RenderWrittenAnswerQuestion(questionColumn, question as WrittenAnswerQuestionEntity);
-                    break;
+                RenderMultipleChoiceQuestion(questionColumn, question);
+            }
+            else
+            {
+                RenderWrittenAnswerQuestion(questionColumn, question);
             }
         });
     }
 
     /// <summary>
-    /// Renders a multiple choice question.
+    /// Renders a multiple choice question with options.
     /// Per MaterialConversionSpecification §4(3).
     /// </summary>
-    private static void RenderMultipleChoiceQuestion(
-        ColumnDescriptor questionColumn,
-        MultipleChoiceQuestionEntity? question)
+    private static void RenderMultipleChoiceQuestion(ColumnDescriptor questionColumn, QuestionEntity question)
     {
-        if (question == null) return;
+        // Cast to MCQ entity to access Options
+        if (question is not MultipleChoiceQuestionEntity mcq || mcq.Options == null)
+            return;
 
         var optionLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-        for (int i = 0; i < question.Options.Count && i < optionLetters.Length; i++)
+        for (int i = 0; i < mcq.Options.Count && i < 26; i++)
         {
             var optionLetter = optionLetters[i];
-            var optionText = question.Options[i];
-
+            var optionText = mcq.Options[i];
+            
             // Checkbox and option per §4(3)(a)-(b)
             questionColumn.Item().PaddingLeft(20).Row(row =>
             {
@@ -490,60 +561,59 @@ public class MaterialPdfService : IMaterialPdfService
     }
 
     /// <summary>
-    /// Renders a written answer question.
+    /// Renders a written answer question with blank lines.
     /// Per MaterialConversionSpecification §4(4).
     /// </summary>
-    private static void RenderWrittenAnswerQuestion(
-        ColumnDescriptor questionColumn,
-        WrittenAnswerQuestionEntity? question)
+    private static void RenderWrittenAnswerQuestion(ColumnDescriptor questionColumn, QuestionEntity question)
     {
-        if (question == null) return;
-
         // Calculate blank lines per §4(4)(b)
-        int blankLines;
-        if (question.MaxScore is null or >= 1 and <= 2)
+        var blankLines = 3; // Default
+        if (question.MaxScore.HasValue)
         {
-            blankLines = 3;
+            if (question.MaxScore.Value <= 2)
+            {
+                blankLines = question.MaxScore.Value;
+            }
+            else if (question.MaxScore.Value <= 5)
+            {
+                blankLines = question.MaxScore.Value;
+            }
+            else
+            {
+                blankLines = question.MaxScore.Value * 2;
+            }
         }
-        else if (question.MaxScore >= 3 && question.MaxScore <= 5)
+
+        // Cap reasonable max
+        if (blankLines > 20)
         {
-            blankLines = 5;
-        }
-        else if (question.MaxScore > 5)
-        {
-            // Per §4(4)(b)(iii): two times the max score
-            blankLines = question.MaxScore.Value * 2;
-        }
-        else
-        {
-            blankLines = 5;
+            blankLines = 20;
         }
 
         // Render blank lines for answers per §4(4)(a)
         for (int i = 0; i < blankLines; i++)
         {
-            questionColumn.Item().PaddingTop(15).BorderBottom(1).BorderColor(Colors.Grey.Medium);
+            questionColumn.Item().PaddingTop(30).BorderBottom(1).BorderColor(Colors.Grey.Medium);
         }
     }
 }
 
 /// <summary>
-/// Tracks information about PDF embeds for post-processing merge.
+/// Represents a segment of content for PDF generation.
 /// </summary>
-public class PdfEmbedInfo
+public class ContentSegment
 {
-    /// <summary>
-    /// Path to the external PDF file to embed.
-    /// </summary>
-    public required string FilePath { get; set; }
-    
-    /// <summary>
-    /// The placeholder page number in the base PDF that will be replaced.
-    /// </summary>
-    public int PlaceholderPageNumber { get; set; }
-    
-    /// <summary>
-    /// Original filename for reference.
-    /// </summary>
+    public SegmentType Type { get; set; }
+    public string? Content { get; set; }
+    public string? FilePath { get; set; }
     public string? FileName { get; set; }
+}
+
+/// <summary>
+/// Type of content segment.
+/// </summary>
+public enum SegmentType
+{
+    Content,
+    PdfEmbed
 }
