@@ -902,6 +902,9 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         } catch (error) {
             console.error('Failed to export PDF:', error);
+            if (typeof window !== 'undefined' && window.alert) {
+                window.alert('Failed to export PDF. Please try again.');
+            }
         } finally {
             setIsExportingPdf(false);
         }
