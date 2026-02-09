@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
@@ -531,6 +533,94 @@ public class MaterialPdfServiceTests
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithPdfEmbed_IncreasesPageCount()
+    {
+        // Arrange - create a synthetic 2-page PDF file for embedding
+        var pdfAttachmentId = Guid.NewGuid();
+        var tempDir = Path.Combine(Path.GetTempPath(), "MaterialPdfServiceTests");
+        Directory.CreateDirectory(tempDir);
+        var syntheticPdfPath = Path.Combine(tempDir, $"{pdfAttachmentId}.pdf");
+
+        try
+        {
+            // Create a 2-page synthetic PDF using PdfSharpCore
+            using (var doc = new PdfSharpCore.Pdf.PdfDocument())
+            {
+                // Add 2 pages
+                var page1 = doc.AddPage();
+                using (var gfx1 = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page1))
+                {
+                    gfx1.DrawString("Test Page 1", 
+                        new PdfSharpCore.Drawing.XFont("Arial", 12), 
+                        PdfSharpCore.Drawing.XBrushes.Black, 
+                        new PdfSharpCore.Drawing.XPoint(100, 100));
+                }
+                
+                var page2 = doc.AddPage();
+                using (var gfx2 = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page2))
+                {
+                    gfx2.DrawString("Test Page 2", 
+                        new PdfSharpCore.Drawing.XFont("Arial", 12), 
+                        PdfSharpCore.Drawing.XBrushes.Black, 
+                        new PdfSharpCore.Drawing.XPoint(100, 100));
+                }
+                
+                doc.Save(syntheticPdfPath);
+            }
+
+            var material = new WorksheetMaterialEntity(
+                _testMaterialId,
+                _testLessonId,
+                "With PDF Embed",
+                $"# Title\n\n!!! pdf id=\"{pdfAttachmentId}\"\n\nAfter embed."
+            );
+
+            var attachment = new AttachmentEntity(
+                pdfAttachmentId,
+                _testMaterialId,
+                "test-document",
+                "pdf"
+            );
+
+            _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+                .ReturnsAsync(material);
+            _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+                .ReturnsAsync(new List<QuestionEntity>());
+            _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+                .ReturnsAsync(new List<AttachmentEntity> { attachment });
+            _mockFileService.Setup(f => f.GetAttachmentFilePath(pdfAttachmentId, "pdf"))
+                .Returns(syntheticPdfPath);
+            _mockFileService.Setup(f => f.FileExists(syntheticPdfPath))
+                .Returns(true);
+
+            // Act
+            var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+            // Assert - Verify PDF is valid
+            Assert.NotNull(result);
+            Assert.NotEmpty(result);
+            Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+
+            // Parse the result PDF and verify page count includes embedded pages
+            using var resultStream = new MemoryStream(result);
+            using var resultPdf = PdfSharpCore.Pdf.IO.PdfReader.Open(resultStream, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+            
+            // Should have at least 3 pages: 1 for content before embed, 2 from embedded PDF
+            // (content after embed may be on same page or new page)
+            Assert.True(resultPdf.PageCount >= 3, 
+                $"Expected at least 3 pages (1 content + 2 embedded), but got {resultPdf.PageCount}");
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(syntheticPdfPath))
+                File.Delete(syntheticPdfPath);
+            if (Directory.Exists(tempDir) && !Directory.EnumerateFileSystemEntries(tempDir).Any())
+                Directory.Delete(tempDir);
+        }
     }
 
     #endregion
