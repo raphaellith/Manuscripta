@@ -120,7 +120,6 @@ For a list of all server method and client handlers to be implemented for commun
     (c) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
 
 
-
 ## Section 4C - Editor Modal
 
 (1) **Core Functionalities**
@@ -456,7 +455,118 @@ For a list of all server method and client handlers to be implemented for commun
     The frontend shall display an alert when the backend invokes the `FeedbackDeliveryFailed` client handler, as defined in s2(1)(e)(v) of the Networking API Specification. The alert shall identify the specific device(s) for which feedback delivery has failed.
 
 
+## Section 5E — rmapi Availability and Installation
+
+(1) **Triggering the Check**
+
+    When the frontend initiates any reMarkable-related operation, it shall first call `Task<bool> CheckRmapiAvailability()`, as defined in §1(1)(n)(v) of the Networking API Specification.
+
+(2) **Handling Unavailability**
+
+    If the check in (1) returns `false`, the frontend shall prompt the user with the following options —
+
+    (a) **Install Automatically** — the frontend shall call `Task<bool> InstallRmapi()`, as defined in §1(1)(n)(vi) of the Networking API Specification, and display a progress indicator while installation is in progress;
+
+    (b) **Install Manually** — the frontend shall open the user's default browser to `https://github.com/ddvk/rmapi/releases` and display instructions for the user to download and place the binary at `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`;
+
+    (c) **Cancel** — the frontend shall abort the reMarkable operation and return the user to the previous screen.
+
+(3) **Installation Failure**
+
+    If the installation in (2)(a) fails, the frontend shall display an error message and offer the user the options in (2)(b) and (2)(c).
+
+(4) **Settings Interface**
+
+    The frontend shall provide an option in the Settings interface to —
+
+    (a) re-check the availability of `rmapi` by calling the method in (1);
+
+    (b) reinstall `rmapi` by calling the method in (2)(a).
+
+
+## Section 5F — reMarkable Device Pairing
+
+(1) **Initiating reMarkable Pairing**
+
+    The frontend shall provide a button or other control to initiate reMarkable device pairing, distinct from Android device pairing.
+
+(2) **Pairing Workflow**
+
+    When the user initiates reMarkable pairing —
+
+    (a) the frontend shall prompt the user to enter a user-friendly device name;
+
+    (b) the frontend shall open the user's default browser to `https://my.remarkable.com/device/desktop/connect`;
+
+    (c) the frontend shall display a fallback link for users to visit manually if the browser does not open;
+
+    (d) the frontend shall prompt the user to enter the one-time code obtained from the URL in (b);
+
+    (e) the frontend shall call `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`, as defined in §1(1)(n)(i) of the Networking API Specification;
+
+    (f) the frontend shall indicate to the user that pairing is in progress;
+
+    (g) upon success, the frontend shall refresh the device grid in accordance with §5A(3A);
+
+    (h) upon failure, the frontend shall display an error message and allow the user to retry or cancel.
+
+(3) **Re-authentication**
+
+    When the backend invokes the `ReMarkableAuthInvalid` client handler —
+
+    (a) the frontend shall display a notification indicating that the specified reMarkable device requires re-authentication;
+
+    (b) the frontend shall provide an option to initiate re-authentication, following the workflow in paragraphs (2)(b)-(h).
+
+(4) **Unpairing**
+
+    The frontend shall provide a means for the user to unpair a reMarkable device by calling `Task UnpairReMarkableDevice(Guid deviceId)`, as defined in §1(1)(n)(ii) of the Networking API Specification.
+
+(5) **Display**
+
+    reMarkable devices shall be displayed in the device grid alongside Android devices, with a distinct visual indicator per reMarkable Integration Specification §1(3).
+
+(6) **Avoidance of Illegal Actions**
+
+    The frontend shall clearly indicate to the user that the classroom control and response collection functionalities are not available for reMarkable devices, by disabling the corresponding UI elements when a reMarkable device is selected, and stating the reason of the unavailability.
+
+## Section 5G — Material Deployment to reMarkable Devices
+
+(1) **Initiating Deployment**
+
+    The frontend shall provide a means to deploy materials to reMarkable devices using the same material selection workflow as Android devices per §5C(3).
+
+(2) **Deployment Workflow**
+
+    When the user deploys a material to one or more reMarkable devices —
+
+    (a) the frontend shall call `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`, as defined in §1(1)(n)(vii) of the Networking API Specification;
+
+    (b) the frontend shall indicate that deployment is in progress;
+
+    (c) upon completion, the frontend shall display a success message indicating that the material has been uploaded to the reMarkable cloud;
+
+    (d) the frontend shall inform the user that the device will receive the material on its next sync.
+
+(3) **Error Handling**
+
+    (a) If the backend invokes the `ReMarkableAuthInvalid` client handler during deployment, the frontend shall follow the re-authentication workflow in §5F(3);
+
+    (b) If the deployment fails for other reasons, the frontend shall display an error message with a retry option.
+
+(4) **Mixed Device Selection**
+
+    When the user selects a mix of Android and reMarkable devices for deployment —
+
+    (a) the frontend shall call `DeployMaterial` for Android devices per §5C(3);
+
+    (b) the frontend shall call `DeployMaterialToReMarkable` for reMarkable devices per this section;
+
+    (c) the frontend shall clearly indicate the status of deployment to each device type separately.
+
+
 ## Section 6 - Functionalities for the "Responses" tab
+
 
 (1) [DELETED]
 
@@ -563,7 +673,6 @@ For a list of all server method and client handlers to be implemented for commun
         (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
 
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalized assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
-
 
 
 ## Section 7 - Functionalities for the "Settings" tab

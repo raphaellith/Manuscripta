@@ -129,6 +129,22 @@ For a description of how these server methods and client handlers are expected t
 
         (i) `Task<byte[]> GenerateMaterialPdf(Guid materialId)`: Generates a PDF document for the specified material and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification.
 
+    (n) Methods for reMarkable device management.
+
+        (i) `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`: Pairs a reMarkable device by authenticating with the one-time code, creating the configuration file, and persisting the `ReMarkableDeviceEntity`. Returns the UUID of the newly created device entity.
+
+        (ii) `Task UnpairReMarkableDevice(Guid deviceId)`: Unpairs a reMarkable device by deleting the `ReMarkableDeviceEntity` and the corresponding rmapi configuration file.
+
+        (iii) `Task<List<ReMarkableDeviceEntity>> GetAllReMarkableDevices()`: Retrieves all paired reMarkable devices.
+
+        (iv) `Task UpdateReMarkableDevice(ReMarkableDeviceEntity entity)`: Updates a reMarkable device entity, identified by its UUID.
+
+        (v) `Task<bool> CheckRmapiAvailability()`: Checks whether rmapi is available and functional per reMarkable Integration Specification §2(2). Returns `true` if available, `false` otherwise.
+
+        (vi) `Task<bool> InstallRmapi()`: Downloads the rmapi binary from GitHub releases and saves it to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`. Returns `true` on success, `false` on failure.
+
+        (vii) `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified reMarkable devices by generating a PDF and uploading it to each device's reMarkable cloud via rmapi. Returns when all uploads are complete or have failed.
+
 
 ### Section 2 - Frontend handlers
 
@@ -161,3 +177,7 @@ For a description of how these server methods and client handlers are expected t
         (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
 
         (v) `FeedbackDeliveryFailed`, with parameter `deviceId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification.
+
+    (f) Handlers for reMarkable devices.
+
+        (i) `ReMarkableAuthInvalid`, with parameter `deviceId` (Guid): Notifies the frontend that a reMarkable device's authentication has become invalid and requires re-authentication.

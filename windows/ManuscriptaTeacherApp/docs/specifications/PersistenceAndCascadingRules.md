@@ -17,6 +17,7 @@ This document is effective for the Windows app only.
     (e) `LessonDataEntity`.
     (f) `SourceDocumentEntity`.
     (g) `AttachmentEntity`.
+    (h) `ReMarkableDeviceEntity`.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
@@ -47,6 +48,8 @@ This document is effective for the Windows app only.
 
 (7) The deletion of an attachment A must delete the attachment file named by A's `FileName` attribute.
 
+(8) The deletion of a `ReMarkableDeviceEntity` R must delete the rmapi configuration file at `%AppData%\ManuscriptaTeacherApp\rmapi\{R.DeviceId}.conf`.
+
 ## Section 3 - Proactive Orphan Removal
 
 (1) **Removal of orphaned attachment files**
@@ -56,3 +59,11 @@ This document is effective for the Windows app only.
     (a) Retrieve all attachment entities from the database.
     (b) For each file placed under the `Attachments` directory, check if it is associated with an attachment entity.
     (c) If a file is not associated with an attachment entity, delete the file.
+
+(2) **Removal of orphaned rmapi configuration files**
+
+    The backend shall, on startup —
+
+    (a) Retrieve all `ReMarkableDeviceEntity` entities from the database.
+    (b) For each `.conf` file placed under the `%AppData%\ManuscriptaTeacherApp\rmapi` directory, check if its base name (without extension) matches a `DeviceId` of a `ReMarkableDeviceEntity`.
+    (c) If a file is not associated with a `ReMarkableDeviceEntity`, delete the file.
