@@ -51,4 +51,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) =>
         ipcRenderer.invoke('save-attachment-from-base64', base64Data, uuid, extension),
+
+    /**
+     * Show save dialog and save PDF file.
+     * Per FrontendWorkflowSpecifications §4D(2)(a).
+     * @param pdfBytes - PDF file content as Uint8Array
+     * @param defaultFilename - Default filename for save dialog
+     * @returns true if saved successfully, false if cancelled
+     */
+    savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) =>
+        ipcRenderer.invoke('save-pdf-file', pdfBytes, defaultFilename),
 });

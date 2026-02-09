@@ -144,5 +144,24 @@ ipcMain.handle('save-attachment-from-base64', async (_event, base64Data: string,
   return destPath;
 });
 
+// Save PDF file via save dialog (per FrontendWorkflowSpecifications §4D)
+ipcMain.handle('save-pdf-file', async (_event, pdfBytes: Uint8Array, defaultFilename: string) => {
+  const result = await dialog.showSaveDialog({
+    title: 'Export PDF',
+    defaultPath: defaultFilename,
+    filters: [
+      { name: 'PDF Documents', extensions: ['pdf'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return false;
+  }
+
+  const buffer = Buffer.from(pdfBytes);
+  fsSync.writeFileSync(result.filePath, buffer);
+  return true;
+});
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.

@@ -40,6 +40,7 @@ builder.Services.AddScoped<IResponseService, ResponseService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();

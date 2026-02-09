@@ -146,6 +146,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [actualAge, setActualAge] = useState<number | undefined>(material.actualAge);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     // Force re-render counter to update toolbar button active states
     const [, setForceUpdate] = useState(0);
@@ -597,8 +598,9 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 doc.descendants((node, pos) => {
                     if (node.type.name === 'image') {
                         const src = node.attrs.src || '';
-                        // Match /attachments/{uuid} pattern
-                        const match = src.match(/^\/attachments\/([a-f0-9-]+)$/i);
+                        // Match /attachments/{uuid} pattern - handles both relative paths and
+                        // full URLs (browser may resolve relative paths to http://localhost:*/attachments/{uuid})
+                        const match = src.match(/\/attachments\/([a-f0-9-]+)$/i);
                         if (match) {
                             const attachmentId = match[1];
                             // Get attachment from backend to get file extension
@@ -875,6 +877,34 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
     const closeInputDialog = () => {
         setInputDialog({ isOpen: false, title: '', onSubmit: () => { /* no-op */ } });
+    };
+
+    // Export material to PDF - per FrontendWorkflowSpecifications §4D
+    const handleExportPdf = async () => {
+        if (isExportingPdf) return;
+        setIsExportingPdf(true);
+
+        try {
+            // First save any unsaved changes
+            if (isDirty) {
+                await saveContent();
+            }
+
+            // Generate PDF via SignalR hub
+            const pdfBytes = await signalRService.generateMaterialPdf(material.id);
+
+            // Prompt user to save the file
+            const defaultFilename = `${title.replace(/[^a-zA-Z0-9 ]/g, '')}.pdf`;
+            const saved = await window.electronAPI.savePdfFile(pdfBytes, defaultFilename);
+
+            if (saved) {
+                console.log('PDF exported successfully');
+            }
+        } catch (error) {
+            console.error('Failed to export PDF:', error);
+        } finally {
+            setIsExportingPdf(false);
+        }
     };
 
     // Insert table
@@ -1211,6 +1241,26 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         <div className="text-xs text-gray-400 min-w-[100px]">
                             {isSaving ? 'Saving...' : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : isDirty ? 'Unsaved changes' : 'No changes'}
                         </div>
+
+                        {/* Export to PDF button */}
+                        <button
+                            onClick={handleExportPdf}
+                            disabled={isExportingPdf}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            title="Export to PDF"
+                        >
+                            {isExportingPdf ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Exporting...
+                                </>
+                            ) : (
+                                'Export PDF'
+                            )}
+                        </button>
 
                         <button
                             onClick={handleClose}

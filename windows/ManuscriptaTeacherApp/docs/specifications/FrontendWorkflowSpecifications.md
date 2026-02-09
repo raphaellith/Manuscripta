@@ -252,6 +252,29 @@ For a list of all server method and client handlers to be implemented for commun
     (b) delete such attachment entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
 
+## Section 4D — PDF Export
+
+(1) **Export Button**
+
+    The editor modal shall provide an "Export to PDF" button. When activated —
+
+    (a) the frontend shall invoke `GenerateMaterialPdf(Guid materialId)`, as defined in s1(1)(m)(i) of the Networking API Specification, passing the current material's ID;
+
+    (b) the frontend shall display a loading indicator while awaiting the response;
+
+    (c) the server method shall return the PDF content as a byte array upon successful generation;
+
+    (d) upon receipt of the byte array, the frontend shall prompt the user to save the PDF file using the system file save dialogue;
+
+    (e) the suggested filename shall be the material title with `.pdf` extension, with any invalid filename characters removed.
+
+(2) **Error Handling**
+
+    (a) If the server method throws an exception, the frontend shall display an error message to the user.
+
+    (b) If the material has unsaved changes, the frontend shall prompt the user to save before exporting, or proceed with the last saved version.
+
+
 ## Section 5 - Functionalities for the "Classroom" tab
 
 (1) [DELETED]
