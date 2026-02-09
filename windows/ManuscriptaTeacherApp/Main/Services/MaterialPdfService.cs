@@ -106,25 +106,9 @@ public class MaterialPdfService : IMaterialPdfService
                         FileName = attachment.FileBaseName
                     });
                 }
-                else
-                {
-                    // PDF not found - add placeholder text
-                    segments.Add(new ContentSegment 
-                    { 
-                        Type = SegmentType.Content, 
-                        Content = $"\n\n[PDF attachment not found: {pdfId}]\n\n" 
-                    });
-                }
+                // Per §3C(3): Invalid references are not rendered
             }
-            else
-            {
-                // Invalid reference - add placeholder text
-                segments.Add(new ContentSegment 
-                { 
-                    Type = SegmentType.Content, 
-                    Content = $"\n\n[PDF attachment not found: {pdfId}]\n\n" 
-                });
-            }
+            // Per §3C(3): Invalid references are not rendered
 
             lastIndex = match.Index + match.Length;
         }
@@ -454,18 +438,14 @@ public class MaterialPdfService : IMaterialPdfService
     {
         if (!attachmentLookup.TryGetValue(attachmentId, out var attachment))
         {
-            // Invalid reference per §3B(2)
-            column.Item().Background(Colors.Grey.Lighten3).Padding(10)
-                .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
+            // Per §3B(2): Invalid references are not rendered
             return;
         }
 
         var filePath = _fileService.GetAttachmentFilePath(attachment.Id, attachment.FileExtension);
         if (!_fileService.FileExists(filePath))
         {
-            // File not found per §3B(2)
-            column.Item().Background(Colors.Grey.Lighten3).Padding(10)
-                .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
+            // Per §3B(2): Invalid references are not rendered
             return;
         }
 
@@ -476,17 +456,13 @@ public class MaterialPdfService : IMaterialPdfService
             try
             {
                 column.Item().Image(filePath).FitWidth();
-                return;
             }
             catch
             {
-                // Fall through to error case
+                // Per §3B(2): Invalid references are not rendered
             }
         }
-
-        // Unsupported format or error
-        column.Item().Background(Colors.Grey.Lighten3).Padding(10)
-            .Text($"[Attachment not found: {altText}]").FontSize(10).Italic();
+        // Per §3B(2): Unsupported formats are not rendered
     }
 
     /// <summary>

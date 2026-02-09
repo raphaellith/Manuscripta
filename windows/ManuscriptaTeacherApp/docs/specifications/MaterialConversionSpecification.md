@@ -109,19 +109,15 @@ This document defines the requirements for converting `MaterialEntity` objects i
     (b) Large images may be scaled down but shall not exceed the content width.
     (c) The service shall resolve attachment references by reading from the `%AppData%\ManuscriptaTeacherApp\Attachments` directory.
 
-(2) **Invalid References**. If an attachment cannot be resolved, the service shall render a placeholder box with the text "[Attachment not found]".
+(2) **Invalid References**. If an attachment cannot be resolved, the attachment shall not be rendered.
 
 ### Section 3C — PDF Embedding
 
 (1) Embedded PDF markers (`!!! pdf id="..."`, §4(2) of Material Encoding Specification) shall be handled by merging the referenced PDF's pages into the output document.
 
-(2) **Page Insertion**. The pages of the embedded PDF shall be inserted at the position of the marker in the content flow.
+(2) **Page Insertion**. The pages of the embedded PDF shall be inserted at the position of the marker in the content flow. Pages shall be broken before and after the inserted pages.
 
-    (a) A page break shall be inserted before the embedded PDF pages.
-    (b) A page break shall be inserted after the embedded PDF pages.
-    (c) The embedded pages shall retain their original formatting and shall not have the header/footer applied.
-
-(3) **Invalid References**. If the referenced PDF attachment cannot be resolved, the service shall render a placeholder block with the text "[PDF attachment not found: {id}]".
+(3) **Invalid References**. If the referenced PDF attachment cannot be resolved, it shall not be rendered.
 
 ### Section 3D — Custom Markers
 
