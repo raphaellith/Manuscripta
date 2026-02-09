@@ -141,7 +141,7 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 (3) **Multiple Choice Questions**. For questions where `QuestionType` is `MULTIPLE_CHOICE`:
 
-    (a) Each option shall be rendered on a separate line, prefixed with an empty checkbox symbol (☐) and an option letter (A, B, C, etc.).
+    (a) Each option shall be rendered on a separate line, prefixed with an option letter (A, B, C, etc.).
     (b) The options shall be indented relative to the question text.
     (c) The `CorrectAnswer` shall not be indicated in the PDF output.
 
