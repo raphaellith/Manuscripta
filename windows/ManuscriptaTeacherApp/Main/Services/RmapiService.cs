@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 
+using System.IO.Compression;
+
 namespace Main.Services;
 
 /// <summary>
@@ -79,6 +81,7 @@ public class RmapiService : IRmapiService
         }
     }
 
+
     /// <inheritdoc />
     public async Task<bool> InstallAsync()
     {
@@ -88,22 +91,54 @@ public class RmapiService : IRmapiService
             var binDir = Path.GetDirectoryName(RmapiExecutablePath)!;
             Directory.CreateDirectory(binDir);
 
-            // Download from GitHub releases
+            // Download from GitHub releases (zip)
             // Per RemarkableIntegrationSpecification §2(4)
-            var downloadUrl = "https://github.com/ddvk/rmapi/releases/latest/download/rmapi-win64.exe";
+            var downloadUrl = "https://github.com/ddvk/rmapi/releases/latest/download/rmapi-win64.zip";
             _logger.LogInformation("Downloading rmapi from {Url}", downloadUrl);
 
-            using var response = await _httpClient.GetAsync(downloadUrl);
-            response.EnsureSuccessStatusCode();
+            var tempZipPath = Path.GetTempFileName();
+            var tempExtractPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-            await using var fileStream = File.Create(RmapiExecutablePath);
-            await response.Content.CopyToAsync(fileStream);
+            try
+            {
+                using (var response = await _httpClient.GetAsync(downloadUrl))
+                {
+                    response.EnsureSuccessStatusCode();
+                    await using var fileStream = File.Create(tempZipPath);
+                    await response.Content.CopyToAsync(fileStream);
+                }
 
-            _logger.LogInformation("rmapi installed successfully at {Path}", RmapiExecutablePath);
+                _logger.LogInformation("Extracting rmapi...");
+                ZipFile.ExtractToDirectory(tempZipPath, tempExtractPath);
 
-            // Invalidate cache so next check picks up the new binary
-            InvalidateAvailabilityCache();
-            return true;
+                // Find rmapi.exe in extracted files (could be in root or subfolder)
+                var rmapiFile = Directory.GetFiles(tempExtractPath, "rmapi.exe", SearchOption.AllDirectories).FirstOrDefault();
+                
+                if (rmapiFile == null)
+                {
+                    throw new FileNotFoundException("rmapi.exe not found in downloaded zip archive");
+                }
+
+                // Move to target location, overwriting if exists
+                if (File.Exists(RmapiExecutablePath))
+                {
+                    File.Delete(RmapiExecutablePath);
+                }
+                
+                File.Move(rmapiFile, RmapiExecutablePath);
+
+                _logger.LogInformation("rmapi installed successfully at {Path}", RmapiExecutablePath);
+
+                // Invalidate cache so next check picks up the new binary
+                InvalidateAvailabilityCache();
+                return true;
+            }
+            finally
+            {
+                // Cleanup temp files
+                if (File.Exists(tempZipPath)) File.Delete(tempZipPath);
+                if (Directory.Exists(tempExtractPath)) Directory.Delete(tempExtractPath, true);
+            }
         }
         catch (Exception ex)
         {
