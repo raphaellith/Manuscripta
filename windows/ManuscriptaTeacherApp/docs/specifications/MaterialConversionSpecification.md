@@ -168,7 +168,7 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 ## Section 6 — Error Handling
 
-(1) If the specified material does not exist, the service shall throw a `NotFoundException`.
+(1) If the specified material does not exist, the service shall throw a `KeyNotFoundException`.
 
 (2) If the material content is empty or null, the service shall generate a PDF containing only the title block.
 
