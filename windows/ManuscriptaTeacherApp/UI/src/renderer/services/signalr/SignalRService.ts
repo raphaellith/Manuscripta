@@ -167,7 +167,7 @@ class SignalRService {
     /**
      * Generates a PDF document for the specified material.
      * Per NetworkingAPISpec §1(1)(m)(i).
-     * @returns Base64-encoded PDF file bytes as Uint8Array.
+     * @returns Decoded PDF file bytes as a Uint8Array.
      */
     public async generateMaterialPdf(materialId: string): Promise<Uint8Array> {
         // SignalR returns byte[] as base64 string
