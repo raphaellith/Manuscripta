@@ -1,11 +1,6 @@
 package com.manuscripta.student.network.tcp.codec;
 
-import com.manuscripta.student.network.tcp.codec.TcpMessage;
-import com.manuscripta.student.network.tcp.codec.TcpMessageDecoder;
-import com.manuscripta.student.network.tcp.codec.TcpMessageEncoder;
-import com.manuscripta.student.network.tcp.core.ConnectionState;
-import com.manuscripta.student.network.tcp.core.TcpProtocolException;
-import com.manuscripta.student.network.tcp.core.TcpSocketManager;
+
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;

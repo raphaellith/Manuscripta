@@ -1,6 +1,6 @@
 package com.manuscripta.student.network.tcp.core;
 
-import com.manuscripta.student.network.tcp.codec.TcpMessage;
+
 import com.manuscripta.student.network.tcp.codec.TcpMessageDecoder;
 import com.manuscripta.student.network.tcp.codec.TcpMessageEncoder;
 import com.manuscripta.student.network.tcp.listener.TcpMessageListener;

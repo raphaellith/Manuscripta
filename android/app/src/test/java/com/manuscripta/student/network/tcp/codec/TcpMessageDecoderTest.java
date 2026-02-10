@@ -1,18 +1,11 @@
 package com.manuscripta.student.network.tcp.codec;
 
-import com.manuscripta.student.network.tcp.codec.TcpMessage;
-import com.manuscripta.student.network.tcp.codec.TcpMessageDecoder;
-import com.manuscripta.student.network.tcp.codec.TcpMessageEncoder;
-import com.manuscripta.student.network.tcp.core.ConnectionState;
 import com.manuscripta.student.network.tcp.core.TcpProtocolException;
-import com.manuscripta.student.network.tcp.core.TcpSocketManager;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import com.manuscripta.student.network.tcp.core.TcpProtocolException;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
