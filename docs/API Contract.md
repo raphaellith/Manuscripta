@@ -113,6 +113,8 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
+
+       // Array of ResponseEntity objects as defined in Validation Rules.md §2G, for example:
       "TextSize": 12,
       "FeedbackStyle": "IMMEDIATE",
       "TtsEnabled": true,
