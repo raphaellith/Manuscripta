@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.data.model.FeedbackEntity;
 import com.manuscripta.student.domain.model.Feedback;
-import com.manuscripta.student.network.FeedbackDto;
+import com.manuscripta.student.network.dto.FeedbackDto;
 
 import org.junit.Test;
 
