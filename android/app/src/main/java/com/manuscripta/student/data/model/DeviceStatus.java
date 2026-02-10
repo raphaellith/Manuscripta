@@ -10,11 +10,6 @@ public enum DeviceStatus {
     ON_TASK,
 
     /**
-     * Student has requested help.
-     */
-    HAND_RAISED,
-
-    /**
      * Device is disconnected or offline.
      */
     DISCONNECTED,

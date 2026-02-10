@@ -329,4 +329,21 @@ public class SessionDaoTest {
         assertEquals("device-2", sessionDao.getById("s-1").getDeviceId());
         assertEquals(1, sessionDao.getCount());
     }
+
+    @Test
+    public void testActivateSession() {
+        // Create session in RECEIVED state with startTime = 0
+        SessionEntity received = new SessionEntity(
+            "s-1", "mat-1", 0, 0, SessionStatus.RECEIVED, "device-1");
+        sessionDao.insert(received);
+
+        // Activate the session
+        long activationTime = System.currentTimeMillis();
+        sessionDao.activateSession("s-1", activationTime);
+
+        // Verify transition
+        SessionEntity activated = sessionDao.getById("s-1");
+        assertEquals(SessionStatus.ACTIVE, activated.getStatus());
+        assertEquals(activationTime, activated.getStartTime());
+    }
 }

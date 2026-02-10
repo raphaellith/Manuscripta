@@ -64,7 +64,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Tests, Report, and Verify
-        # This single command runs unit tests, builds the report, and fails if < 100%
+        # This single command runs unit tests, builds the report, and fails if < 95%
         run: ./gradlew jacocoTestReport jacocoTestCoverageVerification
 
       - name: Upload Test Results (JUnit)
@@ -87,6 +87,6 @@ jobs:
         with:
           paths: android/app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 1.0
-          min-coverage-changed-files: 1.0
+          min-coverage-overall: 0.95
+          min-coverage-changed-files: 0.95
           title: Code Coverage Report

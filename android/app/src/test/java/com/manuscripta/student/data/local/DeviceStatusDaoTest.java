@@ -19,6 +19,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -64,12 +65,12 @@ public class DeviceStatusDaoTest {
         DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, "mat-1", "view-1", System.currentTimeMillis());
         dao.insert(entity1);
 
-        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-1", DeviceStatus.HAND_RAISED, 90, "mat-2", "view-2", System.currentTimeMillis());
+        DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-1", DeviceStatus.IDLE, 90, "mat-2", "view-2", System.currentTimeMillis());
         dao.insert(entity2);
 
         DeviceStatusEntity retrieved = dao.getById("dev-1");
         assertNotNull(retrieved);
-        assertEquals(DeviceStatus.HAND_RAISED, retrieved.getStatus());
+        assertEquals(DeviceStatus.IDLE, retrieved.getStatus());
         assertEquals(90, retrieved.getBatteryLevel());
         assertEquals("mat-2", retrieved.getCurrentMaterialId());
         assertEquals("view-2", retrieved.getStudentView());
@@ -127,7 +128,7 @@ public class DeviceStatusDaoTest {
     public void testInsertAll() {
         DeviceStatusEntity entity1 = new DeviceStatusEntity("dev-1", DeviceStatus.ON_TASK, 100, null, null, System.currentTimeMillis());
         DeviceStatusEntity entity2 = new DeviceStatusEntity("dev-2", DeviceStatus.DISCONNECTED, 0, null, null, System.currentTimeMillis());
-        List<DeviceStatusEntity> list = java.util.Arrays.asList(entity1, entity2);
+        List<DeviceStatusEntity> list = Arrays.asList(entity1, entity2);
 
         dao.insertAll(list);
 
