@@ -39,9 +39,11 @@ This document specifies the process through which the two clients communicate du
 
 This is specified in `API Contract.md` §2.5.
 
-(5) The Android client must, on successful receipt of materials from the REST API end point defined in (4), send a TCP `DISTRIBUTE_ACK` (0x12) message as defined in `API Contract.md` §3.6.
+(5) The Android client must, on successful receipt of materials from the REST API endpoint defined in (4), send one TCP `DISTRIBUTE_ACK` (0x12) message per material received, as defined in `API Contract.md` §3.6. Each `DISTRIBUTE_ACK` message must contain the ID of the material being acknowledged.
 
-(6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message from a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message, it shall indicate to the user (teacher) that the distribution to that specific device has failed.
+(6) If the Windows client does not receive a `DISTRIBUTE_ACK` (0x12) message for every material distributed to a target Android device within 30 seconds of sending the `DISTRIBUTE_MATERIAL` message, it shall indicate to the user (teacher) that the distribution of the unacknowledged material(s) to that specific device has failed.
+
+(7) The Windows client shall prevent a material to be distributed repeatedly upon acknowledgement specified in subsection (5) is received, unless the material is re-deployed by the user.
 
 ## Section 4: Submitting a Response
 
@@ -135,6 +137,8 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 (3) For each feedback received from the endpoint in (2), the Android client must create a separate `FeedbackEntity`.
 
-(4) The Android client must, on successful receipt of feedback from the REST API endpoint defined in (2), send a TCP `FEEDBACK_ACK` (0x13) message, as defined in `API Contract.md` §3.6, to the Windows client.
+(4) The Android client must, on successful receipt of feedback from the REST API endpoint defined in (2), send one TCP `FEEDBACK_ACK` (0x13) message per feedback entity received, as defined in `API Contract.md` §3.6, to the Windows client. Each `FEEDBACK_ACK` message must contain the ID of the feedback entity being acknowledged.
 
-(5) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message from a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message, it shall indicate to the user (teacher) that it has failed to return feedback to that specific device.
+(5) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message for every feedback entity sent to a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message, it shall indicate to the user (teacher) that the return of the unacknowledged feedback item(s) to that specific device has failed.
+
+(6) The Windows client shall prevent a feedback to be distributed repeatedly upon acknowledgement specified in subsection (4) is received, unless the material is re-deployed by the user.
