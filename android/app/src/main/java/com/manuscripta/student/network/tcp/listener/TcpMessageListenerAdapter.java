@@ -6,7 +6,6 @@ import com.manuscripta.student.network.tcp.codec.TcpMessage;
 import com.manuscripta.student.network.tcp.core.ConnectionState;
 import com.manuscripta.student.network.tcp.core.TcpProtocolException;
 
-
 /**
  * Adapter class providing empty default implementations of {@link TcpMessageListener} methods.
  *
