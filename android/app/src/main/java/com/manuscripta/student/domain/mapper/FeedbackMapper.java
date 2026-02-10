@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.manuscripta.student.data.model.FeedbackEntity;
 import com.manuscripta.student.domain.model.Feedback;
-import com.manuscripta.student.network.FeedbackDto;
+import com.manuscripta.student.network.dto.FeedbackDto;
 
 /**
  * Mapper class to convert between FeedbackEntity (data layer), Feedback (domain layer),
