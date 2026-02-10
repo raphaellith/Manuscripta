@@ -20,7 +20,7 @@ public class MaterialDtoTest {
 
     private static final String TEST_ID = "550e8400-e29b-41d4-a716-446655440000";
     private static final String TEST_TYPE = "WORKSHEET";
-    private static final String TEST_TITLE = "Math Quiz Chapter 5";
+    private static final String TEST_TITLE = "Math Worksheet Chapter 5";
     private static final String TEST_CONTENT = "Question 1: What is 2+2?";
     private static final String TEST_METADATA = "{\"author\":\"Teacher\",\"subject\":\"Math\"}";
     private static final Long TEST_TIMESTAMP = 1234567890L;

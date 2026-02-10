@@ -221,8 +221,8 @@ public class QuestionMapperTest {
         assertEquals("Expected answer text", domain.getCorrectAnswer());
     }
 
-    @Test
-    public void testFromDto_NullQuestionTypeDefaultsToWrittenAnswer() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromDto_NullQuestionTypeThrows() {
         // Given
         QuestionDto dto = new QuestionDto(
                 TEST_ID,
@@ -234,15 +234,12 @@ public class QuestionMapperTest {
                 null
         );
 
-        // When
-        Question domain = QuestionMapper.fromDto(dto);
-
-        // Then
-        assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
+        // When - should throw for null type
+        QuestionMapper.fromDto(dto);
     }
 
-    @Test
-    public void testFromDto_UnknownQuestionTypeDefaultsToWrittenAnswer() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromDto_UnknownQuestionTypeThrows() {
         // Given
         QuestionDto dto = new QuestionDto(
                 TEST_ID,
@@ -254,11 +251,8 @@ public class QuestionMapperTest {
                 null
         );
 
-        // When
-        Question domain = QuestionMapper.fromDto(dto);
-
-        // Then
-        assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
+        // When - should throw for unrecognised type
+        QuestionMapper.fromDto(dto);
     }
 
     @Test

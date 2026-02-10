@@ -34,8 +34,8 @@ public class MaterialMapperTest {
         MaterialEntity entity = new MaterialEntity(
                 "test-id-123",
                 MaterialType.WORKSHEET,
-                "Test Quiz Title",
-                "Test quiz content with questions",
+                "Test Worksheet Title",
+                "Test worksheet content with questions",
                 "{\"author\":\"Teacher\",\"subject\":\"Math\"}",
                 "[\"algebra\",\"geometry\"]",
                 1234567890L
@@ -252,7 +252,7 @@ public class MaterialMapperTest {
         assertEquals(MaterialType.WORKSHEET, domain.getType());
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testFromDtoWithInvalidType() {
         // Given
         MaterialDto dto = new MaterialDto(
@@ -265,14 +265,11 @@ public class MaterialMapperTest {
                 TEST_TIMESTAMP
         );
 
-        // When
-        Material domain = MaterialMapper.fromDto(dto);
-
-        // Then - defaults to READING
-        assertEquals(MaterialType.READING, domain.getType());
+        // When - should throw for unrecognised type
+        MaterialMapper.fromDto(dto);
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testFromDtoWithNullType() {
         // Given
         MaterialDto dto = new MaterialDto(
@@ -285,11 +282,8 @@ public class MaterialMapperTest {
                 TEST_TIMESTAMP
         );
 
-        // When
-        Material domain = MaterialMapper.fromDto(dto);
-
-        // Then - defaults to READING
-        assertEquals(MaterialType.READING, domain.getType());
+        // When - should throw for null type
+        MaterialMapper.fromDto(dto);
     }
 
     @Test(expected = IllegalArgumentException.class)

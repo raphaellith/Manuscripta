@@ -151,7 +151,7 @@ public class MaterialListResponseDtoTest {
     public void testEqualsDifferentMaterials() {
         MaterialListResponseDto dto1 = createTestDto();
         MaterialListResponseDto dto2 = createTestDto();
-        dto2.setMaterials(Arrays.asList(new MaterialDto("diff", "QUIZ", "Diff", "", "", null, 0L)));
+        dto2.setMaterials(Arrays.asList(new MaterialDto("diff", "POLL", "Diff", "", "", null, 0L)));
 
         assertFalse(dto1.equals(dto2));
     }
@@ -282,7 +282,7 @@ public class MaterialListResponseDtoTest {
 
     private List<MaterialDto> createTestMaterials() {
         return Arrays.asList(
-                new MaterialDto("id-1", "WORKSHEET", "Quiz 1", "Content 1", "{}", null, 1000L),
+                new MaterialDto("id-1", "WORKSHEET", "Worksheet 1", "Content 1", "{}", null, 1000L),
                 new MaterialDto("id-2", "READING", "Reading 1", "Content 2", "{}", null, 2000L)
         );
     }

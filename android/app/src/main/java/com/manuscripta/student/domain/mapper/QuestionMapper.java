@@ -99,15 +99,11 @@ public final class QuestionMapper {
         }
 
         String questionTypeStr = dto.getQuestionType();
-        QuestionType questionType;
-        try {
-            questionType = questionTypeStr != null
-                    ? QuestionType.valueOf(questionTypeStr.trim().toUpperCase(Locale.ROOT))
-                    : QuestionType.WRITTEN_ANSWER;
-        } catch (IllegalArgumentException e) {
-            // Unknown type - silently default to WRITTEN_ANSWER
-            questionType = QuestionType.WRITTEN_ANSWER;
+        if (questionTypeStr == null || questionTypeStr.trim().isEmpty()) {
+            throw new IllegalArgumentException("QuestionDto questionType cannot be null or empty");
         }
+        QuestionType questionType =
+                QuestionType.valueOf(questionTypeStr.trim().toUpperCase(Locale.ROOT));
 
         // Convert options list to JSON array string
         String optionsJson = convertOptionsToJson(dto.getOptions());

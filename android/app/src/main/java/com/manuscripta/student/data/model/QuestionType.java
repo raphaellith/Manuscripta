@@ -1,7 +1,7 @@
 package com.manuscripta.student.data.model;
 
 /**
- * Enum representing different types of questions that can appear in quizzes.
+ * Enum representing different types of questions that can appear in worksheets and polls.
  * Used to determine how questions should be displayed and answered.
  */
 public enum QuestionType {

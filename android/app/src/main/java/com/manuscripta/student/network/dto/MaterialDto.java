@@ -27,7 +27,7 @@ public class MaterialDto {
     private String id;
 
     /**
-     * The type of material (e.g., "READING", "QUIZ", "WORKSHEET", "POLL").
+     * The type of material (e.g., "READING", "WORKSHEET", "POLL").
      */
     @SerializedName("Type")
     @Nullable
@@ -125,7 +125,7 @@ public class MaterialDto {
     /**
      * Gets the material type.
      *
-     * @return The type (e.g., "READING", "QUIZ")
+     * @return The type (e.g., "READING", "WORKSHEET", "POLL")
      */
     @Nullable
     public String getType() {
@@ -135,7 +135,7 @@ public class MaterialDto {
     /**
      * Sets the material type.
      *
-     * @param type The type (e.g., "READING", "QUIZ")
+     * @param type The type (e.g., "READING", "WORKSHEET", "POLL")
      */
     public void setType(@Nullable String type) {
         this.type = type;

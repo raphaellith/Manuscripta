@@ -56,7 +56,7 @@ public class FeedbackDaoTest {
         MaterialEntity material = new MaterialEntity(
                 "mat-1",
                 MaterialType.WORKSHEET,
-                "Test Quiz",
+                "Test Worksheet",
                 "Content",
                 "{}",
                 "[]",
