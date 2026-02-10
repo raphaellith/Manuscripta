@@ -3,21 +3,21 @@ package com.manuscripta.student.network.tcp.listener;
 import androidx.annotation.NonNull;
 
 import com.manuscripta.student.network.tcp.codec.TcpMessage;
-import com.manuscripta.student.network.tcp.codec.TcpMessageDecoder;
 import com.manuscripta.student.network.tcp.core.ConnectionState;
 import com.manuscripta.student.network.tcp.core.TcpProtocolException;
-import com.manuscripta.student.network.tcp.core.TcpSocketManager;
 
 /**
- * Listener interface for receiving TCP message events from {@link TcpSocketManager}.
+ * Listener interface for receiving TCP message events from
+ * {@link com.manuscripta.student.network.tcp.core.TcpSocketManager}.
  *
- * <p>Implementations of this interface can be registered with a {@link TcpSocketManager}
- * to receive notifications about incoming messages, connection state changes, and errors.
+ * <p>Implementations of this interface can be registered with a
+ * {@link com.manuscripta.student.network.tcp.core.TcpSocketManager} to receive notifications about
+ * incoming messages, connection state changes, and errors.
  *
  * <p>All callback methods are dispatched on the main (UI) thread for safe UI updates.
  *
- * @see TcpSocketManager#addMessageListener(TcpMessageListener)
- * @see TcpSocketManager#removeMessageListener(TcpMessageListener)
+ * @see com.manuscripta.student.network.tcp.core.TcpSocketManager#addMessageListener(TcpMessageListener)
+ * @see com.manuscripta.student.network.tcp.core.TcpSocketManager#removeMessageListener(TcpMessageListener)
  * @see TcpMessageListenerAdapter
  */
 public interface TcpMessageListener {
@@ -26,7 +26,8 @@ public interface TcpMessageListener {
      * Called when a message is received from the server.
      *
      * <p>This method is invoked on the main thread after a TCP message has been
-     * successfully decoded by the {@link TcpMessageDecoder}.
+     * successfully decoded by the
+     * {@link com.manuscripta.student.network.tcp.codec.TcpMessageDecoder}.
      *
      * @param message The received message. Never null.
      */
