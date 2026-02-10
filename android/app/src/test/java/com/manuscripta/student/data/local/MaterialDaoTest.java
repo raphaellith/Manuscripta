@@ -94,10 +94,10 @@ public class MaterialDaoTest {
 
     @Test
     public void testGetByType() {
-        MaterialEntity quiz = new MaterialEntity(
+        MaterialEntity worksheet = new MaterialEntity(
                 "mat-1", 
                 MaterialType.WORKSHEET, 
-                "Quiz",
+                "Worksheet",
                 "Content", "{}", "[]", 0
         );
         MaterialEntity reading = new MaterialEntity(
@@ -106,12 +106,12 @@ public class MaterialDaoTest {
                 "Reading",
                 "Content", "{}", "[]", 0
         );
-        materialDao.insert(quiz);
+        materialDao.insert(worksheet);
         materialDao.insert(reading);
 
-        List<MaterialEntity> quizzes = materialDao.getByType(MaterialType.WORKSHEET);
-        assertEquals(1, quizzes.size());
-        assertEquals("Quiz", quizzes.get(0).getTitle());
+        List<MaterialEntity> worksheets = materialDao.getByType(MaterialType.WORKSHEET);
+        assertEquals(1, worksheets.size());
+        assertEquals("Worksheet", worksheets.get(0).getTitle());
     }
 
     @Test
