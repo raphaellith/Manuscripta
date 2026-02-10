@@ -282,7 +282,7 @@ public class MaterialListResponseDtoTest {
 
     private List<MaterialDto> createTestMaterials() {
         return Arrays.asList(
-                new MaterialDto("id-1", "QUIZ", "Quiz 1", "Content 1", "{}", null, 1000L),
+                new MaterialDto("id-1", "WORKSHEET", "Quiz 1", "Content 1", "{}", null, 1000L),
                 new MaterialDto("id-2", "READING", "Reading 1", "Content 2", "{}", null, 2000L)
         );
     }

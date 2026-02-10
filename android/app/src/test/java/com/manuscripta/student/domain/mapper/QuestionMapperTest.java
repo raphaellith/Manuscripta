@@ -544,7 +544,7 @@ public class QuestionMapperTest {
                 TEST_ID,
                 TEST_MATERIAL_ID,
                 "True or false: The sky is blue",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"True\",\"False\"]",
                 "True"
         );
@@ -556,7 +556,7 @@ public class QuestionMapperTest {
         assertNotNull(dto);
         assertEquals(TEST_ID, dto.getId());
         assertEquals(TEST_MATERIAL_ID, dto.getMaterialId());
-        assertEquals("TRUE_FALSE", dto.getQuestionType());
+        assertEquals("MULTIPLE_CHOICE", dto.getQuestionType());
         assertEquals("True or false: The sky is blue", dto.getQuestionText());
         assertEquals(Arrays.asList("True", "False"), dto.getOptions());
         assertEquals("True", dto.getCorrectAnswer());
