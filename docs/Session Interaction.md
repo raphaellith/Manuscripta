@@ -137,4 +137,4 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
 (5) If the Windows client does not receive a `FEEDBACK_ACK` (0x13) message for every feedback entity sent to a target Android device within 30 seconds of sending the `RETURN_FEEDBACK` message, it shall indicate to the user (teacher) that the return of the unacknowledged feedback item(s) to that specific device has failed.
 
-(6) The Windows client shall prevent a feedback to be distributed repeatedly upon acknowledgement specified in subsection (4) is received, unless the material is re-deployed by the user.
+(6) The Windows client shall prevent a feedback to be distributed repeatedly upon acknowledgement specified in subsection (4) is received, unless the feedback is re-deployed by the user.
