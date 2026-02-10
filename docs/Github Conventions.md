@@ -35,7 +35,7 @@ Each issue or pull request, if applicable, should be marked with either an ```an
 A pull request should only be merged after it is approved by the other member of your subteam. Each subteam may request PR reviews from the other subteam should they deem the PR to be of considerable significance.
 
 
-## PR Workflow *(agreed 10 Feb 2026)*
+## PR Workflow
 
 Every team member is responsible for understanding and owning the code they write and the code they approve.
 
@@ -101,7 +101,7 @@ A PR may only be merged once all of the following are satisfied:
 - No merge conflicts
 
 
-## Communication *(agreed 10 Feb 2026)*
+## Communication
 
 GitHub and WhatsApp are our primary communication channels. It is essential that every team member is genuinely reading and engaging with what others write.
 
