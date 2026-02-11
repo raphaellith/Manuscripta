@@ -66,7 +66,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) if the backend process fails to start due to the designated port being unavailable, the frontend shall retry with the next port in accordance with subsection (8)(c).
     
-    (d) A frontend in development mode shall in no circumstances connect to a backend not spawned by itself.
+    (d) A frontend in deployment mode shall in no circumstances connect to a backend not spawned by itself.
 
 (4) **Splash Screen**
 
