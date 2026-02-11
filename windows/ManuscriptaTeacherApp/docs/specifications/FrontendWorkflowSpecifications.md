@@ -48,21 +48,25 @@ For a list of all server method and client handlers to be implemented for commun
 
     When the frontend application is launched —
 
-    (a) the frontend shall first determine whether a backend process is already listening on the designated port by performing a health probe as specified in subsection (5)(a).
+    (a) the frontend shall first determine whether a backend process is already listening on the designated port by performing a health probe as specified in subsection (5)(a), starting with the default port and proceeding through alternative ports as specified in subsection (8)(c) if necessary.
 
-    (b) If a backend process is already running and responds to the health probe —
+    (b) If the frontend is launched in development mode, and if a backend process is already running and responds to the health probe —
 
         (i) the frontend shall not spawn a new backend process;
 
         (ii) the frontend shall proceed to display the main application window as specified in subsection (6).
 
-    (c) If no backend process is detected —
+    (c) Unless paragraph (b) applies —
 
         (i) the frontend shall spawn the backend executable as a child process using Node.js `child_process.spawn`.
 
-        (ii) the backend shall be started with the command-line argument `--urls http://localhost:5910` to bind to the designated port.
+        (ii) the backend shall be started with the command-line argument `--urls http://localhost:{PORT}` to bind to the designated port.
 
         (iii) the frontend shall capture the backend's standard output and standard error streams for diagnostic purposes.
+
+        (iv) if the backend process fails to start due to the designated port being unavailable, the frontend shall retry with the next port in accordance with subsection (8)(c).
+    
+    (d) A frontend in development mode shall in no circumstances connect to a backend not spawned by itself.
 
 (4) **Splash Screen**
 
@@ -78,7 +82,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (5) **Backend Readiness Confirmation**
 
-    (a) The frontend shall poll the backend's health endpoint at `GET http://localhost:5910/` at intervals of 500 milliseconds.
+    (a) The frontend shall poll the backend's health endpoint at `GET http://localhost:{PORT}/` at intervals of 500 milliseconds.
 
     (b) The backend shall be considered ready when the health endpoint returns an HTTP 200 response.
 
@@ -143,6 +147,18 @@ For a list of all server method and client handlers to be implemented for commun
         (iii) the SignalR connection URL.
 
     (b) The default designated port for SignalR communications shall be 5910.
+
+    (c) If the default port specified in paragraph (b) is unavailable —
+
+        (i) the frontend shall attempt to bind to alternative ports by incrementing the port number sequentially, starting from 5914 up to and including 5919.
+
+        (ii) a port shall be considered unavailable if the backend process fails to start due to an address-in-use error, or if another process is already listening on that port as determined by a health probe returning an unexpected response.
+
+        (iii) if all ports in the range 5914 to 5919 are unavailable, the frontend shall display an error message to the user indicating the application failed to start.
+
+        (iv) upon successful binding to an alternative port, the frontend shall use that port for all subsequent communications within that application session.
+
+    (d) In this section, references to "{PORT}" shall be substituted with the designated port as selected in accordance with paragraphs (b) and (c) above.
 
 
 ### Section 2 — Establishing a Connection and Bidirectional Communication
