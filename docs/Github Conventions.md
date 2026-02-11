@@ -34,8 +34,6 @@ Each issue or pull request, if applicable, should be marked with either an ```an
 
 A pull request should only be merged after it is approved by the other member of your subteam. Each subteam may request PR reviews from the other subteam should they deem the PR to be of considerable significance.
 
-Issues can only be closed once their respective PRs have been merged either into our dev branches or main.
-
 ## Documentation
 
 All forms of system-wide documentation should be stored as Markdown files in the ```docs``` directory. Any change to this directory's contents must be approved by all team members via a PR.

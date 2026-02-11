@@ -81,3 +81,7 @@ Using AI to help you think through a problem or understand a concept is fine. Bu
 ### Why this matters
 
 Our GitHub threads and WhatsApp chats are how we stay aligned on design decisions, surface problems, and coordinate work outside of in person meetings. If someone posts an AI-generated reply without reading the original message, the conversation and shared context breaks down and decisions get made without consensus.
+
+### Closing Issues
+
+Issues can only be closed once their respective PRs have been merged either into our dev branches or main.
