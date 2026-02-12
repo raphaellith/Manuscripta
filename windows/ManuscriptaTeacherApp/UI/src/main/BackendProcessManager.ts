@@ -287,10 +287,21 @@ export class BackendProcessManager {
     private async startInternal(checkExisting: boolean): Promise<void> {
         this.setState(BackendState.STARTING);
 
-        // Per §2ZA(8)(b-c): Try default port first, then alternative range (skipping 5911-5913)
-        const portsToTry = [DEFAULT_BACKEND_PORT];
+        // Per §2ZA(8)(b-c): Determine port order.
+        // On fresh start, try default port first, then alternative range.
+        // On restart (checkExisting === false), prefer reusing this.currentPort first,
+        // then fall back to default and alternatives if needed.
+        const portsToTry: number[] = [];
+        if (!checkExisting && this.currentPort != null) {
+            portsToTry.push(this.currentPort);
+        }
+        if (!portsToTry.includes(DEFAULT_BACKEND_PORT)) {
+            portsToTry.push(DEFAULT_BACKEND_PORT);
+        }
         for (let port = ALTERNATIVE_PORT_RANGE_MIN; port <= ALTERNATIVE_PORT_RANGE_MAX; port++) {
-            portsToTry.push(port);
+            if (!portsToTry.includes(port)) {
+                portsToTry.push(port);
+            }
         }
 
         for (const port of portsToTry) {
