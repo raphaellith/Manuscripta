@@ -328,7 +328,21 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
         try
         {
-            await SendCommandAsync(deviceId, BinaryOpcodes.DistributeMaterial, null);
+            var sent = await SendCommandAsync(deviceId, BinaryOpcodes.DistributeMaterial, null);
+            if (!sent)
+            {
+                // Device not connected - fail immediately for all materials
+                _logger.LogWarning("Device {DeviceId} not connected, failing distribution immediately", deviceId);
+                if (Guid.TryParse(deviceId, out var deviceGuid))
+                {
+                    foreach (var materialId in materialIdList)
+                    {
+                        Console.WriteLine($"[ERROR] Distribution of material {materialId} to device {deviceId} failed (Not connected)");
+                        DistributionTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, materialId));
+                    }
+                }
+                return;
+            }
             _logger.LogInformation("Sent DISTRIBUTE_MATERIAL to {DeviceId} for {Count} materials", deviceId, materialIdList.Count);
 
             // Wait for 30 seconds for all ACKs (per Session Interaction §3(6))
@@ -388,7 +402,21 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
         try
         {
-            await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
+            var sent = await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
+            if (!sent)
+            {
+                // Device not connected - fail immediately for all feedbacks
+                _logger.LogWarning("Device {DeviceId} not connected, failing feedback delivery immediately", deviceId);
+                if (Guid.TryParse(deviceId, out var deviceGuid))
+                {
+                    foreach (var feedbackId in feedbackIdList)
+                    {
+                        Console.WriteLine($"[ERROR] Feedback {feedbackId} delivery to device {deviceId} failed (Not connected)");
+                        FeedbackDeliveryTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, feedbackId));
+                    }
+                }
+                return;
+            }
             _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId} for {Count} feedbacks", deviceId, feedbackIdList.Count);
 
             // Wait for 30 seconds for all ACKs (per Session Interaction §7(5))
@@ -470,7 +498,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         Console.WriteLine($"[INFO] Device {deviceId} has been unpaired");
     }
 
-    private async Task SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
+    private async Task<bool> SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
     {
         // Per Pairing Process.md §2(4), we must have stored the deviceId during the pairing phase.
         // We look up the active TCP connection associated with this deviceId from our registry.
@@ -482,7 +510,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         else 
         {
             _logger.LogWarning("Client {DeviceId} not connected", deviceId);
-            return;
+            return false;
         }
 
         try {
@@ -495,8 +523,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             }
             await stream.WriteAsync(message, 0, message.Length);
             _logger.LogInformation("Sent opcode {Opcode:X2} to {DeviceId}", opcode, deviceId);
+            return true;
         } catch (Exception ex) {
             _logger.LogError(ex, "Failed to send command to {DeviceId}", deviceId);
+            return false;
         }
     }
 

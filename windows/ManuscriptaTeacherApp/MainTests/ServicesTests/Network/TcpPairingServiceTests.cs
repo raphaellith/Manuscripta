@@ -268,24 +268,29 @@ public class TcpPairingServiceTests : IDisposable
     #region SendDistributeMaterialAsync Tests
 
     [Fact]
-    public async Task SendDistributeMaterialAsync_WhenDeviceNotConnected_LogsWarningAndTimesOut()
+    public async Task SendDistributeMaterialAsync_WhenDeviceNotConnected_FailsImmediately()
     {
         // Arrange
         var deviceId = Guid.NewGuid().ToString();
         var materialIds = new[] { Guid.NewGuid() };
+        var eventRaised = false;
+        _service.DistributionTimedOut += (sender, args) => eventRaised = true;
 
-        // Act - Timeout is 30s but device is not connected so it will skip the wait
+        // Act - Device not connected, should fail immediately (no 30s wait)
         await _service.SendDistributeMaterialAsync(deviceId, materialIds);
 
-        // Assert - Verify warning was logged about client not connected
+        // Assert - Verify warning was logged about failing distribution immediately
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("failing distribution immediately")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+        
+        // Assert - DistributionTimedOut event should be raised for each material
+        Assert.True(eventRaised, "DistributionTimedOut event should be raised when device not connected");
     }
 
     #endregion
