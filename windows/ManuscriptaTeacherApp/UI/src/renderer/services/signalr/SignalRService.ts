@@ -310,8 +310,9 @@ class SignalRService {
     /**
      * Subscribe to distribution failure events.
      * Per NetworkingAPISpec §2(1)(d)(ii).
+     * Payload includes deviceId and materialId per API Contract §3.6.2.
      */
-    public onDistributionFailed(callback: (deviceId: string) => void): () => void {
+    public onDistributionFailed(callback: (payload: { deviceId: string; materialId: string }) => void): () => void {
         this.connection.on("DistributionFailed", callback);
         return () => this.connection.off("DistributionFailed", callback);
     }
@@ -328,8 +329,9 @@ class SignalRService {
     /**
      * Subscribe to feedback delivery failure events.
      * Per NetworkingAPISpec §2(1)(d)(v).
+     * Payload includes deviceId and feedbackId per API Contract §3.6.2.
      */
-    public onFeedbackDeliveryFailed(callback: (deviceId: string) => void): () => void {
+    public onFeedbackDeliveryFailed(callback: (payload: { deviceId: string; feedbackId: string }) => void): () => void {
         this.connection.on("FeedbackDeliveryFailed", callback);
         return () => this.connection.off("FeedbackDeliveryFailed", callback);
     }
@@ -448,8 +450,9 @@ class SignalRService {
     /**
      * Subscribe to feedback dispatch failure events.
      * Per NetworkingAPISpec §2(1)(c)(i).
+     * Payload includes feedbackId and deviceId per API Contract §3.6.2.
      */
-    public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
+    public onFeedbackDispatchFailed(callback: (payload: { feedbackId: string; deviceId: string }) => void): () => void {
         this.connection.on("FeedbackDeliveryFailed", callback);
         return () => this.connection.off("FeedbackDeliveryFailed", callback);
     }
