@@ -300,14 +300,15 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     // Key: "deviceId:materialId", Value: ack received
     private readonly ConcurrentDictionary<string, bool> _distributionAcksReceived = new();
     // Pending materials awaiting ACK per device
-    // Key: deviceId, Value: set of pending material IDs
-    private readonly ConcurrentDictionary<string, HashSet<Guid>> _pendingMaterials = new();
+    // Key: deviceId, Value: thread-safe set of pending material IDs (using ConcurrentDictionary<Guid, byte> as set)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingMaterials = new();
     
     // Per-entity tracking for feedback ACKs (Session Interaction §7(6) - prevent repeated distribution)
     // Key: "deviceId:feedbackId", Value: ack received
     private readonly ConcurrentDictionary<string, bool> _feedbackAcksReceived = new();
     // Pending feedbacks awaiting ACK per device
-    private readonly ConcurrentDictionary<string, HashSet<Guid>> _pendingFeedbacks = new();
+    // Key: deviceId, Value: thread-safe set of pending feedback IDs (using ConcurrentDictionary<Guid, byte> as set)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingFeedbacks = new();
 
     /// <summary>
     /// Sends DISTRIBUTE_MATERIAL (0x05) to device and waits for DISTRIBUTE_ACK for all materials.
@@ -322,8 +323,8 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             return;
         }
 
-        // Track pending materials for this device
-        _pendingMaterials[deviceId] = new HashSet<Guid>(materialIdList);
+        // Track pending materials for this device (thread-safe set)
+        _pendingMaterials[deviceId] = new ConcurrentDictionary<Guid, byte>(materialIdList.Select(id => new KeyValuePair<Guid, byte>(id, 0)));
 
         try
         {
@@ -347,7 +348,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                     
                     if (Guid.TryParse(deviceId, out var deviceGuid))
                     {
-                        foreach (var materialId in pending.ToList())
+                        foreach (var materialId in pending.Keys.ToList())
                         {
                             Console.WriteLine($"[ERROR] Distribution of material {materialId} to device {deviceId} failed (Timeout)");
                             DistributionTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, materialId));
@@ -382,8 +383,8 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             return;
         }
 
-        // Track pending feedbacks for this device
-        _pendingFeedbacks[deviceId] = new HashSet<Guid>(feedbackIdList);
+        // Track pending feedbacks for this device (thread-safe set)
+        _pendingFeedbacks[deviceId] = new ConcurrentDictionary<Guid, byte>(feedbackIdList.Select(id => new KeyValuePair<Guid, byte>(id, 0)));
 
         try
         {
@@ -407,7 +408,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                     
                     if (Guid.TryParse(deviceId, out var deviceGuid))
                     {
-                        foreach (var feedbackId in pending.ToList())
+                        foreach (var feedbackId in pending.Keys.ToList())
                         {
                             Console.WriteLine($"[ERROR] Feedback {feedbackId} delivery to device {deviceId} failed (Timeout)");
                             FeedbackDeliveryTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, feedbackId));
@@ -594,10 +595,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 var key = $"{deviceIdString}:{materialIdString}";
                 _distributionAcksReceived[key] = true;
 
-                // Remove from pending materials for this device
+                // Remove from pending materials for this device (thread-safe)
                 if (_pendingMaterials.TryGetValue(deviceIdString, out var pending))
                 {
-                    pending.Remove(materialGuid);
+                    pending.TryRemove(materialGuid, out _);
                 }
 
                 // Fire event for per-material acknowledgement
@@ -635,10 +636,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 var key = $"{deviceIdString}:{feedbackIdString}";
                 _feedbackAcksReceived[key] = true;
 
-                // Remove from pending feedbacks for this device
+                // Remove from pending feedbacks for this device (thread-safe)
                 if (_pendingFeedbacks.TryGetValue(deviceIdString, out var pending))
                 {
-                    pending.Remove(feedbackGuid);
+                    pending.TryRemove(feedbackGuid, out _);
                 }
 
                 // Fire event for per-feedback acknowledgement and status transition
