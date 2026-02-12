@@ -10,8 +10,10 @@ import * as path from 'path';
 import * as http from 'http';
 import { app } from 'electron';
 import {
-    BACKEND_PORT,
-    BACKEND_HEALTH_URL,
+    DEFAULT_BACKEND_PORT,
+    ALTERNATIVE_PORT_RANGE_MIN,
+    ALTERNATIVE_PORT_RANGE_MAX,
+    getBackendHealthUrl,
     BACKEND_EXECUTABLE_NAME,
     BACKEND_RESOURCE_DIR,
 } from './config';
@@ -34,6 +36,7 @@ export enum BackendState {
 export class BackendProcessManager {
     private process: ChildProcess | null = null;
     private state: BackendState = BackendState.STOPPED;
+    private currentPort: number = DEFAULT_BACKEND_PORT; // Per §2ZA(8)(c)(iv): Track active port
     private restartAttempts = 0;
     private restartDelay = 1000; // Initial delay: 1 second
     private lastSuccessfulStart: number | null = null;
@@ -74,18 +77,21 @@ export class BackendProcessManager {
     /**
      * Checks if the backend is already running by probing the health endpoint.
      * Per FrontendWorkflowSpecifications §2ZA(3)(a).
+     * @param port - The port to check
      */
-    private async isBackendAlreadyRunning(): Promise<boolean> {
-        return this.probeHealth();
+    private async isBackendAlreadyRunning(port: number): Promise<boolean> {
+        return this.probeHealth(port);
     }
 
     /**
      * Probes the backend health endpoint.
      * Per FrontendWorkflowSpecifications §2ZA(5)(a-b).
+     * @param port - The port to probe
      */
-    private probeHealth(): Promise<boolean> {
+    private probeHealth(port: number): Promise<boolean> {
         return new Promise((resolve) => {
-            const req = http.get(BACKEND_HEALTH_URL, { timeout: 2000 }, (res) => {
+            const healthUrl = getBackendHealthUrl(port);
+            const req = http.get(healthUrl, { timeout: 2000 }, (res) => {
                 resolve(res.statusCode === 200);
             });
             req.on('error', () => resolve(false));
@@ -109,7 +115,7 @@ export class BackendProcessManager {
                 return;
             }
             
-            const healthy = await this.probeHealth();
+            const healthy = await this.probeHealth(this.currentPort);
             if (!healthy && this.state === BackendState.RUNNING) {
                 console.log('Health monitor detected backend is no longer responding');
                 this.stopHealthMonitoring();
@@ -131,12 +137,13 @@ export class BackendProcessManager {
     /**
      * Waits for the backend to become ready.
      * Per FrontendWorkflowSpecifications §2ZA(5).
+     * @param port - The port to check for readiness
      */
-    private async waitForReady(): Promise<boolean> {
+    private async waitForReady(port: number): Promise<boolean> {
         const startTime = Date.now();
         
         while (Date.now() - startTime < this.MAX_STARTUP_WAIT_MS) {
-            if (await this.probeHealth()) {
+            if (await this.probeHealth(port)) {
                 return true;
             }
             await this.sleep(this.HEALTH_POLL_INTERVAL_MS);
@@ -148,44 +155,67 @@ export class BackendProcessManager {
     /**
      * Spawns the backend process.
      * Per FrontendWorkflowSpecifications §2ZA(3)(c).
+     * @param port - The port to bind the backend to
+     * @returns Promise that resolves to true if spawned successfully, false if port is unavailable
      */
-    private spawnBackend(): void {
-        const executablePath = this.getBackendExecutablePath();
-        
-        // Per §2ZA(3)(c)(ii): Start with --urls argument
-        this.process = spawn(executablePath, [`--urls`, `http://localhost:${BACKEND_PORT}`], {
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: false,
-            windowsHide: true,
-            cwd: path.dirname(executablePath),
-        });
-
-        // Per §2ZA(3)(c)(iii): Capture stdout and stderr for diagnostics
-        this.process.stdout?.on('data', (data) => {
-            console.log(`[Backend stdout]: ${data.toString().trim()}`);
-        });
-
-        this.process.stderr?.on('data', (data) => {
-            console.error(`[Backend stderr]: ${data.toString().trim()}`);
-        });
-
-        // Per §2ZA(6)(a): Monitor for unexpected termination
-        this.process.on('exit', (code, signal) => {
-            console.log(`Backend process exited with code ${code}, signal ${signal}`);
-            this.process = null;
+    private spawnBackend(port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const executablePath = this.getBackendExecutablePath();
+            let addressInUseDetected = false;
             
-            if (!this.isShuttingDown) {
-                this.handleUnexpectedExit();
-            }
-        });
+            // Per §2ZA(3)(c)(ii): Start with --urls argument
+            this.process = spawn(executablePath, [`--urls`, `http://localhost:${port}`], {
+                stdio: ['ignore', 'pipe', 'pipe'],
+                detached: false,
+                windowsHide: true,
+                cwd: path.dirname(executablePath),
+            });
 
-        this.process.on('error', (err) => {
-            console.error(`Backend process error: ${err.message}`);
-            this.process = null;
-            
-            if (!this.isShuttingDown) {
-                this.handleUnexpectedExit();
-            }
+            // Per §2ZA(3)(c)(iii): Capture stdout and stderr for diagnostics
+            this.process.stdout?.on('data', (data) => {
+                console.log(`[Backend stdout]: ${data.toString().trim()}`);
+            });
+
+            this.process.stderr?.on('data', (data) => {
+                const output = data.toString();
+                console.error(`[Backend stderr]: ${output.trim()}`);
+                // Per §2ZA(8)(c)(ii): Detect address-in-use error
+                if (output.includes('EADDRINUSE') || output.includes('address already in use') || output.includes('Address already in use')) {
+                    addressInUseDetected = true;
+                }
+            });
+
+            // Per §2ZA(6)(a): Monitor for unexpected termination
+            this.process.on('exit', (code, signal) => {
+                console.log(`Backend process exited with code ${code}, signal ${signal}`);
+                const proc = this.process;
+                this.process = null;
+                
+                // If process exited very quickly with non-zero code, likely port issue
+                // Per §2ZA(8)(c)(ii): Treat rapid exit as port unavailable
+                if (addressInUseDetected || (code !== 0 && code !== null)) {
+                    resolve(false);
+                    return;
+                }
+                
+                if (!this.isShuttingDown && proc !== null) {
+                    this.handleUnexpectedExit();
+                }
+            });
+
+            this.process.on('error', (err) => {
+                console.error(`Backend process error: ${err.message}`);
+                this.process = null;
+                resolve(false);
+            });
+
+            // Give the process a moment to fail if port is in use
+            // If it doesn't fail quickly, assume spawn was successful
+            setTimeout(() => {
+                if (this.process !== null) {
+                    resolve(true);
+                }
+            }, 1000);
         });
     }
 
@@ -245,38 +275,72 @@ export class BackendProcessManager {
 
     /**
      * Internal start logic.
+     * Per FrontendWorkflowSpecifications §2ZA(3) and §2ZA(8)(c).
      * @param checkExisting Whether to check for existing backend process.
      */
     private async startInternal(checkExisting: boolean): Promise<void> {
         this.setState(BackendState.STARTING);
 
-        // Per §2ZA(3)(a-b): Check if backend is already running
-        if (checkExisting && await this.isBackendAlreadyRunning()) {
-            console.log('Backend already running, skipping spawn');
-            this.lastSuccessfulStart = Date.now();
-            this.setState(BackendState.RUNNING);
-            // Start health monitoring since we don't have a process handle
-            // This allows us to detect when an externally-started backend goes down
-            this.startHealthMonitoring();
-            this.notifyReady();
-            return;
+        // Per §2ZA(8)(b-c): Try default port first, then alternative range (skipping 5911-5913)
+        const portsToTry = [DEFAULT_BACKEND_PORT];
+        for (let port = ALTERNATIVE_PORT_RANGE_MIN; port <= ALTERNATIVE_PORT_RANGE_MAX; port++) {
+            portsToTry.push(port);
         }
 
-        // Per §2ZA(3)(c): Spawn the backend
-        this.spawnBackend();
+        for (const port of portsToTry) {
+            console.log(`Trying port ${port}...`);
 
-        // Per §2ZA(5): Wait for backend to become ready
-        const ready = await this.waitForReady();
+            // Per §2ZA(3)(a-b): Check if backend is already running on this port
+            // Per §2ZA(3)(d): In deployment mode, never connect to a backend not spawned by itself
+            if (checkExisting && !app.isPackaged && await this.isBackendAlreadyRunning(port)) {
+                // Development mode only: connect to an existing backend
+                // Per §2ZA(3)(b): If already running and responds, use it
+                console.log(`[Dev mode] Backend already running on port ${port}, skipping spawn`);
+                this.currentPort = port;
+                this.lastSuccessfulStart = Date.now();
+                this.setState(BackendState.RUNNING);
+                // Start health monitoring since we don't have a process handle
+                this.startHealthMonitoring();
+                this.notifyReady();
+                return;
+            }
 
-        if (ready) {
-            this.lastSuccessfulStart = Date.now();
-            this.setState(BackendState.RUNNING);
-            this.notifyReady();
-        } else {
-            // Per §2ZA(5)(d): Backend did not become ready in time
-            this.killProcess();
-            throw new Error('Backend did not become ready within timeout period');
+            // Per §2ZA(3)(c): Spawn the backend on this port
+            // Per §2ZA(3)(c)(iv) and §2ZA(8)(c)(i-ii): Retry with next port if unavailable
+            const spawned = await this.spawnBackend(port);
+            if (!spawned) {
+                console.log(`Port ${port} unavailable, trying next...`);
+                continue;
+            }
+
+            // Per §2ZA(5): Wait for backend to become ready
+            const ready = await this.waitForReady(port);
+
+            if (ready) {
+                // Per §2ZA(8)(c)(iv): Use this port for all subsequent communications
+                this.currentPort = port;
+                this.lastSuccessfulStart = Date.now();
+                this.setState(BackendState.RUNNING);
+                console.log(`Backend successfully started on port ${port}`);
+                this.notifyReady();
+                return;
+            } else {
+                // Per §2ZA(5)(d): Backend did not become ready in time
+                this.killProcess();
+                console.log(`Backend failed to become ready on port ${port}, trying next...`);
+            }
         }
+
+        // Per §2ZA(8)(c)(iii): All ports exhausted
+        throw new Error(`No available port found. Tried ${DEFAULT_BACKEND_PORT} and ${ALTERNATIVE_PORT_RANGE_MIN}-${ALTERNATIVE_PORT_RANGE_MAX}. Please close other applications and try again.`);
+    }
+
+    /**
+     * Gets the currently active backend port.
+     * Per FrontendWorkflowSpecifications §2ZA(8)(c)(iv).
+     */
+    public getActivePort(): number {
+        return this.currentPort;
     }
 
     /**
@@ -287,6 +351,7 @@ export class BackendProcessManager {
         this.isShuttingDown = false;
         this.restartAttempts = 0;
         this.restartDelay = 1000;
+        this.currentPort = DEFAULT_BACKEND_PORT;
         
         await this.startInternal(true);
     }

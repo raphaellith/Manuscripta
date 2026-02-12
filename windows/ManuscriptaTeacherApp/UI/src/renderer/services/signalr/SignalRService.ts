@@ -21,12 +21,6 @@ import type {
 } from "../../models";
 
 /**
- * SignalR hub URL.
- * Per FrontendWorkflowSpecifications §1(1)(a) and §2(2)(d).
- */
-const SIGNALR_HUB_URL = "http://localhost:5910/TeacherPortalHub";
-
-/**
  * Custom retry policy that retries indefinitely with capped exponential backoff.
  * Per FrontendWorkflowSpecifications §2(4)(a-b).
  */
@@ -44,17 +38,40 @@ class InfiniteRetryPolicy implements signalR.IRetryPolicy {
 }
 
 /**
+ * Pending subscription entry for deferred handler registration.
+ */
+interface PendingSubscription {
+    methodName: string;
+    callback: (...args: unknown[]) => void;
+}
+
+/**
  * SignalR service for communication with Main backend.
  * Per NetworkingAPISpec §1(1).
  */
 class SignalRService {
-    private connection: signalR.HubConnection;
+    private connection: signalR.HubConnection | null = null;
     private connectionStateCallbacks: Array<(state: signalR.HubConnectionState) => void> = [];
+    private pendingSubscriptions: PendingSubscription[] = [];
+    private initialized = false;
 
-    constructor() {
+    /**
+     * Initializes the SignalR connection with the dynamically determined backend port.
+     * Per FrontendWorkflowSpecifications §2ZA(8)(c)(iv): Use port from IPC.
+     */
+    public async initialize(): Promise<void> {
+        if (this.initialized && this.connection) {
+            return;
+        }
+
+        // Get the active backend port from main process
+        const port = await window.electronAPI.getBackendPort();
+        const hubUrl = `http://localhost:${port}/TeacherPortalHub`;
+        console.log(`SignalR initializing with hub URL: ${hubUrl}`);
+
         // Per FrontendWorkflowSpecifications §2(4)(a): Custom retry policy that retries indefinitely
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(SIGNALR_HUB_URL)
+            .withUrl(hubUrl)
             .withAutomaticReconnect(new InfiniteRetryPolicy())
             .configureLogging(signalR.LogLevel.Information)
             .build();
@@ -74,6 +91,59 @@ class SignalRService {
             console.log("SignalR connection closed:", error);
             this.notifyConnectionStateChange(signalR.HubConnectionState.Disconnected);
         });
+
+        // Apply any pending subscriptions that were registered before initialization
+        this.applyPendingSubscriptions();
+
+        this.initialized = true;
+    }
+
+    /**
+     * Applies pending subscriptions to the connection.
+     * Called after the connection is created.
+     */
+    private applyPendingSubscriptions(): void {
+        if (!this.connection) return;
+        
+        for (const sub of this.pendingSubscriptions) {
+            this.connection.on(sub.methodName, sub.callback);
+        }
+        console.log(`Applied ${this.pendingSubscriptions.length} pending SignalR subscriptions`);
+    }
+
+    /**
+     * Subscribes to a hub method, deferring if connection not yet initialized.
+     * Returns an unsubscribe function.
+     */
+    private subscribe<T extends (...args: unknown[]) => void>(methodName: string, callback: T): () => void {
+        if (this.connection) {
+            // Connection exists, subscribe directly
+            this.connection.on(methodName, callback);
+            return () => this.connection?.off(methodName, callback);
+        } else {
+            // Connection not yet initialized, queue the subscription
+            const pending: PendingSubscription = { methodName, callback };
+            this.pendingSubscriptions.push(pending);
+            return () => {
+                // Remove from pending if not yet applied
+                const index = this.pendingSubscriptions.indexOf(pending);
+                if (index > -1) {
+                    this.pendingSubscriptions.splice(index, 1);
+                }
+                // Also remove from connection in case it was applied
+                this.connection?.off(methodName, callback);
+            };
+        }
+    }
+
+    /**
+     * Ensures the connection is initialized before use.
+     */
+    private async ensureInitialized(): Promise<signalR.HubConnection> {
+        if (!this.connection) {
+            await this.initialize();
+        }
+        return this.connection!;
     }
 
     /**
@@ -81,17 +151,19 @@ class SignalRService {
      * Returns a promise that resolves when connection is established.
      */
     public async startConnection(maxRetries = 5, retryDelayMs = 2000): Promise<void> {
+        const connection = await this.ensureInitialized();
+        
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                if (this.connection.state === signalR.HubConnectionState.Connected) {
+                if (connection.state === signalR.HubConnectionState.Connected) {
                     return; // Already connected
                 }
-                if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
+                if (connection.state !== signalR.HubConnectionState.Disconnected) {
                     // Wait a bit if in transitional state
                     await new Promise(resolve => setTimeout(resolve, 500));
                     continue;
                 }
-                await this.connection.start();
+                await connection.start();
                 console.log("SignalR Connection Started.");
                 this.notifyConnectionStateChange(signalR.HubConnectionState.Connected);
                 return; // Success
@@ -106,12 +178,15 @@ class SignalRService {
     }
 
     public stopConnection(): void {
-        if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
+        if (this.connection && this.connection.state !== signalR.HubConnectionState.Disconnected) {
             this.connection.stop().then(() => console.log("SignalR Connection Stopped."));
         }
     }
 
     public getConnectionState(): signalR.HubConnectionState {
+        if (!this.connection) {
+            return signalR.HubConnectionState.Disconnected;
+        }
         return this.connection.state;
     }
 
@@ -134,14 +209,32 @@ class SignalRService {
     }
 
     // Generic handler registration
+    // Note: These methods assume startConnection() has been called
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public on(methodName: string, newMethod: (...args: any[]) => void): void {
+        if (!this.connection) {
+            throw new Error("SignalR connection not initialized. Call startConnection() first.");
+        }
         this.connection.on(methodName, newMethod);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public off(methodName: string, method: (...args: any[]) => void): void {
+        if (!this.connection) {
+            return; // Silently ignore if not initialized
+        }
         this.connection.off(methodName, method);
+    }
+
+    /**
+     * Helper to get the connection for invoke calls.
+     * Throws if not initialized.
+     */
+    private getConnection(): signalR.HubConnection {
+        if (!this.connection) {
+            throw new Error("SignalR connection not initialized. Call startConnection() first.");
+        }
+        return this.connection;
     }
 
     // ==========================================
@@ -149,19 +242,19 @@ class SignalRService {
     // ==========================================
 
     public async createUnitCollection(dto: InternalCreateUnitCollectionDto): Promise<UnitCollectionEntity> {
-        return await this.connection.invoke<UnitCollectionEntity>("CreateUnitCollection", dto);
+        return await this.getConnection().invoke<UnitCollectionEntity>("CreateUnitCollection", dto);
     }
 
     public async getAllUnitCollections(): Promise<UnitCollectionEntity[]> {
-        return await this.connection.invoke<UnitCollectionEntity[]>("GetAllUnitCollections");
+        return await this.getConnection().invoke<UnitCollectionEntity[]>("GetAllUnitCollections");
     }
 
     public async updateUnitCollection(entity: UnitCollectionEntity): Promise<void> {
-        await this.connection.invoke("UpdateUnitCollection", entity);
+        await this.getConnection().invoke("UpdateUnitCollection", entity);
     }
 
     public async deleteUnitCollection(id: string): Promise<void> {
-        await this.connection.invoke("DeleteUnitCollection", id);
+        await this.getConnection().invoke("DeleteUnitCollection", id);
     }
 
     // ==========================================
@@ -169,19 +262,19 @@ class SignalRService {
     // ==========================================
 
     public async createUnit(dto: InternalCreateUnitDto): Promise<UnitEntity> {
-        return await this.connection.invoke<UnitEntity>("CreateUnit", dto);
+        return await this.getConnection().invoke<UnitEntity>("CreateUnit", dto);
     }
 
     public async getAllUnits(): Promise<UnitEntity[]> {
-        return await this.connection.invoke<UnitEntity[]>("GetAllUnits");
+        return await this.getConnection().invoke<UnitEntity[]>("GetAllUnits");
     }
 
     public async updateUnit(entity: UnitEntity): Promise<void> {
-        await this.connection.invoke("UpdateUnit", entity);
+        await this.getConnection().invoke("UpdateUnit", entity);
     }
 
     public async deleteUnit(id: string): Promise<void> {
-        await this.connection.invoke("DeleteUnit", id);
+        await this.getConnection().invoke("DeleteUnit", id);
     }
 
     // ==========================================
@@ -189,19 +282,19 @@ class SignalRService {
     // ==========================================
 
     public async createLesson(dto: InternalCreateLessonDto): Promise<LessonEntity> {
-        return await this.connection.invoke<LessonEntity>("CreateLesson", dto);
+        return await this.getConnection().invoke<LessonEntity>("CreateLesson", dto);
     }
 
     public async getAllLessons(): Promise<LessonEntity[]> {
-        return await this.connection.invoke<LessonEntity[]>("GetAllLessons");
+        return await this.getConnection().invoke<LessonEntity[]>("GetAllLessons");
     }
 
     public async updateLesson(entity: LessonEntity): Promise<void> {
-        await this.connection.invoke("UpdateLesson", entity);
+        await this.getConnection().invoke("UpdateLesson", entity);
     }
 
     public async deleteLesson(id: string): Promise<void> {
-        await this.connection.invoke("DeleteLesson", id);
+        await this.getConnection().invoke("DeleteLesson", id);
     }
 
     // ==========================================
@@ -209,19 +302,19 @@ class SignalRService {
     // ==========================================
 
     public async createMaterial(dto: InternalCreateMaterialDto): Promise<MaterialEntity> {
-        return await this.connection.invoke<MaterialEntity>("CreateMaterial", dto);
+        return await this.getConnection().invoke<MaterialEntity>("CreateMaterial", dto);
     }
 
     public async getAllMaterials(): Promise<MaterialEntity[]> {
-        return await this.connection.invoke<MaterialEntity[]>("GetAllMaterials");
+        return await this.getConnection().invoke<MaterialEntity[]>("GetAllMaterials");
     }
 
     public async updateMaterial(entity: MaterialEntity): Promise<void> {
-        await this.connection.invoke("UpdateMaterial", entity);
+        await this.getConnection().invoke("UpdateMaterial", entity);
     }
 
     public async deleteMaterial(id: string): Promise<void> {
-        await this.connection.invoke("DeleteMaterial", id);
+        await this.getConnection().invoke("DeleteMaterial", id);
     }
 
     // ==========================================
@@ -233,7 +326,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(d1)(i).
      */
     public async createQuestion(dto: InternalCreateQuestionDto): Promise<string> {
-        return await this.connection.invoke<string>("CreateQuestion", dto);
+        return await this.getConnection().invoke<string>("CreateQuestion", dto);
     }
 
     /**
@@ -241,7 +334,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(d1)(ii).
      */
     public async getQuestionsUnderMaterial(materialId: string): Promise<QuestionEntity[]> {
-        return await this.connection.invoke<QuestionEntity[]>("GetQuestionsUnderMaterial", materialId);
+        return await this.getConnection().invoke<QuestionEntity[]>("GetQuestionsUnderMaterial", materialId);
     }
 
     /**
@@ -249,7 +342,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(d1)(iii).
      */
     public async updateQuestion(dto: InternalUpdateQuestionDto): Promise<void> {
-        await this.connection.invoke("UpdateQuestion", dto);
+        await this.getConnection().invoke("UpdateQuestion", dto);
     }
 
     /**
@@ -257,7 +350,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(d1)(iv).
      */
     public async deleteQuestion(id: string): Promise<void> {
-        await this.connection.invoke("DeleteQuestion", id);
+        await this.getConnection().invoke("DeleteQuestion", id);
     }
 
     // ==========================================
@@ -269,7 +362,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5A(2)(a).
      */
     public async pairDevices(): Promise<void> {
-        await this.connection.invoke("PairDevices");
+        await this.getConnection().invoke("PairDevices");
     }
 
     /**
@@ -277,7 +370,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5A(4)(a).
      */
     public async stopPairing(): Promise<void> {
-        await this.connection.invoke("StopPairing");
+        await this.getConnection().invoke("StopPairing");
     }
 
     /**
@@ -285,7 +378,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5(2)(i).
      */
     public async getAllPairedDevices(): Promise<PairedDeviceEntity[]> {
-        return await this.connection.invoke<PairedDeviceEntity[]>("GetAllPairedDevices");
+        return await this.getConnection().invoke<PairedDeviceEntity[]>("GetAllPairedDevices");
     }
 
     /**
@@ -293,7 +386,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5(2)(ii).
      */
     public async getAllDeviceStatuses(): Promise<DeviceStatusEntity[]> {
-        return await this.connection.invoke<DeviceStatusEntity[]>("GetAllDeviceStatuses");
+        return await this.getConnection().invoke<DeviceStatusEntity[]>("GetAllDeviceStatuses");
     }
 
     /**
@@ -301,7 +394,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5C(2).
      */
     public async lockDevices(deviceIds: string[]): Promise<void> {
-        await this.connection.invoke("LockDevices", deviceIds);
+        await this.getConnection().invoke("LockDevices", deviceIds);
     }
 
     /**
@@ -309,7 +402,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5C(2).
      */
     public async unlockDevices(deviceIds: string[]): Promise<void> {
-        await this.connection.invoke("UnlockDevices", deviceIds);
+        await this.getConnection().invoke("UnlockDevices", deviceIds);
     }
 
     /**
@@ -317,7 +410,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5C(3)(b).
      */
     public async deployMaterial(materialId: string, deviceIds: string[]): Promise<void> {
-        await this.connection.invoke("DeployMaterial", materialId, deviceIds);
+        await this.getConnection().invoke("DeployMaterial", materialId, deviceIds);
     }
 
     /**
@@ -325,7 +418,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5A(5).
      */
     public async unpairDevices(deviceIds: string[]): Promise<void> {
-        await this.connection.invoke("UnpairDevices", deviceIds);
+        await this.getConnection().invoke("UnpairDevices", deviceIds);
     }
 
     /**
@@ -333,7 +426,7 @@ class SignalRService {
      * Per FrontendWorkflowSpec §5B(4).
      */
     public async updatePairedDevice(entity: PairedDeviceEntity): Promise<void> {
-        await this.connection.invoke("UpdatePairedDevice", entity);
+        await this.getConnection().invoke("UpdatePairedDevice", entity);
     }
 
     // ==========================================
@@ -345,8 +438,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(a).
      */
     public onDeviceStatusUpdate(callback: (status: DeviceStatusEntity) => void): () => void {
-        this.connection.on("UpdateDeviceStatus", callback);
-        return () => this.connection.off("UpdateDeviceStatus", callback);
+        return this.subscribe("UpdateDeviceStatus", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -354,8 +446,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(b).
      */
     public onDevicePaired(callback: (device: PairedDeviceEntity) => void): () => void {
-        this.connection.on("DevicePaired", callback);
-        return () => this.connection.off("DevicePaired", callback);
+        return this.subscribe("DevicePaired", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -363,8 +454,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(d)(i).
      */
     public onHandRaised(callback: (deviceId: string) => void): () => void {
-        this.connection.on("HandRaised", callback);
-        return () => this.connection.off("HandRaised", callback);
+        return this.subscribe("HandRaised", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -372,8 +462,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(d)(ii).
      */
     public onDistributionFailed(callback: (deviceId: string) => void): () => void {
-        this.connection.on("DistributionFailed", callback);
-        return () => this.connection.off("DistributionFailed", callback);
+        return this.subscribe("DistributionFailed", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -381,8 +470,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(d)(iii).
      */
     public onRemoteControlFailed(callback: (payload: { deviceId: string; command: string }) => void): () => void {
-        this.connection.on("RemoteControlFailed", callback);
-        return () => this.connection.off("RemoteControlFailed", callback);
+        return this.subscribe("RemoteControlFailed", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -390,8 +478,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(d)(v).
      */
     public onFeedbackDeliveryFailed(callback: (deviceId: string) => void): () => void {
-        this.connection.on("FeedbackDeliveryFailed", callback);
-        return () => this.connection.off("FeedbackDeliveryFailed", callback);
+        return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 
     // ==========================================
@@ -403,7 +490,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(l)(i).
      */
     public async createAttachment(dto: InternalCreateAttachmentDto): Promise<string> {
-        return await this.connection.invoke<string>("CreateAttachment", dto);
+        return await this.getConnection().invoke<string>("CreateAttachment", dto);
     }
 
     /**
@@ -411,7 +498,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(l)(ii).
      */
     public async getAttachmentsUnderMaterial(materialId: string): Promise<AttachmentEntity[]> {
-        return await this.connection.invoke<AttachmentEntity[]>("GetAttachmentsUnderMaterial", materialId);
+        return await this.getConnection().invoke<AttachmentEntity[]>("GetAttachmentsUnderMaterial", materialId);
     }
 
     /**
@@ -419,7 +506,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(l)(iii).
      */
     public async deleteAttachment(id: string): Promise<void> {
-        await this.connection.invoke("DeleteAttachment", id);
+        await this.getConnection().invoke("DeleteAttachment", id);
     }
 
     // ==========================================
@@ -431,7 +518,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(i)(i).
      */
     public async getAllResponses(): Promise<ResponseEntity[]> {
-        return await this.connection.invoke<ResponseEntity[]>("GetAllResponses");
+        return await this.getConnection().invoke<ResponseEntity[]>("GetAllResponses");
     }
 
     /**
@@ -439,7 +526,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(i)(ii).
      */
     public async getResponsesUnderQuestion(questionId: string): Promise<ResponseEntity[]> {
-        return await this.connection.invoke<ResponseEntity[]>("GetResponsesUnderQuestion", questionId);
+        return await this.getConnection().invoke<ResponseEntity[]>("GetResponsesUnderQuestion", questionId);
     }
 
     // ==========================================
@@ -451,7 +538,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(h)(iv).
      */
     public async getAllFeedbacks(): Promise<FeedbackEntity[]> {
-        return await this.connection.invoke<FeedbackEntity[]>("GetAllFeedbacks");
+        return await this.getConnection().invoke<FeedbackEntity[]>("GetAllFeedbacks");
     }
 
     /**
@@ -459,7 +546,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(h)(i).
      */
     public async createFeedback(dto: InternalCreateFeedbackDto): Promise<FeedbackEntity> {
-        return await this.connection.invoke<FeedbackEntity>("CreateFeedback", dto);
+        return await this.getConnection().invoke<FeedbackEntity>("CreateFeedback", dto);
     }
 
     /**
@@ -468,7 +555,7 @@ class SignalRService {
      * Only PROVISIONAL feedback can be updated per §6A(7)(b)(ii).
      */
     public async updateFeedback(entity: FeedbackEntity): Promise<void> {
-        await this.connection.invoke("UpdateFeedback", entity);
+        await this.getConnection().invoke("UpdateFeedback", entity);
     }
 
     /**
@@ -477,7 +564,7 @@ class SignalRService {
      * Invoked when teacher clears both Text and Marks on a PROVISIONAL feedback.
      */
     public async deleteFeedback(feedbackId: string): Promise<void> {
-        await this.connection.invoke("DeleteFeedback", feedbackId);
+        await this.getConnection().invoke("DeleteFeedback", feedbackId);
     }
 
     /**
@@ -485,7 +572,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(h)(ii).
      */
     public async approveFeedback(feedbackId: string): Promise<void> {
-        await this.connection.invoke("ApproveFeedback", feedbackId);
+        await this.getConnection().invoke("ApproveFeedback", feedbackId);
     }
 
     /**
@@ -493,7 +580,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(h)(iii).
      */
     public async retryFeedbackDispatch(feedbackId: string): Promise<void> {
-        await this.connection.invoke("RetryFeedbackDispatch", feedbackId);
+        await this.getConnection().invoke("RetryFeedbackDispatch", feedbackId);
     }
 
     /**
@@ -501,8 +588,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(e)(i).
      */
     public onRefreshResponses(callback: () => void): () => void {
-        this.connection.on("RefreshResponses", callback);
-        return () => this.connection.off("RefreshResponses", callback);
+        return this.subscribe("RefreshResponses", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -510,8 +596,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(c)(i).
      */
     public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
-        this.connection.on("FeedbackDeliveryFailed", callback);
-        return () => this.connection.off("FeedbackDeliveryFailed", callback);
+        return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 }
 

@@ -1,4 +1,6 @@
 interface IElectronAPI {
+    /** Get the active backend port. Per §2ZA(8)(c)(iv). */
+    getBackendPort: () => Promise<number>;
     showOpenDialog: (options: any) => Promise<any>;
     saveAttachmentFile: (sourcePath: string, uuid: string, extension: string) => Promise<string>;
     getAttachmentPath: (uuid: string, extension: string) => Promise<string>;

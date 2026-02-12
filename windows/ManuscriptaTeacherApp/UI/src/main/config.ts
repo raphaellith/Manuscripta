@@ -4,32 +4,39 @@
  */
 
 /**
- * The designated backend port.
+ * The default backend port.
  * Per FrontendWorkflowSpecifications §2ZA(8)(b).
  */
-export const BACKEND_PORT = 5910;
+export const DEFAULT_BACKEND_PORT = 5910;
 
 /**
- * The backend base URL.
+ * Alternative port range for auto-retry (skipping 5911-5913 which are used for other purposes).
+ * Per FrontendWorkflowSpecifications §2ZA(8)(c)(i).
  */
-export const BACKEND_URL = `http://localhost:${BACKEND_PORT}`;
+export const ALTERNATIVE_PORT_RANGE_MIN = 5914;
+export const ALTERNATIVE_PORT_RANGE_MAX = 5919;
 
 /**
- * The backend health endpoint URL.
+ * Get the backend base URL for a given port.
+ */
+export const getBackendUrl = (port: number): string => `http://localhost:${port}`;
+
+/**
+ * Get the backend health endpoint URL for a given port.
  * Per FrontendWorkflowSpecifications §2ZA(5)(a).
  */
-export const BACKEND_HEALTH_URL = `${BACKEND_URL}/`;
+export const getBackendHealthUrl = (port: number): string => `${getBackendUrl(port)}/`;
 
 /**
- * The SignalR hub URL.
+ * Get the SignalR hub URL for a given port.
  * Per FrontendWorkflowSpecifications §1(1)(a) and §2(2)(d).
  */
-export const SIGNALR_HUB_URL = `${BACKEND_URL}/TeacherPortalHub`;
+export const getSignalRHubUrl = (port: number): string => `${getBackendUrl(port)}/TeacherPortalHub`;
 
 /**
- * The WebSocket URL for SignalR (used in CSP).
+ * Get the WebSocket URL for SignalR (used in CSP) for a given port.
  */
-export const BACKEND_WS_URL = `ws://localhost:${BACKEND_PORT}`;
+export const getBackendWsUrl = (port: number): string => `ws://localhost:${port}`;
 
 /**
  * Backend executable name.

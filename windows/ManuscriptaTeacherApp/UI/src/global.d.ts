@@ -8,6 +8,12 @@
  */
 interface ElectronAPI {
     /**
+     * Get the active backend port.
+     * Per FrontendWorkflowSpecifications §2ZA(8)(c)(iv).
+     */
+    getBackendPort: () => Promise<number>;
+
+    /**
      * Show file picker dialog.
      */
     showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<Electron.OpenDialogReturnValue>;

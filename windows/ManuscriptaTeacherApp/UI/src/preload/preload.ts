@@ -9,6 +9,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Expose electronAPI to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
     /**
+     * Get the active backend port.
+     * Per FrontendWorkflowSpecifications §2ZA(8)(c)(iv).
+     */
+    getBackendPort: () => ipcRenderer.invoke('get-backend-port'),
+
+    /**
      * Show file picker dialog.
      */
     showOpenDialog: (options: Electron.OpenDialogOptions) =>
