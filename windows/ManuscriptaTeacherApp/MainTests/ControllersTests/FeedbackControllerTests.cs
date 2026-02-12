@@ -7,6 +7,7 @@ using Moq;
 using Main.Controllers;
 using Main.Models.Entities;
 using Main.Models.Entities.Responses;
+using Main.Models.Enums;
 using Main.Services.Repositories;
 using Xunit;
 
@@ -70,7 +71,7 @@ public class FeedbackControllerTests
     {
         // Arrange
         var response = new WrittenAnswerResponseEntity(_testResponseId, _testQuestionId, _testDeviceId, "Answer");
-        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!");
+        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!") { Status = FeedbackStatus.READY };
 
         _mockFeedbackRepository.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new[] { feedback });
@@ -90,7 +91,7 @@ public class FeedbackControllerTests
     {
         // Arrange
         var response = new WrittenAnswerResponseEntity(_testResponseId, _testQuestionId, _testDeviceId, "Answer");
-        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!");
+        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!") { Status = FeedbackStatus.READY };
 
         _mockFeedbackRepository.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new[] { feedback });
@@ -207,8 +208,8 @@ public class FeedbackControllerTests
         var response1 = new WrittenAnswerResponseEntity(Guid.NewGuid(), _testQuestionId, _testDeviceId, "Answer 1");
         var response2 = new WrittenAnswerResponseEntity(Guid.NewGuid(), _testQuestionId, _testDeviceId, "Answer 2");
         
-        var feedback1 = new FeedbackEntity(Guid.NewGuid(), response1.Id, text: "Good!");
-        var feedback2 = new FeedbackEntity(Guid.NewGuid(), response2.Id, marks: 8);
+        var feedback1 = new FeedbackEntity(Guid.NewGuid(), response1.Id, text: "Good!") { Status = FeedbackStatus.READY };
+        var feedback2 = new FeedbackEntity(Guid.NewGuid(), response2.Id, marks: 8) { Status = FeedbackStatus.READY };
 
         _mockFeedbackRepository.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new[] { feedback1, feedback2 });
@@ -248,7 +249,7 @@ public class FeedbackControllerSerialisationTests : IClassFixture<TestWebApplica
     public async Task GetFeedback_FieldNames_ArePascalCase()
     {
         // Arrange - Per s1A(1): Fields serialised in PascalCase
-        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!", marks: 5);
+        var feedback = new FeedbackEntity(Guid.NewGuid(), _testResponseId, text: "Good work!", marks: 5) { Status = FeedbackStatus.READY };
         var response = new WrittenAnswerResponseEntity(_testResponseId, _testQuestionId, _testDeviceId, "Answer");
 
         var mockFeedbackRepo = new Mock<IFeedbackRepository>();

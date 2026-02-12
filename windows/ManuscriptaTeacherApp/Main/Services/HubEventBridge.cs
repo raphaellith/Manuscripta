@@ -209,14 +209,17 @@ public class HubEventBridge : IHostedService, IDisposable
     /// <summary>
     /// Handles DISTRIBUTE_ACK reception for a single material.
     /// Per API Contract.md §3.6.2: one ACK per material entity.
+    /// Per Session Interaction §3(7): removes material from distribution bundle to prevent re-distribution.
     /// </summary>
     internal async Task HandleDistributionAckReceivedAsync(DistributionAckEventArgs e)
     {
         _logger.LogInformation("Distribution acknowledged for material {MaterialId} on device {DeviceId}", 
             e.MaterialId, e.DeviceId);
-        // Per Session Interaction §3(7): duplicate prevention is handled in TcpPairingService
-        // Could notify frontend of successful delivery if needed
-        await Task.CompletedTask;
+        
+        // Per Session Interaction §3(7): remove from distribution assignments to prevent re-distribution
+        using var scope = _serviceProvider.CreateScope();
+        var distributionService = scope.ServiceProvider.GetRequiredService<IDistributionService>();
+        await distributionService.RemoveMaterialAssignmentAsync(e.DeviceId, e.MaterialId);
     }
 
     private async void FireAndForget(Func<Task> action, string context)

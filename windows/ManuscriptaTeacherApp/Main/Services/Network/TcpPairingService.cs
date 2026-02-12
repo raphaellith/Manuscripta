@@ -297,15 +297,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     }
 
     // Per-entity tracking for distribution ACKs (Session Interaction §3(7) - prevent repeated distribution)
-    // Key: "deviceId:materialId", Value: ack received
-    private readonly ConcurrentDictionary<string, bool> _distributionAcksReceived = new();
     // Pending materials awaiting ACK per device
     // Key: deviceId, Value: thread-safe set of pending material IDs (using ConcurrentDictionary<Guid, byte> as set)
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingMaterials = new();
     
-    // Per-entity tracking for feedback ACKs (Session Interaction §7(6) - prevent repeated distribution)
-    // Key: "deviceId:feedbackId", Value: ack received
-    private readonly ConcurrentDictionary<string, bool> _feedbackAcksReceived = new();
     // Pending feedbacks awaiting ACK per device
     // Key: deviceId, Value: thread-safe set of pending feedback IDs (using ConcurrentDictionary<Guid, byte> as set)
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingFeedbacks = new();
@@ -621,10 +616,6 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             if (Guid.TryParse(deviceIdString, out var deviceGuid) && 
                 Guid.TryParse(materialIdString, out var materialGuid))
             {
-                // Mark this material as acknowledged (for duplicate prevention per Session Interaction §3(7))
-                var key = $"{deviceIdString}:{materialIdString}";
-                _distributionAcksReceived[key] = true;
-
                 // Remove from pending materials for this device (thread-safe)
                 if (_pendingMaterials.TryGetValue(deviceIdString, out var pending))
                 {
@@ -632,6 +623,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 }
 
                 // Fire event for per-material acknowledgement
+                // Per Session Interaction §3(7): duplicate prevention handled by removing from _deviceMaterialAssignments in HubEventBridge
                 DistributionAckReceived?.Invoke(this, new DistributionAckEventArgs(deviceGuid, materialGuid));
             }
             else
@@ -662,10 +654,6 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             if (Guid.TryParse(deviceIdString, out var deviceGuid) && 
                 Guid.TryParse(feedbackIdString, out var feedbackGuid))
             {
-                // Mark this feedback as acknowledged (for duplicate prevention per Session Interaction §7(6))
-                var key = $"{deviceIdString}:{feedbackIdString}";
-                _feedbackAcksReceived[key] = true;
-
                 // Remove from pending feedbacks for this device (thread-safe)
                 if (_pendingFeedbacks.TryGetValue(deviceIdString, out var pending))
                 {
@@ -673,6 +661,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
                 }
 
                 // Fire event for per-feedback acknowledgement and status transition
+                // Per Session Interaction §7(6): duplicate prevention handled by transitioning to DELIVERED in HubEventBridge
                 FeedbackAckReceived?.Invoke(this, new FeedbackAckEventArgs(deviceGuid, feedbackGuid));
             }
             else
