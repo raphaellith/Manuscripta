@@ -328,7 +328,7 @@ class SignalRService {
 
     /**
      * Subscribe to feedback delivery failure events.
-     * Per NetworkingAPISpec §2(1)(d)(v).
+     * Per NetworkingAPISpec §2(1)(e)(v).
      * Payload includes deviceId and feedbackId per API Contract §3.6.2.
      */
     public onFeedbackDeliveryFailed(callback: (payload: { deviceId: string; feedbackId: string }) => void): () => void {
@@ -447,15 +447,6 @@ class SignalRService {
         return () => this.connection.off("RefreshResponses", callback);
     }
 
-    /**
-     * Subscribe to feedback dispatch failure events.
-     * Per NetworkingAPISpec §2(1)(c)(i).
-     * Payload includes feedbackId and deviceId per API Contract §3.6.2.
-     */
-    public onFeedbackDispatchFailed(callback: (payload: { feedbackId: string; deviceId: string }) => void): () => void {
-        this.connection.on("FeedbackDeliveryFailed", callback);
-        return () => this.connection.off("FeedbackDeliveryFailed", callback);
-    }
 }
 
 const signalRService = new SignalRService();

@@ -212,7 +212,7 @@ export const ResponsesPage: React.FC = () => {
         const unsubRefresh = signalRService.onRefreshResponses(() => loadData());
         // Per §6A(6): Track failed feedbacks for per-response indicator
         // Payload includes feedbackId and deviceId per API Contract §3.6.2
-        const unsubDispatchFailed = signalRService.onFeedbackDispatchFailed((payload: { feedbackId: string; deviceId: string }) => {
+        const unsubDeliveryFailed = signalRService.onFeedbackDeliveryFailed((payload: { deviceId: string; feedbackId: string }) => {
             // Track failed feedback ID for indicator near specific response
             setFailedFeedbackIds(prev => new Set(prev).add(payload.feedbackId));
             // Show alert with device name (not entity IDs - those are internal)
@@ -221,7 +221,7 @@ export const ResponsesPage: React.FC = () => {
         });
         return () => {
             unsubRefresh();
-            unsubDispatchFailed();
+            unsubDeliveryFailed();
         };
     }, [loadData, addAlert, devices]);
 

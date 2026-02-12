@@ -80,7 +80,7 @@ This document defines the specifications for classes enabling the `Main` compone
 
 (4) If the backend does not receive a `FEEDBACK_ACK` message within 30 seconds of sending `RETURN_FEEDBACK` (per Session Interaction Specification §7(5)) —
 
-    (a) the backend shall notify the frontend via the SignalR handler `OnFeedbackDispatchFailed(Guid feedbackId, Guid deviceId)`.
+    (a) the backend shall notify the frontend via the SignalR handler `FeedbackDeliveryFailed` (NetworkingAPISpec §2(1)(e)(v)).
 
     (b) the `FeedbackEntity` shall remain in `READY` status.
 
