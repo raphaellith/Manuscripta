@@ -76,6 +76,8 @@ This document defines the specifications for classes enabling the `Main` compone
 
     (a) the status shall transition from `READY` to `DELIVERED`.
 
+    (b) the feedback shall be removed from the distribution batch.
+
 (4) If the backend does not receive a `FEEDBACK_ACK` message within 30 seconds of sending `RETURN_FEEDBACK` (per Session Interaction Specification §7(5)) —
 
     (a) the backend shall notify the frontend via the SignalR handler `OnFeedbackDispatchFailed(Guid feedbackId, Guid deviceId)`.

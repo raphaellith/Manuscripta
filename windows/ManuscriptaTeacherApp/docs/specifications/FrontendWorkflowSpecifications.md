@@ -385,7 +385,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) calling `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)` as defined in s1(1)(g)(i) of the Networking API Specification;
 
-    (c) indicating to the user when deployment is in progress, and when it completes. For this purpose, deployment to a device shall be considered complete when a `DISTRIBUTE_ACK` (0x12) message is received from that device, per Session Interaction Specification s3(5).
+    (c) indicating to the user when deployment is in progress, and when it completes. For this purpose, deployment to a device shall be considered complete when `DISTRIBUTE_ACK` (0x12) message(s) for all deployed material(s) are received from that device, per Session Interaction Specification s3(5).
 
 (4) **Unpairing Devices**
 
@@ -521,25 +521,21 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 6A — Response Review and Feedback Workflow
 
-(6) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(i)) —
+(6) The frontend shall, upon receipt of `FeedbackDeliveryFailed` (NetworkingAPISpec §2(1)(e)(v)) —
 
-    (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
+    (a) display a message indicating that feedback delivery to the specified device has failed, and an indicator for the specific response near the indicator specified in Section 6(5)(e)(vi) above.
 
-    (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+    (b) provide a "Retry" option invoking `RetryFeedbackDispatch`, near the indicator specified in paragraph (a) (NetworkingAPISpec §1(1)(h)(iii)).
 
 (7) **Feedback Editing and Deletion Rules**
 
-    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
+    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher in the following manner —
 
         (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
 
-        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` rather than `UpdateFeedback`. This action deletes the provisional feedback.
+        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` rather than `UpdateFeedback`, to delete the provisional feedback.
 
-    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable.
-
-        (i) The frontend shall not display editing controls for feedback in these states.
-
-        (ii) The backend shall reject `UpdateFeedback` calls for feedback entities whose Status is not `PROVISIONAL`, throwing a `HubException`.
+    (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable. The frontend shall not display editing controls for feedback in these states.
 
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalized assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
