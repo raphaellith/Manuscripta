@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { AppProvider, useAppContext, BackendProcessState } from './state/AppContext';
+import { AppProvider, useAppContext } from './state/AppContext';
 import { AlertProvider } from './state/AlertContext';
 import { Header } from './components/layout/Header';
 import { GlobalAlerts } from './components/layout/GlobalAlerts';
