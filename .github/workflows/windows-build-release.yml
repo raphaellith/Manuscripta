@@ -82,9 +82,9 @@ jobs:
         run: npm ci
 
       - name: Override version (if provided)
-        if: ${{ github.event.inputs.version != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
         working-directory: windows/ManuscriptaTeacherApp/UI
-        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+        run: npm version ${{ inputs.version }} --no-git-tag-version
         shell: pwsh
 
       - name: Build frontend (Electron Forge)
