@@ -159,9 +159,10 @@ export class BackendProcessManager {
      * @returns Promise that resolves to true if spawned successfully, false if port is unavailable
      */
     private spawnBackend(port: number): Promise<boolean> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const executablePath = this.getBackendExecutablePath();
             let addressInUseDetected = false;
+            let spawnErrorOccurred = false;
             
             // Per §2ZA(3)(c)(ii): Start with --urls argument
             this.process = spawn(executablePath, [`--urls`, `http://localhost:${port}`], {
@@ -203,16 +204,26 @@ export class BackendProcessManager {
                 }
             });
 
-            this.process.on('error', (err) => {
+            this.process.on('error', (err: NodeJS.ErrnoException) => {
                 console.error(`Backend process error: ${err.message}`);
                 this.process = null;
-                resolve(false);
+                spawnErrorOccurred = true;
+                
+                // Distinguish critical spawn errors from port-related issues
+                if (err.code === 'ENOENT') {
+                    reject(new Error(`Backend executable not found at: ${executablePath}`));
+                } else if (err.code === 'EACCES') {
+                    reject(new Error(`Permission denied when trying to execute backend: ${executablePath}`));
+                } else {
+                    // Other spawn errors - reject with original error
+                    reject(new Error(`Failed to spawn backend process: ${err.message}`));
+                }
             });
 
             // Give the process a moment to fail if port is in use
             // If it doesn't fail quickly, assume spawn was successful
             setTimeout(() => {
-                if (this.process !== null) {
+                if (this.process !== null && !spawnErrorOccurred) {
                     resolve(true);
                 }
             }, 1000);
