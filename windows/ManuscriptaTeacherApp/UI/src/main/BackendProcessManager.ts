@@ -186,15 +186,21 @@ export class BackendProcessManager {
                 }
             });
 
+            const processStartTime = Date.now();
+
             // Per §2ZA(6)(a): Monitor for unexpected termination
             this.process.on('exit', (code, signal) => {
                 console.log(`Backend process exited with code ${code}, signal ${signal}`);
                 const proc = this.process;
                 this.process = null;
+
+                const ranForMs = Date.now() - processStartTime;
+                const STARTUP_FAILURE_WINDOW_MS = 10000;
+                const isStartupPhase = ranForMs < STARTUP_FAILURE_WINDOW_MS;
                 
                 // If process exited very quickly with non-zero code, likely port issue
                 // Per §2ZA(8)(c)(ii): Treat rapid exit as port unavailable
-                if (addressInUseDetected || (code !== 0 && code !== null)) {
+                if (addressInUseDetected || (isStartupPhase && code !== 0 && code !== null)) {
                     resolve(false);
                     return;
                 }
@@ -292,10 +298,21 @@ export class BackendProcessManager {
     private async startInternal(checkExisting: boolean): Promise<void> {
         this.setState(BackendState.STARTING);
 
-        // Per §2ZA(8)(b-c): Try default port first, then alternative range (skipping 5911-5913)
-        const portsToTry = [DEFAULT_BACKEND_PORT];
+        // Per §2ZA(8)(b-c): Determine port order.
+        // On fresh start, try default port first, then alternative range.
+        // On restart (checkExisting === false), prefer reusing this.currentPort first,
+        // then fall back to default and alternatives if needed.
+        const portsToTry: number[] = [];
+        if (!checkExisting && this.currentPort != null) {
+            portsToTry.push(this.currentPort);
+        }
+        if (!portsToTry.includes(DEFAULT_BACKEND_PORT)) {
+            portsToTry.push(DEFAULT_BACKEND_PORT);
+        }
         for (let port = ALTERNATIVE_PORT_RANGE_MIN; port <= ALTERNATIVE_PORT_RANGE_MAX; port++) {
-            portsToTry.push(port);
+            if (!portsToTry.includes(port)) {
+                portsToTry.push(port);
+            }
         }
 
         for (const port of portsToTry) {
