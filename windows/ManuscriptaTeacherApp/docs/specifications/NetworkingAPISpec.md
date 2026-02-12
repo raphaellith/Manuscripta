@@ -156,4 +156,4 @@ For a description of how these server methods and client handlers are expected t
 
         (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
 
-        (v) `FeedbackDeliveryFailed`, with parameters `deviceId` (Guid) and `materialId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification, or when the target device is not connected.
+        (v) `FeedbackDeliveryFailed`, with parameters `deviceId` (Guid) and `feedbackId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification, or when the target device is not connected.
