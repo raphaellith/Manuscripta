@@ -47,6 +47,7 @@ public class HubEventBridge : IHostedService, IDisposable
         _tcpPairingService.DistributionTimedOut += OnDistributionTimedOut;
         _tcpPairingService.FeedbackDeliveryTimedOut += OnFeedbackDeliveryTimedOut;
         _tcpPairingService.FeedbackAckReceived += OnFeedbackAckReceived;
+        _tcpPairingService.DistributionAckReceived += OnDistributionAckReceived;
 
         // Subscribe to Registry events
         _deviceRegistryService.DevicePaired += OnDevicePaired;
@@ -66,6 +67,7 @@ public class HubEventBridge : IHostedService, IDisposable
         _tcpPairingService.DistributionTimedOut -= OnDistributionTimedOut;
         _tcpPairingService.FeedbackDeliveryTimedOut -= OnFeedbackDeliveryTimedOut;
         _tcpPairingService.FeedbackAckReceived -= OnFeedbackAckReceived;
+        _tcpPairingService.DistributionAckReceived -= OnDistributionAckReceived;
 
         _deviceRegistryService.DevicePaired -= OnDevicePaired;
 
@@ -115,22 +117,38 @@ public class HubEventBridge : IHostedService, IDisposable
         await _hubContext.Clients.All.SendAsync("HandRaised", deviceId.ToString());
     }
 
-    private void OnDistributionTimedOut(object? sender, Guid deviceId) 
-        => FireAndForget(() => HandleDistributionTimedOutAsync(deviceId), "DistributionTimedOut");
+    private void OnDistributionTimedOut(object? sender, EntityDeliveryFailedEventArgs e) 
+        => FireAndForget(() => HandleDistributionTimedOutAsync(e), "DistributionTimedOut");
 
-    internal async Task HandleDistributionTimedOutAsync(Guid deviceId)
+    /// <summary>
+    /// Handles distribution timeout for a specific material.
+    /// Per NetworkingAPISpec §2(1)(d)(ii): includes both deviceId and materialId.
+    /// </summary>
+    internal async Task HandleDistributionTimedOutAsync(EntityDeliveryFailedEventArgs e)
     {
         // Per NetworkingAPISpec §2(1)(d)(ii)
-        await _hubContext.Clients.All.SendAsync("DistributionFailed", deviceId.ToString());
+        await _hubContext.Clients.All.SendAsync("DistributionFailed", new
+        {
+            deviceId = e.DeviceId.ToString(),
+            materialId = e.EntityId.ToString()
+        });
     }
 
-    private void OnFeedbackDeliveryTimedOut(object? sender, Guid deviceId) 
-        => FireAndForget(() => HandleFeedbackDeliveryTimedOutAsync(deviceId), "FeedbackDeliveryTimedOut");
+    private void OnFeedbackDeliveryTimedOut(object? sender, EntityDeliveryFailedEventArgs e) 
+        => FireAndForget(() => HandleFeedbackDeliveryTimedOutAsync(e), "FeedbackDeliveryTimedOut");
 
-    internal async Task HandleFeedbackDeliveryTimedOutAsync(Guid deviceId)
+    /// <summary>
+    /// Handles feedback delivery timeout for a specific feedback entity.
+    /// Per NetworkingAPISpec §2(1)(d)(v): includes both deviceId and feedbackId.
+    /// </summary>
+    internal async Task HandleFeedbackDeliveryTimedOutAsync(EntityDeliveryFailedEventArgs e)
     {
         // Per NetworkingAPISpec §2(1)(d)(v)
-        await _hubContext.Clients.All.SendAsync("FeedbackDeliveryFailed", deviceId.ToString());
+        await _hubContext.Clients.All.SendAsync("FeedbackDeliveryFailed", new
+        {
+            deviceId = e.DeviceId.ToString(),
+            feedbackId = e.EntityId.ToString()
+        });
     }
 
     private void OnControlCommandTimedOut(object? sender, ControlTimeoutEventArgs e) 
@@ -162,28 +180,43 @@ public class HubEventBridge : IHostedService, IDisposable
         await _hubContext.Clients.All.SendAsync("DevicePaired", e);
     }
 
-    private void OnFeedbackAckReceived(object? sender, IEnumerable<Guid> feedbackIds)
-        => FireAndForget(() => HandleFeedbackAckReceivedAsync(feedbackIds), "FeedbackAckReceived");
+    private void OnFeedbackAckReceived(object? sender, FeedbackAckEventArgs e)
+        => FireAndForget(() => HandleFeedbackAckReceivedAsync(e), "FeedbackAckReceived");
 
     /// <summary>
-    /// Handles FEEDBACK_ACK reception by transitioning feedbacks to DELIVERED.
-    /// Per GenAISpec §3DA(3).
+    /// Handles FEEDBACK_ACK reception by transitioning a single feedback to DELIVERED.
+    /// Per API Contract.md §3.6.2: one ACK per feedback entity.
+    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED and removes from batch.
     /// </summary>
-    internal async Task HandleFeedbackAckReceivedAsync(IEnumerable<Guid> feedbackIds)
+    internal async Task HandleFeedbackAckReceivedAsync(FeedbackAckEventArgs e)
     {
         using var scope = _serviceProvider.CreateScope();
         var feedbackRepository = scope.ServiceProvider.GetRequiredService<IFeedbackRepository>();
 
-        foreach (var feedbackId in feedbackIds)
+        var feedback = await feedbackRepository.GetByIdAsync(e.FeedbackId);
+        if (feedback != null && feedback.Status == FeedbackStatus.READY)
         {
-            var feedback = await feedbackRepository.GetByIdAsync(feedbackId);
-            if (feedback != null && feedback.Status == FeedbackStatus.READY)
-            {
-                feedback.Status = FeedbackStatus.DELIVERED;
-                await feedbackRepository.UpdateAsync(feedback);
-                _logger.LogInformation("Feedback {FeedbackId} transitioned to DELIVERED", feedbackId);
-            }
+            feedback.Status = FeedbackStatus.DELIVERED;
+            await feedbackRepository.UpdateAsync(feedback);
+            _logger.LogInformation("Feedback {FeedbackId} transitioned to DELIVERED for device {DeviceId}", 
+                e.FeedbackId, e.DeviceId);
         }
+    }
+
+    private void OnDistributionAckReceived(object? sender, DistributionAckEventArgs e)
+        => FireAndForget(() => HandleDistributionAckReceivedAsync(e), "DistributionAckReceived");
+
+    /// <summary>
+    /// Handles DISTRIBUTE_ACK reception for a single material.
+    /// Per API Contract.md §3.6.2: one ACK per material entity.
+    /// </summary>
+    internal async Task HandleDistributionAckReceivedAsync(DistributionAckEventArgs e)
+    {
+        _logger.LogInformation("Distribution acknowledged for material {MaterialId} on device {DeviceId}", 
+            e.MaterialId, e.DeviceId);
+        // Per Session Interaction §3(7): duplicate prevention is handled in TcpPairingService
+        // Could notify frontend of successful delivery if needed
+        await Task.CompletedTask;
     }
 
     private async void FireAndForget(Func<Task> action, string context)

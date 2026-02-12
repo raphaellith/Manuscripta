@@ -91,13 +91,42 @@ public class HubEventBridgeTests
     {
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var deviceId = Guid.NewGuid();
+        var materialId = Guid.NewGuid();
+        var eventArgs = new EntityDeliveryFailedEventArgs(deviceId, materialId);
 
-        _mockTcpService.Raise(s => s.DistributionTimedOut += null, null, deviceId);
+        _mockTcpService.Raise(s => s.DistributionTimedOut += null, null, eventArgs);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
                 "DistributionFailed",
-                It.Is<object[]>(args => args.Length == 1 && (string)args[0] == deviceId.ToString()),
+                It.Is<object[]>(args => 
+                    args.Length == 1 && 
+                    GetProperty(args[0], "deviceId") == deviceId.ToString() &&
+                    GetProperty(args[0], "materialId") == materialId.ToString()),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task FeedbackDeliveryTimedOut_InvokesClientMethodWithFeedbackId()
+    {
+        // Arrange
+        await _hubEventBridge.StartAsync(CancellationToken.None);
+        var deviceId = Guid.NewGuid();
+        var feedbackId = Guid.NewGuid();
+        var eventArgs = new EntityDeliveryFailedEventArgs(deviceId, feedbackId);
+
+        // Act
+        _mockTcpService.Raise(s => s.FeedbackDeliveryTimedOut += null, null, eventArgs);
+
+        // Assert - Per NetworkingAPISpec §2(1)(d)(v): includes deviceId and feedbackId
+        _mockClientProxy.Verify(
+            c => c.SendCoreAsync(
+                "FeedbackDeliveryFailed",
+                It.Is<object[]>(args => 
+                    args.Length == 1 && 
+                    GetProperty(args[0], "deviceId") == deviceId.ToString() &&
+                    GetProperty(args[0], "feedbackId") == feedbackId.ToString()),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
