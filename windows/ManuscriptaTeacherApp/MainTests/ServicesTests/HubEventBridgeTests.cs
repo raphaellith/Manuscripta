@@ -56,7 +56,7 @@ public class HubEventBridgeTests
         
         // Trigger StatusUpdateReceived
         var eventArgs = new DeviceStatusEventArgs("device1", "ON_TASK", 80, "mat1", "view1", 123456);
-        _mockTcpService.Raise(s => s.StatusUpdateReceived += null, null, eventArgs);
+        _mockTcpService.Raise(s => s.StatusUpdateReceived += null, _mockTcpService.Object, eventArgs);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -76,7 +76,7 @@ public class HubEventBridgeTests
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var deviceId = Guid.NewGuid();
 
-        _mockTcpService.Raise(s => s.HandRaisedReceived += null, null, deviceId);
+        _mockTcpService.Raise(s => s.HandRaisedReceived += null, _mockTcpService.Object, deviceId);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -94,7 +94,7 @@ public class HubEventBridgeTests
         var materialId = Guid.NewGuid();
         var eventArgs = new EntityDeliveryFailedEventArgs(deviceId, materialId);
 
-        _mockTcpService.Raise(s => s.DistributionTimedOut += null, null, eventArgs);
+        _mockTcpService.Raise(s => s.DistributionTimedOut += null, _mockTcpService.Object, eventArgs);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -117,7 +117,7 @@ public class HubEventBridgeTests
         var eventArgs = new EntityDeliveryFailedEventArgs(deviceId, feedbackId);
 
         // Act
-        _mockTcpService.Raise(s => s.FeedbackDeliveryTimedOut += null, null, eventArgs);
+        _mockTcpService.Raise(s => s.FeedbackDeliveryTimedOut += null, _mockTcpService.Object, eventArgs);
 
         // Assert - Per NetworkingAPISpec §2(1)(d)(v): includes deviceId and feedbackId
         _mockClientProxy.Verify(
@@ -137,7 +137,7 @@ public class HubEventBridgeTests
         await _hubEventBridge.StartAsync(CancellationToken.None);
         var device = new PairedDeviceEntity(Guid.NewGuid(), "Device 1");
 
-        _mockRegistryService.Raise(s => s.DevicePaired += null, null, device);
+        _mockRegistryService.Raise(s => s.DevicePaired += null, _mockRegistryService.Object, device);
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync(
@@ -156,7 +156,7 @@ public class HubEventBridgeTests
         
         // Act - raise event
         var deviceId = Guid.NewGuid();
-        _mockTcpService.Raise(s => s.HandRaisedReceived += null, null, deviceId);
+        _mockTcpService.Raise(s => s.HandRaisedReceived += null, _mockTcpService.Object, deviceId);
 
         // Assert - should NOT be called again
         _mockClientProxy.Verify(
