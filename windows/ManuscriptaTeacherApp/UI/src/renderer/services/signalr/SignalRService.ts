@@ -52,6 +52,7 @@ interface PendingSubscription {
 class SignalRService {
     private connection: signalR.HubConnection | null = null;
     private connectionStateCallbacks: Array<(state: signalR.HubConnectionState) => void> = [];
+    private reconnectedCallbacks: Array<() => void> = [];
     private pendingSubscriptions: PendingSubscription[] = [];
     private initialized = false;
 
@@ -85,6 +86,8 @@ class SignalRService {
         this.connection.onreconnected((connectionId) => {
             console.log("SignalR reconnected:", connectionId);
             this.notifyConnectionStateChange(signalR.HubConnectionState.Connected);
+            // Per §2(4)(c): Notify listeners to re-fetch all entities
+            this.notifyReconnected();
         });
 
         this.connection.onclose((error) => {
@@ -206,6 +209,25 @@ class SignalRService {
 
     private notifyConnectionStateChange(state: signalR.HubConnectionState): void {
         this.connectionStateCallbacks.forEach(cb => cb(state));
+    }
+
+    /**
+     * Subscribe to reconnection events.
+     * Per FrontendWorkflowSpecifications §2(4)(c): Re-fetch all entities when connection is restored.
+     */
+    public onReconnected(callback: () => void): () => void {
+        this.reconnectedCallbacks.push(callback);
+        return () => {
+            const index = this.reconnectedCallbacks.indexOf(callback);
+            if (index > -1) {
+                this.reconnectedCallbacks.splice(index, 1);
+            }
+        };
+    }
+
+    private notifyReconnected(): void {
+        console.log("SignalR reconnected - notifying listeners to refetch entities per §2(4)(c)");
+        this.reconnectedCallbacks.forEach(cb => cb());
     }
 
     // Generic handler registration
