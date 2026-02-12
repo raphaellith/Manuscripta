@@ -185,15 +185,21 @@ export class BackendProcessManager {
                 }
             });
 
+            const processStartTime = Date.now();
+
             // Per §2ZA(6)(a): Monitor for unexpected termination
             this.process.on('exit', (code, signal) => {
                 console.log(`Backend process exited with code ${code}, signal ${signal}`);
                 const proc = this.process;
                 this.process = null;
+
+                const ranForMs = Date.now() - processStartTime;
+                const STARTUP_FAILURE_WINDOW_MS = 10000;
+                const isStartupPhase = ranForMs < STARTUP_FAILURE_WINDOW_MS;
                 
                 // If process exited very quickly with non-zero code, likely port issue
                 // Per §2ZA(8)(c)(ii): Treat rapid exit as port unavailable
-                if (addressInUseDetected || (code !== 0 && code !== null)) {
+                if (addressInUseDetected || (isStartupPhase && code !== 0 && code !== null)) {
                     resolve(false);
                     return;
                 }
