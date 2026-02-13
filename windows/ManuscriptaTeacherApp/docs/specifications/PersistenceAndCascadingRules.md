@@ -27,6 +27,21 @@ This document is effective for the Windows app only.
 
 (4) The provisions in this document shall define required outcome behaviour. They do not mandate any particular implementation mechanism. An implementation that achieves these outcomes through any means (including but not limited to database foreign key constraints, service-layer logic, or any combination thereof) shall be considered compliant.
 
+## Section 1A — Database and File Storage Paths
+
+(1) All long-term persisted data under §1(1) shall be stored in a SQLite database file at the following path —
+
+    ```
+    %APPDATA%\ManuscriptaTeacherApp\manuscripta.db
+    ```
+
+(2) The backend shall resolve this path to an absolute location on startup, creating the directory if it does not already exist. This ensures that the database is written to a deterministic location regardless of the process's working directory.
+
+(3) The default path in (1) may be overridden by setting a custom connection string in `appsettings.json` under `ConnectionStrings.MainDbContext`. When a non-default value is provided, the backend shall use the configured connection string verbatim.
+
+(4) Attachment files shall be stored under `%APPDATA%\ManuscriptaTeacherApp\Attachments\`, as specified in `FrontendWorkflowSpecifications.md`.
+
+
 ## Section 2 - Requirements for Orphan Removal
 
 (1) The deletion of a material M must delete any questions associated with M.

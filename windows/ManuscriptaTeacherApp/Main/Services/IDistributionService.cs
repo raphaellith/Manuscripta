@@ -30,6 +30,14 @@ public interface IDistributionService
     /// </summary>
     /// <param name="deviceId">The device ID to clear assignments for.</param>
     Task ClearDeviceAssignmentsAsync(Guid deviceId);
+
+    /// <summary>
+    /// Removes a single material assignment for a device.
+    /// Per Session Interaction §3(7): prevents re-distribution after ACK is received.
+    /// </summary>
+    /// <param name="deviceId">The device ID.</param>
+    /// <param name="materialId">The material ID to remove.</param>
+    Task RemoveMaterialAssignmentAsync(Guid deviceId, Guid materialId);
 }
 
 /// <summary>
