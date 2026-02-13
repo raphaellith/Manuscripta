@@ -117,6 +117,8 @@ export const ClassroomPage: React.FC = () => {
     const remarkableDevicesRef = useRef(remarkableDevices);
     remarkableDevicesRef.current = remarkableDevices;
 
+    const remarkableDeployRef = useRef<{ ids: Set<string>; hadAuthError: boolean } | null>(null);
+
     // Pairing state
     const [isPairing, setIsPairing] = useState(false);
 
@@ -202,6 +204,10 @@ export const ClassroomPage: React.FC = () => {
         // §5F(3): subscribe to reMarkable auth invalid events
         const unsubRemarkableAuth = signalRService.onReMarkableAuthInvalid((deviceId) => {
             const device = remarkableDevicesRef.current.find(d => d.deviceId === deviceId);
+            const activeDeploy = remarkableDeployRef.current;
+            if (activeDeploy && activeDeploy.ids.has(deviceId)) {
+                activeDeploy.hadAuthError = true;
+            }
             addAlert('control_failed', undefined,
                 `reMarkable device "${device?.name ?? deviceId}" requires re-authentication. Please re-pair the device.`);
         });
@@ -299,6 +305,10 @@ export const ClassroomPage: React.FC = () => {
             if (!rmapiAvailable && selectedDeviceIds.length === 0) return;
         }
 
+        remarkableDeployRef.current = rmapiAvailable && hasRemarkableTargets
+            ? { ids: new Set(selectedRemarkableIds), hadAuthError: false }
+            : null;
+
         const allTargetIds = rmapiAvailable
             ? [...selectedDeviceIds, ...selectedRemarkableIds]
             : [...selectedDeviceIds];
@@ -319,7 +329,8 @@ export const ClassroomPage: React.FC = () => {
 
             await Promise.all(promises);
 
-            if (rmapiAvailable && selectedRemarkableIds.length > 0) {
+            const remarkableDeploy = remarkableDeployRef.current;
+            if (rmapiAvailable && selectedRemarkableIds.length > 0 && !remarkableDeploy?.hadAuthError) {
                 // §5G(2)(d): inform user about sync
                 addAlert('success', undefined, 'Material uploaded to reMarkable cloud. Devices will receive it on next sync.');
             }
@@ -328,6 +339,7 @@ export const ClassroomPage: React.FC = () => {
             addAlert('distribution_failed', undefined, 'Failed to deploy material');
         } finally {
             setDeployingDevices(new Set());
+            remarkableDeployRef.current = null;
         }
     };
 
