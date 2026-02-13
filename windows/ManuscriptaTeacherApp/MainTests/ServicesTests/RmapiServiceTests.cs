@@ -113,7 +113,7 @@ public class RmapiServiceTests
     #region CheckAvailabilityAsync Tests
 
     [Fact]
-    public async void CheckAvailabilityAsync_RmapiNotInstalled_ReturnsFalse()
+    public async Task CheckAvailabilityAsync_RmapiNotInstalled_ReturnsFalse()
     {
         // rmapi is not installed in the test environment, so should return false
         if (File.Exists(_testRmapiPath))
@@ -128,7 +128,7 @@ public class RmapiServiceTests
     }
 
     [Fact]
-    public async void CheckAvailabilityAsync_CachesResult_SecondCallReturnsCached()
+    public async Task CheckAvailabilityAsync_CachesResult_SecondCallReturnsCached()
     {
         if (File.Exists(_testRmapiPath))
         {
@@ -146,7 +146,7 @@ public class RmapiServiceTests
     }
 
     [Fact]
-    public async void CheckAvailabilityAsync_AfterInvalidate_RechecksAvailability()
+    public async Task CheckAvailabilityAsync_AfterInvalidate_RechecksAvailability()
     {
         if (File.Exists(_testRmapiPath))
         {
@@ -169,7 +169,7 @@ public class RmapiServiceTests
     #region AuthenticateAsync Tests
 
     [Fact]
-    public async void AuthenticateAsync_EmptyCode_ThrowsArgumentException()
+    public async Task AuthenticateAsync_EmptyCode_ThrowsArgumentException()
     {
         var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
@@ -178,7 +178,7 @@ public class RmapiServiceTests
     }
 
     [Fact]
-    public async void AuthenticateAsync_EmptyConfigPath_ThrowsArgumentException()
+    public async Task AuthenticateAsync_EmptyConfigPath_ThrowsArgumentException()
     {
         var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
@@ -187,7 +187,7 @@ public class RmapiServiceTests
     }
 
     [Fact]
-    public async void AuthenticateAsync_WhitespaceCode_ThrowsArgumentException()
+    public async Task AuthenticateAsync_WhitespaceCode_ThrowsArgumentException()
     {
         var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
