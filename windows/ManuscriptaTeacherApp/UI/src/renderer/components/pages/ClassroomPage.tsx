@@ -599,7 +599,7 @@ export const ClassroomPage: React.FC = () => {
                             <button
                                 className="bg-brand-orange text-white hover:bg-brand-orange-dark font-sans font-medium py-2 px-4 rounded-md transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
                                 onClick={handleLockDevices}
-                                disabled={devices.length === 0 || (hasSelection && hasRemarkableInSelection && selectedDeviceIds.length === 0)}
+                                disabled={devices.length === 0 || hasRemarkableInSelection}
                             >
                                 {selectedDeviceIds.length > 0 ? `Lock (${selectedDeviceIds.length})` : 'Lock All'}
                             </button>
@@ -614,7 +614,7 @@ export const ClassroomPage: React.FC = () => {
                             <button
                                 className="bg-white border border-gray-300 text-text-body hover:border-brand-orange hover:text-brand-orange font-sans font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={handleUnlockDevices}
-                                disabled={devices.length === 0 || (hasSelection && hasRemarkableInSelection && selectedDeviceIds.length === 0)}
+                                disabled={devices.length === 0 || hasRemarkableInSelection}
                             >
                                 {selectedDeviceIds.length > 0 ? `Unlock (${selectedDeviceIds.length})` : 'Unlock All'}
                             </button>
