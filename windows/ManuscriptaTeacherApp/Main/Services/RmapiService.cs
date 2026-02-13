@@ -14,6 +14,7 @@ public class RmapiService : IRmapiService
 {
     private readonly ILogger<RmapiService> _logger;
     private readonly HttpClient _httpClient;
+    private readonly string _rmapiExecutablePath;
     private bool? _cachedAvailability;
     private readonly object _cacheLock = new();
 
@@ -21,7 +22,7 @@ public class RmapiService : IRmapiService
     /// The path where the rmapi executable is stored.
     /// Per RemarkableIntegrationSpecification §2(2)(a).
     /// </summary>
-    private static string RmapiExecutablePath => Path.Combine(
+    private static string DefaultRmapiExecutablePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "ManuscriptaTeacherApp",
         "bin",
@@ -38,10 +39,13 @@ public class RmapiService : IRmapiService
         "rmapi"
     );
 
-    public RmapiService(ILogger<RmapiService> logger, HttpClient httpClient)
+    public RmapiService(ILogger<RmapiService> logger, HttpClient httpClient, string? rmapiExecutablePath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _rmapiExecutablePath = string.IsNullOrWhiteSpace(rmapiExecutablePath)
+            ? DefaultRmapiExecutablePath
+            : rmapiExecutablePath;
     }
 
     /// <inheritdoc />
@@ -57,9 +61,9 @@ public class RmapiService : IRmapiService
         }
 
         // Per §2(2)(a): check executable exists
-        if (!File.Exists(RmapiExecutablePath))
+        if (!File.Exists(_rmapiExecutablePath))
         {
-            _logger.LogInformation("rmapi not found at {Path}", RmapiExecutablePath);
+            _logger.LogInformation("rmapi not found at {Path}", _rmapiExecutablePath);
             SetCachedAvailability(false);
             return false;
         }
@@ -88,7 +92,7 @@ public class RmapiService : IRmapiService
         try
         {
             // Ensure target directory exists
-            var binDir = Path.GetDirectoryName(RmapiExecutablePath)!;
+            var binDir = Path.GetDirectoryName(_rmapiExecutablePath)!;
             Directory.CreateDirectory(binDir);
 
             // Download from GitHub releases (zip)
@@ -120,14 +124,14 @@ public class RmapiService : IRmapiService
                 }
 
                 // Move to target location, overwriting if exists
-                if (File.Exists(RmapiExecutablePath))
+                if (File.Exists(_rmapiExecutablePath))
                 {
-                    File.Delete(RmapiExecutablePath);
+                    File.Delete(_rmapiExecutablePath);
                 }
                 
-                File.Move(rmapiFile, RmapiExecutablePath);
+                File.Move(rmapiFile, _rmapiExecutablePath);
 
-                _logger.LogInformation("rmapi installed successfully at {Path}", RmapiExecutablePath);
+                _logger.LogInformation("rmapi installed successfully at {Path}", _rmapiExecutablePath);
 
                 // Invalidate cache so next check picks up the new binary
                 InvalidateAvailabilityCache();
@@ -278,7 +282,7 @@ public class RmapiService : IRmapiService
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = RmapiExecutablePath,
+            FileName = _rmapiExecutablePath,
             Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,

@@ -17,12 +17,14 @@ public class RmapiServiceTests
     private readonly Mock<ILogger<RmapiService>> _mockLogger;
     private readonly Mock<HttpMessageHandler> _mockHttpHandler;
     private readonly HttpClient _httpClient;
+    private readonly string _testRmapiPath;
 
     public RmapiServiceTests()
     {
         _mockLogger = new Mock<ILogger<RmapiService>>();
         _mockHttpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_mockHttpHandler.Object);
+        _testRmapiPath = Path.Combine(Path.GetTempPath(), $"rmapi-test-{Guid.NewGuid():N}.exe");
     }
 
     #region Constructor Tests
@@ -42,7 +44,7 @@ public class RmapiServiceTests
     [Fact]
     public void Constructor_ValidParameters_DoesNotThrow()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         Assert.NotNull(service);
     }
 
@@ -53,7 +55,7 @@ public class RmapiServiceTests
     [Fact]
     public void GetConfigPath_ReturnsPathContainingDeviceId()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         var deviceId = Guid.NewGuid();
 
         var path = service.GetConfigPath(deviceId);
@@ -64,7 +66,7 @@ public class RmapiServiceTests
     [Fact]
     public void GetConfigPath_ReturnsPathWithConfExtension()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         var deviceId = Guid.NewGuid();
 
         var path = service.GetConfigPath(deviceId);
@@ -75,7 +77,7 @@ public class RmapiServiceTests
     [Fact]
     public void GetConfigPath_ReturnsPathContainingRmapiDirectory()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         var deviceId = Guid.NewGuid();
 
         var path = service.GetConfigPath(deviceId);
@@ -87,7 +89,7 @@ public class RmapiServiceTests
     [Fact]
     public void GetConfigPath_DifferentDeviceIds_ReturnDifferentPaths()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         var id1 = Guid.NewGuid();
         var id2 = Guid.NewGuid();
 
@@ -101,7 +103,7 @@ public class RmapiServiceTests
     [Fact]
     public void InvalidateAvailabilityCache_DoesNotThrow()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
         // Should not throw even when no cache exists
         service.InvalidateAvailabilityCache();
     }
@@ -114,7 +116,11 @@ public class RmapiServiceTests
     public async void CheckAvailabilityAsync_RmapiNotInstalled_ReturnsFalse()
     {
         // rmapi is not installed in the test environment, so should return false
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        if (File.Exists(_testRmapiPath))
+        {
+            File.Delete(_testRmapiPath);
+        }
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         var result = await service.CheckAvailabilityAsync();
 
@@ -124,7 +130,11 @@ public class RmapiServiceTests
     [Fact]
     public async void CheckAvailabilityAsync_CachesResult_SecondCallReturnsCached()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        if (File.Exists(_testRmapiPath))
+        {
+            File.Delete(_testRmapiPath);
+        }
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         // First call: rmapi not installed, returns false
         var first = await service.CheckAvailabilityAsync();
@@ -138,7 +148,11 @@ public class RmapiServiceTests
     [Fact]
     public async void CheckAvailabilityAsync_AfterInvalidate_RechecksAvailability()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        if (File.Exists(_testRmapiPath))
+        {
+            File.Delete(_testRmapiPath);
+        }
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         var first = await service.CheckAvailabilityAsync();
         Assert.False(first);
@@ -157,7 +171,7 @@ public class RmapiServiceTests
     [Fact]
     public async void AuthenticateAsync_EmptyCode_ThrowsArgumentException()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.AuthenticateAsync("", "/tmp/test.conf"));
@@ -166,7 +180,7 @@ public class RmapiServiceTests
     [Fact]
     public async void AuthenticateAsync_EmptyConfigPath_ThrowsArgumentException()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.AuthenticateAsync("abc123", ""));
@@ -175,7 +189,7 @@ public class RmapiServiceTests
     [Fact]
     public async void AuthenticateAsync_WhitespaceCode_ThrowsArgumentException()
     {
-        var service = new RmapiService(_mockLogger.Object, _httpClient);
+        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.AuthenticateAsync("   ", "/tmp/test.conf"));
