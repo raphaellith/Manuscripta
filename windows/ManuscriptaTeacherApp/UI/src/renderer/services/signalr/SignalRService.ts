@@ -484,7 +484,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(d)(ii).
      * Payload includes deviceId and materialId per API Contract §3.6.2.
      */
-    public onDistributionFailed(callback: (deviceId: string) => void): () => void {
+    public onDistributionFailed(callback: (payload: { deviceId: string; materialId: string }) => void): () => void {
         return this.subscribe("DistributionFailed", callback as (...args: unknown[]) => void);
     }
 
@@ -501,7 +501,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(e)(v).
      * Payload includes deviceId and feedbackId per API Contract §3.6.2.
      */
-    public onFeedbackDeliveryFailed(callback: (deviceId: string) => void): () => void {
+    public onFeedbackDeliveryFailed(callback: (payload: { deviceId: string; feedbackId: string }) => void): () => void {
         return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 
