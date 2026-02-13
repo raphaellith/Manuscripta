@@ -73,6 +73,7 @@ export const LessonLibraryPage: React.FC = () => {
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,
+        getQuestionsForMaterial,
         createUnitCollection,
         deleteUnitCollection,
         createUnit,
@@ -87,6 +88,48 @@ export const LessonLibraryPage: React.FC = () => {
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const searchKeywords = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const isSearching = searchKeywords.length > 0;
+
+    const getQuestionSearchText = (materialId: string) =>
+        getQuestionsForMaterial(materialId)
+            .map(question => {
+                const options = question.options?.join(' ') ?? '';
+                const correctAnswer = question.correctAnswer ?? '';
+                const markScheme = question.markScheme ?? '';
+                return `${question.questionText} ${options} ${correctAnswer} ${markScheme}`;
+            })
+            .join(' ');
+
+    const materialMatchesSearch = (material: MaterialEntity) => {
+        if (!isSearching) return true;
+        const questionText = getQuestionSearchText(material.id);
+        const haystack = `${material.title} ${material.content || ''} ${questionText}`.toLowerCase();
+        return searchKeywords.every(keyword => haystack.includes(keyword));
+    };
+
+    const getFilteredMaterialsForLesson = (lessonId: string) =>
+        getMaterialsForLesson(lessonId).filter(materialMatchesSearch);
+
+    const getFilteredLessonsForUnit = (unitId: string) => {
+        const lessons = getLessonsForUnit(unitId);
+        if (!isSearching) return lessons;
+        return lessons.filter(lesson => getFilteredMaterialsForLesson(lesson.id).length > 0);
+    };
+
+    const getFilteredUnitsForCollection = (collectionId: string) => {
+        const units = getUnitsForCollection(collectionId);
+        if (!isSearching) return units;
+        return units.filter(unit => getFilteredLessonsForUnit(unit.id).length > 0);
+    };
+
+    const visibleCollections = isSearching
+        ? unitCollections.filter(collection => getFilteredUnitsForCollection(collection.id).length > 0)
+        : unitCollections;
+
+    const hasSearchResults = !isSearching || visibleCollections.length > 0;
 
     const toggleSet = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
         const next = new Set(set);
@@ -130,8 +173,23 @@ export const LessonLibraryPage: React.FC = () => {
                     </button>
                 </div>
 
+                <div className="p-3 border-b border-gray-200 bg-white">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search materials"
+                        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-text-body focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                    />
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {unitCollections.length === 0 && (
+                    {isSearching && !hasSearchResults && (
+                        <div className="text-center py-8">
+                            <p className="text-sm text-gray-400">No materials match your search.</p>
+                        </div>
+                    )}
+                    {!isSearching && unitCollections.length === 0 && (
                         <div className="text-center py-8">
                             <p className="text-sm text-gray-400 mb-2">No collections yet</p>
                             <button
@@ -143,7 +201,7 @@ export const LessonLibraryPage: React.FC = () => {
                         </div>
                     )}
 
-                    {unitCollections.map(collection => (
+                    {visibleCollections.map(collection => (
                         <div key={collection.id}>
                             {/* Collection Row - Orange left border (from prototype) */}
                             <div
@@ -152,7 +210,7 @@ export const LessonLibraryPage: React.FC = () => {
                             >
                                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
                                 <span className="text-sm font-medium text-text-heading truncate flex-1">{collection.title}</span>
-                                <span className="text-xs text-gray-400">{getUnitsForCollection(collection.id).length}</span>
+                                <span className="text-xs text-gray-400">{getFilteredUnitsForCollection(collection.id).length}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createUnit', collection }); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -172,7 +230,7 @@ export const LessonLibraryPage: React.FC = () => {
                             {/* Units under Collection - Orange indent line (from prototype) */}
                             {expandedCollections.has(collection.id) && (
                                 <div className="ml-4 pl-2 space-y-1 mt-1" style={{ borderLeft: '2px solid var(--color-brand-orange)' }}>
-                                    {getUnitsForCollection(collection.id).map(unit => (
+                                    {getFilteredUnitsForCollection(collection.id).map(unit => (
                                         <div key={unit.id}>
                                             {/* Unit Row - Green left border (from prototype) */}
                                             <div
@@ -181,7 +239,7 @@ export const LessonLibraryPage: React.FC = () => {
                                             >
                                                 <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
                                                 <span className="text-sm text-text-heading truncate flex-1">{unit.title}</span>
-                                                <span className="text-xs text-gray-400">{getLessonsForUnit(unit.id).length}</span>
+                                                <span className="text-xs text-gray-400">{getFilteredLessonsForUnit(unit.id).length}</span>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createLesson', unit }); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -201,7 +259,7 @@ export const LessonLibraryPage: React.FC = () => {
                                             {/* Lessons under Unit - Green indent line (from prototype) */}
                                             {expandedUnits.has(unit.id) && (
                                                 <div className="ml-4 pl-2 space-y-0.5 mt-1" style={{ borderLeft: '2px solid var(--color-brand-green)' }}>
-                                                    {getLessonsForUnit(unit.id).map(lesson => (
+                                                    {getFilteredLessonsForUnit(unit.id).map(lesson => (
                                                         <div key={lesson.id}>
                                                             {/* Lesson Row - Blue left border (from prototype) */}
                                                             <div
@@ -210,7 +268,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                             >
                                                                 <ChevronRightIcon isOpen={expandedLessons.has(lesson.id)} />
                                                                 <span className="text-sm text-text-body truncate flex-1">{lesson.title}</span>
-                                                                <span className="text-xs text-gray-400">({getMaterialsForLesson(lesson.id).length})</span>
+                                                                <span className="text-xs text-gray-400">({getFilteredMaterialsForLesson(lesson.id).length})</span>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createMaterial', lesson }); }}
                                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -230,10 +288,10 @@ export const LessonLibraryPage: React.FC = () => {
                                                             {/* Materials in Lesson - Blue indent line (from prototype) */}
                                                             {expandedLessons.has(lesson.id) && (
                                                                 <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
-                                                                    {getMaterialsForLesson(lesson.id).length === 0 ? (
+                                                                    {getFilteredMaterialsForLesson(lesson.id).length === 0 ? (
                                                                         <p className="text-xs text-gray-400 py-2">No materials yet</p>
                                                                     ) : (
-                                                                        getMaterialsForLesson(lesson.id).map(material => (
+                                                                        getFilteredMaterialsForLesson(lesson.id).map(material => (
                                                                             <div
                                                                                 key={material.id}
                                                                                 className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
@@ -255,14 +313,14 @@ export const LessonLibraryPage: React.FC = () => {
                                                             )}
                                                         </div>
                                                     ))}
-                                                    {getLessonsForUnit(unit.id).length === 0 && (
+                                                    {getFilteredLessonsForUnit(unit.id).length === 0 && (
                                                         <p className="text-xs text-gray-400 py-2">No lessons yet</p>
                                                     )}
                                                 </div>
                                             )}
                                         </div>
                                     ))}
-                                    {getUnitsForCollection(collection.id).length === 0 && (
+                                    {getFilteredUnitsForCollection(collection.id).length === 0 && (
                                         <p className="text-xs text-gray-400 py-2">No units yet</p>
                                     )}
                                 </div>
