@@ -1,4 +1,4 @@
-/**
+ /**
  * Preload script for Electron.
  * Exposes IPC APIs to renderer via contextBridge.
  * Per FrontendWorkflowSpecifications §4C(4).
@@ -8,6 +8,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Expose electronAPI to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
+    /**
+     * Get the active backend port.
+     * Per FrontendWorkflowSpecifications §2ZA(8)(c)(iv).
+     */
+    getBackendPort: () => ipcRenderer.invoke('get-backend-port'),
+
     /**
      * Show file picker dialog.
      */
@@ -61,4 +67,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) =>
         ipcRenderer.invoke('save-pdf-file', pdfBytes, defaultFilename),
+
+     /** Listen for backend state changes from main process.
+     * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
+     * @param callback - Function to call when backend state changes
+     * @returns Function to remove the listener
+     */
+    onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => {
+        const listener = (_event: Electron.IpcRendererEvent, state: 'reconnecting' | 'connected') => {
+            callback(state);
+        };
+        ipcRenderer.on('backend-state-change', listener);
+        return () => {
+            ipcRenderer.removeListener('backend-state-change', listener);
+        };
+    },
 });

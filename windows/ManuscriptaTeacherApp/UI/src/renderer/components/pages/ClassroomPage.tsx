@@ -189,10 +189,11 @@ export const ClassroomPage: React.FC = () => {
         });
 
         // Handler for distribution completion - clear deploying state
-        const unsubDistributionFailed = signalRService.onDistributionFailed((deviceId) => {
+        // Payload includes deviceId and materialId per API Contract §3.6.2
+        const unsubDistributionFailed = signalRService.onDistributionFailed((payload: { deviceId: string; materialId: string }) => {
             setDeployingDevices(prev => {
                 const next = new Set(prev);
-                next.delete(deviceId);
+                next.delete(payload.deviceId);
                 return next;
             });
             // Note: Alert for distribution failure is handled by AlertContext

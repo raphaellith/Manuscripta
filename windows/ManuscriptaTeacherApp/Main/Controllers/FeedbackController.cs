@@ -56,12 +56,18 @@ public class FeedbackController : ControllerBase
             // Get all feedback for responses submitted by this device
             var allFeedback = await _feedbackRepository.GetAllAsync();
             
-            // Filter to feedback for responses from this device
-            // We need to check response ownership by device
+            // Filter to READY feedback for responses from this device
+            // Per Session Interaction §7(6): only return feedback not yet ACK'd (READY status)
             var deviceFeedback = new List<Main.Models.Entities.FeedbackEntity>();
             
             foreach (var feedback in allFeedback)
             {
+                // Skip feedback that has already been delivered
+                if (feedback.Status != Main.Models.Enums.FeedbackStatus.READY)
+                {
+                    continue;
+                }
+                
                 var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
                 if (response != null && response.DeviceId == parsedDeviceId)
                 {

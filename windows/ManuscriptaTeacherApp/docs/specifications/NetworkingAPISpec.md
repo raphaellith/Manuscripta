@@ -170,14 +170,10 @@ For a description of how these server methods and client handlers are expected t
 
         (i) `HandRaised`, with parameter `deviceId` (Guid): Notifies the frontend that a device has raised a hand. The backend shall invoke this handler on receipt of a TCP `HAND_RAISED` message from the device.
 
-        (ii) `DistributionFailed`, with parameter `deviceId` (Guid): Notifies the frontend that material distribution to a device has failed. The backend shall invoke this handler if material distribution times out by the virtue of Session Interaction Specification s3(6).
+        (ii) `DistributionFailed`, with parameter `deviceId` (Guid) and `materialId` (Guid): Notifies the frontend that material distribution to a device has failed. The backend shall invoke this handler if material distribution times out by the virtue of Session Interaction Specification s3(6), or when the target device is not connected.
 
         (iii) `RemoteControlFailed`, with parameters `deviceId` (Guid) and `command` (string): Notifies the frontend that a remote control command has failed. The backend shall invoke this handler in case of a timeout under s6(2)(c) of the Session Interaction Specification.
 
         (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
 
-        (v) `FeedbackDeliveryFailed`, with parameter `deviceId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification.
-
-    (f) Handlers for reMarkable devices.
-
-        (i) `ReMarkableAuthInvalid`, with parameter `deviceId` (Guid): Notifies the frontend that a reMarkable device's authentication has become invalid and requires re-authentication.
+        (v) `FeedbackDeliveryFailed`, with parameters `deviceId` (Guid) and `feedbackId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification, or when the target device is not connected.
