@@ -289,6 +289,7 @@ public class RmapiService : IRmapiService
     /// <param name="stdinInput">Optional input to write to the process's standard input (e.g. one-time code).</param>
     private async Task<ProcessResult> RunRmapiAsync(string arguments, string? configPath, string? stdinInput = null)
     {
+        const int timeoutMilliseconds = 30_000;
         var startInfo = new ProcessStartInfo
         {
             FileName = _rmapiExecutablePath,
@@ -317,10 +318,26 @@ public class RmapiService : IRmapiService
             process.StandardInput.Close();
         }
 
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+        var waitForExitTask = process.WaitForExitAsync();
+        var allTasks = Task.WhenAll(outputTask, errorTask, waitForExitTask);
+        var timeoutTask = Task.Delay(timeoutMilliseconds);
+        var completed = await Task.WhenAny(allTasks, timeoutTask);
+        if (completed == timeoutTask)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+            }
+            throw new TimeoutException($"rmapi command timed out after {timeoutMilliseconds}ms: {arguments}");
+        }
 
-        await process.WaitForExitAsync();
+        var output = await outputTask;
+        var error = await errorTask;
 
         var combinedOutput = string.IsNullOrEmpty(error) ? output : $"{output}\n{error}";
 
