@@ -217,6 +217,14 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) When the frontend creates, updates or deletes a unit collection, unit, lesson or material, it must call the appropriate CRUD method defined in S1(1)(a)-(d) of `NetworkingAPISpec.md`.
 
+(3) The "Library" tab must provide a search bar for searching materials in the lesson library, subject to the following requirements.
+
+    (a) When one or more keywords are entered into the search bar, the frontend must filter through all materials in the lesson library and only display those matching those keywords.
+
+    (b) Materials are said to match the keyword if its title, content, question texts or question options include the keyword.
+
+    (c) Material encoding syntax that is not visible through the user interface must be excluded from the search. 
+
 
 
 ## Section 4A - Further Specifications regarding Material Creation
@@ -239,7 +247,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) attach source documents to a unit collection.
 
-    (b) search for a material based on its title and contents.
+    (b) [Deleted.]
 
 
 ## Section 4B - AI Generation
