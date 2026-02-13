@@ -255,7 +255,10 @@ export const LessonLibraryPage: React.FC = () => {
                         </div>
                     )}
 
-                    {visibleCollections.map(collection => (
+                    {visibleCollections.map(collection => {
+                        const unitsForCollection = getFilteredUnitsForCollection(collection.id);
+
+                        return (
                         <div key={collection.id}>
                             {/* Collection Row - Orange left border (from prototype) */}
                             <div
@@ -264,7 +267,7 @@ export const LessonLibraryPage: React.FC = () => {
                             >
                                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
                                 <span className="text-sm font-medium text-text-heading truncate flex-1">{collection.title}</span>
-                                <span className="text-xs text-gray-400">{getFilteredUnitsForCollection(collection.id).length}</span>
+                                <span className="text-xs text-gray-400">{unitsForCollection.length}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createUnit', collection }); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -284,7 +287,10 @@ export const LessonLibraryPage: React.FC = () => {
                             {/* Units under Collection - Orange indent line (from prototype) */}
                             {expandedCollections.has(collection.id) && (
                                 <div className="ml-4 pl-2 space-y-1 mt-1" style={{ borderLeft: '2px solid var(--color-brand-orange)' }}>
-                                    {getFilteredUnitsForCollection(collection.id).map(unit => (
+                                    {unitsForCollection.map(unit => {
+                                        const lessonsForUnit = getFilteredLessonsForUnit(unit.id);
+
+                                        return (
                                         <div key={unit.id}>
                                             {/* Unit Row - Green left border (from prototype) */}
                                             <div
@@ -293,7 +299,7 @@ export const LessonLibraryPage: React.FC = () => {
                                             >
                                                 <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
                                                 <span className="text-sm text-text-heading truncate flex-1">{unit.title}</span>
-                                                <span className="text-xs text-gray-400">{getFilteredLessonsForUnit(unit.id).length}</span>
+                                                <span className="text-xs text-gray-400">{lessonsForUnit.length}</span>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createLesson', unit }); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -313,74 +319,80 @@ export const LessonLibraryPage: React.FC = () => {
                                             {/* Lessons under Unit - Green indent line (from prototype) */}
                                             {expandedUnits.has(unit.id) && (
                                                 <div className="ml-4 pl-2 space-y-0.5 mt-1" style={{ borderLeft: '2px solid var(--color-brand-green)' }}>
-                                                    {getFilteredLessonsForUnit(unit.id).map(lesson => (
-                                                        <div key={lesson.id}>
-                                                            {/* Lesson Row - Blue left border (from prototype) */}
-                                                            <div
-                                                                className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02] group"
-                                                                onClick={() => toggleSet(lesson.id, expandedLessons, setExpandedLessons)}
-                                                            >
-                                                                <ChevronRightIcon isOpen={expandedLessons.has(lesson.id)} />
-                                                                <span className="text-sm text-text-body truncate flex-1">{lesson.title}</span>
-                                                                <span className="text-xs text-gray-400">({getFilteredMaterialsForLesson(lesson.id).length})</span>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setModal({ type: 'createMaterial', lesson }); }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
-                                                                    title="Add material"
-                                                                >
-                                                                    <PlusIcon />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
-                                                                    title="Delete lesson"
-                                                                >
-                                                                    <TrashIcon />
-                                                                </button>
-                                                            </div>
+                                                    {lessonsForUnit.map(lesson => {
+                                                        const materialsForLesson = getFilteredMaterialsForLesson(lesson.id);
 
-                                                            {/* Materials in Lesson - Blue indent line (from prototype) */}
-                                                            {expandedLessons.has(lesson.id) && (
-                                                                <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
-                                                                    {getFilteredMaterialsForLesson(lesson.id).length === 0 ? (
-                                                                        <p className="text-xs text-gray-400 py-2">No materials yet</p>
-                                                                    ) : (
-                                                                        getFilteredMaterialsForLesson(lesson.id).map(material => (
-                                                                            <div
-                                                                                key={material.id}
-                                                                                className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
-                                                                                onClick={() => setModal({ type: 'editMaterial', material })}
-                                                                            >
-                                                                                {getContentIcon(material.materialType)}
-                                                                                <span className="text-sm text-text-body truncate flex-1">{material.title}</span>
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
-                                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
-                                                                                    title="Delete material"
-                                                                                >
-                                                                                    <TrashIcon />
-                                                                                </button>
-                                                                            </div>
-                                                                        ))
-                                                                    )}
+                                                        return (
+                                                            <div key={lesson.id}>
+                                                                {/* Lesson Row - Blue left border (from prototype) */}
+                                                                <div
+                                                                    className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02] group"
+                                                                    onClick={() => toggleSet(lesson.id, expandedLessons, setExpandedLessons)}
+                                                                >
+                                                                    <ChevronRightIcon isOpen={expandedLessons.has(lesson.id)} />
+                                                                    <span className="text-sm text-text-body truncate flex-1">{lesson.title}</span>
+                                                                    <span className="text-xs text-gray-400">({materialsForLesson.length})</span>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setModal({ type: 'createMaterial', lesson }); }}
+                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
+                                                                        title="Add material"
+                                                                    >
+                                                                        <PlusIcon />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
+                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                        title="Delete lesson"
+                                                                    >
+                                                                        <TrashIcon />
+                                                                    </button>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {getFilteredLessonsForUnit(unit.id).length === 0 && (
+
+                                                                {/* Materials in Lesson - Blue indent line (from prototype) */}
+                                                                {expandedLessons.has(lesson.id) && (
+                                                                    <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
+                                                                        {materialsForLesson.length === 0 ? (
+                                                                            <p className="text-xs text-gray-400 py-2">No materials yet</p>
+                                                                        ) : (
+                                                                            materialsForLesson.map(material => (
+                                                                                <div
+                                                                                    key={material.id}
+                                                                                    className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
+                                                                                    onClick={() => setModal({ type: 'editMaterial', material })}
+                                                                                >
+                                                                                    {getContentIcon(material.materialType)}
+                                                                                    <span className="text-sm text-text-body truncate flex-1">{material.title}</span>
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
+                                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                                        title="Delete material"
+                                                                                    >
+                                                                                        <TrashIcon />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {lessonsForUnit.length === 0 && (
                                                         <p className="text-xs text-gray-400 py-2">No lessons yet</p>
                                                     )}
                                                 </div>
                                             )}
-                                        </div>
-                                    ))}
-                                    {getFilteredUnitsForCollection(collection.id).length === 0 && (
+                                                </div>
+                                            );
+                                            })}
+                                            {unitsForCollection.length === 0 && (
                                         <p className="text-xs text-gray-400 py-2">No units yet</p>
                                     )}
                                 </div>
                             )}
                         </div>
-                    ))}
+                            );
+                            })}
                 </div>
             </div>
 
