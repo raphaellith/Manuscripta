@@ -222,19 +222,36 @@ public class RmapiService : IRmapiService
     public async Task EnsureFolderExistsAsync(string remotePath, string configPath)
     {
         var result = await RunRmapiAsync($"mkdir \"{remotePath}\"", configPath);
-        // mkdir may fail if folder already exists — that's acceptable
+
         if (result.ExitCode != 0)
         {
-            _logger.LogDebug("mkdir returned exit code {ExitCode} for {Path} (may already exist): {Output}",
-                result.ExitCode, remotePath, result.Output);
-
             if (IsAuthError(result.Output))
             {
                 throw new RmapiAuthException($"Authentication invalid. Output: {result.Output}");
             }
+
+            // mkdir may fail if folder already exists — that's acceptable; other errors are not.
+            if (!IsAlreadyExistsError(result.Output))
+            {
+                throw new RmapiException($"mkdir failed for path {remotePath} with exit code {result.ExitCode}. Output: {result.Output}");
+            }
+
+            _logger.LogDebug("mkdir reported existing folder for {Path}: {Output}", remotePath, result.Output);
         }
     }
 
+    private static bool IsAlreadyExistsError(string output)
+    {
+        if (string.IsNullOrEmpty(output))
+        {
+            return false;
+        }
+
+        // Heuristic: rmapi (or underlying tools) typically indicate existing folders with phrases like
+        // "already exists" or "File exists".
+        return output.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+               || output.Contains("file exists", StringComparison.OrdinalIgnoreCase);
+    }
     /// <inheritdoc />
     public async Task<List<string>> ListFolderAsync(string remotePath, string configPath)
     {
