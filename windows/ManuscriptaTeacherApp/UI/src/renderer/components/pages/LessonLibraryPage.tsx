@@ -11,6 +11,7 @@ import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
+import { markdownToHtml } from '../../utils/markdownConversion';
 import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
@@ -96,6 +97,18 @@ export const LessonLibraryPage: React.FC = () => {
     );
     const isSearching = searchKeywords.length > 0;
 
+    const getVisibleTextFromContent = (content: string) => {
+        if (!content.trim()) return '';
+        const html = markdownToHtml(content);
+        const text = html
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\[Question:\s*[^\]]+\]/gi, ' ')
+            .replace(/\[PDF:\s*[^\]]+\]/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return text;
+    };
+
     const filteredMaterialsByLesson = useMemo(() => {
         const result = new Map<string, MaterialEntity[]>();
         const materialMatchesSearch = (material: MaterialEntity) => {
@@ -103,12 +116,11 @@ export const LessonLibraryPage: React.FC = () => {
             const questionText = getQuestionsForMaterial(material.id)
                 .map(question => {
                     const options = question.options?.join(' ') ?? '';
-                    const correctAnswer = question.correctAnswer ?? '';
-                    const markScheme = question.markScheme ?? '';
-                    return `${question.questionText} ${options} ${correctAnswer} ${markScheme}`;
+                    return `${question.questionText} ${options}`;
                 })
                 .join(' ');
-            const haystack = `${material.title} ${material.content || ''} ${questionText}`.toLowerCase();
+            const visibleContent = getVisibleTextFromContent(material.content || '');
+            const haystack = `${material.title} ${visibleContent} ${questionText}`.toLowerCase();
             return searchKeywords.every(keyword => haystack.includes(keyword));
         };
 
