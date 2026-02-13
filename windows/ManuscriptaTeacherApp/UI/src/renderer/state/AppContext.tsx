@@ -17,10 +17,17 @@ import type {
     InternalCreateMaterialDto,
 } from '../models';
 
+/**
+ * Backend process state for lifecycle management.
+ * Per FrontendWorkflowSpecifications §2ZA(6)(c).
+ */
+export type BackendProcessState = 'connected' | 'reconnecting';
+
 interface AppState {
     isConnected: boolean;
     isLoading: boolean;
     error: string | null;
+    backendState: BackendProcessState;
     unitCollections: UnitCollectionEntity[];
     units: UnitEntity[];
     lessons: LessonEntity[];
@@ -74,6 +81,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         isConnected: false,
         isLoading: true,
         error: null,
+        backendState: 'connected',
         unitCollections: [],
         units: [],
         lessons: [],
@@ -130,17 +138,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 await fetchAllData();
             } catch (err) {
                 console.error('Failed to initialize connection:', err);
+                // Per §2ZA(4)(d): Avoid wording that implies frontend-backend separation
                 setState(prev => ({
                     ...prev,
                     isConnected: false,
                     isLoading: false,
-                    error: 'Unable to load your library. Please ensure the application is running and try again.',
+                    error: 'Unable to load your library. Please restart the application and try again.',
                 }));
             }
         };
         init();
         return () => signalRService.stopConnection();
     }, [fetchAllData]);
+
+    // Per §2ZA(6)(c)(i): Listen for backend state changes from main process
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.electronAPI?.onBackendStateChange) {
+            const unsubscribe = window.electronAPI.onBackendStateChange((newState) => {
+                console.log('Backend state changed:', newState);
+                setState(prev => ({ ...prev, backendState: newState }));
+            });
+            return unsubscribe;
+        }
+    }, []);
 
     // CRUD operations
     const createUnitCollection = async (dto: InternalCreateUnitCollectionDto) => {

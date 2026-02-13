@@ -15,8 +15,34 @@ import { ResponsesPage } from './components/pages/ResponsesPage';
 type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
 const AppContent: React.FC = () => {
-    const { isLoading, error, isConnected, refreshData } = useAppContext();
+    const { isLoading, error, isConnected, backendState, refreshData } = useAppContext();
     const [activeView, setActiveView] = useState<View>('lesson-library');
+
+    /**
+     * Render connection status indicator.
+     * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i): Display reconnecting indicator.
+     */
+    /**
+     * Render application status indicator.
+     * Per FrontendWorkflowSpecifications §2ZA(4)(d): Avoid wording that implies frontend-backend separation.
+     */
+    const renderApplicationStatus = () => {
+        // Backend restarting takes precedence (per §2ZA(6)(c)(i))
+        if (backendState === 'reconnecting') {
+            return (
+                <div className="absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                    <div className="animate-spin h-3 w-3 border-2 border-yellow-700 border-t-transparent rounded-full"></div>
+                    Restarting...
+                </div>
+            );
+        }
+        // Application readiness status
+        return (
+            <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {isConnected ? '● Ready' : '○ Busy'}
+            </div>
+        );
+    };
 
     const renderView = () => {
         if (isLoading) {
@@ -67,10 +93,8 @@ const AppContent: React.FC = () => {
             {/* Global alerts - per FrontendWorkflowSpec §5D(1) */}
             <GlobalAlerts />
 
-            {/* Connection status indicator */}
-            <div className={`absolute top-2 right-2 z-50 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {isConnected ? '● Connected' : '○ Disconnected'}
-            </div>
+            {/* Application status indicator - per §2ZA(4)(d) and §2ZA(6)(c)(i) */}
+            {renderApplicationStatus()}
 
             {/* Floating Header Wrapper */}
             <div className="absolute top-0 left-0 w-full z-40 pointer-events-none">
