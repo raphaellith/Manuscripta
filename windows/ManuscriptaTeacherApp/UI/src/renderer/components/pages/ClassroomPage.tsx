@@ -291,7 +291,16 @@ export const ClassroomPage: React.FC = () => {
     const handleDeployMaterial = async () => {
         if (!selectedMaterialId || totalSelectedCount === 0) return;
 
-        const allTargetIds = [...selectedDeviceIds, ...selectedRemarkableIds];
+        const hasRemarkableTargets = selectedRemarkableIds.length > 0;
+        let rmapiAvailable = true;
+        if (hasRemarkableTargets) {
+            rmapiAvailable = await ensureRmapiAvailable();
+            if (!rmapiAvailable && selectedDeviceIds.length === 0) return;
+        }
+
+        const allTargetIds = rmapiAvailable
+            ? [...selectedDeviceIds, ...selectedRemarkableIds]
+            : [...selectedDeviceIds];
         setDeployingDevices(new Set(allTargetIds));
 
         try {
@@ -303,13 +312,13 @@ export const ClassroomPage: React.FC = () => {
             }
 
             // Deploy to reMarkable devices per §5G(2)
-            if (selectedRemarkableIds.length > 0) {
+            if (rmapiAvailable && selectedRemarkableIds.length > 0) {
                 promises.push(signalRService.deployMaterialToReMarkable(selectedMaterialId, selectedRemarkableIds));
             }
 
             await Promise.all(promises);
 
-            if (selectedRemarkableIds.length > 0) {
+            if (rmapiAvailable && selectedRemarkableIds.length > 0) {
                 // §5G(2)(d): inform user about sync
                 addAlert('success', undefined, 'Material uploaded to reMarkable cloud. Devices will receive it on next sync.');
             }
