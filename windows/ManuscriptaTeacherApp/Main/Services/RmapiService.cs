@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 using System.IO.Compression;
 
@@ -17,6 +18,8 @@ public class RmapiService : IRmapiService
     private readonly string _rmapiExecutablePath;
     private bool? _cachedAvailability;
     private readonly object _cacheLock = new();
+    private const string RmapiReleaseVersion = "v0.0.32";
+    private const string RmapiZipSha256 = "2b784d017ea19723bb75c90fa5500349a1599d2956404251b5631736de5ddf94";
 
     /// <summary>
     /// The path where the rmapi executable is stored.
@@ -97,7 +100,7 @@ public class RmapiService : IRmapiService
 
             // Download from GitHub releases (zip)
             // Per RemarkableIntegrationSpecification §2(4)
-            var downloadUrl = "https://github.com/ddvk/rmapi/releases/latest/download/rmapi-win64.zip";
+            var downloadUrl = $"https://github.com/ddvk/rmapi/releases/download/{RmapiReleaseVersion}/rmapi-win64.zip";
             _logger.LogInformation("Downloading rmapi from {Url}", downloadUrl);
 
             var tempZipPath = Path.GetTempFileName();
@@ -110,6 +113,12 @@ public class RmapiService : IRmapiService
                     response.EnsureSuccessStatusCode();
                     await using var fileStream = File.Create(tempZipPath);
                     await response.Content.CopyToAsync(fileStream);
+                }
+
+                var actualHash = ComputeFileSha256(tempZipPath);
+                if (!string.Equals(actualHash, RmapiZipSha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException($"rmapi checksum mismatch. expected {RmapiZipSha256}, got {actualHash}");
                 }
 
                 _logger.LogInformation("Extracting rmapi...");
@@ -328,6 +337,14 @@ public class RmapiService : IRmapiService
                output.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
                output.Contains("token", StringComparison.OrdinalIgnoreCase) && output.Contains("expired", StringComparison.OrdinalIgnoreCase) ||
                output.Contains("authentication", StringComparison.OrdinalIgnoreCase) && output.Contains("failed", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ComputeFileSha256(string filePath)
+    {
+        using var stream = File.OpenRead(filePath);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private void SetCachedAvailability(bool value)
