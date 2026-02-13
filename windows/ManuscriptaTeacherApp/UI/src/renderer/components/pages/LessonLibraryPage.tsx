@@ -4,7 +4,7 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
@@ -90,44 +90,98 @@ export const LessonLibraryPage: React.FC = () => {
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
     const [searchQuery, setSearchQuery] = useState('');
 
-    const searchKeywords = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const searchKeywords = useMemo(
+        () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
+        [searchQuery]
+    );
     const isSearching = searchKeywords.length > 0;
 
-    const getQuestionSearchText = (materialId: string) =>
-        getQuestionsForMaterial(materialId)
-            .map(question => {
-                const options = question.options?.join(' ') ?? '';
-                const correctAnswer = question.correctAnswer ?? '';
-                const markScheme = question.markScheme ?? '';
-                return `${question.questionText} ${options} ${correctAnswer} ${markScheme}`;
-            })
-            .join(' ');
+    const filteredMaterialsByLesson = useMemo(() => {
+        const result = new Map<string, MaterialEntity[]>();
+        const materialMatchesSearch = (material: MaterialEntity) => {
+            if (!isSearching) return true;
+            const questionText = getQuestionsForMaterial(material.id)
+                .map(question => {
+                    const options = question.options?.join(' ') ?? '';
+                    const correctAnswer = question.correctAnswer ?? '';
+                    const markScheme = question.markScheme ?? '';
+                    return `${question.questionText} ${options} ${correctAnswer} ${markScheme}`;
+                })
+                .join(' ');
+            const haystack = `${material.title} ${material.content || ''} ${questionText}`.toLowerCase();
+            return searchKeywords.every(keyword => haystack.includes(keyword));
+        };
 
-    const materialMatchesSearch = (material: MaterialEntity) => {
-        if (!isSearching) return true;
-        const questionText = getQuestionSearchText(material.id);
-        const haystack = `${material.title} ${material.content || ''} ${questionText}`.toLowerCase();
-        return searchKeywords.every(keyword => haystack.includes(keyword));
-    };
+        unitCollections.forEach(collection => {
+            getUnitsForCollection(collection.id).forEach(unit => {
+                getLessonsForUnit(unit.id).forEach(lesson => {
+                    const materials = getMaterialsForLesson(lesson.id);
+                    const filtered = isSearching
+                        ? materials.filter(materialMatchesSearch)
+                        : materials;
+                    result.set(lesson.id, filtered);
+                });
+            });
+        });
+
+        return result;
+    }, [
+        getLessonsForUnit,
+        getMaterialsForLesson,
+        getQuestionsForMaterial,
+        getUnitsForCollection,
+        isSearching,
+        searchKeywords,
+        unitCollections,
+    ]);
 
     const getFilteredMaterialsForLesson = (lessonId: string) =>
-        getMaterialsForLesson(lessonId).filter(materialMatchesSearch);
+        filteredMaterialsByLesson.get(lessonId) ?? [];
 
-    const getFilteredLessonsForUnit = (unitId: string) => {
-        const lessons = getLessonsForUnit(unitId);
-        if (!isSearching) return lessons;
-        return lessons.filter(lesson => getFilteredMaterialsForLesson(lesson.id).length > 0);
-    };
+    const filteredLessonsByUnit = useMemo(() => {
+        const result = new Map<string, LessonEntity[]>();
+        unitCollections.forEach(collection => {
+            getUnitsForCollection(collection.id).forEach(unit => {
+                const lessons = getLessonsForUnit(unit.id);
+                const filtered = isSearching
+                    ? lessons.filter(lesson => (filteredMaterialsByLesson.get(lesson.id)?.length ?? 0) > 0)
+                    : lessons;
+                result.set(unit.id, filtered);
+            });
+        });
+        return result;
+    }, [
+        filteredMaterialsByLesson,
+        getLessonsForUnit,
+        getUnitsForCollection,
+        isSearching,
+        unitCollections,
+    ]);
 
-    const getFilteredUnitsForCollection = (collectionId: string) => {
-        const units = getUnitsForCollection(collectionId);
-        if (!isSearching) return units;
-        return units.filter(unit => getFilteredLessonsForUnit(unit.id).length > 0);
-    };
+    const getFilteredLessonsForUnit = (unitId: string) =>
+        filteredLessonsByUnit.get(unitId) ?? [];
 
-    const visibleCollections = isSearching
-        ? unitCollections.filter(collection => getFilteredUnitsForCollection(collection.id).length > 0)
-        : unitCollections;
+    const filteredUnitsByCollection = useMemo(() => {
+        const result = new Map<string, UnitEntity[]>();
+        unitCollections.forEach(collection => {
+            const units = getUnitsForCollection(collection.id);
+            const filtered = isSearching
+                ? units.filter(unit => (filteredLessonsByUnit.get(unit.id)?.length ?? 0) > 0)
+                : units;
+            result.set(collection.id, filtered);
+        });
+        return result;
+    }, [getUnitsForCollection, isSearching, filteredLessonsByUnit, unitCollections]);
+
+    const getFilteredUnitsForCollection = (collectionId: string) =>
+        filteredUnitsByCollection.get(collectionId) ?? [];
+
+    const visibleCollections = useMemo(
+        () => (isSearching
+            ? unitCollections.filter(collection => (filteredUnitsByCollection.get(collection.id)?.length ?? 0) > 0)
+            : unitCollections),
+        [filteredUnitsByCollection, isSearching, unitCollections]
+    );
 
     const hasSearchResults = !isSearching || visibleCollections.length > 0;
 
