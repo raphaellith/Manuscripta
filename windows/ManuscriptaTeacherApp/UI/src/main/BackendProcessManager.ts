@@ -11,6 +11,7 @@ import * as http from 'http';
 import { app } from 'electron';
 import {
     DEFAULT_BACKEND_PORT,
+    HTTP_API_PORT,
     ALTERNATIVE_PORT_RANGE_MIN,
     ALTERNATIVE_PORT_RANGE_MAX,
     getBackendHealthUrl,
@@ -165,7 +166,9 @@ export class BackendProcessManager {
             let spawnErrorOccurred = false;
             
             // Per §2ZA(3)(c)(ii): Start with --urls argument
-            this.process = spawn(executablePath, [`--urls`, `http://localhost:${port}`], {
+            // Per API Contract: SignalR on port, HTTP API on HTTP_API_PORT (5911)
+            const urls = `http://localhost:${port};http://localhost:${HTTP_API_PORT}`;
+            this.process = spawn(executablePath, [`--urls`, urls], {
                 stdio: ['ignore', 'pipe', 'pipe'],
                 detached: false,
                 windowsHide: true,

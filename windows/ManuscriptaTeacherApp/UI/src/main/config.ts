@@ -4,10 +4,16 @@
  */
 
 /**
- * The default backend port.
+ * The default SignalR port.
  * Per FrontendWorkflowSpecifications §2ZA(8)(b).
  */
 export const DEFAULT_BACKEND_PORT = 5910;
+
+/**
+ * The HTTP API port.
+ * Per API Contract specification - REST API endpoints are served on this port.
+ */
+export const HTTP_API_PORT = 5911;
 
 /**
  * Alternative port range for auto-retry (skipping 5911-5913 which are used for other purposes).
