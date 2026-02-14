@@ -9,8 +9,10 @@ using Main.Services.Network;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure network settings from appsettings.json
-builder.Services.Configure<NetworkSettings>(
-    builder.Configuration.GetSection("NetworkSettings"));
+builder.Services.AddOptions<NetworkSettings>()
+    .Bind(builder.Configuration.GetSection("NetworkSettings"))
+    .Validate(settings => settings.ArePortsDistinct(), "NetworkSettings ports must be distinct.")
+    .ValidateOnStart();
 
 // Resolve the database path to a deterministic absolute location under %APPDATA%.
 // This prevents the SQLite file from being created in an unpredictable working directory
