@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -172,17 +173,51 @@ public class NetworkSettingsTests
 
     private static string GetMainProjectPath()
     {
-        // Navigate from test output to Main project
-        var currentDir = Directory.GetCurrentDirectory();
-        var mainPath = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "Main"));
-        
-        if (!Directory.Exists(mainPath))
+        var startDirectories = new[]
         {
-            // Fallback for different test runner contexts
-            mainPath = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "Main"));
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory(),
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty
+        };
+
+        foreach (var startDir in startDirectories)
+        {
+            if (string.IsNullOrWhiteSpace(startDir))
+            {
+                continue;
+            }
+
+            var candidate = FindMainProjectDirectory(startDir);
+            if (!string.IsNullOrEmpty(candidate))
+            {
+                return candidate;
+            }
         }
-        
-        return mainPath;
+
+        throw new DirectoryNotFoundException("Unable to locate Manuscripta.Main.csproj from test environment.");
+    }
+
+    private static string? FindMainProjectDirectory(string startDirectory)
+    {
+        var current = new DirectoryInfo(startDirectory);
+        while (current != null)
+        {
+            var mainProjectPath = Path.Combine(current.FullName, "windows", "ManuscriptaTeacherApp", "Main", "Manuscripta.Main.csproj");
+            if (File.Exists(mainProjectPath))
+            {
+                return Path.GetDirectoryName(mainProjectPath);
+            }
+
+            var altMainProjectPath = Path.Combine(current.FullName, "Main", "Manuscripta.Main.csproj");
+            if (File.Exists(altMainProjectPath))
+            {
+                return Path.GetDirectoryName(altMainProjectPath);
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
     }
 
     #endregion
