@@ -87,7 +87,7 @@ This document is effective for Windows App development only.
         (v) Appropriate cross-references to the specification sections.
     (f) The implementation does not introduce security regressions, including:
         (i) No hard-coded secrets or credentials.
-        (ii) Appropriate authentication and authorization checks.
+        (ii) Where required, appropriate authentication and authorisation checks.
         (iii) Avoidance of unsafe deserialization patterns.
         (iv) Avoidance of sensitive data leakage in logs.
     (g) Configuration changes are documented and wired through appropriate configuration sources, with safe defaults.
