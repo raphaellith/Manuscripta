@@ -560,10 +560,11 @@ public class TeacherPortalHub : Hub
             await _distributionService.AssignMaterialsToDeviceAsync(deviceId, new[] { materialId });
         }
 
-        // Step 2: Send TCP trigger to each device
+        // Step 2: Send TCP trigger to each device with material IDs for per-entity ACK tracking
+        // Per API Contract.md §3.6.2 and Session Interaction §3(5)-(7)
         foreach (var deviceId in deviceIds)
         {
-            await _tcpPairingService.SendDistributeMaterialAsync(deviceId.ToString());
+            await _tcpPairingService.SendDistributeMaterialAsync(deviceId.ToString(), new[] { materialId });
         }
     }
 

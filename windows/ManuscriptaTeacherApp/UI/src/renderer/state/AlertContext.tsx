@@ -106,9 +106,11 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
         });
 
         // Handler: Distribution failure alerts (per §5D(4))
-        const unsubDistributionFailed = signalRService.onDistributionFailed((deviceId: string) => {
-            const device = devicesRef.current.find(d => d.deviceId === deviceId);
-            addAlert('distribution_failed', deviceId, `Failed to deploy material to ${device?.name || 'device'}`);
+        // Payload includes deviceId and materialId per API Contract §3.6.2
+        const unsubDistributionFailed = signalRService.onDistributionFailed((payload: { deviceId: string; materialId: string }) => {
+            const device = devicesRef.current.find(d => d.deviceId === payload.deviceId);
+            // Entity IDs are internal - only show device name to user
+            addAlert('distribution_failed', payload.deviceId, `Failed to deploy material to ${device?.name || 'device'}`);
         });
 
         // Handler: Remote control failure alerts (per §5D(5))
@@ -123,9 +125,11 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
         });
 
         // Handler: Feedback delivery failure alerts (per §5D(7))
-        const unsubFeedbackFailed = signalRService.onFeedbackDeliveryFailed((deviceId: string) => {
-            const device = devicesRef.current.find(d => d.deviceId === deviceId);
-            addAlert('feedback_failed', deviceId, `Failed to deliver feedback to ${device?.name || 'device'}`);
+        // Payload includes deviceId and feedbackId per API Contract §3.6.2
+        const unsubFeedbackFailed = signalRService.onFeedbackDeliveryFailed((payload: { deviceId: string; feedbackId: string }) => {
+            const device = devicesRef.current.find(d => d.deviceId === payload.deviceId);
+            // Entity IDs are internal - only show device name to user
+            addAlert('feedback_failed', payload.deviceId, `Failed to deliver feedback to ${device?.name || 'device'}`);
         });
 
         return () => {

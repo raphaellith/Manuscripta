@@ -12,8 +12,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<NetworkSettings>(
     builder.Configuration.GetSection("NetworkSettings"));
 
+// Resolve the database path to a deterministic absolute location under %APPDATA%.
+// This prevents the SQLite file from being created in an unpredictable working directory
+// when the backend is spawned by Electron. The appsettings.json connection string may
+// override this default if set to a non-default value.
+var configuredConnectionString = builder.Configuration.GetConnectionString("MainDbContext");
+string dbConnectionString;
+
+if (string.IsNullOrWhiteSpace(configuredConnectionString)
+    || configuredConnectionString == "Data Source=manuscripta.db")
+{
+    // Default: resolve to %APPDATA%/ManuscriptaTeacherApp/manuscripta.db
+    var appDataDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ManuscriptaTeacherApp");
+    Directory.CreateDirectory(appDataDir);
+    var dbPath = Path.Combine(appDataDir, "manuscripta.db");
+    dbConnectionString = $"Data Source={dbPath}";
+}
+else
+{
+    dbConnectionString = configuredConnectionString;
+}
+
 builder.Services.AddDbContext<MainDbContext>(options =>
-  options.UseSqlite(builder.Configuration.GetConnectionString("MainDbContext")));
+    options.UseSqlite(dbConnectionString));
 
 // Register pairing and device services
 builder.Services.AddSingleton<IDeviceRegistryService, DeviceRegistryService>();
@@ -157,7 +180,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
 
 app.MapControllers();
-app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/hub");
+// Per FrontendWorkflowSpecifications §1(1)(a) and §2(1)(a)
+app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 
 app.Run();
 

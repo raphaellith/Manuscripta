@@ -1,3 +1,5 @@
+using Main.Models.Events;
+
 namespace Main.Services.Network;
 
 /// <summary>
@@ -34,8 +36,11 @@ public interface ITcpPairingService
 
     /// <summary>
     /// Sends a DISTRIBUTE_MATERIAL (0x05) command to the specified device and waits for DISTRIBUTE_ACK.
+    /// Per Session Interaction.md §3(6): waits for ACKs for all materials within 30 seconds.
     /// </summary>
-    Task SendDistributeMaterialAsync(string deviceId);
+    /// <param name="deviceId">Target device ID.</param>
+    /// <param name="materialIds">Material entity IDs being sent to this device.</param>
+    Task SendDistributeMaterialAsync(string deviceId, IEnumerable<Guid> materialIds);
 
     /// <summary>
     /// Sends an UNPAIR (0x04) command to the specified device and removes it from registry.
@@ -82,19 +87,28 @@ public interface ITcpPairingService
     event EventHandler<Guid>? HandRaisedReceived;
 
     /// <summary>
-    /// Event raised when a distribution command times out (no DISTRIBUTE_ACK).
+    /// Event raised when a distribution command times out for a specific material (no DISTRIBUTE_ACK).
+    /// Per NetworkingAPISpec §2(1)(d)(ii): includes both deviceId and materialId.
     /// </summary>
-    event EventHandler<Guid>? DistributionTimedOut;
+    event EventHandler<EntityDeliveryFailedEventArgs>? DistributionTimedOut;
 
     /// <summary>
-    /// Event raised when a feedback delivery command times out (no FEEDBACK_ACK).
+    /// Event raised when a feedback delivery command times out for a specific feedback (no FEEDBACK_ACK).
+    /// Per NetworkingAPISpec §2(1)(d)(v): includes both deviceId and feedbackId.
     /// </summary>
-    event EventHandler<Guid>? FeedbackDeliveryTimedOut;
+    event EventHandler<EntityDeliveryFailedEventArgs>? FeedbackDeliveryTimedOut;
 
     /// <summary>
-    /// Event raised when FEEDBACK_ACK is received, containing the feedback IDs that were acknowledged.
+    /// Event raised when FEEDBACK_ACK is received for a single feedback entity.
+    /// Per API Contract.md §3.6.2: one ACK per feedback entity.
     /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED.
     /// </summary>
-    event EventHandler<IEnumerable<Guid>>? FeedbackAckReceived;
+    event EventHandler<FeedbackAckEventArgs>? FeedbackAckReceived;
+
+    /// <summary>
+    /// Event raised when DISTRIBUTE_ACK is received for a single material entity.
+    /// Per API Contract.md §3.6.2: one ACK per material entity.
+    /// </summary>
+    event EventHandler<DistributionAckEventArgs>? DistributionAckReceived;
 }
 

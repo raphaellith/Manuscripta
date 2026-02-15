@@ -268,23 +268,29 @@ public class TcpPairingServiceTests : IDisposable
     #region SendDistributeMaterialAsync Tests
 
     [Fact]
-    public async Task SendDistributeMaterialAsync_WhenDeviceNotConnected_LogsWarningAndTimesOut()
+    public async Task SendDistributeMaterialAsync_WhenDeviceNotConnected_FailsImmediately()
     {
         // Arrange
         var deviceId = Guid.NewGuid().ToString();
+        var materialIds = new[] { Guid.NewGuid() };
+        var eventRaised = false;
+        _service.DistributionTimedOut += (sender, args) => eventRaised = true;
 
-        // Act - Timeout is 30s but device is not connected so it will skip the wait
-        await _service.SendDistributeMaterialAsync(deviceId);
+        // Act - Device not connected, should fail immediately (no 30s wait)
+        await _service.SendDistributeMaterialAsync(deviceId, materialIds);
 
-        // Assert - Verify warning was logged about client not connected
+        // Assert - Verify warning was logged about failing distribution immediately
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not connected")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("failing distribution immediately")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+        
+        // Assert - DistributionTimedOut event should be raised for each material
+        Assert.True(eventRaised, "DistributionTimedOut event should be raised when device not connected");
     }
 
     #endregion
@@ -341,6 +347,140 @@ public class TcpPairingServiceTests : IDisposable
         _mockDeviceRegistry.Verify(
             r => r.UnregisterDeviceAsync(It.IsAny<Guid>()),
             Times.Never);
+    }
+
+    #endregion
+
+    #region ParsingHelper Tests - Per API Contract §3.6.2
+
+    [Fact]
+    public void ExtractNullTerminatedStrings_WithValidData_ParsesCorrectly()
+    {
+        // Arrange - Opcode (1 byte) + DeviceID + null + EntityID
+        var deviceId = Guid.NewGuid().ToString();
+        var entityId = Guid.NewGuid().ToString();
+        var deviceIdBytes = System.Text.Encoding.UTF8.GetBytes(deviceId);
+        var entityIdBytes = System.Text.Encoding.UTF8.GetBytes(entityId);
+        
+        // Build: [opcode][deviceId][0x00][entityId]
+        var data = new byte[1 + deviceIdBytes.Length + 1 + entityIdBytes.Length];
+        data[0] = 0x12; // DISTRIBUTE_ACK opcode
+        Array.Copy(deviceIdBytes, 0, data, 1, deviceIdBytes.Length);
+        data[1 + deviceIdBytes.Length] = 0x00; // null terminator
+        Array.Copy(entityIdBytes, 0, data, 1 + deviceIdBytes.Length + 1, entityIdBytes.Length);
+
+        // Act
+        var (parsedDeviceId, parsedEntityId) = ParsingHelper.ExtractNullTerminatedStrings(data);
+
+        // Assert
+        Assert.Equal(deviceId, parsedDeviceId);
+        Assert.Equal(entityId, parsedEntityId);
+    }
+
+    [Fact]
+    public void ExtractNullTerminatedStrings_WithNoNullTerminator_ReturnsEmptyStrings()
+    {
+        // Arrange - Invalid format: Opcode (1 byte) + DeviceID only (no null terminator)
+        var deviceId = Guid.NewGuid().ToString();
+        var deviceIdBytes = System.Text.Encoding.UTF8.GetBytes(deviceId);
+        
+        // Build: [opcode][deviceId] - no null terminator
+        var data = new byte[1 + deviceIdBytes.Length];
+        data[0] = 0x12; // DISTRIBUTE_ACK opcode
+        Array.Copy(deviceIdBytes, 0, data, 1, deviceIdBytes.Length);
+
+        // Act
+        var (parsedDeviceId, parsedEntityId) = ParsingHelper.ExtractNullTerminatedStrings(data);
+
+        // Assert - Invalid format returns empty strings
+        Assert.Equal(string.Empty, parsedDeviceId);
+        Assert.Equal(string.Empty, parsedEntityId);
+    }
+
+    [Fact]
+    public void ExtractNullTerminatedStrings_WithNullAtEnd_ReturnsEmptyStrings()
+    {
+        // Arrange - Null terminator at the very end (nothing after)
+        var deviceId = Guid.NewGuid().ToString();
+        var deviceIdBytes = System.Text.Encoding.UTF8.GetBytes(deviceId);
+        
+        // Build: [opcode][deviceId][0x00] - null at end, nothing after
+        var data = new byte[1 + deviceIdBytes.Length + 1];
+        data[0] = 0x12;
+        Array.Copy(deviceIdBytes, 0, data, 1, deviceIdBytes.Length);
+        data[data.Length - 1] = 0x00;
+
+        // Act
+        var (parsedDeviceId, parsedEntityId) = ParsingHelper.ExtractNullTerminatedStrings(data);
+
+        // Assert - Invalid format (nothing after null) returns empty strings
+        Assert.Equal(string.Empty, parsedDeviceId);
+        Assert.Equal(string.Empty, parsedEntityId);
+    }
+
+    [Fact]
+    public void ExtractNullTerminatedStrings_WithNullData_ReturnsEmptyStrings()
+    {
+        // Act
+        var (parsedDeviceId, parsedEntityId) = ParsingHelper.ExtractNullTerminatedStrings(null!);
+
+        // Assert
+        Assert.Equal(string.Empty, parsedDeviceId);
+        Assert.Equal(string.Empty, parsedEntityId);
+    }
+
+    [Fact]
+    public void ExtractNullTerminatedStrings_WithTooShortData_ReturnsEmptyStrings()
+    {
+        // Arrange - Only 2 bytes (opcode + 1 char), too short for valid parsing
+        var data = new byte[] { 0x12, 0x41 };
+
+        // Act
+        var (parsedDeviceId, parsedEntityId) = ParsingHelper.ExtractNullTerminatedStrings(data);
+
+        // Assert
+        Assert.Equal(string.Empty, parsedDeviceId);
+        Assert.Equal(string.Empty, parsedEntityId);
+    }
+
+    [Fact]
+    public void ExtractString_WithValidData_ReturnsString()
+    {
+        // Arrange
+        var content = "test-device-id";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var data = new byte[1 + bytes.Length];
+        data[0] = 0x01; // opcode
+        Array.Copy(bytes, 0, data, 1, bytes.Length);
+
+        // Act
+        var result = ParsingHelper.ExtractString(data);
+
+        // Assert
+        Assert.Equal(content, result);
+    }
+
+    [Fact]
+    public void ExtractString_WithNullData_ReturnsEmptyString()
+    {
+        // Act
+        var result = ParsingHelper.ExtractString(null!);
+
+        // Assert
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void ExtractString_WithTooShortData_ReturnsEmptyString()
+    {
+        // Arrange - Only 1 byte (just opcode)
+        var data = new byte[] { 0x01 };
+
+        // Act
+        var result = ParsingHelper.ExtractString(data);
+
+        // Assert
+        Assert.Equal(string.Empty, result);
     }
 
     #endregion

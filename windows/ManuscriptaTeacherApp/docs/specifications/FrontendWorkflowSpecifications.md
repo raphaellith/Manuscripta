@@ -26,25 +26,172 @@ For a list of all server method and client handlers to be implemented for commun
 
 
 
-### Section 2 - Establishing a Connection and Bidirectional Communication
+### Section 2ZA — Backend Process Lifecycle Management
 
-(1) When the backend is run,
+(1) **Obligation to Start Backend**
+
+    The frontend application shall be solely responsible for starting, monitoring, and terminating the backend application process. The backend shall not be expected to run independently in production.
+
+(2) **Backend Executable Bundling**
+
+    (a) The backend application shall be published as a self-contained executable targeting the `win-x64` runtime.
+
+    (b) The published backend executable and its dependencies shall be bundled with the frontend Electron application as an extra resource, outside the ASAR archive.
+
+    (c) The frontend shall resolve the backend executable path as follows:
+
+        (i) In packaged (production) mode, the path shall be resolved relative to `process.resourcesPath`.
+
+        (ii) In development mode, the path shall be resolved relative to a configurable fallback location.
+
+(3) **Backend Process Spawning**
+
+    When the frontend application is launched —
+
+    (a) the frontend shall first determine whether a backend process is already listening on the designated port by performing a health probe as specified in subsection (5)(a), starting with the default port and proceeding through alternative ports as specified in subsection (8)(c) if necessary.
+
+    (b) If the frontend is launched in development mode, and if a backend process is already running and responds to the health probe —
+
+        (i) the frontend shall not spawn a new backend process;
+
+        (ii) the frontend shall proceed to display the main application window as specified in subsection (6).
+
+    (c) Unless paragraph (b) applies —
+
+        (i) the frontend shall spawn the backend executable as a child process using Node.js `child_process.spawn`.
+
+        (ii) the backend shall be started with the command-line argument `--urls http://localhost:{PORT}` to bind to the designated port.
+
+        (iii) the frontend shall capture the backend's standard output and standard error streams for diagnostic purposes.
+
+        (iv) if the backend process fails to start due to the designated port being unavailable, the frontend shall retry with the next port in accordance with subsection (8)(c).
+    
+    (d) A frontend in deployment mode shall in no circumstances connect to a backend not spawned by itself.
+
+(4) **Splash Screen**
+
+    (a) Before the backend is confirmed ready, the frontend shall display a splash screen indicating that the application is starting.
+
+    (b) The splash screen shall be a lightweight Electron `BrowserWindow` without the main React renderer.
+
+    (c) The splash screen shall be dismissed once the backend is confirmed ready, as specified in subsection (5)(c).
+
+    (d) The frontend shall, in no circumstances, use a wording which appears to the user that there is a frontend-backend separation[, such as "connecting"]. 
+
+    [Explanatory note: The frontend-backend separation is not a user-facing concept. The user should be informed as if there is no such separation.] 
+
+(5) **Backend Readiness Confirmation**
+
+    (a) The frontend shall poll the backend's health endpoint at `GET http://localhost:{PORT}/` at intervals of 500 milliseconds.
+
+    (b) The backend shall be considered ready when the health endpoint returns an HTTP 200 response.
+
+    (c) Once the backend is confirmed ready —
+
+        (i) the frontend shall dismiss the splash screen;
+
+        (ii) the frontend shall proceed to create the main application window and establish SignalR connection as specified in Section 2.
+
+    (d) If the backend does not become ready within 30 seconds of spawning —
+
+        (i) the frontend shall display an error message to the user indicating that the application failed to start;
+
+        (ii) the frontend shall terminate the spawned backend process, if any;
+
+        (iii) the frontend shall provide an option to retry or exit the application.
+
+(6) **Backend Process Monitoring and Automatic Restart**
+
+    (a) The frontend shall monitor the spawned backend process for unexpected termination by listening for the `exit` event on the child process handle.
+
+    (b) If the backend process terminates unexpectedly while the frontend is running —
+
+        (i) the frontend shall attempt to restart the backend process automatically;
+
+        (ii) restart attempts shall use exponential backoff with initial delay of 1 second, doubling after each failed attempt, up to a maximum delay of 30 seconds;
+
+        (iii) the backoff delay shall reset to 1 second after the backend has been running continuously for at least 60 seconds.
+
+    (c) During backend restart —
+
+        (i) the frontend shall display a reconnecting indicator to the user;
+
+        (ii) the frontend shall not dismiss any unsaved user state.
+
+    (d) If five consecutive restart attempts fail within a 5-minute window —
+
+        (i) the frontend shall display an error message indicating persistent backend failure;
+
+        (ii) the frontend shall provide options to retry manually or exit the application.
+
+(7) **Graceful Shutdown**
+
+    (a) When the user closes the frontend application, or when Electron's `will-quit` event is emitted —
+
+        (i) the frontend shall send a termination signal (`SIGTERM` or equivalent) to the backend process;
+
+        (ii) the frontend shall wait up to 5 seconds for the backend process to exit gracefully;
+
+        (iii) if the backend process does not exit within 5 seconds, the frontend shall forcibly terminate the process.
+
+    (b) The frontend shall ensure no orphaned backend processes remain after the application exits.
+
+(8) **Port Configuration**
+
+    (a) The designated backend port shall be defined in a single configuration constant shared across —
+
+        (i) the backend process spawning logic;
+
+        (ii) the Content Security Policy header;
+
+        (iii) the SignalR connection URL.
+
+    (b) The default designated port for SignalR communications shall be 5910.
+
+    (c) If the default port specified in paragraph (b) is unavailable —
+
+        (i) the frontend shall attempt to bind to alternative ports by incrementing the port number sequentially, starting from 5914 up to and including 5919.
+
+        (ii) a port shall be considered unavailable if the backend process fails to start due to an address-in-use error, or if another process is already listening on that port as determined by a health probe returning an unexpected response.
+
+        (iii) if all ports in the range 5914 to 5919 are unavailable, the frontend shall display an error message to the user indicating the application failed to start.
+
+        (iv) upon successful binding to an alternative port, the frontend shall use that port for all subsequent communications within that application session.
+
+    (d) In this section, references to "{PORT}" shall be substituted with the designated port as selected in accordance with paragraphs (b) and (c) above.
+
+
+### Section 2 — Establishing a Connection and Bidirectional Communication
+
+(1) When the backend is run —
 
     (a) it must expose its hub by mapping the `TeacherPortalHub` class to the endpoint `/TeacherPortalHub`.
 
+    (b) it must expose a health endpoint at `GET /` that returns HTTP 200 when the application is ready to accept connections.
 
-(2) When the frontend is run,
+(2) When the frontend is run —
 
-    (a) it must start and initialise a SignalR client.
+    (a) it must start and manage the backend process in accordance with Section 2ZA.
 
-    (b) it must connect to the SignalR Hub endpoint `/TeacherPortalHub`, exposed by the backend.
+    (b) it must not proceed to initialise the SignalR client until the backend is confirmed ready per Section 2ZA(5)(b).
 
+    (c) once the backend is confirmed ready, it must start and initialise a SignalR client.
 
-(3) After a connection is established,
+    (d) it must connect to the SignalR Hub endpoint `/TeacherPortalHub`, exposed by the backend.
+
+(3) After a connection is established —
 
     (a) The frontend may send messages to the backend by invoking server methods via its SignalR client.
 
     (b) The backend may send messages to the frontend through its hub.
+
+(4) **Connection Resilience**
+
+    (a) The SignalR client shall be configured with a custom retry policy that retries indefinitely with exponential backoff.
+
+    (b) The retry policy shall use initial delay of 0 seconds, then 2 seconds, then 10 seconds, then 30 seconds for subsequent attempts, repeating the 30-second delay indefinitely.
+
+    (c) When the SignalR connection is lost and subsequently restored, the frontend shall re-fetch all entities as specified in Section 3(1) to ensure state consistency.
 
 
 ## Section 3 - Initialisation
@@ -69,6 +216,14 @@ For a list of all server method and client handlers to be implemented for commun
 (1) When the "Library" tab is open on the frontend, the lesson library must show all unit collections, units, lessons and materials in accordance with the entities previously retrieved during initialisation in S3(1).
 
 (2) When the frontend creates, updates or deletes a unit collection, unit, lesson or material, it must call the appropriate CRUD method defined in S1(1)(a)-(d) of `NetworkingAPISpec.md`.
+
+(3) The "Library" tab must provide a search bar for searching materials in the lesson library, subject to the following requirements.
+
+    (a) When one or more keywords are entered into the search bar, the frontend must filter through all materials in the lesson library and only display those matching those keywords.
+
+    (b) Materials are said to match the keyword if its title, content, question texts or question options include the keyword.
+
+    (c) Material encoding syntax that is not visible through the user interface must be excluded from the search. 
 
 
 
@@ -444,7 +599,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) calling `Task DeployMaterial(Guid materialId, List<Guid> deviceIds)` as defined in s1(1)(g)(i) of the Networking API Specification;
 
-    (c) indicating to the user when deployment is in progress, and when it completes. For this purpose, deployment to a device shall be considered complete when a `DISTRIBUTE_ACK` (0x12) message is received from that device, per Session Interaction Specification s3(5).
+    (c) indicating to the user when deployment is in progress, and when it completes. For this purpose, deployment to a device shall be considered complete when `DISTRIBUTE_ACK` (0x12) message(s) for all deployed material(s) are received from that device, per Session Interaction Specification s3(5).
 
 (4) **Unpairing Devices**
 
@@ -612,17 +767,17 @@ For a list of all server method and client handlers to be implemented for commun
 
 (5) [DELETED]
 
-(6) Upon receipt of `OnFeedbackDispatchFailed` (NetworkingAPISpec §2(1)(c)(ii)) —
+(6) The frontend shall, upon receipt of `FeedbackDeliveryFailed` (NetworkingAPISpec §2(1)(e)(v)) —
 
-    (a) the frontend shall display a message indicating that feedback delivery to the specified device has failed.
+    (a) display a message indicating that feedback delivery to the specified device has failed, and an indicator for the specific response near the indicator specified in Section 6(5)(e)(vi) above.
 
-    (b) the frontend shall provide a "Retry" option invoking `RetryFeedbackDispatch` (NetworkingAPISpec §1(1)(h)(iii)).
+    (b) provide a "Retry" option invoking `RetryFeedbackDispatch`, near the indicator specified in paragraph (a) (NetworkingAPISpec §1(1)(h)(iii)).
 
 (7) **Feedback Editing and Deletion Rules**
 
     Subject to subsection (1) above —
 
-    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher.
+    (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher in the following manner —
 
         (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
 
