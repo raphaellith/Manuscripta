@@ -927,10 +927,13 @@ public class TeacherPortalHubTests
         await _hub.DeployMaterial(materialId, deviceIds);
 
         // Assert - verifies each device gets material assigned and TCP notification
+        // Per API Contract.md §3.6.2: SendDistributeMaterialAsync now includes materialIds for per-entity ACK tracking
         foreach (var id in deviceIds)
         {
             _mockDistributionService.Verify(s => s.AssignMaterialsToDeviceAsync(id, It.IsAny<IEnumerable<Guid>>()), Times.Once);
-            _mockTcpPairingService.Verify(s => s.SendDistributeMaterialAsync(id.ToString()), Times.Once);
+            _mockTcpPairingService.Verify(s => s.SendDistributeMaterialAsync(
+                id.ToString(), 
+                It.Is<IEnumerable<Guid>>(m => m.Contains(materialId))), Times.Once);
         }
     }
 

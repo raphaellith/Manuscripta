@@ -115,5 +115,19 @@ public class DistributionService : IDistributionService
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task RemoveMaterialAssignmentAsync(Guid deviceId, Guid materialId)
+    {
+        lock (_lock)
+        {
+            if (_deviceMaterialAssignments.TryGetValue(deviceId, out var assignments))
+            {
+                assignments.Remove(materialId);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
 }
 

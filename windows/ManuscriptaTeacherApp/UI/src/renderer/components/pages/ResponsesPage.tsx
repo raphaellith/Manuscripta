@@ -31,16 +31,16 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
-// Status badge component
-const FeedbackStatusBadge: React.FC<{ status: FeedbackStatus; onRetry?: () => void }> = ({ status, onRetry }) => {
+// Status badge component with failure indicator per §6A(6)
+const FeedbackStatusBadge: React.FC<{ status: FeedbackStatus; hasFailed?: boolean; onRetry?: () => void }> = ({ status, hasFailed, onRetry }) => {
     const styles: Record<FeedbackStatus, string> = {
         PROVISIONAL: 'bg-gray-100 text-gray-600',
-        READY: 'bg-yellow-100 text-yellow-700',
+        READY: hasFailed ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700',
         DELIVERED: 'bg-green-100 text-green-700'
     };
     const labels: Record<FeedbackStatus, string> = {
         PROVISIONAL: 'Not Sent',
-        READY: 'Pending',
+        READY: hasFailed ? 'Delivery Failed' : 'Pending',
         DELIVERED: 'Delivered'
     };
     return (
@@ -48,6 +48,13 @@ const FeedbackStatusBadge: React.FC<{ status: FeedbackStatus; onRetry?: () => vo
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${styles[status]}`}>
                 {labels[status]}
             </span>
+            {/* Per §6A(6)(a): Failure indicator for specific response */}
+            {hasFailed && status === 'READY' && (
+                <span className="text-xs text-red-600" title="Delivery to device failed">
+                    ⚠
+                </span>
+            )}
+            {/* Per §6A(6)(b): Retry option near the indicator */}
             {status === 'READY' && onRetry && (
                 <button
                     onClick={onRetry}
@@ -65,10 +72,11 @@ const FeedbackInput: React.FC<{
     responseId: string;
     feedback: FeedbackEntity | undefined;
     maxScore?: number;
+    hasFailed?: boolean;
     onSave: (responseId: string, marks: number | null, text: string | null, existingId?: string) => void;
     onApprove: (feedbackId: string) => void;
     onRetry: (feedbackId: string) => void;
-}> = ({ responseId, feedback, maxScore, onSave, onApprove, onRetry }) => {
+}> = ({ responseId, feedback, maxScore, hasFailed, onSave, onApprove, onRetry }) => {
     const [marks, setMarks] = useState<string>(feedback?.marks?.toString() ?? '');
     const [text, setText] = useState<string>(feedback?.text ?? '');
 
@@ -118,6 +126,7 @@ const FeedbackInput: React.FC<{
                 {feedback && (
                     <FeedbackStatusBadge
                         status={feedback.status}
+                        hasFailed={hasFailed}
                         onRetry={feedback.status === 'READY' ? () => onRetry(feedback.id) : undefined}
                     />
                 )}
@@ -163,6 +172,9 @@ export const ResponsesPage: React.FC = () => {
     const [devices, setDevices] = useState<PairedDeviceEntity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Track failed feedback IDs per §6A(6) - for showing indicator near specific responses
+    const [failedFeedbackIds, setFailedFeedbackIds] = useState<Set<string>>(new Set());
+
     // Popup state per §6(4)(c)(iv)
     const [devicePopup, setDevicePopup] = useState<{ isOpen: boolean; title: string; deviceNames: string[] }>({
         isOpen: false,
@@ -198,13 +210,18 @@ export const ResponsesPage: React.FC = () => {
     useEffect(() => {
         loadData();
         const unsubRefresh = signalRService.onRefreshResponses(() => loadData());
-        const unsubDispatchFailed = signalRService.onFeedbackDispatchFailed((feedbackId, deviceId) => {
-            const device = devices.find(d => d.deviceId === deviceId);
+        // Per §6A(6): Track failed feedbacks for per-response indicator
+        // Payload includes feedbackId and deviceId per API Contract §3.6.2
+        const unsubDeliveryFailed = signalRService.onFeedbackDeliveryFailed((payload: { deviceId: string; feedbackId: string }) => {
+            // Track failed feedback ID for indicator near specific response
+            setFailedFeedbackIds(prev => new Set(prev).add(payload.feedbackId));
+            // Show alert with device name (not entity IDs - those are internal)
+            const device = devices.find(d => d.deviceId === payload.deviceId);
             addAlert('feedback_failed', undefined, `Feedback delivery failed${device ? ` to ${device.name}` : ''}`);
         });
         return () => {
             unsubRefresh();
-            unsubDispatchFailed();
+            unsubDeliveryFailed();
         };
     }, [loadData, addAlert, devices]);
 
@@ -317,6 +334,12 @@ export const ResponsesPage: React.FC = () => {
 
     const handleRetryFeedback = useCallback(async (feedbackId: string) => {
         try {
+            // Clear failed status when retry is initiated (will be re-added if it fails again)
+            setFailedFeedbackIds(prev => {
+                const next = new Set(prev);
+                next.delete(feedbackId);
+                return next;
+            });
             await signalRService.retryFeedbackDispatch(feedbackId);
         } catch (error) {
             console.error('Failed to retry feedback dispatch:', error);
@@ -521,6 +544,10 @@ export const ResponsesPage: React.FC = () => {
                                                             responseId={response.id}
                                                             feedback={getFeedbackForResponse(response.id)}
                                                             maxScore={question.maxScore}
+                                                            hasFailed={(() => {
+                                                                const fb = getFeedbackForResponse(response.id);
+                                                                return fb ? failedFeedbackIds.has(fb.id) : false;
+                                                            })()}
                                                             onSave={handleSaveFeedback}
                                                             onApprove={handleApproveFeedback}
                                                             onRetry={handleRetryFeedback}
@@ -700,6 +727,10 @@ export const ResponsesPage: React.FC = () => {
                                                 responseId={response.id}
                                                 feedback={getFeedbackForResponse(response.id)}
                                                 maxScore={question.maxScore}
+                                                hasFailed={(() => {
+                                                    const fb = getFeedbackForResponse(response.id);
+                                                    return fb ? failedFeedbackIds.has(fb.id) : false;
+                                                })()}
                                                 onSave={handleSaveFeedback}
                                                 onApprove={handleApproveFeedback}
                                                 onRetry={handleRetryFeedback}

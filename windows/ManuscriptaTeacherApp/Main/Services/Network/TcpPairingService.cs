@@ -51,11 +51,13 @@ public class TcpPairingService : ITcpPairingService, IDisposable
     public event EventHandler<DeviceStatusEventArgs>? StatusUpdateReceived;
     public event EventHandler<DeviceStatusEventArgs>? DeviceDisconnected;
     public event EventHandler<ControlTimeoutEventArgs>? ControlCommandTimedOut;
-    // New events per NetworkingAPISpec §2(1)
+    // Events per NetworkingAPISpec §2(1)
     public event EventHandler<Guid>? HandRaisedReceived;
-    public event EventHandler<Guid>? DistributionTimedOut;
-    public event EventHandler<Guid>? FeedbackDeliveryTimedOut;
-    public event EventHandler<IEnumerable<Guid>>? FeedbackAckReceived;
+    // Per API Contract.md §3.6.2: per-entity acknowledgements
+    public event EventHandler<EntityDeliveryFailedEventArgs>? DistributionTimedOut;
+    public event EventHandler<EntityDeliveryFailedEventArgs>? FeedbackDeliveryTimedOut;
+    public event EventHandler<FeedbackAckEventArgs>? FeedbackAckReceived;
+    public event EventHandler<DistributionAckEventArgs>? DistributionAckReceived;
 
     public TcpPairingService(
         IOptions<NetworkSettings> settings,
@@ -308,83 +310,159 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         }
     }
 
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _distributionAcks = new();
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _feedbackAcks = new();
-    private readonly ConcurrentDictionary<string, List<Guid>> _pendingFeedbacks = new();
+    // Per-entity tracking for distribution ACKs (Session Interaction §3(7) - prevent repeated distribution)
+    // Pending materials awaiting ACK per device
+    // Key: deviceId, Value: thread-safe set of pending material IDs (using ConcurrentDictionary<Guid, byte> as set)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingMaterials = new();
+    
+    // Pending feedbacks awaiting ACK per device
+    // Key: deviceId, Value: thread-safe set of pending feedback IDs (using ConcurrentDictionary<Guid, byte> as set)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, byte>> _pendingFeedbacks = new();
 
-    public async Task SendDistributeMaterialAsync(string deviceId)
+    /// <summary>
+    /// Sends DISTRIBUTE_MATERIAL (0x05) to device and waits for DISTRIBUTE_ACK for all materials.
+    /// Per Session Interaction.md §3(5)-(7) and API Contract.md §3.6.2.
+    /// </summary>
+    public async Task SendDistributeMaterialAsync(string deviceId, IEnumerable<Guid> materialIds)
     {
-        var tcs = new TaskCompletionSource<bool>();
-        _distributionAcks[deviceId] = tcs;
+        var materialIdList = materialIds.ToList();
+        if (materialIdList.Count == 0)
+        {
+            _logger.LogWarning("SendDistributeMaterialAsync called with no materials for {DeviceId}", deviceId);
+            return;
+        }
+
+        // Track pending materials for this device (thread-safe set)
+        _pendingMaterials[deviceId] = new ConcurrentDictionary<Guid, byte>(materialIdList.Select(id => new KeyValuePair<Guid, byte>(id, 0)));
 
         try
         {
-            await SendCommandAsync(deviceId, BinaryOpcodes.DistributeMaterial, null);
-
-            // Wait for 30 seconds for ACK
-            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));
-
-            if (completedTask == tcs.Task && tcs.Task.Result)
+            var sent = await SendCommandAsync(deviceId, BinaryOpcodes.DistributeMaterial, null);
+            if (!sent)
             {
-                // ACK received
-                _logger.LogInformation("Received DISTRIBUTE_ACK for device {DeviceId}", deviceId);
-            }
-            else
-            {
-                // Timeout or explicit failure
-                _logger.LogWarning("Timeout waiting for DISTRIBUTE_ACK from device {DeviceId}", deviceId);
-                // Report to console as per requirement
-                Console.WriteLine($"[ERROR] Distribution to device {deviceId} failed (Timeout)");
-                
-                if (Guid.TryParse(deviceId, out var guid))
+                // Device not connected - fail immediately for all materials
+                _logger.LogWarning("Device {DeviceId} not connected, failing distribution immediately", deviceId);
+                if (Guid.TryParse(deviceId, out var deviceGuid))
                 {
-                    DistributionTimedOut?.Invoke(this, guid);
+                    foreach (var materialId in materialIdList)
+                    {
+                        Console.WriteLine($"[ERROR] Distribution of material {materialId} to device {deviceId} failed (Not connected)");
+                        DistributionTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, materialId));
+                    }
                 }
+                return;
+            }
+            _logger.LogInformation("Sent DISTRIBUTE_MATERIAL to {DeviceId} for {Count} materials", deviceId, materialIdList.Count);
+
+            // Wait for 30 seconds for all ACKs (per Session Interaction §3(6))
+            var timeout = Task.Delay(TimeSpan.FromSeconds(30));
+            
+            while (_pendingMaterials.TryGetValue(deviceId, out var pending) && pending.Count > 0)
+            {
+                // Check every 100ms if all ACKs received or timeout
+                var checkDelay = Task.Delay(TimeSpan.FromMilliseconds(100));
+                var completedTask = await Task.WhenAny(checkDelay, timeout);
+                
+                if (completedTask == timeout)
+                {
+                    // Timeout - report unacknowledged materials
+                    _logger.LogWarning("Timeout waiting for DISTRIBUTE_ACK from device {DeviceId}. Unacknowledged: {Count}", 
+                        deviceId, pending.Count);
+                    
+                    if (Guid.TryParse(deviceId, out var deviceGuid))
+                    {
+                        foreach (var materialId in pending.Keys.ToList())
+                        {
+                            Console.WriteLine($"[ERROR] Distribution of material {materialId} to device {deviceId} failed (Timeout)");
+                            DistributionTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, materialId));
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // All ACKs received
+            if (_pendingMaterials.TryGetValue(deviceId, out var remainingPending) && remainingPending.Count == 0)
+            {
+                _logger.LogInformation("All DISTRIBUTE_ACKs received for device {DeviceId}", deviceId);
             }
         }
         finally
         {
-            _distributionAcks.TryRemove(deviceId, out _);
+            _pendingMaterials.TryRemove(deviceId, out _);
         }
     }
 
     /// <summary>
-    /// Sends RETURN_FEEDBACK (0x07) to device and waits for FEEDBACK_ACK.
-    /// Per Session Interaction.md §7 and API Contract.md §3.4.
+    /// Sends RETURN_FEEDBACK (0x07) to device and waits for FEEDBACK_ACK for all feedbacks.
+    /// Per Session Interaction.md §7(4)-(6) and API Contract.md §3.6.2.
     /// </summary>
     public async Task SendReturnFeedbackAsync(string deviceId, IEnumerable<Guid> feedbackIds)
     {
-        var tcs = new TaskCompletionSource<bool>();
-        _feedbackAcks[deviceId] = tcs;
-        _pendingFeedbacks[deviceId] = feedbackIds.ToList();
+        var feedbackIdList = feedbackIds.ToList();
+        if (feedbackIdList.Count == 0)
+        {
+            _logger.LogWarning("SendReturnFeedbackAsync called with no feedbacks for {DeviceId}", deviceId);
+            return;
+        }
+
+        // Track pending feedbacks for this device (thread-safe set)
+        _pendingFeedbacks[deviceId] = new ConcurrentDictionary<Guid, byte>(feedbackIdList.Select(id => new KeyValuePair<Guid, byte>(id, 0)));
 
         try
         {
-            await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
-            _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId} for {Count} feedbacks", deviceId, _pendingFeedbacks[deviceId].Count);
-
-            // Wait for 30 seconds for ACK (per Session Interaction §7(5))
-            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));
-
-            if (completedTask == tcs.Task && tcs.Task.Result)
+            var sent = await SendCommandAsync(deviceId, BinaryOpcodes.ReturnFeedback, null);
+            if (!sent)
             {
-                _logger.LogInformation("Received FEEDBACK_ACK for device {DeviceId}", deviceId);
-                // ACK event is fired in HandleFeedbackAck
-            }
-            else
-            {
-                _logger.LogWarning("Timeout waiting for FEEDBACK_ACK from device {DeviceId}", deviceId);
-                Console.WriteLine($"[ERROR] Feedback delivery to device {deviceId} failed (Timeout)");
-                
-                if (Guid.TryParse(deviceId, out var guid))
+                // Device not connected - fail immediately for all feedbacks
+                _logger.LogWarning("Device {DeviceId} not connected, failing feedback delivery immediately", deviceId);
+                if (Guid.TryParse(deviceId, out var deviceGuid))
                 {
-                    FeedbackDeliveryTimedOut?.Invoke(this, guid);
+                    foreach (var feedbackId in feedbackIdList)
+                    {
+                        Console.WriteLine($"[ERROR] Feedback {feedbackId} delivery to device {deviceId} failed (Not connected)");
+                        FeedbackDeliveryTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, feedbackId));
+                    }
                 }
+                return;
+            }
+            _logger.LogInformation("Sent RETURN_FEEDBACK to {DeviceId} for {Count} feedbacks", deviceId, feedbackIdList.Count);
+
+            // Wait for 30 seconds for all ACKs (per Session Interaction §7(5))
+            var timeout = Task.Delay(TimeSpan.FromSeconds(30));
+            
+            while (_pendingFeedbacks.TryGetValue(deviceId, out var pending) && pending.Count > 0)
+            {
+                // Check every 100ms if all ACKs received or timeout
+                var checkDelay = Task.Delay(TimeSpan.FromMilliseconds(100));
+                var completedTask = await Task.WhenAny(checkDelay, timeout);
+                
+                if (completedTask == timeout)
+                {
+                    // Timeout - report unacknowledged feedbacks
+                    _logger.LogWarning("Timeout waiting for FEEDBACK_ACK from device {DeviceId}. Unacknowledged: {Count}", 
+                        deviceId, pending.Count);
+                    
+                    if (Guid.TryParse(deviceId, out var deviceGuid))
+                    {
+                        foreach (var feedbackId in pending.Keys.ToList())
+                        {
+                            Console.WriteLine($"[ERROR] Feedback {feedbackId} delivery to device {deviceId} failed (Timeout)");
+                            FeedbackDeliveryTimedOut?.Invoke(this, new EntityDeliveryFailedEventArgs(deviceGuid, feedbackId));
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // All ACKs received
+            if (_pendingFeedbacks.TryGetValue(deviceId, out var remainingPending) && remainingPending.Count == 0)
+            {
+                _logger.LogInformation("All FEEDBACK_ACKs received for device {DeviceId}", deviceId);
             }
         }
         finally
         {
-            _feedbackAcks.TryRemove(deviceId, out _);
             _pendingFeedbacks.TryRemove(deviceId, out _);
         }
     }
@@ -429,7 +507,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         Console.WriteLine($"[INFO] Device {deviceId} has been unpaired");
     }
 
-    private async Task SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
+    private async Task<bool> SendCommandAsync(string deviceId, byte opcode, byte[]? operand)
     {
         // Per Pairing Process.md §2(4), we must have stored the deviceId during the pairing phase.
         // We look up the active TCP connection associated with this deviceId from our registry.
@@ -441,7 +519,7 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         else 
         {
             _logger.LogWarning("Client {DeviceId} not connected", deviceId);
-            return;
+            return false;
         }
 
         try {
@@ -454,8 +532,10 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             }
             await stream.WriteAsync(message, 0, message.Length);
             _logger.LogInformation("Sent opcode {Opcode:X2} to {DeviceId}", opcode, deviceId);
+            return true;
         } catch (Exception ex) {
             _logger.LogError(ex, "Failed to send command to {DeviceId}", deviceId);
+            return false;
         }
     }
 
@@ -535,17 +615,38 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Handles DISTRIBUTE_ACK (0x12) messages from Android devices.
+    /// Per API Contract.md §3.6.2: one ACK per material with DeviceID + MaterialID format.
+    /// </summary>
     private void HandleDistributeAck(byte[] data)
     {
         try
         {
-             var deviceIdString = ParsingHelper.ExtractString(data);
-             if (_distributionAcks.TryGetValue(deviceIdString, out var tcs))
-             {
-                 tcs.TrySetResult(true);
-             }
+            var (deviceIdString, materialIdString) = ParsingHelper.ExtractNullTerminatedStrings(data);
+            _logger.LogInformation("Received DISTRIBUTE_ACK from {DeviceId} for material {MaterialId}", 
+                deviceIdString, materialIdString);
+
+            if (Guid.TryParse(deviceIdString, out var deviceGuid) && 
+                Guid.TryParse(materialIdString, out var materialGuid))
+            {
+                // Remove from pending materials for this device (thread-safe)
+                if (_pendingMaterials.TryGetValue(deviceIdString, out var pending))
+                {
+                    pending.TryRemove(materialGuid, out _);
+                }
+
+                // Fire event for per-material acknowledgement
+                // Per Session Interaction §3(7): duplicate prevention handled by removing from _deviceMaterialAssignments in HubEventBridge
+                DistributionAckReceived?.Invoke(this, new DistributionAckEventArgs(deviceGuid, materialGuid));
+            }
+            else
+            {
+                _logger.LogWarning("Failed to parse DISTRIBUTE_ACK: DeviceId={DeviceId}, MaterialId={MaterialId}", 
+                    deviceIdString, materialIdString);
+            }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling DISTRIBUTE_ACK");
         }
@@ -553,26 +654,34 @@ public class TcpPairingService : ITcpPairingService, IDisposable
 
     /// <summary>
     /// Handles FEEDBACK_ACK (0x13) messages from Android devices.
-    /// Per API Contract.md §3.6: acknowledges successful receipt of feedback via HTTP.
+    /// Per API Contract.md §3.6.2: one ACK per feedback with DeviceID + FeedbackID format.
     /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED.
     /// </summary>
     private void HandleFeedbackAck(byte[] data)
     {
         try
         {
-            var deviceIdString = ParsingHelper.ExtractString(data);
-            _logger.LogInformation("Received FEEDBACK_ACK from {DeviceId}", deviceIdString);
-            
-            if (_feedbackAcks.TryGetValue(deviceIdString, out var tcs))
-            {
-                tcs.TrySetResult(true);
-            }
+            var (deviceIdString, feedbackIdString) = ParsingHelper.ExtractNullTerminatedStrings(data);
+            _logger.LogInformation("Received FEEDBACK_ACK from {DeviceId} for feedback {FeedbackId}", 
+                deviceIdString, feedbackIdString);
 
-            // Fire event with pending feedback IDs for status transition
-            if (_pendingFeedbacks.TryGetValue(deviceIdString, out var feedbackIds) && feedbackIds.Count > 0)
+            if (Guid.TryParse(deviceIdString, out var deviceGuid) && 
+                Guid.TryParse(feedbackIdString, out var feedbackGuid))
             {
-                _logger.LogInformation("Firing FeedbackAckReceived for {Count} feedbacks from {DeviceId}", feedbackIds.Count, deviceIdString);
-                FeedbackAckReceived?.Invoke(this, feedbackIds);
+                // Remove from pending feedbacks for this device (thread-safe)
+                if (_pendingFeedbacks.TryGetValue(deviceIdString, out var pending))
+                {
+                    pending.TryRemove(feedbackGuid, out _);
+                }
+
+                // Fire event for per-feedback acknowledgement and status transition
+                // Per Session Interaction §7(6): duplicate prevention handled by transitioning to DELIVERED in HubEventBridge
+                FeedbackAckReceived?.Invoke(this, new FeedbackAckEventArgs(deviceGuid, feedbackGuid));
+            }
+            else
+            {
+                _logger.LogWarning("Failed to parse FEEDBACK_ACK: DeviceId={DeviceId}, FeedbackId={FeedbackId}", 
+                    deviceIdString, feedbackIdString);
             }
         }
         catch (Exception ex)
@@ -772,14 +881,49 @@ public class TcpPairingService : ITcpPairingService, IDisposable
             tcs.TrySetCanceled();
         }
     }
+}
 
-    
-    
-    // Helper class for parsing (inlined for simplicity in this artifact)
-    private static class ParsingHelper {
-        public static string ExtractString(byte[] data) {
-            if (data == null || data.Length < 2) return string.Empty;
-            return Encoding.UTF8.GetString(data, 1, data.Length - 1);
+/// <summary>
+/// Helper class for parsing TCP message payloads.
+/// Pure utility functions for message parsing per API Contract.md §3.6.2.
+/// </summary>
+public static class ParsingHelper {
+    public static string ExtractString(byte[] data) {
+        if (data == null || data.Length < 2) return string.Empty;
+        return Encoding.UTF8.GetString(data, 1, data.Length - 1);
+    }
+
+    /// <summary>
+    /// Extracts two null-terminated strings from the message payload.
+    /// Per API Contract.md §3.6.2: DeviceID (null-terminated) + EntityID.
+    /// </summary>
+    /// <param name="data">Raw message data including opcode at position 0.</param>
+    /// <returns>Tuple of (deviceId, entityId) as strings.</returns>
+    public static (string DeviceId, string EntityId) ExtractNullTerminatedStrings(byte[] data)
+    {
+        if (data == null || data.Length < 3) 
+            return (string.Empty, string.Empty);
+
+        // Find null terminator position (starts after opcode at index 1)
+        int nullIndex = -1;
+        for (int i = 1; i < data.Length; i++)
+        {
+            if (data[i] == 0x00)
+            {
+                nullIndex = i;
+                break;
+            }
         }
+
+        if (nullIndex == -1 || nullIndex == data.Length - 1)
+        {
+            // Invalid format: no null terminator or nothing after it
+            return (string.Empty, string.Empty);
+        }
+
+        string deviceId = Encoding.UTF8.GetString(data, 1, nullIndex - 1);
+        string entityId = Encoding.UTF8.GetString(data, nullIndex + 1, data.Length - nullIndex - 1);
+        
+        return (deviceId, entityId);
     }
 }

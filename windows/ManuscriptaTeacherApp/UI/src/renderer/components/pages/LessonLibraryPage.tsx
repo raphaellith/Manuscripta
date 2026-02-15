@@ -4,13 +4,14 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
+import { markdownToHtml } from '../../utils/markdownConversion';
 import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
@@ -73,6 +74,7 @@ export const LessonLibraryPage: React.FC = () => {
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,
+        getQuestionsForMaterial,
         createUnitCollection,
         deleteUnitCollection,
         createUnit,
@@ -87,6 +89,113 @@ export const LessonLibraryPage: React.FC = () => {
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const searchKeywords = useMemo(
+        () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
+        [searchQuery]
+    );
+    const isSearching = searchKeywords.length > 0;
+
+    const getVisibleTextFromContent = (content: string) => {
+        if (!content.trim()) return '';
+        const html = markdownToHtml(content);
+        const text = html
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\[Question:\s*[^\]]+\]/gi, ' ')
+            .replace(/\[PDF:\s*[^\]]+\]/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return text;
+    };
+
+    const filteredMaterialsByLesson = useMemo(() => {
+        const result = new Map<string, MaterialEntity[]>();
+        const materialMatchesSearch = (material: MaterialEntity) => {
+            if (!isSearching) return true;
+            const questionText = getQuestionsForMaterial(material.id)
+                .map(question => {
+                    const options = question.options?.join(' ') ?? '';
+                    return `${question.questionText} ${options}`;
+                })
+                .join(' ');
+            const visibleContent = getVisibleTextFromContent(material.content || '');
+            const haystack = `${material.title} ${visibleContent} ${questionText}`.toLowerCase();
+            return searchKeywords.every(keyword => haystack.includes(keyword));
+        };
+
+        unitCollections.forEach(collection => {
+            getUnitsForCollection(collection.id).forEach(unit => {
+                getLessonsForUnit(unit.id).forEach(lesson => {
+                    const materials = getMaterialsForLesson(lesson.id);
+                    const filtered = isSearching
+                        ? materials.filter(materialMatchesSearch)
+                        : materials;
+                    result.set(lesson.id, filtered);
+                });
+            });
+        });
+
+        return result;
+    }, [
+        getLessonsForUnit,
+        getMaterialsForLesson,
+        getQuestionsForMaterial,
+        getUnitsForCollection,
+        isSearching,
+        searchKeywords,
+        unitCollections,
+    ]);
+
+    const getFilteredMaterialsForLesson = (lessonId: string) =>
+        filteredMaterialsByLesson.get(lessonId) ?? [];
+
+    const filteredLessonsByUnit = useMemo(() => {
+        const result = new Map<string, LessonEntity[]>();
+        unitCollections.forEach(collection => {
+            getUnitsForCollection(collection.id).forEach(unit => {
+                const lessons = getLessonsForUnit(unit.id);
+                const filtered = isSearching
+                    ? lessons.filter(lesson => (filteredMaterialsByLesson.get(lesson.id)?.length ?? 0) > 0)
+                    : lessons;
+                result.set(unit.id, filtered);
+            });
+        });
+        return result;
+    }, [
+        filteredMaterialsByLesson,
+        getLessonsForUnit,
+        getUnitsForCollection,
+        isSearching,
+        unitCollections,
+    ]);
+
+    const getFilteredLessonsForUnit = (unitId: string) =>
+        filteredLessonsByUnit.get(unitId) ?? [];
+
+    const filteredUnitsByCollection = useMemo(() => {
+        const result = new Map<string, UnitEntity[]>();
+        unitCollections.forEach(collection => {
+            const units = getUnitsForCollection(collection.id);
+            const filtered = isSearching
+                ? units.filter(unit => (filteredLessonsByUnit.get(unit.id)?.length ?? 0) > 0)
+                : units;
+            result.set(collection.id, filtered);
+        });
+        return result;
+    }, [getUnitsForCollection, isSearching, filteredLessonsByUnit, unitCollections]);
+
+    const getFilteredUnitsForCollection = (collectionId: string) =>
+        filteredUnitsByCollection.get(collectionId) ?? [];
+
+    const visibleCollections = useMemo(
+        () => (isSearching
+            ? unitCollections.filter(collection => (filteredUnitsByCollection.get(collection.id)?.length ?? 0) > 0)
+            : unitCollections),
+        [filteredUnitsByCollection, isSearching, unitCollections]
+    );
+
+    const hasSearchResults = !isSearching || visibleCollections.length > 0;
 
     const toggleSet = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
         const next = new Set(set);
@@ -130,8 +239,23 @@ export const LessonLibraryPage: React.FC = () => {
                     </button>
                 </div>
 
+                <div className="p-3 border-b border-gray-200 bg-white">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search materials"
+                        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-text-body focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                    />
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {unitCollections.length === 0 && (
+                    {isSearching && !hasSearchResults && (
+                        <div className="text-center py-8">
+                            <p className="text-sm text-gray-400">No materials match your search.</p>
+                        </div>
+                    )}
+                    {!isSearching && unitCollections.length === 0 && (
                         <div className="text-center py-8">
                             <p className="text-sm text-gray-400 mb-2">No collections yet</p>
                             <button
@@ -143,7 +267,10 @@ export const LessonLibraryPage: React.FC = () => {
                         </div>
                     )}
 
-                    {unitCollections.map(collection => (
+                    {visibleCollections.map(collection => {
+                        const unitsForCollection = getFilteredUnitsForCollection(collection.id);
+
+                        return (
                         <div key={collection.id}>
                             {/* Collection Row - Orange left border (from prototype) */}
                             <div
@@ -152,7 +279,7 @@ export const LessonLibraryPage: React.FC = () => {
                             >
                                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
                                 <span className="text-sm font-medium text-text-heading truncate flex-1">{collection.title}</span>
-                                <span className="text-xs text-gray-400">{getUnitsForCollection(collection.id).length}</span>
+                                <span className="text-xs text-gray-400">{unitsForCollection.length}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createUnit', collection }); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -172,7 +299,10 @@ export const LessonLibraryPage: React.FC = () => {
                             {/* Units under Collection - Orange indent line (from prototype) */}
                             {expandedCollections.has(collection.id) && (
                                 <div className="ml-4 pl-2 space-y-1 mt-1" style={{ borderLeft: '2px solid var(--color-brand-orange)' }}>
-                                    {getUnitsForCollection(collection.id).map(unit => (
+                                    {unitsForCollection.map(unit => {
+                                        const lessonsForUnit = getFilteredLessonsForUnit(unit.id);
+
+                                        return (
                                         <div key={unit.id}>
                                             {/* Unit Row - Green left border (from prototype) */}
                                             <div
@@ -181,7 +311,7 @@ export const LessonLibraryPage: React.FC = () => {
                                             >
                                                 <ChevronRightIcon isOpen={expandedUnits.has(unit.id)} />
                                                 <span className="text-sm text-text-heading truncate flex-1">{unit.title}</span>
-                                                <span className="text-xs text-gray-400">{getLessonsForUnit(unit.id).length}</span>
+                                                <span className="text-xs text-gray-400">{lessonsForUnit.length}</span>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createLesson', unit }); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -201,74 +331,80 @@ export const LessonLibraryPage: React.FC = () => {
                                             {/* Lessons under Unit - Green indent line (from prototype) */}
                                             {expandedUnits.has(unit.id) && (
                                                 <div className="ml-4 pl-2 space-y-0.5 mt-1" style={{ borderLeft: '2px solid var(--color-brand-green)' }}>
-                                                    {getLessonsForUnit(unit.id).map(lesson => (
-                                                        <div key={lesson.id}>
-                                                            {/* Lesson Row - Blue left border (from prototype) */}
-                                                            <div
-                                                                className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02] group"
-                                                                onClick={() => toggleSet(lesson.id, expandedLessons, setExpandedLessons)}
-                                                            >
-                                                                <ChevronRightIcon isOpen={expandedLessons.has(lesson.id)} />
-                                                                <span className="text-sm text-text-body truncate flex-1">{lesson.title}</span>
-                                                                <span className="text-xs text-gray-400">({getMaterialsForLesson(lesson.id).length})</span>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setModal({ type: 'createMaterial', lesson }); }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
-                                                                    title="Add material"
-                                                                >
-                                                                    <PlusIcon />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
-                                                                    title="Delete lesson"
-                                                                >
-                                                                    <TrashIcon />
-                                                                </button>
-                                                            </div>
+                                                    {lessonsForUnit.map(lesson => {
+                                                        const materialsForLesson = getFilteredMaterialsForLesson(lesson.id);
 
-                                                            {/* Materials in Lesson - Blue indent line (from prototype) */}
-                                                            {expandedLessons.has(lesson.id) && (
-                                                                <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
-                                                                    {getMaterialsForLesson(lesson.id).length === 0 ? (
-                                                                        <p className="text-xs text-gray-400 py-2">No materials yet</p>
-                                                                    ) : (
-                                                                        getMaterialsForLesson(lesson.id).map(material => (
-                                                                            <div
-                                                                                key={material.id}
-                                                                                className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
-                                                                                onClick={() => setModal({ type: 'editMaterial', material })}
-                                                                            >
-                                                                                {getContentIcon(material.materialType)}
-                                                                                <span className="text-sm text-text-body truncate flex-1">{material.title}</span>
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
-                                                                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
-                                                                                    title="Delete material"
-                                                                                >
-                                                                                    <TrashIcon />
-                                                                                </button>
-                                                                            </div>
-                                                                        ))
-                                                                    )}
+                                                        return (
+                                                            <div key={lesson.id}>
+                                                                {/* Lesson Row - Blue left border (from prototype) */}
+                                                                <div
+                                                                    className="flex items-center gap-2 px-2 py-1 rounded-r-md cursor-pointer hover:bg-brand-blue/5 transition-colors border-l-3 border-l-brand-blue bg-brand-blue/[0.02] group"
+                                                                    onClick={() => toggleSet(lesson.id, expandedLessons, setExpandedLessons)}
+                                                                >
+                                                                    <ChevronRightIcon isOpen={expandedLessons.has(lesson.id)} />
+                                                                    <span className="text-sm text-text-body truncate flex-1">{lesson.title}</span>
+                                                                    <span className="text-xs text-gray-400">({materialsForLesson.length})</span>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setModal({ type: 'createMaterial', lesson }); }}
+                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
+                                                                        title="Add material"
+                                                                    >
+                                                                        <PlusIcon />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
+                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                        title="Delete lesson"
+                                                                    >
+                                                                        <TrashIcon />
+                                                                    </button>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {getLessonsForUnit(unit.id).length === 0 && (
+
+                                                                {/* Materials in Lesson - Blue indent line (from prototype) */}
+                                                                {expandedLessons.has(lesson.id) && (
+                                                                    <div className="ml-4 pl-2 space-y-0.5 mt-0.5" style={{ borderLeft: '2px solid var(--color-brand-blue)' }}>
+                                                                        {materialsForLesson.length === 0 ? (
+                                                                            <p className="text-xs text-gray-400 py-2">No materials yet</p>
+                                                                        ) : (
+                                                                            materialsForLesson.map(material => (
+                                                                                <div
+                                                                                    key={material.id}
+                                                                                    className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors border-l-2 border-l-gray-200 group hover:bg-gray-50"
+                                                                                    onClick={() => setModal({ type: 'editMaterial', material })}
+                                                                                >
+                                                                                    {getContentIcon(material.materialType)}
+                                                                                    <span className="text-sm text-text-body truncate flex-1">{material.title}</span>
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
+                                                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                                        title="Delete material"
+                                                                                    >
+                                                                                        <TrashIcon />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {lessonsForUnit.length === 0 && (
                                                         <p className="text-xs text-gray-400 py-2">No lessons yet</p>
                                                     )}
                                                 </div>
                                             )}
-                                        </div>
-                                    ))}
-                                    {getUnitsForCollection(collection.id).length === 0 && (
+                                                </div>
+                                            );
+                                            })}
+                                            {unitsForCollection.length === 0 && (
                                         <p className="text-xs text-gray-400 py-2">No units yet</p>
                                     )}
                                 </div>
                             )}
                         </div>
-                    ))}
+                            );
+                            })}
                 </div>
             </div>
 
