@@ -19,7 +19,9 @@ import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpMessage;
 import com.manuscripta.student.network.tcp.TcpMessageListenerAdapter;
 import com.manuscripta.student.network.tcp.TcpOpcode;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.ContentParser;
 import com.manuscripta.student.utils.FileStorageManager;
 
@@ -337,6 +339,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
                 // Refresh LiveData to notify observers
                 refreshMaterialsLiveData();
+            }
+
+            // 4. Send DISTRIBUTE_ACK to confirm receipt
+            try {
+                tcpSocketManager.send(new DistributeAckMessage(deviceId));
+                Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
+            } catch (TcpProtocolException | IOException e) {
+                Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
             }
 
             Log.i(TAG, "Material sync completed successfully");
