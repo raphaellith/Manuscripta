@@ -102,6 +102,20 @@ public class MaterialRepositoryImplTest {
                         mockTcpSocketManager, mockPairingManager));
     }
 
+    @Test
+    public void testConstructor_nullTcpSocketManager_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                        null, mockPairingManager));
+    }
+
+    @Test
+    public void testConstructor_nullPairingManager_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                        mockTcpSocketManager, null));
+    }
+
     // ========== getMaterialById tests ==========
 
     @Test
