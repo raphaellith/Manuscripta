@@ -52,7 +52,7 @@ This document specifies how configurations are to be managed in the Windows Appl
 
     (c) When an override value is set or changed, request a config refresh to the device(s) the change corresponds to.
 
-(2) The Windows application shall intiate a config refresh request by sending a TCP `CONFIG_REFRESH` (0x07) message, as specified in Section 6(3) of the Session Interaction Specifications.
+(2) The Windows application shall initiate a config refresh request by sending a TCP `CONFIG_REFRESH` message, as specified in Section 6(3) of the Session Interaction Specifications.
 
 (3) The Service layer shall provide mechanisms to determine the trigger of a event specified in subsection (1), and the Frontend Workflow Specifications shall provide mechanisms for the backend to report timeouts and other errors regarding config refreshes.
 
