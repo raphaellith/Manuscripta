@@ -15,16 +15,27 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.tcp.ConnectionState;
+import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.network.tcp.TcpMessage;
+import com.manuscripta.student.network.tcp.TcpMessageListenerAdapter;
+import com.manuscripta.student.network.tcp.TcpOpcode;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.utils.ContentParser;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import okhttp3.ResponseBody;
 import retrofit2.Response;
 
 /**
@@ -40,8 +51,6 @@ import retrofit2.Response;
  *   <li>Thread-safe operations</li>
  * </ul>
  *
- * <p><b>Note:</b> HTTP network operations for material fetching are not yet implemented.
- * The syncMaterials method is a placeholder for when the HTTP layer is ready.</p>
  */
 @Singleton
 public class MaterialRepositoryImpl implements MaterialRepository {
@@ -57,6 +66,15 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     /** The API service for network operations. */
     private final ApiService apiService;
+
+    /** The TCP socket manager for receiving DISTRIBUTE_MATERIAL signals. */
+    private final TcpSocketManager tcpSocketManager;
+
+    /** The pairing manager for retrieving the current device ID. */
+    private final PairingManager pairingManager;
+
+    /** Executor for running sync operations on a background thread. */
+    private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
     /** Lock object for thread-safe operations. */
     private final Object lock = new Object();
@@ -85,12 +103,16 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * @param materialDao        The DAO for material persistence
      * @param fileStorageManager The file storage manager for attachments
      * @param apiService         The API service for network operations
+     * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
+     * @param pairingManager     The pairing manager for retrieving the current device ID
      * @throws IllegalArgumentException if any dependency is null
      */
     @Inject
     public MaterialRepositoryImpl(@NonNull MaterialDao materialDao,
                                   @NonNull FileStorageManager fileStorageManager,
-                                  @NonNull ApiService apiService) {
+                                  @NonNull ApiService apiService,
+                                  @NonNull TcpSocketManager tcpSocketManager,
+                                  @NonNull PairingManager pairingManager) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
         }
@@ -100,10 +122,35 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         if (apiService == null) {
             throw new IllegalArgumentException("ApiService cannot be null");
         }
+        if (tcpSocketManager == null) {
+            throw new IllegalArgumentException("TcpSocketManager cannot be null");
+        }
+        if (pairingManager == null) {
+            throw new IllegalArgumentException("PairingManager cannot be null");
+        }
         this.materialDao = materialDao;
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
+        this.tcpSocketManager = tcpSocketManager;
+        this.pairingManager = pairingManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
+
+        // Register as a listener for DISTRIBUTE_MATERIAL signals from the TCP layer.
+        // When the server signals that new materials are available, trigger a sync.
+        tcpSocketManager.addMessageListener(new TcpMessageListenerAdapter() {
+            @Override
+            public void onMessageReceived(@NonNull TcpMessage message) {
+                if (message.getOpcode() == TcpOpcode.DISTRIBUTE_MATERIAL) {
+                    String deviceId = pairingManager.getDeviceId();
+                    if (deviceId != null && !deviceId.trim().isEmpty()) {
+                        Log.d(TAG, "DISTRIBUTE_MATERIAL signal received, triggering sync");
+                        syncExecutor.execute(() -> syncMaterials(deviceId));
+                    } else {
+                        Log.w(TAG, "DISTRIBUTE_MATERIAL received but device ID not available");
+                    }
+                }
+            }
+        });
 
         // Initialize LiveData with existing materials from database.
         // Safe to call here as all fields are initialized and getAll() is a pure read.
@@ -271,13 +318,20 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
-            // 2. Convert MaterialDtos to MaterialEntities and save to database
+            // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
             synchronized (lock) {
                 for (MaterialDto dto : materialDtos) {
                     try {
                         MaterialEntity entity = MaterialMapper.dtoToEntity(dto);
                         materialDao.insert(entity);
                         Log.d(TAG, "Saved material: " + entity.getId());
+
+                        // 3. Parse content for attachment references and download each one
+                        List<String> attachmentIds =
+                                ContentParser.extractDistinctAttachmentReferences(dto.getContent());
+                        for (String attachmentId : attachmentIds) {
+                            downloadAttachment(dto.getId(), attachmentId);
+                        }
                     } catch (IllegalArgumentException e) {
                         Log.e(TAG, "Invalid material data: " + e.getMessage());
                     }
@@ -285,13 +339,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
                 // Refresh LiveData to notify observers
                 refreshMaterialsLiveData();
-            }
-
-            // Notify callback if registered
-            // Note: Attachments referenced in material content (/attachments/{id})
-            // will be downloaded on-demand when the material is viewed
-            if (materialAvailableCallback != null) {
-                materialAvailableCallback.onMaterialsAvailable();
             }
 
             Log.i(TAG, "Material sync completed successfully");
@@ -318,6 +365,40 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     @Override
     public boolean isSyncing() {
         return syncing.get();
+    }
+
+    /**
+     * Downloads a single attachment and saves it to local storage.
+     *
+     * @param materialId   The ID of the material the attachment belongs to
+     * @param attachmentId The ID of the attachment to download
+     */
+    private void downloadAttachment(@NonNull String materialId, @NonNull String attachmentId) {
+        try {
+            Response<ResponseBody> attachmentResponse =
+                    apiService.getAttachment(attachmentId).execute();
+
+            if (!attachmentResponse.isSuccessful() || attachmentResponse.body() == null) {
+                Log.e(TAG, "Failed to download attachment " + attachmentId
+                        + ". HTTP " + attachmentResponse.code());
+                return;
+            }
+
+            ResponseBody body = attachmentResponse.body();
+            byte[] bytes = body.bytes();
+
+            // Determine file extension from content-type header (default to "bin")
+            String contentType = body.contentType() != null
+                    ? body.contentType().subtype()
+                    : "bin";
+
+            fileStorageManager.saveAttachment(materialId, attachmentId, contentType, bytes);
+            Log.d(TAG, "Saved attachment " + attachmentId + " for material " + materialId);
+
+        } catch (IOException e) {
+            Log.e(TAG, "Network error downloading attachment " + attachmentId + ": "
+                    + e.getMessage(), e);
+        }
     }
 
     /**

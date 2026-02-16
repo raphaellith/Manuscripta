@@ -456,7 +456,7 @@ public class PairingManager implements TcpMessageListener {
      */
     @Nullable
     @VisibleForTesting
-    String getDeviceId() {
+    public String getDeviceId() {
         return deviceId;
     }
 }

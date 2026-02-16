@@ -20,6 +20,8 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import org.junit.Before;
@@ -53,6 +55,12 @@ public class MaterialRepositoryImplTest {
     @Mock
     private ApiService mockApiService;
 
+    @Mock
+    private TcpSocketManager mockTcpSocketManager;
+
+    @Mock
+    private PairingManager mockPairingManager;
+
     private MaterialRepositoryImpl repository;
 
     private static final String TEST_MATERIAL_ID = "test-material-123";
@@ -62,7 +70,8 @@ public class MaterialRepositoryImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
-        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService);
+        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                mockTcpSocketManager, mockPairingManager);
     }
 
     // ========== Constructor tests ==========
@@ -75,19 +84,22 @@ public class MaterialRepositoryImplTest {
     @Test
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService));
+                () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService,
+                        mockTcpSocketManager, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, null, mockApiService));
+                () -> new MaterialRepositoryImpl(mockDao, null, mockApiService,
+                        mockTcpSocketManager, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullApiService_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null));
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null,
+                        mockTcpSocketManager, mockPairingManager));
     }
 
     // ========== getMaterialById tests ==========

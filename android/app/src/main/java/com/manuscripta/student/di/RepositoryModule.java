@@ -16,6 +16,7 @@ import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
@@ -112,14 +113,19 @@ public class RepositoryModule {
      * @param materialDao        The MaterialDao instance
      * @param fileStorageManager The FileStorageManager instance
      * @param apiService         The ApiService instance
+     * @param tcpSocketManager   The TcpSocketManager instance
+     * @param pairingManager     The PairingManager instance
      * @return MaterialRepository instance
      */
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
                                                         FileStorageManager fileStorageManager,
-                                                        ApiService apiService) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService);
+                                                        ApiService apiService,
+                                                        TcpSocketManager tcpSocketManager,
+                                                        PairingManager pairingManager) {
+        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
+                tcpSocketManager, pairingManager);
     }
 
     /**
