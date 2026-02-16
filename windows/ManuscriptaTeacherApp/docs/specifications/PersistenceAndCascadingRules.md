@@ -17,6 +17,7 @@ This document is effective for the Windows app only.
     (e) `LessonDataEntity`.
     (f) `SourceDocumentEntity`.
     (g) `AttachmentEntity`.
+    (h) `ConfigurationEntity`, for the purpose of storing default configuration values, as defined in Configuration Management Specification.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
