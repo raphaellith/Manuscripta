@@ -34,6 +34,13 @@ public class MainDbContext : DbContext
     /// Per PersistenceAndCascadingRules.md §1(1)(g).
     /// </summary>
     public DbSet<AttachmentEntity> Attachments { get; set; }
+
+    /// <summary>
+    /// Default configuration values.
+    /// Per PersistenceAndCascadingRules.md §1(1)(h).
+    /// Per ConfigurationManagementSpecification §1(3)(a).
+    /// </summary>
+    public DbSet<ConfigurationEntity> Configurations { get; set; }
     
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
@@ -135,6 +142,15 @@ public class MainDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(a => a.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure ConfigurationEntity for default configuration values
+        // Per PersistenceAndCascadingRules.md §1(1)(h), ConfigurationManagementSpecification §1(3)(a)
+        modelBuilder.Entity<ConfigurationEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FeedbackStyle).HasConversion<string>();
+            entity.Property(e => e.MascotSelection).HasConversion<string>();
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
