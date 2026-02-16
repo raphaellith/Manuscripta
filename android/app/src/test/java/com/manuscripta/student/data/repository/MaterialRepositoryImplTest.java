@@ -20,9 +20,15 @@ import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
+
+import java.io.IOException;
+
+import retrofit2.Call;
+import retrofit2.Response;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,6 +66,9 @@ public class MaterialRepositoryImplTest {
 
     @Mock
     private PairingManager mockPairingManager;
+
+    @Mock
+    private Call<DistributionBundleDto> mockDistributionCall;
 
     private MaterialRepositoryImpl repository;
 
@@ -363,7 +372,11 @@ public class MaterialRepositoryImplTest {
     // ========== syncMaterials tests ==========
 
     @Test
-    public void testSyncMaterials_setsAndClearsSyncingFlag() {
+    public void testSyncMaterials_setsAndClearsSyncingFlag() throws IOException {
+        DistributionBundleDto emptyBundle = new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(emptyBundle));
+
         assertFalse(repository.isSyncing());
 
         repository.syncMaterials(TEST_DEVICE_ID);
@@ -391,7 +404,11 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void testSyncMaterials_notifiesCallback() {
+    public void testSyncMaterials_notifiesCallback() throws IOException {
+        DistributionBundleDto emptyBundle = new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(emptyBundle));
+
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
 
