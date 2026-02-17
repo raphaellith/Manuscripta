@@ -186,6 +186,40 @@ public class ConfigurationServiceTests
 
     #endregion
 
+    #region GetOverride Tests
+
+    [Fact]
+    public void GetOverride_ReturnsOverrideWhenExists()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        var expected = new ConfigurationOverride { TextSize = 30 };
+        _mockOverrideRepo.Setup(r => r.GetByDeviceId(deviceId)).Returns(expected);
+
+        // Act
+        var result = _service.GetOverride(deviceId);
+
+        // Assert
+        Assert.Same(expected, result);
+        _mockOverrideRepo.Verify(r => r.GetByDeviceId(deviceId), Times.Once);
+    }
+
+    [Fact]
+    public void GetOverride_ReturnsNullWhenNoOverrideSet()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        _mockOverrideRepo.Setup(r => r.GetByDeviceId(deviceId)).Returns((ConfigurationOverride?)null);
+
+        // Act
+        var result = _service.GetOverride(deviceId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
     #region SetOverride Tests
 
     [Fact]
