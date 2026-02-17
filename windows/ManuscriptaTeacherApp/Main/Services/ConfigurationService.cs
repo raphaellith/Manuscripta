@@ -11,7 +11,8 @@ namespace Main.Services;
 /// Implements the two-tier model per ConfigurationManagementSpecification:
 /// - Defaults: long-term persisted via <see cref="IDefaultConfigurationRepository"/>
 /// - Per-device overrides: short-term persisted via <see cref="IConfigurationOverrideRepository"/>
-/// Triggers config refresh per ConfigurationManagementSpecification §3.
+/// Triggers config refresh per ConfigurationManagementSpecification §3(1)(b-c).
+/// Note: §3(1)(a) (device paired) is handled by <see cref="ConfigurationRefreshListener"/> (singleton).
 /// </summary>
 public class ConfigurationService : IConfigurationService
 {
@@ -33,9 +34,6 @@ public class ConfigurationService : IConfigurationService
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        // §3(1)(a): When a device is first paired, request a config refresh to that device.
-        _deviceRegistryService.DevicePaired += OnDevicePaired;
     }
 
     /// <inheritdoc />
@@ -108,14 +106,6 @@ public class ConfigurationService : IConfigurationService
     }
 
     #region §3 Config Refresh Triggers
-
-    /// <summary>
-    /// Handles device paired event per §3(1)(a).
-    /// </summary>
-    private void OnDevicePaired(object? sender, PairedDeviceEntity device)
-    {
-        _ = RefreshDeviceAsync(device.DeviceId);
-    }
 
     /// <summary>
     /// Sends config refresh to a specific device.

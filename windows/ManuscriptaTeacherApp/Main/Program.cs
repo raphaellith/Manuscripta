@@ -59,6 +59,8 @@ builder.Services.AddScoped<Main.Services.Repositories.IDefaultConfigurationRepos
 // Overrides: short-term persisted (in-memory) per PersistenceAndCascadingRules §1(2)
 builder.Services.AddSingleton<Main.Services.Repositories.IConfigurationOverrideRepository, Main.Services.Repositories.InMemoryConfigurationOverrideRepository>();
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+// Singleton listener for §3(1)(a): DevicePaired → config refresh
+builder.Services.AddSingleton<ConfigurationRefreshListener>();
 
 // Register CRUD services for hub
 builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
@@ -124,6 +126,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Eagerly resolve singleton so its DevicePaired event subscription is active
+app.Services.GetRequiredService<ConfigurationRefreshListener>();
 
 if (app.Environment.IsDevelopment())
 {
