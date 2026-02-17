@@ -9,17 +9,6 @@ using Main.Models.Network;
 namespace Main.Services.Network;
 
 /// <summary>
-/// Configuration settings for network services.
-/// </summary>
-public class NetworkSettings
-{
-    public int HttpPort { get; set; } = 5911;
-    public int TcpPort { get; set; } = 5912;
-    public int UdpBroadcastPort { get; set; } = 5913;
-    public int BroadcastIntervalMs { get; set; } = 3000;
-}
-
-/// <summary>
 /// Implementation of UDP broadcasting service.
 /// Broadcasts server presence per Pairing Process.md §2(1) and API Contract.md §1.1.
 /// </summary>

@@ -9,8 +9,10 @@ using Main.Services.Network;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure network settings from appsettings.json
-builder.Services.Configure<NetworkSettings>(
-    builder.Configuration.GetSection("NetworkSettings"));
+builder.Services.AddOptions<NetworkSettings>()
+    .Bind(builder.Configuration.GetSection("NetworkSettings"))
+    .Validate(settings => settings.ArePortsDistinct(), "NetworkSettings ports must be distinct.")
+    .ValidateOnStart();
 
 // Resolve the database path to a deterministic absolute location under %APPDATA%.
 // This prevents the SQLite file from being created in an unpredictable working directory
@@ -180,12 +182,42 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-// Minimal default endpoint to confirm the app is running.
-app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+// Port-based routing per API Contract.md §Ports and FrontendWorkflowSpecifications §2ZA(8).
+// - SignalR and health endpoint: available on ANY bound port (frontend uses dynamic port selection)
+// - REST API controllers: ONLY on port 5911 (Android clients need stable port per API Contract)
+//
+// Per FrontendWorkflowSpecifications §2ZA(8)(c), the SignalR port is dynamically selected:
+// frontend tries 5910 first, then falls back to 5914-5919 if unavailable.
+// Therefore, SignalR/health must NOT be restricted to a specific port.
+//
+// Note: In Testing environment, host constraints are skipped since TestWebApplicationFactory
+// uses an in-memory test server that doesn't bind to real ports.
+var networkSettings = app.Configuration.GetSection("NetworkSettings").Get<NetworkSettings>() ?? new NetworkSettings();
 
-app.MapControllers();
-// Per FrontendWorkflowSpecifications §1(1)(a) and §2(1)(a)
-app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+if (app.Environment.IsEnvironment("Testing"))
+{
+    // Testing environment: no host constraints for in-memory test server
+    app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+    app.MapControllers();
+    app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+}
+else
+{
+    // Production/Development: enforce port-based routing for HTTP API only
+    var httpApiHost = $"*:{networkSettings.HttpPort}";
+
+    // Health endpoint: available on any bound port for frontend health checks.
+    // Per FrontendWorkflowSpecifications §2ZA(5)(a): health probe uses dynamic port.
+    app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+
+    // REST API controllers on HTTP API port ONLY per API Contract.md §Ports.
+    // Android clients rely on stable port 5911 for material distribution.
+    app.MapControllers().RequireHost(httpApiHost);
+
+    // SignalR hub: available on any bound port per FrontendWorkflowSpecifications §2ZA(8).
+    // Frontend uses dynamic port selection and connects to whatever port succeeded.
+    app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+}
 
 app.Run();
 
