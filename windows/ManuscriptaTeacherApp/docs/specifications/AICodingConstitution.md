@@ -68,10 +68,10 @@ This document is effective for Windows App development only.
 
 (2) **Recommendations to Developers**
 
-    A developer seeking a review should —
+    A developer seeking a review should include —
 
-    (a) Include the respective changes of specifications in the pull request; or
-    (b) In case of a specification being approved before implementation, a reference to those specifications in the form of the pull request during which the specifications are merged, or the corresponding section(s).
+    (a) the respective changes of specifications in the pull request; or
+    (b) in case of a specification being approved before implementation, a reference to those specifications in the form of the pull request during which the specifications are merged, or the corresponding section(s).
     
 (3) An AI agent shall conduct a review of the submitted implementation including, but not limited to, the following:
 
