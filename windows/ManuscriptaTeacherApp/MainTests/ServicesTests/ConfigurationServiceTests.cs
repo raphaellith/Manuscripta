@@ -400,5 +400,19 @@ public class ConfigurationServiceTests
         _mockOverrideRepo.Verify(r => r.Remove(deviceId), Times.Once);
     }
 
+    [Fact]
+    public void RemoveOverride_TriggersRefreshForDevice()
+    {
+        // Arrange — §3(1)(c): removing overrides changes effective config
+        var deviceId = Guid.NewGuid();
+
+        // Act
+        _service.RemoveOverride(deviceId);
+
+        // Assert
+        _mockTcpService.Verify(
+            t => t.SendRefreshConfigAsync(deviceId.ToString()), Times.Once);
+    }
+
     #endregion
 }

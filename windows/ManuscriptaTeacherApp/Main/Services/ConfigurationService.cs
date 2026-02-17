@@ -82,6 +82,9 @@ public class ConfigurationService : IConfigurationService
     public void RemoveOverride(Guid deviceId)
     {
         _overrideRepository.Remove(deviceId);
+
+        // §3(1)(c): Removing overrides changes the effective config, trigger refresh.
+        _ = RefreshDeviceAsync(deviceId);
     }
 
     /// <inheritdoc />
