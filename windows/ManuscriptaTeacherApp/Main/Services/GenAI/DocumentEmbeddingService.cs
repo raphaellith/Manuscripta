@@ -318,6 +318,50 @@ public class DocumentEmbeddingService : IEmbeddingService
     {
         try
         {
+            // Ensure the EmbeddingStatus column exists in the SQLite schema.
+            // Older databases created before this field was added will not have the column,
+            // resulting in queries like the one below throwing "no such column".
+            var connection = _dbContext.Database.GetDbConnection();
+            try
+            {
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info('SourceDocuments')";
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    var hasEmbeddingStatus = false;
+
+                    while (await reader.ReadAsync())
+                    {
+                        var nameOrdinal = reader.GetOrdinal("name");
+                        var colName = reader.GetString(nameOrdinal);
+                        if (string.Equals(colName, "EmbeddingStatus", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasEmbeddingStatus = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasEmbeddingStatus)
+                    {
+                        // Add the nullable integer column to match the nullable enum property
+                        reader.Close();
+                        using var alter = connection.CreateCommand();
+                        alter.CommandText = "ALTER TABLE \"SourceDocuments\" ADD COLUMN \"EmbeddingStatus\" INTEGER";
+                        await alter.ExecuteNonQueryAsync();
+                        _logger.LogInformation("Added missing EmbeddingStatus column to SourceDocuments table.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not validate or patch SourceDocuments schema for EmbeddingStatus. Proceeding and allowing query to fail if necessary.");
+            }
+
             // §3A(8)(a): Identify all SourceDocumentEntity objects with EmbeddingStatus of FAILED
             var failedDocuments = await _dbContext.SourceDocuments
                 .Where(d => d.EmbeddingStatus == EmbeddingStatus.FAILED)

@@ -182,6 +182,40 @@ if (!app.Environment.IsEnvironment("Testing"))
         context.Database.EnsureCreated();
         // DbInitializer.Initialize(context);
 
+        // Ensure the database has the `EmbeddingStatus` column on SourceDocuments.
+        // Older databases may have been created before this column was added to the model,
+        // causing queries that filter on EmbeddingStatus to fail with "no such column".
+        try
+        {
+            var connection = context.Database.GetDbConnection();
+            connection.Open();
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "PRAGMA table_info('SourceDocuments');";
+                using var reader = cmd.ExecuteReader();
+                var hasEmbeddingStatus = false;
+                while (reader.Read())
+                {
+                    var colName = reader.GetString(1);
+                    if (string.Equals(colName, "EmbeddingStatus", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasEmbeddingStatus = true;
+                        break;
+                    }
+                }
+
+                if (!hasEmbeddingStatus)
+                {
+                    Console.WriteLine("Adding missing column 'EmbeddingStatus' to SourceDocuments table.");
+                    context.Database.ExecuteSqlRaw("ALTER TABLE SourceDocuments ADD COLUMN EmbeddingStatus INTEGER DEFAULT 0;");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not ensure EmbeddingStatus column exists: {ex.Message}");
+        }
+
     // Initialize embedding startup handler per GenAISpec.md §3A(8)
     var embeddingService = services.GetRequiredService<Main.Services.GenAI.IEmbeddingService>();
     await embeddingService.InitializeFailedEmbeddingsAsync();
