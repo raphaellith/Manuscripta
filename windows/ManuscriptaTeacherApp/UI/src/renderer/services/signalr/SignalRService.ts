@@ -10,6 +10,7 @@ import type {
     DeviceStatusEntity,
     ResponseEntity,
     FeedbackEntity,
+    ReMarkableDeviceEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -638,6 +639,75 @@ class SignalRService {
      */
     public onFeedbackDispatchFailed(callback: (feedbackId: string, deviceId: string) => void): () => void {
         return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // reMarkable Methods - NetworkingAPISpec §1(1)(n)
+    // ==========================================
+
+    /**
+     * Pairs a reMarkable device using a one-time code.
+     * Per NetworkingAPISpec §1(1)(n)(i).
+     */
+    public async pairReMarkableDevice(name: string, oneTimeCode: string): Promise<string> {
+        return await this.connection.invoke<string>("PairReMarkableDevice", name, oneTimeCode);
+    }
+
+    /**
+     * Unpairs a reMarkable device.
+     * Per NetworkingAPISpec §1(1)(n)(ii).
+     */
+    public async unpairReMarkableDevice(deviceId: string): Promise<void> {
+        await this.connection.invoke("UnpairReMarkableDevice", deviceId);
+    }
+
+    /**
+     * Retrieves all paired reMarkable devices.
+     * Per NetworkingAPISpec §1(1)(n)(iii).
+     */
+    public async getAllReMarkableDevices(): Promise<ReMarkableDeviceEntity[]> {
+        return await this.connection.invoke<ReMarkableDeviceEntity[]>("GetAllReMarkableDevices");
+    }
+
+    /**
+     * Updates a reMarkable device entity.
+     * Per NetworkingAPISpec §1(1)(n)(iv).
+     */
+    public async updateReMarkableDevice(entity: ReMarkableDeviceEntity): Promise<void> {
+        await this.connection.invoke("UpdateReMarkableDevice", entity);
+    }
+
+    /**
+     * Checks whether rmapi is available.
+     * Per NetworkingAPISpec §1(1)(n)(v).
+     */
+    public async checkRmapiAvailability(): Promise<boolean> {
+        return await this.connection.invoke<boolean>("CheckRmapiAvailability");
+    }
+
+    /**
+     * Installs rmapi binary.
+     * Per NetworkingAPISpec §1(1)(n)(vi).
+     */
+    public async installRmapi(): Promise<boolean> {
+        return await this.connection.invoke<boolean>("InstallRmapi");
+    }
+
+    /**
+     * Deploys a material to reMarkable devices.
+     * Per NetworkingAPISpec §1(1)(n)(vii).
+     */
+    public async deployMaterialToReMarkable(materialId: string, deviceIds: string[]): Promise<void> {
+        await this.connection.invoke("DeployMaterialToReMarkable", materialId, deviceIds);
+    }
+
+    /**
+     * Subscribe to reMarkable auth invalid events.
+     * Per NetworkingAPISpec §2(1)(f).
+     */
+    public onReMarkableAuthInvalid(callback: (deviceId: string) => void): () => void {
+        this.connection.on("ReMarkableAuthInvalid", callback);
+        return () => this.connection.off("ReMarkableAuthInvalid", callback);
     }
 }
 
