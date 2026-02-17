@@ -122,3 +122,16 @@ export interface FeedbackEntity {
     status: FeedbackStatus;
 }
 
+// ==========================================
+// reMarkable Entities - RemarkableIntegrationSpecification §3
+// ==========================================
+
+/**
+ * reMarkable device entity per AdditionalValidationRules §3D.
+ * Contains device ID and user-friendly name.
+ */
+export interface ReMarkableDeviceEntity {
+    deviceId: string;
+    name: string;
+}
+

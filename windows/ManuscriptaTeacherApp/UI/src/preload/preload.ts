@@ -1,4 +1,4 @@
-/**
+ /**
  * Preload script for Electron.
  * Exposes IPC APIs to renderer via contextBridge.
  * Per FrontendWorkflowSpecifications §4C(4).
@@ -59,7 +59,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('save-attachment-from-base64', base64Data, uuid, extension),
 
     /**
-     * Listen for backend state changes from main process.
+     * Show save dialog and save PDF file.
+     * Per FrontendWorkflowSpecifications §4D(2)(a).
+     * @param pdfBytes - PDF file content as Uint8Array
+     * @param defaultFilename - Default filename for save dialog
+     * @returns true if saved successfully, false if cancelled
+     */
+    savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) =>
+        ipcRenderer.invoke('save-pdf-file', pdfBytes, defaultFilename),
+
+     /** Listen for backend state changes from main process.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
      * @param callback - Function to call when backend state changes
      * @returns Function to remove the listener

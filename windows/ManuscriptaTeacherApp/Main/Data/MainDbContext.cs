@@ -42,6 +42,12 @@ public class MainDbContext : DbContext
     /// </summary>
     public DbSet<ConfigurationEntity> Configurations { get; set; }
     
+    /// <summary>
+    /// Paired reMarkable devices.
+    /// Per PersistenceAndCascadingRules.md §1(1)(h).
+    /// </summary>
+    public DbSet<ReMarkableDeviceEntity> ReMarkableDevices { get; set; }
+    
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
     // They are managed by InMemoryResponseRepository and InMemorySessionRepository.
@@ -151,6 +157,11 @@ public class MainDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.FeedbackStyle).HasConversion<string>();
             entity.Property(e => e.MascotSelection).HasConversion<string>();
+        // Configure ReMarkableDeviceEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(h)
+        modelBuilder.Entity<ReMarkableDeviceEntity>(entity =>
+        {
+            entity.HasKey(e => e.DeviceId);
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.

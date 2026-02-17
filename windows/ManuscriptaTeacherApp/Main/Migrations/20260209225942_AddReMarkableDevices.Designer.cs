@@ -3,6 +3,7 @@ using System;
 using Main.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Manuscripta.Main.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    partial class MainDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260209225942_AddReMarkableDevices")]
+    partial class AddReMarkableDevices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -38,36 +41,6 @@ namespace Manuscripta.Main.Migrations
                     b.HasIndex("MaterialId");
 
                     b.ToTable("Attachments");
-                });
-
-            modelBuilder.Entity("Main.Models.Entities.ConfigurationEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("AiScaffoldingEnabled")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("FeedbackStyle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MascotSelection")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("SummarisationEnabled")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TextSize")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("TtsEnabled")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Configurations");
                 });
 
             modelBuilder.Entity("Main.Models.Entities.LessonEntity", b =>
