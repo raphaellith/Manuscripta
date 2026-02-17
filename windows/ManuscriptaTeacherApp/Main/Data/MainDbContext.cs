@@ -157,6 +157,8 @@ public class MainDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.FeedbackStyle).HasConversion<string>();
             entity.Property(e => e.MascotSelection).HasConversion<string>();
+        });
+        
         // Configure ReMarkableDeviceEntity
         // Per PersistenceAndCascadingRules.md §1(1)(h)
         modelBuilder.Entity<ReMarkableDeviceEntity>(entity =>
