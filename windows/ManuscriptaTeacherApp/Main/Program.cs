@@ -235,6 +235,122 @@ app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 app.Run();
 
 
+// Helper method to find the ChromaDB executable in the system
+string? FindChromaExecutable()
+{
+    // On Windows, try to find chroma.exe in common Python installation locations
+    if (OperatingSystem.IsWindows())
+    {
+        // First, check if 'chroma' is in PATH
+        try
+        {
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/c where chroma",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            
+            using (var process = Process.Start(processInfo))
+            {
+                if (process != null)
+                {
+                    var output = process.StandardOutput.ReadToEnd().Trim();
+                    process.WaitForExit();
+                    
+                    if (!string.IsNullOrEmpty(output) && File.Exists(output))
+                    {
+                        Console.WriteLine($"Found ChromaDB in PATH at: {output}");
+                        return output;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Continue searching
+        }
+        
+        // Search in Microsoft Store Python installation (most common on Windows)
+        try
+        {
+            var packagesPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Packages");
+            
+            if (Directory.Exists(packagesPath))
+            {
+                foreach (var pythonPackageDir in Directory.GetDirectories(packagesPath, "PythonSoftwareFoundation.Python.*"))
+                {
+                    var scriptsPath = Path.Combine(pythonPackageDir, "LocalCache", "local-packages");
+                    
+                    if (Directory.Exists(scriptsPath))
+                    {
+                        foreach (var pythonVersionDir in Directory.GetDirectories(scriptsPath, "Python*"))
+                        {
+                            var chromaExe = Path.Combine(pythonVersionDir, "Scripts", "chroma.exe");
+                            if (File.Exists(chromaExe))
+                            {
+                                Console.WriteLine($"Found ChromaDB at: {chromaExe}");
+                                return chromaExe;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Microsoft Store Python location: {ex.Message}");
+        }
+        
+        // Search in traditional Python locations
+        try
+        {
+            var pythonSearchPaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".venv"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Python"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Python"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python"),
+            };
+            
+            foreach (var pythonPath in pythonSearchPaths)
+            {
+                if (Directory.Exists(pythonPath))
+                {
+                    var chromaExe = Path.Combine(pythonPath, "Scripts", "chroma.exe");
+                    if (File.Exists(chromaExe))
+                    {
+                        Console.WriteLine($"Found ChromaDB at: {chromaExe}");
+                        return chromaExe;
+                    }
+                    
+                    // Also check subdirectories for version-specific paths
+                    foreach (var subDir in Directory.GetDirectories(pythonPath))
+                    {
+                        chromaExe = Path.Combine(subDir, "Scripts", "chroma.exe");
+                        if (File.Exists(chromaExe))
+                        {
+                            Console.WriteLine($"Found ChromaDB at: {chromaExe}");
+                            return chromaExe;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching traditional Python locations: {ex.Message}");
+        }
+    }
+    
+    return null;
+}
+
 // Helper method to start ChromaDB server if not already running
 async Task StartChromaDbServerAsync(IConfiguration configuration)
 {
@@ -272,12 +388,19 @@ async Task StartChromaDbServerAsync(IConfiguration configuration)
     {
         Console.WriteLine("Starting ChromaDB server...");
         
+        // Find the chroma executable path
+        string chromaPath = FindChromaExecutable();
+        if (string.IsNullOrEmpty(chromaPath))
+        {
+            throw new FileNotFoundException("ChromaDB executable not found. Please ensure ChromaDB is installed via pip.");
+        }
+        
         var chromaProcess = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = "chroma",
-                Arguments = $"run --path \"{dataPath}\"",
+                FileName = chromaPath,
+                Arguments = $"run --path \"{dataPath}\" --host 127.0.0.1 --port 8000",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -286,30 +409,46 @@ async Task StartChromaDbServerAsync(IConfiguration configuration)
         };
         
         chromaProcess.Start();
+        Console.WriteLine($"ChromaDB process started with PID: {chromaProcess.Id}");
+        
+        // Give the server a small moment to initialize before health checks
+        await Task.Delay(1000);
         
         // Wait for server to start (up to 30 seconds)
         var startTime = DateTime.UtcNow;
         var timeout = TimeSpan.FromSeconds(30);
         var serverStarted = false;
+        var attemptCount = 0;
         
         while (DateTime.UtcNow - startTime < timeout)
         {
+            attemptCount++;
             try
             {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-                var healthCheckUri = serverUri.TrimEnd('/') + "/heartbeat";
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                var healthCheckUri = "http://127.0.0.1:8000/api/v1/";
                 var response = await httpClient.GetAsync(healthCheckUri);
                 
-                if (response.IsSuccessStatusCode)
-                {
-                    serverStarted = true;
-                    Console.WriteLine("ChromaDB server started successfully.");
-                    break;
-                }
+                // If we get any HTTP response, the server is up
+                Console.WriteLine($"Health check attempt {attemptCount}: Got response {response.StatusCode}");
+                serverStarted = true;
+                Console.WriteLine("ChromaDB server started successfully.");
+                break;
             }
-            catch
+            catch (HttpRequestException ex) when (ex.InnerException is System.Net.Sockets.SocketException)
             {
-                // Server not ready yet, retry
+                // Connection refused - server not ready yet
+                Console.WriteLine($"Health check attempt {attemptCount}: Connection refused, retrying...");
+            }
+            catch (OperationCanceledException)
+            {
+                // Timeout - server not responding
+                Console.WriteLine($"Health check attempt {attemptCount}: Timeout, retrying...");
+            }
+            catch (Exception ex)
+            {
+                // Other error
+                Console.WriteLine($"Health check attempt {attemptCount}: {ex.GetType().Name}: {ex.Message}");
             }
             
             await Task.Delay(500);
@@ -317,7 +456,7 @@ async Task StartChromaDbServerAsync(IConfiguration configuration)
         
         if (!serverStarted)
         {
-            Console.WriteLine("Warning: ChromaDB server may not have started properly. Continuing anyway...");
+            Console.WriteLine($"Warning: ChromaDB server may not have started properly after {attemptCount} attempts. Continuing anyway...");
         }
     }
     catch (Exception ex)
