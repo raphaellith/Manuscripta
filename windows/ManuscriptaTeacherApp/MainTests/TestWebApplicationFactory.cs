@@ -44,7 +44,29 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-            db.Database.EnsureCreated();
+            
+            try
+            {
+                // Clear any existing schema to avoid conflicts with migrations
+                // (especially important for in-memory SQLite databases in tests)
+                db.Database.EnsureDeleted();
+            }
+            catch
+            {
+                // In-memory database may not support EnsureDeleted, continue anyway
+            }
+            
+            try
+            {
+                db.Database.EnsureCreated();
+            }
+            catch (Exception ex) when (ex.InnerException != null && 
+                                       ex.InnerException.Message.Contains("already exists"))
+            {
+                // If tables already exist (can happen with in-memory SQLite and shared cache),
+                // continue without re-creating them. The migrations have already been applied.
+                System.Diagnostics.Debug.WriteLine($"Database tables already exist: {ex.InnerException.Message}");
+            }
         });
 
         builder.UseEnvironment("Testing");
