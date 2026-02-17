@@ -55,7 +55,7 @@ public class ConfigController : ControllerBase
         // Reject requests from unpaired devices per Pairing Process §1(3)
         if (!await _deviceRegistryService.IsDevicePairedAsync(deviceGuid))
         {
-            _logger.LogWarning("Configuration request from unpaired device {DeviceId}", deviceId);
+            _logger.LogInformation("Configuration request from unpaired device {DeviceId}", deviceId);
             return StatusCode(StatusCodes.Status403Forbidden, "Device is not paired.");
         }
 
