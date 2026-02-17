@@ -339,6 +339,23 @@ class SignalRService {
         await this.getConnection().invoke("DeleteMaterial", id);
     }
 
+    /**
+     * Generates a PDF document for the specified material.
+     * Per NetworkingAPISpec §1(1)(m)(i).
+     * @returns Decoded PDF file bytes as a Uint8Array.
+     */
+    public async generateMaterialPdf(materialId: string): Promise<Uint8Array> {
+        // SignalR returns byte[] as base64 string
+        const base64 = await this.connection.invoke<string>("GenerateMaterialPdf", materialId);
+        // Decode base64 to Uint8Array
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
     // ==========================================
     // Question CRUD - NetworkingAPISpec §1(1)(d1)
     // ==========================================

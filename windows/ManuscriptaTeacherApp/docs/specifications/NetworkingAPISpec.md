@@ -125,6 +125,10 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task DeleteAttachment(Guid id)`: Deletes an attachment entity, identified by its UUID.
 
+    (m) Methods for PDF generation.
+
+        (i) `Task<byte[]> GenerateMaterialPdf(Guid materialId)`: Generates a PDF document for the specified material and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification.
+
 
 ### Section 2 - Frontend handlers
 

@@ -47,6 +47,7 @@ public class TeacherPortalHubTests
     private readonly Mock<IFeedbackRepository> _mockFeedbackRepository;
     private readonly Mock<IResponseRepository> _mockResponseRepository;
     private readonly Mock<ILogger<TeacherPortalHub>> _mockLogger;
+    private readonly Mock<IMaterialPdfService> _mockMaterialPdfService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -73,6 +74,7 @@ public class TeacherPortalHubTests
         _mockFeedbackRepository = new Mock<IFeedbackRepository>();
         _mockResponseRepository = new Mock<IResponseRepository>();
         _mockLogger = new Mock<ILogger<TeacherPortalHub>>();
+        _mockMaterialPdfService = new Mock<IMaterialPdfService>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -96,7 +98,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object);
     }
 
     #region Constructor Tests
@@ -126,7 +129,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -154,7 +158,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -182,7 +187,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -210,7 +216,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -238,7 +245,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -266,7 +274,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -294,7 +303,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -322,7 +332,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -350,7 +361,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -378,7 +390,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -406,7 +419,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -434,7 +448,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -462,7 +477,8 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
     }
 
     [Fact]
@@ -490,7 +506,37 @@ public class TeacherPortalHubTests
             _mockDistributionService.Object,
             _mockFeedbackRepository.Object,
             _mockResponseRepository.Object,
-            _mockLogger.Object));
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullMaterialPdfService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            null!));
     }
 
     #endregion

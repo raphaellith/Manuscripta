@@ -42,6 +42,7 @@ public class TeacherPortalHub : Hub
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly IResponseRepository _responseRepository;
     private readonly ILogger<TeacherPortalHub> _logger;
+    private readonly IMaterialPdfService _materialPdfService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -65,7 +66,8 @@ public class TeacherPortalHub : Hub
         IDistributionService distributionService,
         IFeedbackRepository feedbackRepository,
         IResponseRepository responseRepository,
-        ILogger<TeacherPortalHub> logger)
+        ILogger<TeacherPortalHub> logger,
+        IMaterialPdfService materialPdfService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -89,6 +91,7 @@ public class TeacherPortalHub : Hub
         _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _materialPdfService = materialPdfService ?? throw new ArgumentNullException(nameof(materialPdfService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -474,6 +477,19 @@ public class TeacherPortalHub : Hub
     public async Task DeleteAttachment(Guid id)
     {
         await _attachmentService.DeleteAsync(id);
+    }
+
+    #endregion
+
+    #region PDF Generation - NetworkingAPISpec §1(1)(m)
+
+    /// <summary>
+    /// Generates a PDF document for the specified material.
+    /// Per NetworkingAPISpec §1(1)(m)(i).
+    /// </summary>
+    public async Task<byte[]> GenerateMaterialPdf(Guid materialId)
+    {
+        return await _materialPdfService.GeneratePdfAsync(materialId);
     }
 
     #endregion
