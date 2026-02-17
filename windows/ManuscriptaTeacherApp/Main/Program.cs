@@ -56,7 +56,7 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 // Note: ChromaDB.Client is a client-server library. The database path is configured
 // on the server side (e.g., `chroma run --path /path/to/store`), not in the C# client.
 // The client connects via HTTP to the running server using the URI below.
-var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
+var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
 
 builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
 builder.Services.AddHttpClient();
@@ -388,7 +388,7 @@ string? FindChromaExecutable()
 // Helper method to start ChromaDB server if not already running
 async Task StartChromaDbServerAsync(IConfiguration configuration)
 {
-    var serverUri = configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
+    var serverUri = configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
     
     // Per GenAISpec.md §2(3)(b): ChromaDB shall store its data in %AppData%\ManuscriptaTeacherApp\VectorStore
     var dataPath = Path.Combine(
@@ -460,7 +460,7 @@ async Task StartChromaDbServerAsync(IConfiguration configuration)
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-                var healthCheckUri = "http://127.0.0.1:8000/api/v1/";
+                var healthCheckUri = "http://127.0.0.1:8000/api/v2/";
                 var response = await httpClient.GetAsync(healthCheckUri);
                 
                 // If we get any HTTP response, the server is up
