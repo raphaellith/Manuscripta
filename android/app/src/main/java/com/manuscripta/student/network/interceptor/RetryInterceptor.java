@@ -204,6 +204,7 @@ public class RetryInterceptor implements Interceptor {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             Log.w(TAG, "Sleep interrupted during backoff");
+            throw new RuntimeException("Sleep interrupted during backoff", e);
         }
     }
 
