@@ -56,7 +56,7 @@ public class RetryInterceptorTest {
         }
 
         @Override
-        protected void sleep(long millis) {
+        protected void sleep(long millis) throws IOException {
             sleepCallCount++;
             lastSleepDuration = millis;
             // Don't actually sleep in tests

@@ -198,13 +198,13 @@ public class RetryInterceptor implements Interceptor {
      * @param millis The duration to sleep in milliseconds
      */
     @VisibleForTesting
-    protected void sleep(long millis) {
+    protected void sleep(long millis) throws IOException {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             Log.w(TAG, "Sleep interrupted during backoff");
-            throw new RuntimeException("Sleep interrupted during backoff", e);
+            throw new IOException("Sleep interrupted during backoff", e);
         }
     }
 
