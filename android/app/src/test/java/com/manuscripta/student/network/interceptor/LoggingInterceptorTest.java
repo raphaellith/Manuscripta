@@ -237,6 +237,13 @@ public class LoggingInterceptorTest {
             }
 
             @Override
+            public long contentLength() {
+                // Return a positive value so LoggingInterceptor enters the
+                // writeTo() branch instead of skipping the body as unknown length
+                return 15;
+            }
+
+            @Override
             public void writeTo(okio.BufferedSink sink) throws IOException {
                 throw new IOException("Failed to write request body");
             }
