@@ -19,7 +19,8 @@ import okhttp3.Response;
  * <p>Retry behavior:</p>
  * <ul>
  *   <li>5xx errors: Retry with exponential backoff</li>
- *   <li>4xx errors: Fail immediately (client errors)</li>
+ *   <li>4xx errors: Fail immediately (client errors), except for transient errors
+ *       (408 Request Timeout, 429 Too Many Requests) which are retried</li>
  *   <li>Network errors (IOException): Retry with exponential backoff</li>
  * </ul>
  */
