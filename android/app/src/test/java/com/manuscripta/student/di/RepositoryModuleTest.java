@@ -6,13 +6,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.manuscripta.student.data.local.DeviceStatusDao;
+import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
-import com.manuscripta.student.data.local.SessionDao;
-import com.manuscripta.student.data.repository.SessionRepository;
-import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.data.local.ResponseDao;
+import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
+import com.manuscripta.student.data.repository.FeedbackRepository;
+import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
+import com.manuscripta.student.data.repository.SessionRepository;
+import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -26,6 +34,8 @@ public class RepositoryModuleTest {
     private ManuscriptaDatabase mockDatabase;
     private SessionDao mockSessionDao;
     private ResponseDao mockResponseDao;
+    private DeviceStatusDao mockDeviceStatusDao;
+    private FeedbackDao mockFeedbackDao;
 
     @Before
     public void setUp() {
@@ -33,6 +43,8 @@ public class RepositoryModuleTest {
         mockDatabase = mock(ManuscriptaDatabase.class);
         mockSessionDao = mock(SessionDao.class);
         mockResponseDao = mock(ResponseDao.class);
+        mockDeviceStatusDao = mock(DeviceStatusDao.class);
+        mockFeedbackDao = mock(FeedbackDao.class);
     }
 
     @Test
@@ -69,5 +81,45 @@ public class RepositoryModuleTest {
 
         assertNotNull(result);
         assertTrue(result instanceof ResponseRepositoryImpl);
+    }
+
+    @Test
+    public void testProvideDeviceStatusDao_returnsDao() {
+        when(mockDatabase.deviceStatusDao()).thenReturn(mockDeviceStatusDao);
+
+        DeviceStatusDao result = repositoryModule.provideDeviceStatusDao(mockDatabase);
+
+        assertNotNull(result);
+        verify(mockDatabase).deviceStatusDao();
+    }
+
+    @Test
+    public void testProvideDeviceStatusRepository_returnsRepository() {
+        DeviceStatusRepository result = repositoryModule.provideDeviceStatusRepository(mockDeviceStatusDao);
+
+        assertNotNull(result);
+        assertTrue(result instanceof DeviceStatusRepositoryImpl);
+    }
+
+    @Test
+    public void testProvideFeedbackDao_returnsDao() {
+        when(mockDatabase.feedbackDao()).thenReturn(mockFeedbackDao);
+
+        FeedbackDao result = repositoryModule.provideFeedbackDao(mockDatabase);
+
+        assertNotNull(result);
+        verify(mockDatabase).feedbackDao();
+    }
+
+    @Test
+    public void testProvideFeedbackRepository_returnsRepository() {
+        ApiService mockApiService = mock(ApiService.class);
+        TcpSocketManager mockTcpSocketManager = mock(TcpSocketManager.class);
+
+        FeedbackRepository result = repositoryModule.provideFeedbackRepository(
+                mockFeedbackDao, mockApiService, mockTcpSocketManager);
+
+        assertNotNull(result);
+        assertTrue(result instanceof FeedbackRepositoryImpl);
     }
 }
