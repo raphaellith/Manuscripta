@@ -337,6 +337,7 @@ public class ErrorInterceptorTest {
 
         when(mockErrorResponse.isSuccessful()).thenReturn(false);
         when(mockErrorResponse.code()).thenReturn(500);
+        when(mockErrorResponse.request()).thenReturn(testRequest);
         when(mockChain.request()).thenReturn(testRequest);
         when(mockChain.proceed(any(Request.class))).thenReturn(mockErrorResponse);
 
