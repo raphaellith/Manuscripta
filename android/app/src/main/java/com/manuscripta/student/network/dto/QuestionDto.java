@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Data Transfer Object for Question API communication.
  * Questions are linked to a parent Material and define interactive elements
- * within worksheets, polls, or quizzes.
+ * within worksheets or polls.
  *
  * <p>Entity IDs are assigned by the Windows teacher application and must be preserved
  * exactly as received, without modification or regeneration.</p>
