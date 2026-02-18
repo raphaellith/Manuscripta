@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -184,8 +183,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_500InternalServerError_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -200,8 +199,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_502BadGateway_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(502, "Bad Gateway");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(502, "Bad Gateway"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -214,8 +213,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_503ServiceUnavailable_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(503, "Service Unavailable");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(503, "Service Unavailable"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -228,8 +227,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_504GatewayTimeout_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(504, "Gateway Timeout");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(504, "Gateway Timeout"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -288,8 +287,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_408RequestTimeout_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(408, "Request Timeout");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(408, "Request Timeout"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -302,8 +301,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_429TooManyRequests_retries() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
-        Response errorResponse = createResponse(429, "Too Many Requests");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(429, "Too Many Requests"));
 
         Response response = interceptor.intercept(mockChain);
 
@@ -397,8 +396,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_exponentialBackoffProgression() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor(3, 1000L, 32000L, 2.0);
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
         interceptor.intercept(mockChain);
 
@@ -413,8 +412,8 @@ public class RetryInterceptorTest {
     @Test
     public void testIntercept_customMaxRetries_respectsLimit() throws IOException {
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor(1, 1000L, 32000L, 2.0);
-        Response errorResponse = createResponse(500, "Internal Server Error");
-        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
         Response response = interceptor.intercept(mockChain);
 
