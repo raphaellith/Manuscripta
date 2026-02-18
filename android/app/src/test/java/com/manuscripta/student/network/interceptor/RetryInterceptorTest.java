@@ -6,6 +6,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -38,8 +40,7 @@ public class RetryInterceptorTest {
      * Test implementation of RetryInterceptor that doesn't actually sleep.
      */
     private static class TestableRetryInterceptor extends RetryInterceptor {
-        private int sleepCallCount = 0;
-        private long lastSleepDuration = 0;
+        private final List<Long> sleepDurations = new ArrayList<>();
 
         TestableRetryInterceptor() {
             super();
@@ -52,17 +53,20 @@ public class RetryInterceptorTest {
 
         @Override
         protected void sleep(long millis) throws IOException {
-            sleepCallCount++;
-            lastSleepDuration = millis;
+            sleepDurations.add(millis);
             // Don't actually sleep in tests
         }
 
         int getSleepCallCount() {
-            return sleepCallCount;
+            return sleepDurations.size();
         }
 
         long getLastSleepDuration() {
-            return lastSleepDuration;
+            return sleepDurations.isEmpty() ? 0 : sleepDurations.get(sleepDurations.size() - 1);
+        }
+
+        List<Long> getSleepDurations() {
+            return sleepDurations;
         }
     }
 
@@ -396,10 +400,12 @@ public class RetryInterceptorTest {
 
         interceptor.intercept(mockChain);
 
-        // Verify sleep was called 3 times with increasing durations
-        assertEquals(3, interceptor.getSleepCallCount());
-        // Last sleep should be 4000ms (1000 * 2^2)
-        assertEquals(4000L, interceptor.getLastSleepDuration());
+        // Verify sleep was called 3 times with doubling durations: 1000 -> 2000 -> 4000
+        List<Long> durations = interceptor.getSleepDurations();
+        assertEquals(3, durations.size());
+        assertEquals(1000L, (long) durations.get(0));
+        assertEquals(2000L, (long) durations.get(1));
+        assertEquals(4000L, (long) durations.get(2));
     }
 
     // ========== Custom retry configuration tests ==========
