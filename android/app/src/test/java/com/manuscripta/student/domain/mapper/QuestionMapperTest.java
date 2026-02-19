@@ -58,7 +58,7 @@ public class QuestionMapperTest {
                 "question-id-789",
                 "material-id-012",
                 "Is the sky blue?",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
                 "true"
         );
@@ -133,7 +133,7 @@ public class QuestionMapperTest {
                 "round-trip-domain-id",
                 "material-domain-id",
                 "True or False question",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
                 "false"
         );
@@ -221,8 +221,8 @@ public class QuestionMapperTest {
         assertEquals("Expected answer text", domain.getCorrectAnswer());
     }
 
-    @Test
-    public void testFromDto_NullQuestionTypeDefaultsToWrittenAnswer() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromDto_NullQuestionTypeThrows() {
         // Given
         QuestionDto dto = new QuestionDto(
                 TEST_ID,
@@ -234,15 +234,12 @@ public class QuestionMapperTest {
                 null
         );
 
-        // When
-        Question domain = QuestionMapper.fromDto(dto);
-
-        // Then
-        assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
+        // When - should throw for null type
+        QuestionMapper.fromDto(dto);
     }
 
-    @Test
-    public void testFromDto_UnknownQuestionTypeDefaultsToWrittenAnswer() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromDto_UnknownQuestionTypeThrows() {
         // Given
         QuestionDto dto = new QuestionDto(
                 TEST_ID,
@@ -254,11 +251,8 @@ public class QuestionMapperTest {
                 null
         );
 
-        // When
-        Question domain = QuestionMapper.fromDto(dto);
-
-        // Then
-        assertEquals(QuestionType.WRITTEN_ANSWER, domain.getQuestionType());
+        // When - should throw for unrecognised type
+        QuestionMapper.fromDto(dto);
     }
 
     @Test
@@ -544,7 +538,7 @@ public class QuestionMapperTest {
                 TEST_ID,
                 TEST_MATERIAL_ID,
                 "True or false: The sky is blue",
-                QuestionType.TRUE_FALSE,
+                QuestionType.MULTIPLE_CHOICE,
                 "[\"True\",\"False\"]",
                 "True"
         );
@@ -556,7 +550,7 @@ public class QuestionMapperTest {
         assertNotNull(dto);
         assertEquals(TEST_ID, dto.getId());
         assertEquals(TEST_MATERIAL_ID, dto.getMaterialId());
-        assertEquals("TRUE_FALSE", dto.getQuestionType());
+        assertEquals("MULTIPLE_CHOICE", dto.getQuestionType());
         assertEquals("True or false: The sky is blue", dto.getQuestionText());
         assertEquals(Arrays.asList("True", "False"), dto.getOptions());
         assertEquals("True", dto.getCorrectAnswer());
