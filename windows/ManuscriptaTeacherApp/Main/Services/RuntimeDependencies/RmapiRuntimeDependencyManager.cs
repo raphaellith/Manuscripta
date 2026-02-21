@@ -78,7 +78,7 @@ namespace Main.Services.RuntimeDependencies
 
         /// <summary>
         /// Provides one domain-specific service instance to manage and use the dependency.
-        /// Per BackendRuntimeDependencyManagementSpecification §2(3).
+        /// Per BackendRuntimeDependencyManagementSpecification §2(3A).
         /// </summary>
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
