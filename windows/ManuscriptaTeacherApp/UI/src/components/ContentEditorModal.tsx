@@ -1,6 +1,7 @@
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { ContentItem, VocabularyTerm } from '../types';
+import { stripLinksFromHtml } from '../utils/htmlSanitizer';
 
 interface ContentEditorModalProps {
     contentItem: ContentItem;
@@ -34,26 +35,7 @@ const EditorToolbar: React.FC = () => {
     );
 };
 
-const sanitizeContent = (html: string) => {
-    if (!html) return '';
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
 
-    // Remove hyperlinks while preserving their visible content.
-    Array.from(doc.querySelectorAll('a')).forEach((link) => {
-        const parent = link.parentNode;
-        if (!parent) {
-            link.remove();
-            return;
-        }
-        while (link.firstChild) {
-            parent.insertBefore(link.firstChild, link);
-        }
-        parent.removeChild(link);
-    });
-
-    return doc.body.innerHTML;
-};
 
 interface VocabularyEditorProps {
     terms: VocabularyTerm[];
@@ -138,22 +120,15 @@ const VocabularyEditor: React.FC<VocabularyEditorProps> = ({ terms, onTermsChang
 export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentItem, onClose, onSave }) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const [vocabularyTerms, setVocabularyTerms] = useState<VocabularyTerm[]>(contentItem.vocabularyTerms || []);
-    const sanitizedContent = useMemo(() => sanitizeContent(contentItem.content || ''), [contentItem.content]);
     
     const handleSave = () => {
         const rawContent = editorRef.current?.innerHTML || '';
-        const cleanContent = sanitizeContent(rawContent);
+        const cleanContent = stripLinksFromHtml(rawContent);
         onSave({
             ...contentItem,
             content: cleanContent,
             vocabularyTerms: vocabularyTerms.length > 0 ? vocabularyTerms : undefined,
         });
-    };
-
-    const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        const text = event.clipboardData?.getData('text/plain') || '';
-        document.execCommand('insertText', false, text);
     };
 
     return (
@@ -176,9 +151,8 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
                                 ref={editorRef}
                                 contentEditable={true}
                                 suppressContentEditableWarning={true}
-                                onPaste={handlePaste}
                                 className="prose max-w-none p-6 flex-1 overflow-y-auto focus:outline-none font-serif text-text-body"
-                                dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+                                dangerouslySetInnerHTML={{ __html: contentItem.content || '' }}
                             />
                         </div>
                     </div>
