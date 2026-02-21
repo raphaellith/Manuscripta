@@ -37,8 +37,16 @@ namespace Main.Services.RuntimeDependencies
 
                 progress?.Report(new RuntimeDependencyProgress { Phase = "Installing" });
                 await PerformInstallDependencyAsync(progress);
-
-                return await CheckDependencyAvailabilityAsync();
+                var isAvailable = await CheckDependencyAvailabilityAsync();
+                if (isAvailable)
+                {
+                    progress?.Report(new RuntimeDependencyProgress { Phase = "Completed" });
+                }
+                else
+                {
+                    progress?.Report(new RuntimeDependencyProgress { Phase = "Failed", ErrorMessage = "Installation finished but the dependency is still not available." });
+                }
+                return isAvailable;
             }
             catch (Exception ex)
             {
