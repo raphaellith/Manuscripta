@@ -39,15 +39,17 @@ public class RmapiRuntimeDependencyManagerTests
     {
         var progress = new Mock<IProgress<RuntimeDependencyProgress>>();
         _mockRmapiService.Setup(s => s.CheckAvailabilityAsync()).ReturnsAsync(true);
-        _mockRmapiService.Setup(s => s.DownloadRmapiAsync(progress.Object)).Returns(Task.CompletedTask);
-        _mockRmapiService.Setup(s => s.ExtractAndInstallRmapiAsync(progress.Object)).Returns(Task.CompletedTask);
+        _mockRmapiService.Setup(s => s.DownloadDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), progress.Object)).Returns(Task.CompletedTask);
+        _mockRmapiService.Setup(s => s.VerifyDownloadAsync(It.IsAny<string>(), progress.Object)).Returns(Task.CompletedTask);
+        _mockRmapiService.Setup(s => s.InstallExtractedAsync(It.IsAny<string>(), It.IsAny<string>(), progress.Object)).Returns(Task.CompletedTask);
 
         var result = await _manager.InstallDependencyAsync(progress.Object);
         Assert.True(result);
 
         // Verify that the template method called the abstract parts
-        _mockRmapiService.Verify(s => s.DownloadRmapiAsync(progress.Object), Times.Once);
-        _mockRmapiService.Verify(s => s.ExtractAndInstallRmapiAsync(progress.Object), Times.Once);
+        _mockRmapiService.Verify(s => s.DownloadDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), progress.Object), Times.Once);
+        _mockRmapiService.Verify(s => s.VerifyDownloadAsync(It.IsAny<string>(), progress.Object), Times.Once);
+        _mockRmapiService.Verify(s => s.InstallExtractedAsync(It.IsAny<string>(), It.IsAny<string>(), progress.Object), Times.Once);
         _mockRmapiService.Verify(s => s.CheckAvailabilityAsync(), Times.Once);
     }
 
