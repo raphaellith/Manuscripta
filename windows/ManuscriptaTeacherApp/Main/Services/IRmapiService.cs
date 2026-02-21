@@ -92,12 +92,6 @@ public interface IRmapiService : IDependencyService
     /// <param name="deviceId">The device UUID.</param>
     /// <returns>The full configuration file path.</returns>
     string GetConfigPath(Guid deviceId);
-
-    /// <summary>
-    /// Invalidates the cached availability check result.
-    /// Per RemarkableIntegrationSpecification §2(6): used for re-check from Settings.
-    /// </summary>
-    void InvalidateAvailabilityCache();
 }
 
 /// <summary>

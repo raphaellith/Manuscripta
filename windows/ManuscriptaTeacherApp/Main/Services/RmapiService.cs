@@ -21,8 +21,6 @@ public class RmapiService : IRmapiService
     private readonly ILogger<RmapiService> _logger;
     private readonly HttpClient _httpClient;
     private readonly string _rmapiExecutablePath;
-    private bool? _cachedAvailability;
-    private readonly object _cacheLock = new();
     public const string RmapiReleaseVersion = "v0.0.32";
     private const string RmapiZipSha256 = "2b784d017ea19723bb75c90fa5500349a1599d2956404251b5631736de5ddf94";
 
@@ -59,20 +57,10 @@ public class RmapiService : IRmapiService
     /// <inheritdoc />
     public async Task<bool> CheckAvailabilityAsync()
     {
-        // Per §2(3): return cached result if available
-        lock (_cacheLock)
-        {
-            if (_cachedAvailability.HasValue)
-            {
-                return _cachedAvailability.Value;
-            }
-        }
-
         // Per §2(2)(a): check executable exists
         if (!File.Exists(_rmapiExecutablePath))
         {
             _logger.LogInformation("rmapi not found at {Path}", _rmapiExecutablePath);
-            SetCachedAvailability(false);
             return false;
         }
 
@@ -82,13 +70,11 @@ public class RmapiService : IRmapiService
             var result = await RunRmapiAsync("version", configPath: null);
             var available = result.ExitCode == 0;
             _logger.LogInformation("rmapi version check: exit code {ExitCode}, available={Available}", result.ExitCode, available);
-            SetCachedAvailability(available);
             return available;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "rmapi version check failed");
-            SetCachedAvailability(false);
             return false;
         }
     }
@@ -111,8 +97,6 @@ public class RmapiService : IRmapiService
                 await DownloadDependencyAsync(downloadUrl, tempZipPath, progress);
                 await VerifyDownloadAsync(tempZipPath, progress);
                 await InstallExtractedAsync(tempZipPath, tempExtractPath, progress);
-
-                InvalidateAvailabilityCache();
                 progress?.Report(new RuntimeDependencyProgress { Phase = "Completed", ProgressPercentage = null });
                 return true;
             }
@@ -211,7 +195,6 @@ public class RmapiService : IRmapiService
             {
                 File.Delete(_rmapiExecutablePath);
             }
-            InvalidateAvailabilityCache();
             return Task.FromResult(true);
         }
         catch (Exception ex)
@@ -350,15 +333,6 @@ public class RmapiService : IRmapiService
         return Path.Combine(RmapiConfigDirectory, $"{deviceId}.conf");
     }
 
-    /// <inheritdoc />
-    public void InvalidateAvailabilityCache()
-    {
-        lock (_cacheLock)
-        {
-            _cachedAvailability = null;
-        }
-    }
-
     /// <summary>
     /// Runs the rmapi executable with the given arguments.
     /// </summary>
@@ -440,14 +414,6 @@ public class RmapiService : IRmapiService
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(stream);
         return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private void SetCachedAvailability(bool value)
-    {
-        lock (_cacheLock)
-        {
-            _cachedAvailability = value;
-        }
     }
 
     private record ProcessResult(int ExitCode, string Output);

@@ -1687,9 +1687,8 @@ public class TeacherPortalHubTests
     {
         // Arrange
         var dependencyId = "test-dep";
-        var mockManager = new Mock<RuntimeDependencyManagerBase>();
-        mockManager.Setup(m => m.InstallDependencyAsync(It.IsAny<IProgress<Main.Models.RuntimeDependencyProgress>>())).ReturnsAsync(true);
-        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
+        var fakeManager = new FakeRuntimeDependencyManager();
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(fakeManager);
         
         var mockClientProxy = new Mock<ISingleClientProxy>();
         var mockClients = new Mock<IHubCallerClients>();
@@ -1702,7 +1701,17 @@ public class TeacherPortalHubTests
         // Assert
         Assert.True(result);
         _mockRuntimeDependencyRegistry.Verify(r => r.GetManager(dependencyId), Times.Once);
-        mockManager.Verify(m => m.InstallDependencyAsync(It.IsAny<IProgress<Main.Models.RuntimeDependencyProgress>>()), Times.Once);
+    }
+
+    private class FakeRuntimeDependencyManager : RuntimeDependencyManagerBase
+    {
+        public override string DependencyId => "test-dep";
+        public override Task<bool> CheckDependencyAvailabilityAsync() => Task.FromResult(true);
+        protected override Task DownloadDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
+        protected override Task VerifyDownloadAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
+        protected override Task PerformInstallDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
+        public override Task<bool> UninstallDependencyAsync() => Task.FromResult(true);
+        public override Task<IDependencyService> GetDependencyServiceAsync() => Task.FromResult<IDependencyService>(null!);
     }
 
     #endregion

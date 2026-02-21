@@ -98,18 +98,6 @@ public class RmapiServiceTests
 
     #endregion
 
-    #region InvalidateAvailabilityCache Tests
-
-    [Fact]
-    public void InvalidateAvailabilityCache_DoesNotThrow()
-    {
-        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
-        // Should not throw even when no cache exists
-        service.InvalidateAvailabilityCache();
-    }
-
-    #endregion
-
     #region CheckAvailabilityAsync Tests
 
     [Fact]
@@ -125,43 +113,6 @@ public class RmapiServiceTests
         var result = await service.CheckAvailabilityAsync();
 
         Assert.False(result);
-    }
-
-    [Fact]
-    public async Task CheckAvailabilityAsync_CachesResult_SecondCallReturnsCached()
-    {
-        if (File.Exists(_testRmapiPath))
-        {
-            File.Delete(_testRmapiPath);
-        }
-        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
-
-        // First call: rmapi not installed, returns false
-        var first = await service.CheckAvailabilityAsync();
-        Assert.False(first);
-
-        // Second call should return the same cached result without re-checking
-        var second = await service.CheckAvailabilityAsync();
-        Assert.Equal(first, second);
-    }
-
-    [Fact]
-    public async Task CheckAvailabilityAsync_AfterInvalidate_RechecksAvailability()
-    {
-        if (File.Exists(_testRmapiPath))
-        {
-            File.Delete(_testRmapiPath);
-        }
-        var service = new RmapiService(_mockLogger.Object, _httpClient, _testRmapiPath);
-
-        var first = await service.CheckAvailabilityAsync();
-        Assert.False(first);
-
-        // Invalidate and re-check — should still return false (rmapi not installed)
-        // but should actually re-check rather than return cached
-        service.InvalidateAvailabilityCache();
-        var second = await service.CheckAvailabilityAsync();
-        Assert.False(second);
     }
 
     #endregion
