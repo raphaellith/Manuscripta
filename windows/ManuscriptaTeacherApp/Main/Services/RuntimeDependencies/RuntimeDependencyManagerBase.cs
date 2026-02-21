@@ -29,7 +29,7 @@ namespace Main.Services.RuntimeDependencies
         {
             try
             {
-                progress?.Report(new RuntimeDependencyProgress { Phase = "Downloading" });
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Downloading", ProgressPercentage = 0 });
                 await DownloadDependencyAsync(progress);
 
                 progress?.Report(new RuntimeDependencyProgress { Phase = "Verifying" });
