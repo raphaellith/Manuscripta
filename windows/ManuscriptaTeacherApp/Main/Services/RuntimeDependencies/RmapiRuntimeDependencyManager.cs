@@ -24,14 +24,14 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         public override string DependencyId => "rmapi";
 
-        /// <summary>
-        /// Checks whether the dependency is available and functional.
-        /// Per BackendRuntimeDependencyManagementSpecification §2(2)(a).
-        /// </summary>
         // Since the template method architecture dictates state, we define the temp zip paths once logically
         private string? _tempZipPath;
         private string? _tempExtractPath;
 
+        /// <summary>
+        /// Checks whether the dependency is available and functional.
+        /// Per BackendRuntimeDependencyManagementSpecification §2(2)(a).
+        /// </summary>
         public override Task<bool> CheckDependencyAvailabilityAsync()
         {
             return _rmapiService.CheckAvailabilityAsync();
