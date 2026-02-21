@@ -182,6 +182,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 heading: {
                     levels: [1, 2, 3],
                 },
+                link: false, // Prevent link creation per Material Encoding Spec §1(4)
             }),
             Placeholder.configure({
                 placeholder: 'Start writing your material content...',
