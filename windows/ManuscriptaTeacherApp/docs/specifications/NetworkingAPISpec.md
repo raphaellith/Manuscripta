@@ -129,6 +129,12 @@ For a description of how these server methods and client handlers are expected t
 
         (i) `Task<byte[]> GenerateMaterialPdf(Guid materialId)`: Generates a PDF document for the specified material and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification.
 
+    (nz) Methods for runtime dependency management.
+
+        (i) `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)`: Checks whether the runtime dependency with the specified dependencyId is available and functional per Runtime Dependency Management Specification §2(2). Returns `true` if available, `false` otherwise.
+
+        (ii) `Task<bool> InstallRuntimeDependency(string dependencyId)`: Installs the runtime dependency with the specified dependencyId per Runtime Dependency Management Specification §2(2). Returns `true` on success, `false` on failure.
+
     (n) Methods for reMarkable device management.
 
         (i) `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`: Pairs a reMarkable device by authenticating with the one-time code, creating the configuration file, and persisting the `ReMarkableDeviceEntity`. Returns the UUID of the newly created device entity.
@@ -139,9 +145,9 @@ For a description of how these server methods and client handlers are expected t
 
         (iv) `Task UpdateReMarkableDevice(ReMarkableDeviceEntity entity)`: Updates a reMarkable device entity, identified by its UUID.
 
-        (v) `Task<bool> CheckRmapiAvailability()`: Checks whether rmapi is available and functional per reMarkable Integration Specification §2(2). Returns `true` if available, `false` otherwise.
+        (v) [DELETED]
 
-        (vi) `Task<bool> InstallRmapi()`: Downloads the rmapi binary from GitHub releases and saves it to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`. Returns `true` on success, `false` on failure.
+        (vi) [DELETED]
 
         (vii) `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified reMarkable devices by generating a PDF and uploading it to each device's reMarkable cloud via rmapi. Returns when all uploads are complete or have failed.
 
@@ -177,3 +183,9 @@ For a description of how these server methods and client handlers are expected t
         (iv) `ConfigRefreshFailed`, with parameter `deviceId` (Guid): Notifies the frontend that a configuration refresh has failed. The backend shall invoke this handler in case of a timeout under s6(3)(b) of the Session Interaction Specification.
 
         (v) `FeedbackDeliveryFailed`, with parameters `deviceId` (Guid) and `feedbackId` (Guid): Notifies the frontend that feedback delivery to a device has failed. The backend shall invoke this handler when a timeout occurs under s7(5) of the Session Interaction Specification, or when the target device is not connected.
+    
+    (f) Handlers for runtime dependency management.
+
+        (i) `RuntimeDependencyNotInstalled`, with parameter `dependencyIds` (List<String>): Notifies the frontend that the list of runtime dependencies specified by `dependencyIds` have not been installed properly.
+
+        (ii) `RuntimeDependencyInstallProgress`, with parameters `dependencyId` (string), `phase` (string), `progressPercentage` (int?) and `errorMessage` (string?): Notifies the frontend of the progress of a runtime dependency installation. The `phase` parameter shall be one of "Downloading", "Verifying", "Installing", "Completed" or "Failed". The `progressPercentage` parameter shall be an integer between 0 and 100 inclusive when `phase` is "Downloading", and null otherwise. The `errorMessage` parameter shall contain the error description when `phase` is "Failed", and null otherwise.

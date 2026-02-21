@@ -211,6 +211,57 @@ For a list of all server method and client handlers to be implemented for commun
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
 
+## Section 3A - Runtime Dependency Management
+
+(1) The backend may notify the frontend of a missing runtime dependency by invoking the `RuntimeDependencyNotInstalled` handler specified in the Networking API Specification Section 2(1)(f)(i).
+
+(2) When such notification is received, the frontend shall —
+
+    (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies;
+
+    (b) if confirmation is received —
+
+        (i) call `Task<bool> InstallRuntimeDependency(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(ii);
+
+        (ii) subscribe to the `RuntimeDependencyInstallProgress` handler specified in the Networking API Specification Section 2(1)(f)(ii);
+
+        (iii) display a modal with —
+
+            (A) the current phase of the installation process, being one of "Downloading", "Verifying", "Installing";
+
+            (B) where the phase is "Downloading", a progress bar indicating the percentage of the download completed;
+
+            (C) where the phase is "Verifying" or "Installing", an indeterminate progress indicator;
+
+    (c) if the installation succeeds —
+
+        (i) close the modal; and
+
+        (ii) retry the original operation that triggered the dependency check;
+
+    (d) if the installation fails —
+
+        (i) display an error message with the error details received from the `RuntimeDependencyInstallProgress` handler;
+
+        (ii) offer the user the option to install manually per paragraph (3); and
+
+        (iii) offer the user the option to cancel the operation.
+
+(3) When manual installation is selected, or when automatic installation fails and the user selects manual installation, the frontend shall —
+
+    (a) open the user's default browser to the download page for the dependency;
+
+    (b) display instructions for the user to download and place the binary at the expected path; and
+
+    (c) provide a button to re-check the availability of the dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(i).
+
+(4) The frontend shall provide an option in the Settings interface to —
+
+    (a) re-check the availability of each runtime dependency by calling the method in paragraph (3)(c); and
+
+    (b) reinstall each runtime dependency by calling the method in paragraph (2)(b)(i).
+
+
 ## Section 4 - Functionalities for the "Library" tab
 
 (1) When the "Library" tab is open on the frontend, the lesson library must show all unit collections, units, lessons and materials in accordance with the entities previously retrieved during initialisation in S3(1).
@@ -612,31 +663,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 5E — rmapi Availability and Installation
 
-(1) **Triggering the Check**
-
-    When the frontend initiates any reMarkable-related operation, it shall first call `Task<bool> CheckRmapiAvailability()`, as defined in §1(1)(n)(v) of the Networking API Specification.
-
-(2) **Handling Unavailability**
-
-    If the check in (1) returns `false`, the frontend shall prompt the user with the following options —
-
-    (a) **Install Automatically** — the frontend shall call `Task<bool> InstallRmapi()`, as defined in §1(1)(n)(vi) of the Networking API Specification, and display a progress indicator while installation is in progress;
-
-    (b) **Install Manually** — the frontend shall open the user's default browser to `https://github.com/ddvk/rmapi/releases` and display instructions for the user to download and place the binary at `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`;
-
-    (c) **Cancel** — the frontend shall abort the reMarkable operation and return the user to the previous screen.
-
-(3) **Installation Failure**
-
-    If the installation in (2)(a) fails, the frontend shall display an error message and offer the user the options in (2)(b) and (2)(c).
-
-(4) **Settings Interface**
-
-    The frontend shall provide an option in the Settings interface to —
-
-    (a) re-check the availability of `rmapi` by calling the method in (1);
-
-    (b) reinstall `rmapi` by calling the method in (2)(a).
+[DELETED. See Section 3A for generalised runtime dependency management.]
 
 
 ## Section 5F — reMarkable Device Pairing
