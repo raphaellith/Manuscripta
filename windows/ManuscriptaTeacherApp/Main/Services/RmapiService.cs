@@ -1,9 +1,14 @@
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-
 using System.IO.Compression;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Main.Models;
 
 namespace Main.Services;
 
@@ -18,7 +23,7 @@ public class RmapiService : IRmapiService
     private readonly string _rmapiExecutablePath;
     private bool? _cachedAvailability;
     private readonly object _cacheLock = new();
-    private const string RmapiReleaseVersion = "v0.0.32";
+    public const string RmapiReleaseVersion = "v0.0.32";
     private const string RmapiZipSha256 = "2b784d017ea19723bb75c90fa5500349a1599d2956404251b5631736de5ddf94";
 
     /// <summary>
@@ -90,65 +95,29 @@ public class RmapiService : IRmapiService
 
 
     /// <inheritdoc />
-    public async Task<bool> InstallAsync()
+    public async Task<bool> InstallAsync(IProgress<RuntimeDependencyProgress>? progress = null)
     {
         try
         {
-            // Ensure target directory exists
             var binDir = Path.GetDirectoryName(_rmapiExecutablePath)!;
             Directory.CreateDirectory(binDir);
 
-            // Download from GitHub releases (zip)
-            // Per RemarkableIntegrationSpecification §2(4)
             var downloadUrl = $"https://github.com/ddvk/rmapi/releases/download/{RmapiReleaseVersion}/rmapi-win64.zip";
-            _logger.LogInformation("Downloading rmapi from {Url}", downloadUrl);
-
             var tempZipPath = Path.GetTempFileName();
             var tempExtractPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
             try
             {
-                using (var response = await _httpClient.GetAsync(downloadUrl))
-                {
-                    response.EnsureSuccessStatusCode();
-                    await using var fileStream = File.Create(tempZipPath);
-                    await response.Content.CopyToAsync(fileStream);
-                }
+                await DownloadDependencyAsync(downloadUrl, tempZipPath, progress);
+                await VerifyDownloadAsync(tempZipPath, progress);
+                await InstallExtractedAsync(tempZipPath, tempExtractPath, progress);
 
-                var actualHash = ComputeFileSha256(tempZipPath);
-                if (!string.Equals(actualHash, RmapiZipSha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidDataException($"rmapi checksum mismatch. expected {RmapiZipSha256}, got {actualHash}");
-                }
-
-                _logger.LogInformation("Extracting rmapi...");
-                ZipFile.ExtractToDirectory(tempZipPath, tempExtractPath);
-
-                // Find rmapi.exe in extracted files (could be in root or subfolder)
-                var rmapiFile = Directory.GetFiles(tempExtractPath, "rmapi.exe", SearchOption.AllDirectories).FirstOrDefault();
-                
-                if (rmapiFile == null)
-                {
-                    throw new FileNotFoundException("rmapi.exe not found in downloaded zip archive");
-                }
-
-                // Move to target location, overwriting if exists
-                if (File.Exists(_rmapiExecutablePath))
-                {
-                    File.Delete(_rmapiExecutablePath);
-                }
-                
-                File.Move(rmapiFile, _rmapiExecutablePath);
-
-                _logger.LogInformation("rmapi installed successfully at {Path}", _rmapiExecutablePath);
-
-                // Invalidate cache so next check picks up the new binary
                 InvalidateAvailabilityCache();
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Completed", ProgressPercentage = null });
                 return true;
             }
             finally
             {
-                // Cleanup temp files
                 if (File.Exists(tempZipPath)) File.Delete(tempZipPath);
                 if (Directory.Exists(tempExtractPath)) Directory.Delete(tempExtractPath, true);
             }
@@ -156,7 +125,93 @@ public class RmapiService : IRmapiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to install rmapi");
+            progress?.Report(new RuntimeDependencyProgress { Phase = "Failed", ErrorMessage = ex.Message });
             return false;
+        }
+    }
+
+    public async Task DownloadDependencyAsync(string downloadUrl, string tempZipPath, IProgress<RuntimeDependencyProgress>? progress)
+    {
+        progress?.Report(new RuntimeDependencyProgress { Phase = "Downloading", ProgressPercentage = 0 });
+        _logger.LogInformation("Downloading rmapi from {Url}", downloadUrl);
+
+        using var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        var totalBytes = response.Content.Headers.ContentLength;
+        using var contentStream = await response.Content.ReadAsStreamAsync();
+        using var fileStream = File.Create(tempZipPath);
+
+        var buffer = new byte[8192];
+        long totalRead = 0;
+        int bytesRead;
+
+        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        {
+            await fileStream.WriteAsync(buffer, 0, bytesRead);
+            totalRead += bytesRead;
+
+            if (totalBytes.HasValue && totalBytes.Value > 0)
+            {
+                var percentage = (int)((double)totalRead / totalBytes.Value * 100);
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Downloading", ProgressPercentage = percentage });
+            }
+        }
+    }
+
+    public Task VerifyDownloadAsync(string tempZipPath, IProgress<RuntimeDependencyProgress>? progress)
+    {
+        progress?.Report(new RuntimeDependencyProgress { Phase = "Verifying", ProgressPercentage = null });
+
+        var actualHash = ComputeFileSha256(tempZipPath);
+        if (!string.Equals(actualHash, RmapiZipSha256, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException($"rmapi checksum mismatch. expected {RmapiZipSha256}, got {actualHash}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task InstallExtractedAsync(string tempZipPath, string tempExtractPath, IProgress<RuntimeDependencyProgress>? progress)
+    {
+        progress?.Report(new RuntimeDependencyProgress { Phase = "Installing", ProgressPercentage = null });
+        _logger.LogInformation("Extracting rmapi...");
+
+        ZipFile.ExtractToDirectory(tempZipPath, tempExtractPath);
+
+        var rmapiFile = Directory.GetFiles(tempExtractPath, "rmapi.exe", SearchOption.AllDirectories).FirstOrDefault();
+        if (rmapiFile == null)
+        {
+            throw new FileNotFoundException("rmapi.exe not found in downloaded zip archive");
+        }
+
+        if (File.Exists(_rmapiExecutablePath))
+        {
+            File.Delete(_rmapiExecutablePath);
+        }
+
+        File.Move(rmapiFile, _rmapiExecutablePath);
+        _logger.LogInformation("rmapi installed successfully at {Path}", _rmapiExecutablePath);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<bool> UninstallAsync()
+    {
+        try
+        {
+            if (File.Exists(_rmapiExecutablePath))
+            {
+                File.Delete(_rmapiExecutablePath);
+            }
+            InvalidateAvailabilityCache();
+            return Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to uninstall rmapi");
+            return Task.FromResult(false);
         }
     }
 

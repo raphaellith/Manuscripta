@@ -75,6 +75,17 @@ builder.Services.AddSingleton<IRmapiService>(sp =>
         new HttpClient()));
 builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
 
+// Register Runtime Dependency Management
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependencyRegistry>(sp =>
+{
+    var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+    var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    registry.Register(rmapiManager);
+    return registry;
+});
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();

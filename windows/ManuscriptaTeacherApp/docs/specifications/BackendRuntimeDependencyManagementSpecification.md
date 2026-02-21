@@ -37,11 +37,11 @@ This specification defines the requirement to provide and use a standardised int
 
 (2) The abstract class specified in this section shall require the following public methods for the purpose of dependency management:
 
-    (a) Abstract `Task<Boolean>  CheckDependencyAvailabilityAsync()`: Checks whether the dependency is available and functional. Returns `true` if the dependency is available and functional, and `false` otherwise. 
+    (a) Abstract `Task<Boolean>  CheckDependencyAvailabilityAsync()`: The derived classes shall override this method. Checks whether the dependency is available and functional. Returns `true` if the dependency is available and functional, and `false` otherwise. 
 
-    (b) Sealed `Task<Boolean> InstallDependencyAsync()`: Calls `DownloadDependencyAsync()`, `VerifyDownloadAsync()`, and `InstallDependencyAsync()` in sequence, as specified in the following sections, then calls `CheckDependencyAvailabilityAsync()` and returns the result. It shall throw an exception if any of the steps results in an exception. 
+    (b) `Task<Boolean> InstallDependencyAsync()`: Calls `DownloadDependencyAsync()`, `VerifyDownloadAsync()`, and `InstallDependencyAsync()` in sequence, as specified in the following sections, then calls `CheckDependencyAvailabilityAsync()` and returns the result. It shall throw an exception if any of the steps results in an exception. 
 
-    (c) Abstract `Task<Boolean> UninstallDependencyAsync()`: Uninstalls the dependency by removing the files related to that dependency. Returns `true` if the dependency is uninstalled, and `false` otherwise. This method shall only be applicable to dependencies installed at a local scope, and an exception shall be thrown if called on a dependency installed at a global scope.
+    (c) Abstract `Task<Boolean> UninstallDependencyAsync()`: The derived classes shall override this method. Uninstalls the dependency by removing the files related to that dependency. Returns `true` if the dependency is uninstalled, and `false` otherwise. This method shall only be applicable to dependencies installed at a local scope, and an exception shall be thrown if called on a dependency installed at a global scope.
 
 (2A) To fulfill the purposes of paragraph (2)(b) above, the abstract methods defined there shall be implemented by derived classes as follows, and shall throw an exception if any of the steps results in an exception:
 

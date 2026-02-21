@@ -7,6 +7,8 @@ using Main.Models.Entities.Responses;
 using Main.Models.Enums;
 using Main.Services.Repositories;
 using Main.Services.Network;
+using Main.Services.RuntimeDependencies;
+using Main.Models;
 
 namespace Main.Services.Hubs;
 
@@ -48,6 +50,7 @@ public class TeacherPortalHub : Hub
     private readonly IRmapiService _rmapiService;
     private readonly IReMarkableDeviceRepository _remarkableDeviceRepository;
     private readonly IReMarkableDeploymentService _remarkableDeploymentService;
+    private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -75,7 +78,8 @@ public class TeacherPortalHub : Hub
         IMaterialPdfService materialPdfService,
         IRmapiService rmapiService,
         IReMarkableDeviceRepository remarkableDeviceRepository,
-        IReMarkableDeploymentService remarkableDeploymentService)
+        IReMarkableDeploymentService remarkableDeploymentService,
+        IRuntimeDependencyRegistry runtimeDependencyRegistry)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -103,6 +107,7 @@ public class TeacherPortalHub : Hub
         _rmapiService = rmapiService ?? throw new ArgumentNullException(nameof(rmapiService));
         _remarkableDeviceRepository = remarkableDeviceRepository ?? throw new ArgumentNullException(nameof(remarkableDeviceRepository));
         _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
+        _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -883,23 +888,41 @@ public class TeacherPortalHub : Hub
         await _remarkableDeviceRepository.UpdateAsync(entity);
     }
 
+    #region Runtime Dependency Management - NetworkingAPISpec §1(1)(nz)
+
     /// <summary>
-    /// Checks whether rmapi is available and functional.
-    /// Per NetworkingAPISpec §1(1)(n)(v) and RemarkableIntegrationSpecification §2.
+    /// Checks whether the runtime dependency with the specified dependencyId is available and functional.
+    /// Per NetworkingAPISpec §1(1)(nz)(i) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
     /// </summary>
-    public async Task<bool> CheckRmapiAvailability()
+    public async Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)
     {
-        return await _rmapiService.CheckAvailabilityAsync();
+        var manager = _runtimeDependencyRegistry.GetManager(dependencyId);
+        if (manager == null)
+            throw new HubException($"Dependency {dependencyId} not found");
+
+        return await manager.CheckDependencyAvailabilityAsync();
     }
 
     /// <summary>
-    /// Downloads and installs rmapi.
-    /// Per NetworkingAPISpec §1(1)(n)(vi) and RemarkableIntegrationSpecification §2(4).
+    /// Installs the runtime dependency with the specified dependencyId.
+    /// Per NetworkingAPISpec §1(1)(nz)(ii) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
     /// </summary>
-    public async Task<bool> InstallRmapi()
+    public async Task<bool> InstallRuntimeDependency(string dependencyId)
     {
-        return await _rmapiService.InstallAsync();
+        var manager = _runtimeDependencyRegistry.GetManager(dependencyId);
+        if (manager == null)
+            throw new HubException($"Dependency {dependencyId} not found");
+
+        var progress = new Progress<RuntimeDependencyProgress>(p =>
+        {
+            Clients.Caller.SendAsync("RuntimeDependencyInstallProgress", 
+                dependencyId, p.Phase, p.ProgressPercentage, p.ErrorMessage);
+        });
+
+        return await manager.InstallDependencyAsync(progress);
     }
+    
+    #endregion
 
     /// <summary>
     /// Deploys a material to the specified reMarkable devices.

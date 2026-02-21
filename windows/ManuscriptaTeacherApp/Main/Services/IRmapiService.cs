@@ -1,10 +1,16 @@
+using Main.Models;
+using Main.Services.RuntimeDependencies;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace Main.Services;
 
 /// <summary>
 /// Service interface for interacting with the rmapi tool.
 /// Per RemarkableIntegrationSpecification §1(4), §2, §3(2)(b-c), §4(2)(c).
 /// </summary>
-public interface IRmapiService
+public interface IRmapiService : IDependencyService
 {
     /// <summary>
     /// Checks whether rmapi is available and functional.
@@ -19,7 +25,28 @@ public interface IRmapiService
     /// Per RemarkableIntegrationSpecification §2(4).
     /// </summary>
     /// <returns>True if installation succeeded.</returns>
-    Task<bool> InstallAsync();
+    Task<bool> InstallAsync(IProgress<RuntimeDependencyProgress>? progress = null);
+
+    /// <summary>
+    /// Uninstalls the rmapi binary.
+    /// </summary>
+    /// <returns>True if uninstallation succeeded.</returns>
+    Task<bool> UninstallAsync();
+
+    /// <summary>
+    /// Downloads the rmapi zip file.
+    /// </summary>
+    Task DownloadDependencyAsync(string downloadUrl, string tempZipPath, IProgress<RuntimeDependencyProgress>? progress);
+
+    /// <summary>
+    /// Verifies the downloaded zip file hash.
+    /// </summary>
+    Task VerifyDownloadAsync(string tempZipPath, IProgress<RuntimeDependencyProgress>? progress);
+
+    /// <summary>
+    /// Extracts and installs the rmapi binary from the zip file.
+    /// </summary>
+    Task InstallExtractedAsync(string tempZipPath, string tempExtractPath, IProgress<RuntimeDependencyProgress>? progress);
 
     /// <summary>
     /// Authenticates with the reMarkable cloud using a one-time code.
