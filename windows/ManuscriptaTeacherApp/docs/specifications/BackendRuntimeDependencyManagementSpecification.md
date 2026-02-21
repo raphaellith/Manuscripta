@@ -2,7 +2,7 @@
 
 ## Explanatory Note
 
-This specification defines the requirement to provide and use a standardised interface for all dependencies to be checked and install at runtime, including AI-related dependencies and integration with external platforms, such as reMarkable.
+This specification defines the requirement to provide and use a standardised interface for all dependencies to be checked and installed at runtime, including AI-related dependencies and integration with external platforms, such as reMarkable.
 
 ## Section 1 - General Principles
 
@@ -16,7 +16,7 @@ This specification defines the requirement to provide and use a standardised int
 
     (c) the provision of such dependency at build time would be against the principle that "Your installer should only install the product intended by the user", as stipulated in the Microsoft App Store submission guidelines.
 
-(3) Where a dependency is to be installed at a local scope, files necessary for runtime dependency management shall be stored in the `%AppData%\ManuscriptaTeacherApp\bin` directory. However, if the dependency can only be installed at a local scope, the requirement above shall not apply.
+(3) Where a dependency is to be installed at a local scope, files necessary for runtime dependency management shall be stored in the `%AppData%\ManuscriptaTeacherApp\bin` directory. However, this subsection does not apply if the dependency can only be installed at a global scope.
 
 (4) For the purposes of this specification —
 

@@ -39,7 +39,7 @@ This document provides specifications regarding the integration of the applicati
 
 ## Section 2A - rmapi Runtime Dependency Manager
 
-(1) The `RmapiRuntimeDependencyManager` class shall implement the `IRuntimeDependencyManager` interface specified in the Backend Runtime Dependency Management Specification §2.
+(1) The `RmapiRuntimeDependencyManager` class shall extend the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
 
 (2) For the purposes of §2(2A) of that Specification —
 

@@ -82,3 +82,4 @@ This document is effective for the Windows app only.
     (a) Retrieve all `ReMarkableDeviceEntity` entities from the database.
     (b) For each `.conf` file placed under the `%AppData%\ManuscriptaTeacherApp\rmapi` directory, check if its base name (without extension) matches a `DeviceId` of a `ReMarkableDeviceEntity`.
     (c) If a file is not associated with a `ReMarkableDeviceEntity`, delete the file.
+    (d) If a `RemarkableDeviceEntity` is not associated with a `.conf` file, delete the entity.
