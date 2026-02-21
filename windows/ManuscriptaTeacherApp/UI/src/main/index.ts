@@ -38,6 +38,7 @@ function sanitizeWindowsFilename(filename: string): string {
   let sanitized = filename.replace(/[<>:"/\\|?*]/g, '');
 
   // Remove control characters (0-31)
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F]/g, '');
 
   // Trim leading/trailing spaces and dots (invalid on Windows)
@@ -142,7 +143,7 @@ const createMainWindow = (): void => {
   const activePort = backendProcessManager.getActivePort();
   const backendUrl = getBackendUrl(activePort);
   const backendWsUrl = getBackendWsUrl(activePort);
-  
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -215,7 +216,7 @@ const initializeApp = async (): Promise<void> => {
 
   backendProcessManager.onStateChange((state) => {
     console.log(`Backend state changed to: ${state}`);
-    
+
     // Per §2ZA(6)(c)(i): Display reconnecting indicator
     if (state === BackendState.RESTARTING && mainWindow) {
       mainWindow.webContents.send('backend-state-change', 'reconnecting');
