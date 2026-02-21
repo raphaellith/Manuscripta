@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, session, ipcMain, dialog, shell } from 'electron';
 import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as pathModule from 'path';
@@ -135,6 +135,14 @@ const createMainWindow = (): void => {
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
+  });
+
+  // Intercept window.open calls from the renderer and route them to the OS default browser
+  // instead of opening a standalone Electron window.
+  // Per FrontendWorkflowSpecifications §5F(2)(b).
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   // Set Content Security Policy to allow Google Fonts, Tailwind CDN, and PDF worker
