@@ -15,7 +15,6 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
@@ -183,6 +182,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 heading: {
                     levels: [1, 2, 3],
                 },
+                link: false, // Prevent link creation per Material Encoding Spec §1(4)
             }),
             Placeholder.configure({
                 placeholder: 'Start writing your material content...',
@@ -200,9 +200,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             // Standard extensions
             AttachmentImage.configure({
                 inline: true,
-            }),
-            Link.configure({
-                openOnClick: false,
             }),
             TextAlign.configure({
                 types: ['heading', 'paragraph'],

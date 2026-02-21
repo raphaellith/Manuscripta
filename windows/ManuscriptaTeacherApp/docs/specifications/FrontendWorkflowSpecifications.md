@@ -305,6 +305,10 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) automatically save any changes to the material (not including embedded questions) by calling the appropriate update endpoint, as specified in s1(1)(d)(ii) of the Networking API Specification, at most one second after each change.
 
+    (a1) strip any syntax or tags that is not permitted per Material Encoding Specification §1(4) from the material content before saving, preserving only the visible text content within such tags. This includes -
+
+        (i) hyperlinks.
+
     (b) provide a "save" button when creating or editing an embedded question. When it is clicked -
 
         (i) in the case of a question whose ID is known by a question reference defined in S4(4) of the Material Encoding Specification, update the question entity by calling the appropriate update endpoint in s1(1)(d1)(ii) of the Networking API Specification.

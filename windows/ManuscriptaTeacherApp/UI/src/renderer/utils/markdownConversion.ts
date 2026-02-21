@@ -6,6 +6,7 @@
 
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import { stripLinksFromHtml } from '../../utils/htmlSanitizer';
 
 // Configure Turndown for HTML → Markdown conversion
 const turndownService = new TurndownService({
@@ -154,7 +155,7 @@ turndownService.keep(function (node) {
  */
 export function htmlToMarkdown(html: string): string {
     if (!html || html.trim() === '') return '';
-    return turndownService.turndown(html);
+    return turndownService.turndown(stripLinksFromHtml(html));
 }
 
 /**
@@ -224,7 +225,7 @@ export function markdownToHtml(markdown: string): string {
         }
     );
 
-    return html;
+    return stripLinksFromHtml(html);
 }
 
 /**

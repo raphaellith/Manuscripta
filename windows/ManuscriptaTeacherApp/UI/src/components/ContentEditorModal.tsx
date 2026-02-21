@@ -1,6 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import type { ContentItem, VocabularyTerm } from '../types';
+import { stripLinksFromHtml } from '../utils/htmlSanitizer';
 
 interface ContentEditorModalProps {
     contentItem: ContentItem;
@@ -33,6 +34,8 @@ const EditorToolbar: React.FC = () => {
         </div>
     );
 };
+
+
 
 interface VocabularyEditorProps {
     terms: VocabularyTerm[];
@@ -119,9 +122,11 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
     const [vocabularyTerms, setVocabularyTerms] = useState<VocabularyTerm[]>(contentItem.vocabularyTerms || []);
     
     const handleSave = () => {
+        const rawContent = editorRef.current?.innerHTML || '';
+        const cleanContent = stripLinksFromHtml(rawContent);
         onSave({
             ...contentItem,
-            content: editorRef.current?.innerHTML || '',
+            content: cleanContent,
             vocabularyTerms: vocabularyTerms.length > 0 ? vocabularyTerms : undefined,
         });
     };
