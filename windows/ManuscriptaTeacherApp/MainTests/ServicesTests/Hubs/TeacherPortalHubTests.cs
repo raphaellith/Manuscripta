@@ -1711,7 +1711,7 @@ public class TeacherPortalHubTests
         protected override Task VerifyDownloadAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
         protected override Task PerformInstallDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
         public override Task<bool> UninstallDependencyAsync() => Task.FromResult(true);
-        public override Task<IDependencyService> GetDependencyServiceAsync() => Task.FromResult<IDependencyService>(null!);
+        protected override Task<IDependencyService> ProvideDependencyServiceAsync() => Task.FromResult<IDependencyService>(null!);
     }
 
     #endregion

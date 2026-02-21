@@ -63,9 +63,18 @@ public class RmapiRuntimeDependencyManagerTests
     }
 
     [Fact]
-    public async Task GetDependencyServiceAsync_ReturnsRmapiService()
+    public async Task GetDependencyServiceAsync_ReturnsRmapiService_WhenAvailable()
     {
+        _mockRmapiService.Setup(s => s.CheckAvailabilityAsync()).ReturnsAsync(true);
         var result = await _manager.GetDependencyServiceAsync();
         Assert.Same(_mockRmapiService.Object, result);
+    }
+
+    [Fact]
+    public async Task GetDependencyServiceAsync_ThrowsWhenNotAvailable()
+    {
+        _mockRmapiService.Setup(s => s.CheckAvailabilityAsync()).ReturnsAsync(false);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _manager.GetDependencyServiceAsync());
+        Assert.Contains("rmapi is not available", ex.Message);
     }
 }

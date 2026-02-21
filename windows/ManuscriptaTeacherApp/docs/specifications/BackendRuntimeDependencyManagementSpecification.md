@@ -53,7 +53,13 @@ This specification defines the requirement to provide and use a standardised int
 
     (c) `Task PerformInstallDependencyAsync()`: Installs the downloaded dependency, and in the scope of local dependencies, store files in the directory specified in Section 1(3) above.
 
-(3) The abstract class specified in this section shall instantiate and provide one domain-specific service instance, through `Task<IDependencyService> GetDependencyServiceAsync()`, which shall be used to manage and use the runtime dependencies. That service shall implement the `IDependencyService` interface.
+(3) The abstract class shall provide a method `Task<IDependencyService> GetDependencyServiceAsync()` which shall —
+
+    (a) call `CheckDependencyAvailabilityAsync()` and throw an exception if it returns false;
+    
+    (b) return an instance of a domain-specific service that implements the `IDependencyService` interface, by calling `ProvideDependencyServiceAsync()`.
+
+(3A) Each derived class shall fulfil  `ProvideDependencyServiceAsync()`, as specified in paragraph (3)(b) above, by instantiating a singleton instance of the domain-specific service class, which implements the `IDependencyService` interface.
 
 
 ## Section 3 - Interaction with Frontend Regarding Runtime Dependencies

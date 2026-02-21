@@ -80,7 +80,7 @@ namespace Main.Services.RuntimeDependencies
         /// Provides one domain-specific service instance to manage and use the dependency.
         /// Per BackendRuntimeDependencyManagementSpecification §2(3).
         /// </summary>
-        public override Task<IDependencyService> GetDependencyServiceAsync()
+        protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
             return Task.FromResult<IDependencyService>(_rmapiService);
         }

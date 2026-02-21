@@ -81,8 +81,20 @@ namespace Main.Services.RuntimeDependencies
 
         /// <summary>
         /// Provides one domain-specific service instance to manage and use the dependency.
-        /// Per BackendRuntimeDependencyManagementSpecification §2(3).
+        /// Per BackendRuntimeDependencyManagementSpecification §2(3) and §2(4).
         /// </summary>
-        public abstract Task<IDependencyService> GetDependencyServiceAsync();
+        public async Task<IDependencyService> GetDependencyServiceAsync()
+        {
+            if (!await CheckDependencyAvailabilityAsync())
+            {
+                throw new InvalidOperationException($"Runtime dependency {DependencyId} is not available.");
+            }
+            return await ProvideDependencyServiceAsync();
+        }
+
+        /// <summary>
+        /// Provides the actual domain-specific service instance after availability is confirmed.
+        /// </summary>
+        protected abstract Task<IDependencyService> ProvideDependencyServiceAsync();
     }
 }
