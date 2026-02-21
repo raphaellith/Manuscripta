@@ -51,7 +51,7 @@ This specification defines the requirement to provide and use a standardised int
 
     This method may be implemented as no-op if verification is not feasible, but that decision shall be clearly justified in the form of comments.
 
-    (c) `Task InstallDependencyAsync()`: Installs the downloaded dependency, and in the scope of local dependencies, store files in the directory specified in Section 1(3) above.
+    (c) `Task PerformInstallDependencyAsync()`: Installs the downloaded dependency, and in the scope of local dependencies, store files in the directory specified in Section 1(3) above.
 
 (3) The abstract class specified in this section shall instantiate and provide one domain-specific service instance, through `Task<IDependencyService> GetDependencyServiceAsync()`, which shall be used to manage and use the runtime dependencies. That service shall implement the `IDependencyService` interface.
 
