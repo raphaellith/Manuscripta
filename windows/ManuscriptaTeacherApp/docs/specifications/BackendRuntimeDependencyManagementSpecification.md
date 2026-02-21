@@ -39,7 +39,7 @@ This specification defines the requirement to provide and use a standardised int
 
     (a) Abstract `Task<Boolean>  CheckDependencyAvailabilityAsync()`: The derived classes shall override this method. Checks whether the dependency is available and functional. Returns `true` if the dependency is available and functional, and `false` otherwise. 
 
-    (b) `Task<Boolean> InstallDependencyAsync()`: Calls `DownloadDependencyAsync()`, `VerifyDownloadAsync()`, and `InstallDependencyAsync()` in sequence, as specified in the following sections, then calls `CheckDependencyAvailabilityAsync()` and returns the result. It shall throw an exception if any of the steps results in an exception. 
+    (b) `Task<Boolean> InstallDependencyAsync()`: Calls `DownloadDependencyAsync()`, `VerifyDownloadAsync()`, and `PerformInstallDependencyAsync()` in sequence, as specified in the following sections, then calls `CheckDependencyAvailabilityAsync()` and returns the result. It shall throw an exception if any of the steps results in an exception. 
 
     (c) Abstract `Task<Boolean> UninstallDependencyAsync()`: The derived classes shall override this method. Uninstalls the dependency by removing the files related to that dependency. Returns `true` if the dependency is uninstalled, and `false` otherwise. This method shall only be applicable to dependencies installed at a local scope, and an exception shall be thrown if called on a dependency installed at a global scope.
 

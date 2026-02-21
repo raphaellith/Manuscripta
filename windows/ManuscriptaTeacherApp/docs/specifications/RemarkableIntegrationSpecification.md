@@ -28,7 +28,7 @@ This document provides specifications regarding the integration of the applicati
 
 (2) [DELETED. See Backend Runtime Dependency Management Specification §2(2)(a).]
 
-(3) [DELETED. See Backend Runtime Dependency Management Specification §2(2)(a), which provides for session-scoped caching of availability check results.]
+(3) [DELETED. See Backend Runtime Dependency Management Specification §2(2)(a).]
 
 (4) [DELETED. See Frontend Workflow Specifications §3A(2)-(3).]
 
@@ -43,11 +43,11 @@ This document provides specifications regarding the integration of the applicati
 
 (2) For the purposes of §2(2A) of that Specification —
 
-    (a) `DownloadDependencyAsync()` shall download the latest Windows x64 release of `rmapi` from `https://github.com/ddvk/rmapi/releases`;
+    (a) `DownloadDependencyAsync()` shall download version 0.0.32 Windows x64 release of `rmapi` from `https://github.com/ddvk/rmapi/releases`;
 
     (b) `VerifyDownloadAsync()` shall verify the downloaded file using SHA256 hash comparison against the published checksums; and
 
-    (c) `InstallDependencyAsync()` shall extract or copy the executable to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`.
+    (c) `PerformInstallDependencyAsync()` shall extract or copy the executable to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`.
 
 (3) The `GetDependencyServiceAsync()` method shall return an instance of `IRmapiService`, which shall provide methods for interacting with the reMarkable cloud via `rmapi`.
 
