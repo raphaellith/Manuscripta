@@ -60,9 +60,9 @@ This specification defines the requirement to provide and use a standardised int
 
 (1) The frontend shall by default, assume that all runtime dependencies are available and functional.
 
-(2) When the frontend attempts to use a SignalR endpoint that would eventually require a runtime dependency —
+(2) When the frontend attempts to use a SignalR endpoint that would eventually require runtime dependency(ies) —
 
-    (a) the backend shall notify the frontend that relevant dependencies have not been installed, using the `RuntimeDependencyNotInstalled` handler specified in the Networking API Specification Section 2(1)(f)(i); and
+    (a) the backend shall notify the frontend that relevant runtime dependency(ies) have not been installed, using the `RuntimeDependencyNotInstalled` handler specified in the Networking API Specification Section 2(1)(f)(i); and
 
     (b) the frontend shall handle this notification in accordance with the Frontend Workflow Specifications Section 3A.
 

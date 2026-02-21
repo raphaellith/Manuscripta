@@ -219,7 +219,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies;
 
-    (b) if confirmation is received —
+    (b) if confirmation is received, for each missing runtime dependency —
 
         (i) call `Task<bool> InstallRuntimeDependency(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(ii);
 
@@ -233,17 +233,13 @@ For a list of all server method and client handlers to be implemented for commun
 
             (C) where the phase is "Verifying" or "Installing", an indeterminate progress indicator;
 
-    (c) if the installation succeeds —
-
-        (i) close the modal; and
-
-        (ii) retry the original operation that triggered the dependency check;
+    (c) [DELETED]
 
     (d) if the installation fails —
 
         (i) display an error message with the error details received from the `RuntimeDependencyInstallProgress` handler;
 
-        (ii) offer the user the option to install manually per paragraph (3); and
+        (ii) offer the user the option to install manually per subsection (3); and
 
         (iii) offer the user the option to cancel the operation.
 
@@ -259,7 +255,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) re-check the availability of each runtime dependency by calling the method in paragraph (3)(c); and
 
-    (b) reinstall each runtime dependency by calling the method in paragraph (2)(b)(i).
+    (b) reinstall each runtime dependency by calling the method in subparagraph (2)(b)(i).
 
 
 ## Section 4 - Functionalities for the "Library" tab
