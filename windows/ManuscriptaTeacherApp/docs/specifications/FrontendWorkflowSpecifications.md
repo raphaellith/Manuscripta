@@ -219,7 +219,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies;
 
-    (b) if confirmation is received, for each missing runtime dependency —
+    (b) if confirmation is received, for each missing runtime dependency, sequentially —
 
         (i) call `Task<bool> InstallRuntimeDependency(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(ii);
 

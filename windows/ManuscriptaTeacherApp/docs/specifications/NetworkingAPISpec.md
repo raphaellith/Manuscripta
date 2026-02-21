@@ -4,7 +4,7 @@
 
 This document lists the method signatures to be implemented by the backend `TeacherPortalHub` class and the handlers to be used by the frontend Electron app's SignalR client.
 
-For a description of how these server methods and client handlers are expected to interact, see `NetworkingInteractionSpec.md`.
+For a description of how these server methods and client handlers are expected to interact, see `FrontendWorkflowSpecifications.md`.
 
 
 ### Section 1 - Backend methods
