@@ -124,7 +124,7 @@ export const ClassroomPage: React.FC = () => {
 
     // Modal states
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-    const [missingDependencyId, setMissingDependencyId] = useState<string | null>(null);
+    const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
     const [isRemarkablePairingModalOpen, setIsRemarkablePairingModalOpen] = useState(false);
 
     // Deployment state - per device progress
@@ -213,8 +213,8 @@ export const ClassroomPage: React.FC = () => {
         });
 
         // §3A(1): subscribe to missing runtime dependencies
-        const unsubMissingDependency = signalRService.onRuntimeDependencyNotInstalled((dependencyId) => {
-            setMissingDependencyId(dependencyId);
+        const unsubMissingDependency = signalRService.onRuntimeDependencyNotInstalled((dependencyIds) => {
+            setMissingDependencyIds(dependencyIds);
         });
 
         return () => {
@@ -409,7 +409,7 @@ export const ClassroomPage: React.FC = () => {
         try {
             const available = await signalRService.checkRuntimeDependencyAvailability("rmapi");
             if (!available) {
-                setMissingDependencyId("rmapi");
+                setMissingDependencyIds(["rmapi"]);
                 return false;
             }
             return true;
@@ -502,13 +502,13 @@ export const ClassroomPage: React.FC = () => {
             )}
 
             {/* Runtime Dependency Install Modal — per §3A */}
-            {missingDependencyId && (
+            {missingDependencyIds.length > 0 && (
                 <RuntimeDependencyInstallModal
-                    dependencyId={missingDependencyId}
-                    onClose={() => setMissingDependencyId(null)}
+                    dependencyIds={missingDependencyIds}
+                    onClose={() => setMissingDependencyIds([])}
                     onInstallComplete={() => {
-                        setMissingDependencyId(null);
-                        addAlert('success', undefined, `${missingDependencyId} installed successfully. Please retry your action.`);
+                        setMissingDependencyIds([]);
+                        addAlert('success', undefined, `Dependencies installed successfully. Please retry your action.`);
                     }}
                 />
             )}

@@ -832,7 +832,10 @@ public class TeacherPortalHub : Hub
 
         // Per §2(1): check rmapi availability first
         if (!await _rmapiService.CheckAvailabilityAsync())
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
             throw new HubException("rmapi is not available. Please install it first.");
+        }
 
         // Generate UUID for the device
         var deviceId = Guid.NewGuid();
@@ -932,7 +935,10 @@ public class TeacherPortalHub : Hub
     {
         // Per §4(1): check rmapi availability
         if (!await _rmapiService.CheckAvailabilityAsync())
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
             throw new HubException("rmapi is not available. Please install it first.");
+        }
 
         var results = await _remarkableDeploymentService.DeployAsync(materialId, deviceIds);
 

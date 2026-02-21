@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 
 interface RuntimeDependencyInstallModalProps {
-    dependencyId: string;
+    dependencyIds: string[];
     onClose: () => void;
     onInstallComplete: () => void;
 }
@@ -33,7 +33,7 @@ const DEPENDENCY_METADATA: Record<string, {
  * Per FrontendWorkflowSpecifications §3A(2).
  */
 export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallModalProps> = ({
-    dependencyId,
+    dependencyIds,
     onClose,
     onInstallComplete,
 }) => {
@@ -41,6 +41,9 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
     const [phase, setPhase] = useState<string>('');
     const [progressPercentage, setProgressPercentage] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const dependencyId = dependencyIds[currentIndex];
 
     const meta = DEPENDENCY_METADATA[dependencyId] || {
         name: dependencyId,
@@ -49,13 +52,39 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
         manualPathInfo: `Please install ${dependencyId} manually and try again.`
     };
 
+    const handleAutoInstallForId = async (id: string) => {
+        setState('installing');
+        setPhase('Starting');
+        setProgressPercentage(null);
+        setErrorMessage(null);
+
+        try {
+            const success = await signalRService.installRuntimeDependency(id);
+            if (!success) {
+                setState('failed');
+                setErrorMessage('Installation failed to start.');
+            }
+        } catch (e: any) {
+            setState('failed');
+            setErrorMessage(e.message || 'An error occurred during installation.');
+        }
+    };
+
     useEffect(() => {
+        if (!dependencyId) return;
+
         const unsubscribe = signalRService.onRuntimeDependencyInstallProgress(
             (id, currentPhase, percentage, errorMsg) => {
                 if (id !== dependencyId) return;
 
                 if (currentPhase === 'Completed') {
-                    onInstallComplete();
+                    if (currentIndex < dependencyIds.length - 1) {
+                        const nextId = dependencyIds[currentIndex + 1];
+                        setCurrentIndex(prev => prev + 1);
+                        handleAutoInstallForId(nextId);
+                    } else {
+                        onInstallComplete();
+                    }
                 } else if (currentPhase === 'Failed') {
                     setState('failed');
                     setErrorMessage(errorMsg || 'Installation failed.');
@@ -70,25 +99,11 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
         return () => {
             unsubscribe();
         };
-    }, [dependencyId, onInstallComplete]);
+    }, [dependencyId, currentIndex, dependencyIds, onInstallComplete]);
 
-    const handleAutoInstall = async () => {
-        setState('installing');
-        setPhase('Starting');
-        setProgressPercentage(null);
-        setErrorMessage(null);
-
-        try {
-            const success = await signalRService.installRuntimeDependency(dependencyId);
-            // If the hub method returns false synchronously (which shouldn't happen much since progress handles it)
-            if (!success) {
-                setState('failed');
-                setErrorMessage('Installation failed to start.');
-            }
-        } catch (e: any) {
-            setState('failed');
-            setErrorMessage(e.message || 'An error occurred during installation.');
-        }
+    const handleAutoInstall = () => {
+        setCurrentIndex(0);
+        handleAutoInstallForId(dependencyIds[0]);
     };
 
     const handleManualInstall = () => {
@@ -101,7 +116,7 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
         <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-md space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">
-                    {meta.name} Required
+                    Missing Dependencies Required
                 </h2>
 
                 {state === 'installing' ? (
@@ -127,7 +142,9 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                         <p className="text-text-body font-sans text-sm leading-relaxed">
                             {state === 'failed'
                                 ? errorMessage || 'Automatic installation failed. You can try installing manually or cancel.'
-                                : meta.description + ' How would you like to proceed?'}
+                                : dependencyIds.length === 1
+                                    ? meta.description + ' How would you like to proceed?'
+                                    : `The following dependencies are required to continue: ${dependencyIds.map(id => DEPENDENCY_METADATA[id]?.name ?? id).join(', ')}. How would you like to proceed?`}
                         </p>
 
                         <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">

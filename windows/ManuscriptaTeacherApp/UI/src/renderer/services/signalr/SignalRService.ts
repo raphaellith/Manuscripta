@@ -702,7 +702,7 @@ class SignalRService {
      * Subscribe to runtime dependency not installed events.
      * Per NetworkingAPISpec §2(1)(f)(i) and FrontendWorkflowSpecifications §3A(1) and §3A(2).
      */
-    public onRuntimeDependencyNotInstalled(callback: (dependencyId: string) => void): () => void {
+    public onRuntimeDependencyNotInstalled(callback: (dependencyIds: string[]) => void): () => void {
         return this.subscribe("RuntimeDependencyNotInstalled", callback as (...args: unknown[]) => void);
     }
 

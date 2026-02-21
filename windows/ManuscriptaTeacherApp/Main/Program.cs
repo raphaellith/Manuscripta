@@ -212,6 +212,25 @@ if (!app.Environment.IsEnvironment("Testing"))
             var allDevices = await remarkableRepo.GetAllAsync();
             var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
 
+            var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
+                .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
+
+            foreach (var device in allDevices)
+            {
+                if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
+                {
+                    try
+                    {
+                        await remarkableRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete orphan entity {device.DeviceId}: {ex.Message}");
+                    }
+                }
+            }
+
             foreach (var configFile in Directory.GetFiles(rmapiConfigDir, "*.conf"))
             {
                 var fileDeviceId = Path.GetFileNameWithoutExtension(configFile).ToLowerInvariant();
