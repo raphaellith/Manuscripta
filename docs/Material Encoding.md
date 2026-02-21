@@ -16,6 +16,8 @@ This document defines the markdown-based encoding for the `Content` field of `Ma
 
 (4) External URLs shall not be permitted within marker content. All resource references shall use attachment references, as specified in Section 3.
 
+(4a) Hyperlinks shall not be permitted anywhere in material content. Authoring applications shall strip markdown links and HTML anchor tags, preserving only the visible text.
+
 (5) This document may be cited as "Material Encoding Specification".
 
 ## Section 2: Standard Markdown Elements
