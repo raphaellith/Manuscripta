@@ -13,6 +13,7 @@ using Main.Services;
 using Main.Services.Hubs;
 using Main.Services.Repositories;
 using Main.Services.Network;
+using Main.Services.RuntimeDependencies;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System.Threading;
@@ -51,6 +52,7 @@ public class TeacherPortalHubTests
     private readonly Mock<IRmapiService> _mockRmapiService;
     private readonly Mock<IReMarkableDeviceRepository> _mockReMarkableDeviceRepository;
     private readonly Mock<IReMarkableDeploymentService> _mockReMarkableDeploymentService;
+    private readonly Mock<IRuntimeDependencyRegistry> _mockRuntimeDependencyRegistry;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -81,6 +83,7 @@ public class TeacherPortalHubTests
         _mockRmapiService = new Mock<IRmapiService>();
         _mockReMarkableDeviceRepository = new Mock<IReMarkableDeviceRepository>();
         _mockReMarkableDeploymentService = new Mock<IReMarkableDeploymentService>();
+        _mockRuntimeDependencyRegistry = new Mock<IRuntimeDependencyRegistry>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -108,7 +111,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object);
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object);
     }
 
     #region Constructor Tests
@@ -142,7 +146,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -174,7 +179,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -206,7 +212,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -238,7 +245,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -270,7 +278,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -302,7 +311,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -334,7 +344,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -366,7 +377,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -398,7 +410,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -430,7 +443,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -462,7 +476,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -494,7 +509,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -526,7 +542,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -558,7 +575,8 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     [Fact]
@@ -590,7 +608,8 @@ public class TeacherPortalHubTests
             null!,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object));
     }
 
     #endregion
@@ -1639,6 +1658,51 @@ public class TeacherPortalHubTests
         // Assert
         Assert.Single(result);
         _mockResponseRepository.Verify(r => r.GetByQuestionIdAsync(questionId), Times.Once);
+    }
+
+    #endregion
+
+    #region Generic Runtime Dependency Tests
+
+    [Fact]
+    public async Task CheckRuntimeDependencyAvailability_CallsRegistryAndManager()
+    {
+        // Arrange
+        var dependencyId = "test-dep";
+        var mockManager = new Mock<RuntimeDependencyManagerBase>();
+        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
+
+        // Act
+        var result = await _hub.CheckRuntimeDependencyAvailability(dependencyId);
+
+        // Assert
+        Assert.True(result);
+        _mockRuntimeDependencyRegistry.Verify(r => r.GetManager(dependencyId), Times.Once);
+        mockManager.Verify(m => m.CheckDependencyAvailabilityAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task InstallRuntimeDependency_CallsRegistryAndManager()
+    {
+        // Arrange
+        var dependencyId = "test-dep";
+        var mockManager = new Mock<RuntimeDependencyManagerBase>();
+        mockManager.Setup(m => m.InstallDependencyAsync(It.IsAny<IProgress<Main.Models.RuntimeDependencyProgress>>())).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
+        
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        _hub.Clients = mockClients.Object;
+
+        // Act
+        var result = await _hub.InstallRuntimeDependency(dependencyId);
+
+        // Assert
+        Assert.True(result);
+        _mockRuntimeDependencyRegistry.Verify(r => r.GetManager(dependencyId), Times.Once);
+        mockManager.Verify(m => m.InstallDependencyAsync(It.IsAny<IProgress<Main.Models.RuntimeDependencyProgress>>()), Times.Once);
     }
 
     #endregion
