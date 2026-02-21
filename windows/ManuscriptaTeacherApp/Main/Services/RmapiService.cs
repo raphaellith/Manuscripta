@@ -185,6 +185,12 @@ public class RmapiService : IRmapiService
             throw new FileNotFoundException("rmapi.exe not found in downloaded zip archive");
         }
 
+        var binDir = Path.GetDirectoryName(_rmapiExecutablePath);
+        if (binDir != null && !Directory.Exists(binDir))
+        {
+            Directory.CreateDirectory(binDir);
+        }
+
         if (File.Exists(_rmapiExecutablePath))
         {
             File.Delete(_rmapiExecutablePath);
