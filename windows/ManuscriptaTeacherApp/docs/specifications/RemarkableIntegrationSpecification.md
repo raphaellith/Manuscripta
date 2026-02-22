@@ -20,28 +20,47 @@ This document provides specifications regarding the integration of the applicati
 
 ## Section 2 - Ascertaining the Availability of `rmapi`
 
-(1) Prior to any operation requiring `rmapi`, the application shall verify that `rmapi` is available and functional.
+(1) Prior to any operation requiring `rmapi`, the application shall verify that `rmapi` is available and functional in accordance with the Backend Runtime Dependency Management Specification.
 
     [Explanatory Note: This includes operations such as pairing a reMarkable device, uploading materials to the reMarkable cloud, or retrieving documents therefrom.]
 
-(2) The availability check shall be performed by —
+(1A) For the purposes of the Backend Runtime Dependency Management Specification, the unique identifier for the `rmapi` dependency shall be `"rmapi"`.
 
-    (a) checking whether the `rmapi` executable exists at the path `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`; and
+(2) [DELETED. See Backend Runtime Dependency Management Specification §2(2)(a).]
 
-    (b) if so, invoking `rmapi version` to verify that the executable responds correctly.
+(3) [DELETED. See Backend Runtime Dependency Management Specification §2(2)(a).]
 
-(3) If the check in (2) succeeds, the application shall cache the result for the duration of the session and shall not repeat the check until the next application startup.
+(4) [DELETED. See Frontend Workflow Specifications §3A(2)-(3).]
 
-(4) If the check in (2) fails, the application shall offer the user the option to install `rmapi` automatically or manually, or to cancel the operation.
+(5) [DELETED. See Frontend Workflow Specifications §3A(2)(d).]
 
-(5) If automatic installation fails, the application shall fall back to manual installation options.
+(6) [DELETED. See Frontend Workflow Specifications §3A(4).]
 
-(6) The application shall provide an option in the Settings interface to re-check the availability of `rmapi` and to reinstall it if necessary.
+
+## Section 2A - rmapi Runtime Dependency Manager
+
+(1) The `RmapiRuntimeDependencyManager` class shall extend the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) For the purposes of §2(2A) of that Specification —
+
+    (a) `DownloadDependencyAsync()` shall download version 0.0.32 Windows x64 release of `rmapi` from `https://github.com/ddvk/rmapi/releases`;
+
+    (b) `VerifyDownloadAsync()` shall verify the downloaded file using SHA256 hash comparison against the published checksums; and
+
+    (c) `PerformInstallDependencyAsync()` shall extract or copy the executable to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`.
+
+(3) The `GetDependencyServiceAsync()` method shall return an instance of `IRmapiService`, which shall provide methods for interacting with the reMarkable cloud via `rmapi`.
+
+(4) For the purposes of §2(2)(a) of that Specification, the availability check shall verify that —
+
+    (a) the `rmapi` executable exists at the path specified in paragraph (2)(c); and
+
+    (b) invoking `rmapi version` returns successfully.
 
 
 ## Section 3 - Pairing reMarkable Devices
 
-(1) Prior to pairing a reMarkable device, the application shall perform the availability check specified in §2.
+(1) Prior to pairing a reMarkable device, the application shall perform the availability check specified in §2, and handle unavailability in accordance with the Backend Runtime Dependency Management Specification §3.
 
 (2) To pair a reMarkable device, the application shall —
 
@@ -66,7 +85,7 @@ This document provides specifications regarding the integration of the applicati
 
 ## Section 4 - Material Deployment to reMarkable Devices
 
-(1) Prior to deploying a material to a reMarkable device, the application shall perform the availability check specified in §2.
+(1) Prior to deploying a material to a reMarkable device, the application shall perform the availability check specified in §2, and handle unavailability in accordance with the Backend Runtime Dependency Management Specification §3.
 
 (2) To deploy a material to a reMarkable device, the application shall —
 

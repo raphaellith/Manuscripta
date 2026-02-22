@@ -16,7 +16,7 @@ import type {
     ReMarkableDeviceEntity
 } from '../../models';
 import { RenameDeviceModal } from '../modals/RenameDeviceModal';
-import { RmapiInstallModal } from '../modals/RmapiInstallModal';
+import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { ReMarkablePairingModal } from '../modals/ReMarkablePairingModal';
 
 // Icons
@@ -124,7 +124,7 @@ export const ClassroomPage: React.FC = () => {
 
     // Modal states
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-    const [isRmapiInstallModalOpen, setIsRmapiInstallModalOpen] = useState(false);
+    const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
     const [isRemarkablePairingModalOpen, setIsRemarkablePairingModalOpen] = useState(false);
 
     // Deployment state - per device progress
@@ -212,11 +212,17 @@ export const ClassroomPage: React.FC = () => {
                 `reMarkable device "${device?.name ?? deviceId}" requires re-authentication. Please re-pair the device.`);
         });
 
+        // §3A(1): subscribe to missing runtime dependencies
+        const unsubMissingDependency = signalRService.onRuntimeDependencyNotInstalled((dependencyIds) => {
+            setMissingDependencyIds(dependencyIds);
+        });
+
         return () => {
             unsubStatus();
             unsubPaired();
             unsubDistributionFailed();
             unsubRemarkableAuth();
+            unsubMissingDependency();
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
@@ -398,12 +404,12 @@ export const ClassroomPage: React.FC = () => {
         }
     };
 
-    // §5E: rmapi availability check before reMarkable operations
+    // §5E: dependency availability check before reMarkable operations
     const ensureRmapiAvailable = async (): Promise<boolean> => {
         try {
-            const available = await signalRService.checkRmapiAvailability();
+            const available = await signalRService.checkRuntimeDependencyAvailability("rmapi");
             if (!available) {
-                setIsRmapiInstallModalOpen(true);
+                setMissingDependencyIds(["rmapi"]);
                 return false;
             }
             return true;
@@ -495,15 +501,15 @@ export const ClassroomPage: React.FC = () => {
                 />
             )}
 
-            {/* rmapi Install Modal — per §5E */}
-            {isRmapiInstallModalOpen && (
-                <RmapiInstallModal
-                    onClose={() => setIsRmapiInstallModalOpen(false)}
+            {/* Runtime Dependency Install Modal — per §3A */}
+            {missingDependencyIds.length > 0 && (
+                <RuntimeDependencyInstallModal
+                    dependencyIds={missingDependencyIds}
+                    onClose={() => setMissingDependencyIds([])}
                     onInstallComplete={() => {
-                        setIsRmapiInstallModalOpen(false);
-                        addAlert('success', undefined, 'rmapi installed successfully');
+                        setMissingDependencyIds([]);
+                        addAlert('success', undefined, `Dependencies installed successfully. Please retry your action.`);
                     }}
-                    installRmapi={() => signalRService.installRmapi()}
                 />
             )}
 

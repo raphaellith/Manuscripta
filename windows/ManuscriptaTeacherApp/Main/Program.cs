@@ -75,6 +75,17 @@ builder.Services.AddSingleton<IRmapiService>(sp =>
         new HttpClient()));
 builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
 
+// Register Runtime Dependency Management
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependencyRegistry>(sp =>
+{
+    var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+    var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    registry.Register(rmapiManager);
+    return registry;
+});
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
 builder.Services.AddSingleton<IUdpBroadcastService, UdpBroadcastService>();
@@ -200,6 +211,25 @@ if (!app.Environment.IsEnvironment("Testing"))
             var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
             var allDevices = await remarkableRepo.GetAllAsync();
             var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+
+            var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
+                .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
+
+            foreach (var device in allDevices)
+            {
+                if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
+                {
+                    try
+                    {
+                        await remarkableRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete orphan entity {device.DeviceId}: {ex.Message}");
+                    }
+                }
+            }
 
             foreach (var configFile in Directory.GetFiles(rmapiConfigDir, "*.conf"))
             {

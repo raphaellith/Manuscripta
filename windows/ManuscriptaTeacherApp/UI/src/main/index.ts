@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, session, ipcMain, dialog, shell } from 'electron';
 import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as pathModule from 'path';
@@ -38,6 +38,7 @@ function sanitizeWindowsFilename(filename: string): string {
   let sanitized = filename.replace(/[<>:"/\\|?*]/g, '');
 
   // Remove control characters (0-31)
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F]/g, '');
 
   // Trim leading/trailing spaces and dots (invalid on Windows)
@@ -136,13 +137,21 @@ const createMainWindow = (): void => {
     },
   });
 
+  // Intercept window.open calls from the renderer and route them to the OS default browser
+  // instead of opening a standalone Electron window.
+  // Per FrontendWorkflowSpecifications §5F(2)(b).
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   // Set Content Security Policy to allow Google Fonts, Tailwind CDN, and PDF worker
   // Per FrontendWorkflowSpecifications §2ZA(8)(a)(ii): Use centralized port config
   // Per §2ZA(8)(c)(iv): Use the dynamically selected port
   const activePort = backendProcessManager.getActivePort();
   const backendUrl = getBackendUrl(activePort);
   const backendWsUrl = getBackendWsUrl(activePort);
-  
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -215,7 +224,7 @@ const initializeApp = async (): Promise<void> => {
 
   backendProcessManager.onStateChange((state) => {
     console.log(`Backend state changed to: ${state}`);
-    
+
     // Per §2ZA(6)(c)(i): Display reconnecting indicator
     if (state === BackendState.RESTARTING && mainWindow) {
       mainWindow.webContents.send('backend-state-change', 'reconnecting');
