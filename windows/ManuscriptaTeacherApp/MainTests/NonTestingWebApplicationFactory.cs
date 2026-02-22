@@ -17,6 +17,10 @@ public class NonTestingWebApplicationFactory : WebApplicationFactory<Program>
 
     public NonTestingWebApplicationFactory()
     {
+        // Disable ChromaDB auto-start for tests
+        // Use the __ separator convention so .NET configuration maps this
+        // to the "ChromaDB:AutoStart" key read by Program.cs.
+        Environment.SetEnvironmentVariable("ChromaDB__AutoStart", "false");
         _connection.Open();
     }
 

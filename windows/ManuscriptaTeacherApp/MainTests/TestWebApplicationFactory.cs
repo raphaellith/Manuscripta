@@ -14,6 +14,14 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"TestDb_{Guid.NewGuid()}";
 
+    public TestWebApplicationFactory()
+    {
+        // Disable ChromaDB auto-start for tests
+        // Use the __ separator convention so .NET configuration maps this
+        // to the "ChromaDB:AutoStart" key read by Program.cs.
+        Environment.SetEnvironmentVariable("ChromaDB__AutoStart", "false");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
