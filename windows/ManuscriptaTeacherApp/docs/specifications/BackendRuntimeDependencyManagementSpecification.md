@@ -20,9 +20,9 @@ This specification defines the requirement to provide and use a standardised int
 
 (4) For the purposes of this specification —
 
-    (a) "manage" in relation to a runtime dependency means to check, install and uninstall dependencies at runtime; and
+    (a) "manage" in relation to a runtime dependency means to check, install and uninstall the dependency at runtime; and
 
-    (b) "use" in relation to a runtime dependency means to call the dependency at runtime.
+    (b) "use" in relation to a runtime dependency means obtaining an instance of the service that relates to the dependency, and calling methods of that service at runtime.
 
 (5) The backend shall provide a standardised abstract blueprint class for all runtime dependencies to be managed or used at runtime, as specified in the following sections.
 
