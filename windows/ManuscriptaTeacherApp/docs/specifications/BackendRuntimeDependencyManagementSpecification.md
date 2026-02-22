@@ -59,7 +59,7 @@ This specification defines the requirement to provide and use a standardised int
     
     (b) return an instance of a domain-specific service that implements the `IDependencyService` interface, by calling `ProvideDependencyServiceAsync()`.
 
-(3A) Each derived class shall fulfil  `ProvideDependencyServiceAsync()`, as specified in paragraph (3)(b) above, by instantiating a singleton instance of the domain-specific service class, which implements the `IDependencyService` interface.
+(3A) Each derived class shall fulfil  `ProvideDependencyServiceAsync()`, as specified in paragraph (3)(b) above, by providing a singleton instance of the domain-specific service class that implements the `IDependencyService` interface.
 
 
 ## Section 3 - Interaction with Frontend Regarding Runtime Dependencies
