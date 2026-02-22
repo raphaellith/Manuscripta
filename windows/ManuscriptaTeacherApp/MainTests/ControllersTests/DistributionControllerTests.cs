@@ -207,16 +207,14 @@ public class DistributionControllerTests
 /// - s1A(2): Windows-only fields excluded from Android DTOs
 /// - s1A(3): Polymorphic entities serialised as flat composition-like structures
 /// </summary>
-public class DistributionControllerSerialisationTests : IClassFixture<CustomWebApplicationFactory>
+
 public class DistributionControllerSerialisationTests : IClassFixture<TestWebApplicationFactory>
 {
-    private readonly CustomWebApplicationFactory _factory;
     private readonly TestWebApplicationFactory _factory;
     private readonly Guid _testDeviceId = Guid.NewGuid();
     private readonly Guid _testMaterialId = Guid.NewGuid();
     private readonly Guid _testLessonId = Guid.NewGuid();
 
-    public DistributionControllerSerialisationTests(CustomWebApplicationFactory factory)
     public DistributionControllerSerialisationTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
