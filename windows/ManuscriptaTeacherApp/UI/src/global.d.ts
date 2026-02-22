@@ -58,6 +58,15 @@ interface ElectronAPI {
      * @returns Function to remove the listener
      */
     onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => () => void;
+
+    /**
+     * Show save dialog and save PDF file.
+     * Per FrontendWorkflowSpecifications §4D(2)(a).
+     * @param pdfBytes - PDF file content as Uint8Array
+     * @param defaultFilename - Default filename for save dialog
+     * @returns true if saved successfully, false if cancelled
+     */
+    savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) => Promise<boolean>;
 }
 
 declare global {

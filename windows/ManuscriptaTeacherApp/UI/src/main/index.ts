@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
 import * as fsSync from 'fs';
+import * as fs from 'fs/promises';
 import * as pathModule from 'path';
 import { backendProcessManager, BackendState } from './BackendProcessManager';
 import { getBackendUrl, getBackendWsUrl } from './config';
@@ -23,6 +24,43 @@ let mainWindow: BrowserWindow | null = null;
 function getAttachmentsDir(): string {
   const appDataPath = app.getPath('appData');
   return pathModule.join(appDataPath, 'ManuscriptaTeacherApp', 'Attachments');
+}
+
+/**
+ * Sanitizes a filename to be safe for Windows file systems.
+ * - Removes characters that are invalid on Windows: <>:"/\|?*
+ * - Trims trailing dots and spaces (invalid on Windows)
+ * - Handles Windows reserved names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+ * - Falls back to a default name if the result is empty
+ */
+function sanitizeWindowsFilename(filename: string): string {
+  // Remove characters invalid on Windows: <>:"/\|?*
+  let sanitized = filename.replace(/[<>:"/\\|?*]/g, '');
+
+  // Remove control characters (0-31)
+  sanitized = sanitized.replace(/[\x00-\x1F]/g, '');
+
+  // Trim leading/trailing spaces and dots (invalid on Windows)
+  sanitized = sanitized.replace(/^[\s.]+|[\s.]+$/g, '');
+
+  // Check for Windows reserved names
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  const baseName = sanitized.replace(/\.pdf$/i, '');
+  if (reservedNames.test(baseName)) {
+    sanitized = 'Material.pdf';
+  }
+
+  // Ensure the filename ends with .pdf
+  if (!sanitized.toLowerCase().endsWith('.pdf')) {
+    sanitized = sanitized ? `${sanitized}.pdf` : 'Material.pdf';
+  }
+
+  // Fall back if empty
+  if (!sanitized || sanitized === '.pdf') {
+    sanitized = 'Material.pdf';
+  }
+
+  return sanitized;
 }
 
 /**
@@ -324,6 +362,29 @@ ipcMain.handle('save-attachment-from-base64', async (_event, base64Data: string,
   const buffer = Buffer.from(base64Data, 'base64');
   fsSync.writeFileSync(destPath, buffer);
   return destPath;
+});
+
+// Save PDF file via save dialog (per FrontendWorkflowSpecifications §4D)
+ipcMain.handle('save-pdf-file', async (_event, pdfBytes: Uint8Array, defaultFilename: string) => {
+  // Sanitize filename for Windows compatibility
+  const sanitizedFilename = sanitizeWindowsFilename(defaultFilename);
+
+  const result = await dialog.showSaveDialog({
+    title: 'Export PDF',
+    defaultPath: sanitizedFilename,
+    filters: [
+      { name: 'PDF Documents', extensions: ['pdf'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return false;
+  }
+
+  const buffer = Buffer.from(pdfBytes);
+  // Use async I/O to avoid blocking the main process event loop
+  await fs.writeFile(result.filePath, buffer);
+  return true;
 });
 
 // In this file you can include the rest of your app's specific main process
