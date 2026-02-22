@@ -7,6 +7,7 @@ interface IElectronAPI {
     getAttachmentDataUrl: (uuid: string, extension: string) => Promise<string>;
     deleteAttachmentFile: (uuid: string, extension: string) => Promise<void>;
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) => Promise<string>;
+    savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) => Promise<boolean>;
     /** Listen for backend state changes from main process. Per §2ZA(6)(c)(i). */
     onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => () => void;
 }
