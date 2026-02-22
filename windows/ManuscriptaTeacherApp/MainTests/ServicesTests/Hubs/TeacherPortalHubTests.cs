@@ -124,7 +124,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object);
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object);
     }
 
     #region Constructor Tests
@@ -158,7 +163,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -190,7 +200,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -222,7 +237,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -254,7 +274,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -286,7 +311,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -318,7 +348,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -350,7 +385,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -382,7 +422,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -414,7 +459,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -446,7 +496,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -478,7 +533,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -510,7 +570,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -542,7 +607,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -574,7 +644,12 @@ public class TeacherPortalHubTests
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     [Fact]
@@ -606,7 +681,12 @@ public class TeacherPortalHubTests
             null!,
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object));
+            _mockReMarkableDeploymentService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object));
     }
 
     #endregion
@@ -1655,6 +1735,39 @@ public class TeacherPortalHubTests
         // Assert
         Assert.Single(result);
         _mockResponseRepository.Verify(r => r.GetByQuestionIdAsync(questionId), Times.Once);
+    }
+
+    #endregion
+
+    #region Stub Services
+
+    private sealed class StubMaterialGenerationService : IMaterialGenerationService
+    {
+        public Task<GenerationResult> GenerateReading(GenerationRequest request)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+    }
+
+    private sealed class StubContentModificationService : IContentModificationService
+    {
+        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+        {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+    }
+
+    private sealed class StubEmbeddingStatusService : IEmbeddingStatusService
+    {
+        public Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
+        {
+            return Task.FromResult(EmbeddingStatus.PENDING);
+        }
     }
 
     #endregion
