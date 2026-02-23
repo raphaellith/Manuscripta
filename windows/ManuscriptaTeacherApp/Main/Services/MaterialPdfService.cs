@@ -3,6 +3,7 @@ using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
+using Main.Services.Latex;
 using Main.Services.Repositories;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
@@ -24,17 +25,20 @@ public class MaterialPdfService : IMaterialPdfService
     private readonly IQuestionRepository _questionRepository;
     private readonly IAttachmentRepository _attachmentRepository;
     private readonly IFileService _fileService;
+    private readonly ILatexRenderer _latexRenderer;
 
     public MaterialPdfService(
         IMaterialRepository materialRepository,
         IQuestionRepository questionRepository,
         IAttachmentRepository attachmentRepository,
-        IFileService fileService)
+        IFileService fileService,
+        ILatexRenderer latexRenderer)
     {
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+        _latexRenderer = latexRenderer ?? throw new ArgumentNullException(nameof(latexRenderer));
     }
 
     /// <inheritdoc/>
@@ -341,10 +345,13 @@ public class MaterialPdfService : IMaterialPdfService
         ref int questionNumber)
     {
         // Pattern for markers (excluding PDF which is handled at higher level)
+        // Note: Inline LaTeX ($...$) is NOT extracted here; it is handled inside
+        // RenderPureMarkdown using the QuestPDF Text API for inline rendering.
         var combinedPattern = new Regex(
             @"(!!! question id=""([^""]+)"")|" +  // Group 1,2: question marker
             @"(!\[([^\]]*)\]\(/attachments/([^)]+)\))|" + // Group 3,4,5: image attachment
-            @"(!!! center\s*\n((?:    .+\n?)+))", // Group 6,7: center marker
+            @"(!!! center\s*\n((?:    .+\n?)+))|" + // Group 6,7: center marker
+            @"(\$\$([\s\S]*?)\$\$)",                  // Group 8,9: block LaTeX per §3(6)(b)
             RegexOptions.Multiline);
 
         var matches = combinedPattern.Matches(content);
@@ -380,6 +387,12 @@ public class MaterialPdfService : IMaterialPdfService
                 var centeredContent = match.Groups[7].Value;
                 RenderCenteredContent(column, centeredContent);
             }
+            else if (match.Groups[8].Success)
+            {
+                // Block LaTeX per §3(6)(b)
+                var latex = match.Groups[9].Value.Trim();
+                RenderBlockLatex(column, latex);
+            }
 
             lastIndex = match.Index + match.Length;
         }
@@ -412,15 +425,132 @@ public class MaterialPdfService : IMaterialPdfService
 
     /// <summary>
     /// Renders pure markdown without attachment references.
-    /// Per MaterialConversionSpecification §3A.
-    /// Note: Custom markers (center, question, pdf) are handled separately.
+    /// Per MaterialConversionSpecification §3A and §3(6)(a).
+    /// If the segment contains inline LaTeX ($...$), it is rendered using the QuestPDF
+    /// Text API with inline element embedding. Otherwise, QuestPDF.Markdown is used.
     /// </summary>
-    private static void RenderPureMarkdown(ColumnDescriptor column, string markdown)
+    private void RenderPureMarkdown(ColumnDescriptor column, string markdown)
     {
-        if (!string.IsNullOrWhiteSpace(markdown))
+        if (string.IsNullOrWhiteSpace(markdown))
+            return;
+
+        // Check for inline LaTeX
+        var inlineLatexPattern = new Regex(@"(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)");
+        if (inlineLatexPattern.IsMatch(markdown))
+        {
+            RenderTextWithInlineLatex(column, markdown, inlineLatexPattern);
+        }
+        else
         {
             column.Item().Markdown(markdown);
         }
+    }
+
+    /// <summary>
+    /// Renders a text segment containing inline LaTeX using the QuestPDF Text API.
+    /// Per MaterialConversionSpecification §3(6)(a): inline LaTeX is rendered within
+    /// the text flow using text.Element() for inline image embedding.
+    /// Per §3(6)(a)(i): markdown formatting is not preserved in such paragraphs.
+    /// </summary>
+    private void RenderTextWithInlineLatex(ColumnDescriptor column, string text, Regex inlineLatexPattern)
+    {
+        column.Item().Text(textDescriptor =>
+        {
+            textDescriptor.DefaultTextStyle(x => x.FontSize(12).LineHeight(1.5f));
+
+            var matches = inlineLatexPattern.Matches(text);
+            var lastIndex = 0;
+
+            foreach (Match match in matches)
+            {
+                // Render text before this LaTeX expression
+                if (match.Index > lastIndex)
+                {
+                    var textSegment = text.Substring(lastIndex, match.Index - lastIndex);
+                    textDescriptor.Span(UnescapeMarkdown(textSegment));
+                }
+
+                // Render inline LaTeX as an embedded image
+                var latex = match.Groups[1].Value.Trim();
+                var imageBytes = _latexRenderer.RenderToImage(latex, displayMode: false, fontSize: 14f);
+                if (imageBytes != null)
+                {
+                    var (_, ptH) = GetImagePointDimensions(imageBytes);
+                    textDescriptor.Element().Height(ptH).Image(imageBytes).FitHeight();
+                }
+                else
+                {
+                    // Fallback per §6(4): display raw LaTeX source as plain text
+                    textDescriptor.Span($"${latex}$");
+                }
+
+                lastIndex = match.Index + match.Length;
+            }
+
+            // Render remaining text after the last LaTeX expression
+            if (lastIndex < text.Length)
+            {
+                var remaining = text.Substring(lastIndex);
+                textDescriptor.Span(UnescapeMarkdown(remaining));
+            }
+        });
+    }
+
+    /// <summary>
+    /// Removes markdown backslash escapes from text.
+    /// When bypassing QuestPDF.Markdown, raw escapes like \[ appear literally.
+    /// This restores the intended characters.
+    /// </summary>
+    private static string UnescapeMarkdown(string text)
+    {
+        // Markdown escape: backslash followed by a punctuation character
+        return Regex.Replace(text, @"\\([\[\]\\*_{}()#+\-.!|`~>])", "$1");
+    }
+
+    /// <summary>
+    /// Renders block LaTeX as a centred image at natural size.
+    /// Per MaterialConversionSpecification §3(6)(b).
+    /// Falls back to raw text per §6(4) on rendering failure.
+    /// </summary>
+    private void RenderBlockLatex(ColumnDescriptor column, string latex)
+    {
+        var imageBytes = _latexRenderer.RenderToImage(latex, displayMode: true, fontSize: 24f);
+        if (imageBytes != null)
+        {
+            var (ptW, ptH) = GetImagePointDimensions(imageBytes);
+            column.Item().AlignCenter().Width(ptW).Height(ptH).Image(imageBytes);
+        }
+        else
+        {
+            // Fallback per §6(4): display raw LaTeX source as plain text
+            column.Item().AlignCenter().Text($"$${latex}$$").FontSize(12);
+        }
+    }
+
+    /// <summary>
+    /// Reads pixel dimensions from a PNG's IHDR chunk and converts to PDF points.
+    /// Assumes 96 DPI (1px = 0.75pt). Caps width to available content area (~170mm).
+    /// </summary>
+    private static (float width, float height) GetImagePointDimensions(byte[] pngBytes)
+    {
+        // PNG IHDR: bytes 16-19 = width, 20-23 = height (big-endian uint32)
+        int pxW = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
+        int pxH = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
+
+        // Convert pixels to PDF points at 96 DPI (1px = 72/96 = 0.75pt)
+        float ptW = pxW * 0.75f;
+        float ptH = pxH * 0.75f;
+
+        // Cap to available content width: A4 (210mm) - margins (20mm + 20mm) = 170mm ≈ 481pt
+        const float maxContentWidth = 481f;
+        if (ptW > maxContentWidth)
+        {
+            float scale = maxContentWidth / ptW;
+            ptW = maxContentWidth;
+            ptH *= scale;
+        }
+
+        return (ptW, ptH);
     }
 
     /// <summary>
