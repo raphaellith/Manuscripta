@@ -346,6 +346,12 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) undo and redo changes to the material.  
 
+(2A) **LaTeX Formatting**
+
+    The frontend shall disable rich text formatting (bold, italic, underline) in paragraphs containing inline or block LaTeX nodes. When a LaTeX node is inserted into a paragraph, any existing formatting marks in that paragraph shall be removed.
+
+    [Explanatory Note: Pursuitant to Material Conversion Specifications, Section 6A(3)(a), LaTeX and markdown formatting may not coexist in the same paragraph.]
+
 (3) **Saving Content**
 
     The editor modal shall -

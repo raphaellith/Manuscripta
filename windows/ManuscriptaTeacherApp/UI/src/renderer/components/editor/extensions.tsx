@@ -3,7 +3,7 @@
  * Implements LaTeX, PDF embed, question reference, and centered text nodes.
  */
 
-import { Node, mergeAttributes } from '@tiptap/core';
+import { Node, Extension, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import React from 'react';
 import katex from 'katex';
@@ -188,7 +188,7 @@ export const InlineLatex = Node.create({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['span', mergeAttributes(HTMLAttributes, { 'data-latex': HTMLAttributes.latex }), 0];
+        return ['span', mergeAttributes(HTMLAttributes, { 'data-latex': HTMLAttributes.latex })];
     },
 
     addNodeView() {
@@ -243,11 +243,68 @@ export const BlockLatex = Node.create({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(HTMLAttributes, { 'data-block-latex': HTMLAttributes.latex }), 0];
+        return ['div', mergeAttributes(HTMLAttributes, { 'data-block-latex': HTMLAttributes.latex })];
     },
 
     addNodeView() {
         return ReactNodeViewRenderer(BlockLatexComponent);
+    },
+});
+
+// ============ LaTeX Formatting Guard Extension ============
+// Per FrontendWorkflowSpecifications §4C(1)(e): disable rich text formatting
+// in paragraphs containing LaTeX nodes, for consistency with PDF rendering
+// (MaterialConversionSpecification §3(6)(a)(i)).
+
+export const LatexFormattingGuard = Extension.create({
+    name: 'latexFormattingGuard',
+
+    addProseMirrorPlugins() {
+        const { Plugin, PluginKey } = require('prosemirror-state');
+
+        return [
+            new Plugin({
+                key: new PluginKey('latexFormattingGuard'),
+                appendTransaction(_transactions: any, _oldState: any, newState: any) {
+                    const { doc, schema, tr } = newState;
+                    let modified = false;
+
+                    doc.descendants((node: any, pos: number) => {
+                        // Only process paragraph nodes
+                        if (node.type.name !== 'paragraph') return;
+
+                        // Check if this paragraph contains an inlineLatex node
+                        let hasLatex = false;
+                        node.descendants((child: any) => {
+                            if (child.type.name === 'inlineLatex') {
+                                hasLatex = true;
+                            }
+                        });
+
+                        if (!hasLatex) return;
+
+                        // Strip all formatting marks from text nodes in this paragraph
+                        const marksToStrip = ['bold', 'italic', 'underline', 'code'];
+                        node.descendants((child: any, childOffset: number) => {
+                            if (!child.isText || child.marks.length === 0) return;
+
+                            const from = pos + 1 + childOffset;
+                            const to = from + child.nodeSize;
+
+                            for (const markName of marksToStrip) {
+                                const markType = schema.marks[markName];
+                                if (markType && child.marks.some((m: any) => m.type === markType)) {
+                                    tr.removeMark(from, to, markType);
+                                    modified = true;
+                                }
+                            }
+                        });
+                    });
+
+                    return modified ? tr : null;
+                },
+            }),
+        ];
     },
 });
 
