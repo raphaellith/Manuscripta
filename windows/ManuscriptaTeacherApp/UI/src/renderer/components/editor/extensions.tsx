@@ -252,7 +252,7 @@ export const BlockLatex = Node.create({
 });
 
 // ============ LaTeX Formatting Guard Extension ============
-// Per FrontendWorkflowSpecifications §4C(1)(e): disable rich text formatting
+// Per FrontendWorkflowSpecifications §4C(2A): disable rich text formatting
 // in paragraphs containing LaTeX nodes, for consistency with PDF rendering
 // (MaterialConversionSpecification §3(6)(a)(i)).
 
