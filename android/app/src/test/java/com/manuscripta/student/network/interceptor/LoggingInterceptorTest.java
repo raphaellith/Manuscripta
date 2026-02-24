@@ -54,7 +54,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create("test body", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), "test body"))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -78,8 +78,8 @@ public class LoggingInterceptorTest {
         // Arrange
         String requestBodyContent = "{\"key\":\"value\"}";
         RequestBody requestBody = RequestBody.create(
-                requestBodyContent,
-                MediaType.parse("application/json")
+                MediaType.parse("application/json"),
+                requestBodyContent
         );
 
         Request request = new Request.Builder()
@@ -93,7 +93,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(201)
                 .message("Created")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -123,7 +123,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -153,7 +153,7 @@ public class LoggingInterceptorTest {
                 .message("OK")
                 .header("Content-Type", "application/json")
                 .header("X-Request-ID", "req-123")
-                .body(ResponseBody.create("{\"status\":\"ok\"}", MediaType.parse("application/json")))
+                .body(ResponseBody.create(MediaType.parse("application/json"), "{\"status\":\"ok\"}"))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -183,7 +183,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(404)
                 .message("Not Found")
-                .body(ResponseBody.create("Not found", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), "Not found"))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -213,7 +213,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(204)
                 .message("No Content")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -260,7 +260,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -305,7 +305,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -336,7 +336,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create("", MediaType.parse("text/plain")))
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
@@ -390,7 +390,7 @@ public class LoggingInterceptorTest {
                 .protocol(Protocol.HTTP_1_1)
                 .code(200)
                 .message("OK")
-                .body(ResponseBody.create(jsonBody, MediaType.parse("application/json")))
+                .body(ResponseBody.create(MediaType.parse("application/json"), jsonBody))
                 .build();
         when(mockChain.proceed(any(Request.class))).thenReturn(response);
 
