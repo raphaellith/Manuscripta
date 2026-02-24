@@ -418,15 +418,13 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * invoke this method when handling TCP signals.</p>
      */
     void notifyMaterialsAvailable() {
-        MaterialAvailableCallback callback;
-        synchronized (lock) {
-            callback = this.materialAvailableCallback;
-        }
+        MaterialAvailableCallback callback = this.materialAvailableCallback;
 
         if (callback != null) {
             Log.d(TAG, "Notifying callback: materials available");
             callback.onMaterialsAvailable();
         }
+    }
     }
 
     /**
