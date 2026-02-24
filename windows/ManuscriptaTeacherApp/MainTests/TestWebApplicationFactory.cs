@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.Sqlite;
 using Main.Data;
 
 namespace MainTests;
@@ -13,6 +14,13 @@ namespace MainTests;
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"TestDb_{Guid.NewGuid()}";
+    private readonly SqliteConnection _keepAliveConnection;
+
+    public TestWebApplicationFactory()
+    {
+        _keepAliveConnection = new SqliteConnection($"Data Source={_databaseName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection.Open();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -48,5 +56,15 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         });
 
         builder.UseEnvironment("Testing");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _keepAliveConnection.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

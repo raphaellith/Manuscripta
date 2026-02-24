@@ -55,6 +55,15 @@ builder.Services.AddSingleton<Main.Services.Repositories.IFeedbackRepository, Ma
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
 
+// Register configuration — two-tier model per ConfigurationManagementSpecification
+// Defaults: long-term persisted (EF Core) per PersistenceAndCascadingRules §1(1)(h)
+builder.Services.AddScoped<Main.Services.Repositories.IDefaultConfigurationRepository, Main.Services.Repositories.EfDefaultConfigurationRepository>();
+// Overrides: short-term persisted (in-memory) per PersistenceAndCascadingRules §1(2)
+builder.Services.AddSingleton<Main.Services.Repositories.IConfigurationOverrideRepository, Main.Services.Repositories.InMemoryConfigurationOverrideRepository>();
+builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+// Singleton listener for §3(1)(a): DevicePaired → config refresh
+builder.Services.AddSingleton<ConfigurationRefreshListener>();
+
 // Register CRUD services for hub
 builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
@@ -140,6 +149,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Eagerly resolve singleton so its DevicePaired event subscription is active
+app.Services.GetRequiredService<ConfigurationRefreshListener>();
 // Configure QuestPDF license once at startup (before any PDFs are generated)
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
