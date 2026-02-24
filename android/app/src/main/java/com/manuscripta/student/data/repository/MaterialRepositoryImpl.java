@@ -174,10 +174,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     @Override
     @NonNull
     public List<Material> getAllMaterials() {
-        synchronized (lock) {
-            List<MaterialEntity> entities = materialDao.getAll();
-            return mapEntitiesToDomain(entities);
-        }
+        List<MaterialEntity> entities = materialDao.getAll();
+        return mapEntitiesToDomain(entities);
     }
 
     @Override
