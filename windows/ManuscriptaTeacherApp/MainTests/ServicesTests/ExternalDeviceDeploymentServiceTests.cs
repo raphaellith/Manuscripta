@@ -129,7 +129,7 @@ public class ExternalDeviceDeploymentServiceTests
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
             .ReturnsAsync(pdfBytes);
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
-            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "test@kindle.com", ExternalDeviceType.KINDLE));
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });
         
         await _service.DeployAsync(materialId, new List<Guid> { deviceId });
 
@@ -195,7 +195,7 @@ public class ExternalDeviceDeploymentServiceTests
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
-            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "test@kindle.com", ExternalDeviceType.KINDLE));
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });
         
         _mockEmailCredRepo.Setup(r => r.GetCredentialsAsync()).ReturnsAsync((EmailCredentialEntity?)null);
 
