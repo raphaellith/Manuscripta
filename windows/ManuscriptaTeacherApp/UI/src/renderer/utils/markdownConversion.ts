@@ -28,7 +28,7 @@ const turndownService = new TurndownService({
             const pdfId = element.getAttribute('data-pdf-id');
             return `\n!!! pdf id="${pdfId}"\n`;
         }
-        // Inline LaTeX per Material Encoding Spec §4(7)(a)
+        // Inline LaTeX per Material Encoding Spec §2(7)(a)
         // collapseWhitespace strips spaces from text nodes adjacent to empty inline elements,
         // so we compensate by adding spaces when adjacent text nodes have lost their spacing.
         if (element.nodeName === 'SPAN' && element.hasAttribute('data-latex')) {
@@ -41,7 +41,7 @@ const turndownService = new TurndownService({
             const needsTrailingSpace = next && next.nodeType === 3 && !/^\s/.test(next.nodeValue || '');
             return (needsLeadingSpace ? ' ' : '') + `$${latex}$` + (needsTrailingSpace ? ' ' : '');
         }
-        // Block LaTeX per Material Encoding Spec §4(7)(b)
+        // Block LaTeX per Material Encoding Spec §2(7)(b)
         if (element.nodeName === 'DIV' && element.hasAttribute('data-block-latex')) {
             const latex = element.getAttribute('data-block-latex') || '';
             return `\n$$${latex}$$\n`;
@@ -230,14 +230,14 @@ export function markdownToHtml(markdown: string): string {
         '<div class="pdf-embed" data-pdf-id="$1">[PDF: $1]</div>'
     );
 
-    // Convert block LaTeX $$...$$ to TipTap block latex nodes per §4(7)(b)
+    // Convert block LaTeX $$...$$ to TipTap block latex nodes per §2(7)(b)
     // Must be processed before inline LaTeX to prevent $$ being matched by single $
     processed = processed.replace(
         /\$\$([\s\S]*?)\$\$/g,
         (_match, latex) => `<div data-block-latex="${latex.trim()}"></div>`
     );
 
-    // Convert inline LaTeX $...$ to TipTap inline latex nodes per §4(7)(a)
+    // Convert inline LaTeX $...$ to TipTap inline latex nodes per §2(7)(a)
     // Negative lookbehind/lookahead for $ to avoid matching $$ remnants
     processed = processed.replace(
         /(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g,

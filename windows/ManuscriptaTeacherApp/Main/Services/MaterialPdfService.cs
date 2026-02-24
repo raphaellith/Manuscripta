@@ -448,9 +448,9 @@ public class MaterialPdfService : IMaterialPdfService
 
     /// <summary>
     /// Renders a text segment containing inline LaTeX using the QuestPDF Text API.
-    /// Per MaterialConversionSpecification §3(6)(a): inline LaTeX is rendered within
+    /// Per MaterialConversionSpecification §3A(6)(a): inline LaTeX is rendered within
     /// the text flow using text.Element() for inline image embedding.
-    /// Per §3(6)(a)(i): markdown formatting is not preserved in such paragraphs.
+    /// Per §3A(6)(a): markdown formatting is not preserved in such paragraphs.
     /// </summary>
     private void RenderTextWithInlineLatex(ColumnDescriptor column, string text, Regex inlineLatexPattern)
     {
@@ -475,8 +475,8 @@ public class MaterialPdfService : IMaterialPdfService
                 var imageBytes = _latexRenderer.RenderToImage(latex, displayMode: false, fontSize: 14f);
                 if (imageBytes != null)
                 {
-                    var (_, ptH) = GetImagePointDimensions(imageBytes);
-                    textDescriptor.Element().Height(ptH).Image(imageBytes).FitHeight();
+                    var (ptW, ptH) = GetImagePointDimensions(imageBytes);
+                    textDescriptor.Element().Width(ptW).Height(ptH).Image(imageBytes);
                 }
                 else
                 {
@@ -509,7 +509,7 @@ public class MaterialPdfService : IMaterialPdfService
 
     /// <summary>
     /// Renders block LaTeX as a centred image at natural size.
-    /// Per MaterialConversionSpecification §3(6)(b).
+    /// Per MaterialConversionSpecification §3A(6)(b).
     /// Falls back to raw text per §6(4) on rendering failure.
     /// </summary>
     private void RenderBlockLatex(ColumnDescriptor column, string latex)
@@ -533,6 +533,16 @@ public class MaterialPdfService : IMaterialPdfService
     /// </summary>
     private static (float width, float height) GetImagePointDimensions(byte[] pngBytes)
     {
+        // Validate PNG: must be at least 24 bytes (8-byte signature + 16-byte IHDR)
+        // and start with the PNG magic signature
+        if (pngBytes.Length < 24 ||
+            pngBytes[0] != 0x89 || pngBytes[1] != 0x50 ||
+            pngBytes[2] != 0x4E || pngBytes[3] != 0x47)
+        {
+            // Fallback: return a small default size for malformed data
+            return (50f, 14f);
+        }
+
         // PNG IHDR: bytes 16-19 = width, 20-23 = height (big-endian uint32)
         int pxW = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
         int pxH = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
