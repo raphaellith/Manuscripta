@@ -701,7 +701,7 @@ class SignalRService {
 
     /**
      * Retrieves the configuration used by a device.
-     * Per NetworkingAPISpec §1(1)(i)(iii) and FrontendWorkflowSpecifications §5H(1)(a).
+     * Per NetworkingAPISpec §1(1)(o)(iii) and FrontendWorkflowSpecifications §5H(1)(a).
      */
     public async getDeviceConfiguration(deviceId: string): Promise<ConfigurationEntity> {
         return await this.getConnection().invoke<ConfigurationEntity>("GetDeviceConfiguration", deviceId);
