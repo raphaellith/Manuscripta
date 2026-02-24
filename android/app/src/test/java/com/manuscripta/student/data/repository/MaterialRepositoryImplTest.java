@@ -420,6 +420,47 @@ public class MaterialRepositoryImplTest {
         assertTrue(callbackCalled[0]);
     }
 
+    @Test
+    public void testSyncMaterials_httpFailure_doesNotNotifyCallback() throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.error(500,
+                okhttp3.ResponseBody.create(null, "")));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_emptyBundle_doesNotNotifyCallback() throws IOException {
+        DistributionBundleDto emptyBundle = new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(emptyBundle));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_ioException_doesNotNotifyCallback() throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenThrow(new IOException("Network error"));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
+    }
+
     // ========== isSyncing tests ==========
 
     @Test

@@ -288,6 +288,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
         Log.d(TAG, "Starting material sync for device: " + deviceId);
 
+        boolean syncSucceeded = false;
+
         try {
             // 1. HTTP GET /distribution/{deviceId} to fetch materials
             Response<DistributionBundleDto> response =
@@ -340,6 +342,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             }
 
             Log.i(TAG, "Material sync completed successfully");
+            syncSucceeded = true;
 
         } catch (IOException e) {
             Log.e(TAG, "Network error during material sync: " + e.getMessage(), e);
@@ -350,13 +353,14 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.d(TAG, "Material sync completed for device: " + deviceId);
         }
 
-        // Notify callback that materials may be available. This is invoked
-        // outside the sync state management block to ensure callback behaviour
-        // cannot interfere with clearing the syncing flag.
-        try {
-            notifyMaterialsAvailable();
-        } catch (RuntimeException e) {
-            Log.e(TAG, "Error while notifying materials availability callback", e);
+        // Only notify callback if sync actually succeeded and materials were saved.
+        // This ensures the callback fires only when materials are available.
+        if (syncSucceeded) {
+            try {
+                notifyMaterialsAvailable();
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Error while notifying materials availability callback", e);
+            }
         }
     }
 
