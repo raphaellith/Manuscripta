@@ -753,7 +753,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (1) When the settings button for a displayed device is pressed, the frontend shall display a configuration modal which -
 
-    (a) shows the configuration currently associated with the seelected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
+    (a) shows the configuration currently associated with the selected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
 
     (b) allows the user to modify any value(s) in the selected device's configuration.
     
