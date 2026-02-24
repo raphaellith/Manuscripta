@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ModalOverlay } from './ModalOverlay';
 
 interface RenameDeviceModalProps {
     currentName: string;
