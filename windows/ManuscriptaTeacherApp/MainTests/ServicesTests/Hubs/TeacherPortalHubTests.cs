@@ -50,8 +50,10 @@ public class TeacherPortalHubTests
     private readonly Mock<ILogger<TeacherPortalHub>> _mockLogger;
     private readonly Mock<IMaterialPdfService> _mockMaterialPdfService;
     private readonly Mock<IRmapiService> _mockRmapiService;
-    private readonly Mock<IReMarkableDeviceRepository> _mockReMarkableDeviceRepository;
-    private readonly Mock<IReMarkableDeploymentService> _mockReMarkableDeploymentService;
+    private readonly Mock<IEmailCredentialRepository> _mockEmailCredentialRepository;
+    private readonly Mock<IEmailService> _mockEmailService;
+    private readonly Mock<IExternalDeviceRepository> _mockExternalDeviceRepository;
+    private readonly Mock<IExternalDeviceDeploymentService> _mockExternalDeviceDeploymentService;
     private readonly Mock<IRuntimeDependencyRegistry> _mockRuntimeDependencyRegistry;
     private readonly TeacherPortalHub _hub;
 
@@ -81,8 +83,10 @@ public class TeacherPortalHubTests
         _mockLogger = new Mock<ILogger<TeacherPortalHub>>();
         _mockMaterialPdfService = new Mock<IMaterialPdfService>();
         _mockRmapiService = new Mock<IRmapiService>();
-        _mockReMarkableDeviceRepository = new Mock<IReMarkableDeviceRepository>();
-        _mockReMarkableDeploymentService = new Mock<IReMarkableDeploymentService>();
+        _mockEmailCredentialRepository = new Mock<IEmailCredentialRepository>();
+        _mockEmailService = new Mock<IEmailService>();
+        _mockExternalDeviceRepository = new Mock<IExternalDeviceRepository>();
+        _mockExternalDeviceDeploymentService = new Mock<IExternalDeviceDeploymentService>();
         _mockRuntimeDependencyRegistry = new Mock<IRuntimeDependencyRegistry>();
 
         _hub = new TeacherPortalHub(
@@ -110,8 +114,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object);
     }
 
@@ -145,8 +151,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -178,8 +186,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -211,8 +221,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -244,8 +256,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -277,8 +291,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -310,8 +326,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -343,8 +361,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -376,8 +396,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -409,8 +431,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -442,8 +466,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -475,8 +501,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -508,8 +536,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -541,8 +571,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -574,8 +606,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             _mockMaterialPdfService.Object,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
@@ -607,8 +641,10 @@ public class TeacherPortalHubTests
             _mockLogger.Object,
             null!,
             _mockRmapiService.Object,
-            _mockReMarkableDeviceRepository.Object,
-            _mockReMarkableDeploymentService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
             _mockRuntimeDependencyRegistry.Object));
     }
 
