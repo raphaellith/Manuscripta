@@ -693,7 +693,7 @@ class SignalRService {
 
     /**
      * Updates the base configuration.
-     * Per NetworkingAPISpec §1(1)(i)(ii).
+     * Per NetworkingAPISpec §1(1)(o)(ii).
      */
     public async updateBaseConfiguration(entity: ConfigurationEntity): Promise<void> {
         await this.getConnection().invoke("UpdateBaseConfiguration", entity);
@@ -709,7 +709,7 @@ class SignalRService {
 
     /**
      * Updates the overrides associated with a device.
-     * Per NetworkingAPISpec §1(1)(i)(iv) and FrontendWorkflowSpecifications §5H(1)(c).
+     * Per NetworkingAPISpec §1(1)(o)(iv) and FrontendWorkflowSpecifications §5H(1)(c).
      */
     public async updateDeviceConfiguration(deviceId: string, newDeviceConfiguration: ConfigurationEntity): Promise<void> {
         await this.getConnection().invoke("UpdateDeviceConfiguration", deviceId, newDeviceConfiguration);
