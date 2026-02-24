@@ -132,7 +132,7 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
             <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl animate-fade-in-up flex flex-col" style={{ maxHeight: '90vh' }}>
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex-shrink-0">
