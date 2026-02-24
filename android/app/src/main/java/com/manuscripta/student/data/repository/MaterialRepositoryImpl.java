@@ -87,7 +87,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     /** Callback for material availability notifications. */
     @Nullable
-    private MaterialAvailableCallback materialAvailableCallback;
+    private volatile MaterialAvailableCallback materialAvailableCallback;
 
     /**
      * Creates a new MaterialRepositoryImpl with the given dependencies.
