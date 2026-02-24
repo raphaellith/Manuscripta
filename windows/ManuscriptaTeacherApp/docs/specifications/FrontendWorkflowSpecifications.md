@@ -871,4 +871,8 @@ For a list of all server method and client handlers to be implemented for commun
 
 (1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all devices.
 
-(2) The frontend shall provide means to modify any value in the base configuration.
+(2) The frontend shall -
+
+    (a) when there are no paired devices, provide means to modify any value in the base configuration; and
+
+    (b) when there are paired devices, prevent the user from modifying the base configuration.

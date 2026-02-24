@@ -14,14 +14,23 @@ export const SettingsPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    // Per §7(2): Check if there are paired devices
+    const [hasPairedDevices, setHasPairedDevices] = useState(false);
 
     // Per §7(1): On entry, call GetBaseConfiguration()
+    // Per §7(2): Also check for paired devices
     useEffect(() => {
         const loadBaseConfiguration = async () => {
             try {
                 setIsLoading(true);
-                const config = await signalRService.getBaseConfiguration();
+                const [config, androidDevices, remarkableDevices] = await Promise.all([
+                    signalRService.getBaseConfiguration(),
+                    signalRService.getAllPairedDevices(),
+                    signalRService.getAllReMarkableDevices()
+                ]);
                 setBaseConfig(config);
+                // Per §7(2)(b): prevent modification when there are paired devices
+                setHasPairedDevices(androidDevices.length > 0 || remarkableDevices.length > 0);
             } catch (err) {
                 console.error('Failed to load base configuration:', err);
                 setError('Failed to load configuration');
@@ -88,6 +97,17 @@ export const SettingsPage: React.FC = () => {
                     </div>
                 )}
 
+                {/* Per §7(2)(b): Show warning when devices are paired */}
+                {hasPairedDevices && (
+                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-6">
+                        <p className="font-medium">Configuration is locked</p>
+                        <p className="text-sm mt-1">
+                            The base configuration cannot be modified while devices are paired. 
+                            Please unpair all devices before making changes.
+                        </p>
+                    </div>
+                )}
+
                 {baseConfig && (
                     <div className="space-y-6">
                         {/* Text Size - Per Validation Rules §2G(1)(a) */}
@@ -101,7 +121,8 @@ export const SettingsPage: React.FC = () => {
                                 max={50}
                                 value={baseConfig.textSize}
                                 onChange={(e) => updateConfig('textSize', parseInt(e.target.value, 10))}
-                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                disabled={hasPairedDevices}
+                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <p className="text-sm text-gray-500 mt-1">
                                 Default text size for reading materials on student devices
@@ -116,7 +137,8 @@ export const SettingsPage: React.FC = () => {
                             <select
                                 value={baseConfig.feedbackStyle}
                                 onChange={(e) => updateConfig('feedbackStyle', e.target.value as FeedbackStyle)}
-                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                disabled={hasPairedDevices}
+                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="IMMEDIATE">Immediate</option>
                                 <option value="NEUTRAL">Neutral</option>
@@ -135,7 +157,8 @@ export const SettingsPage: React.FC = () => {
                                 id="baseTtsEnabled"
                                 checked={baseConfig.ttsEnabled}
                                 onChange={(e) => updateConfig('ttsEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
+                                disabled={hasPairedDevices}
+                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1">
                                 <label htmlFor="baseTtsEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
@@ -154,7 +177,8 @@ export const SettingsPage: React.FC = () => {
                                 id="baseAiScaffoldingEnabled"
                                 checked={baseConfig.aiScaffoldingEnabled}
                                 onChange={(e) => updateConfig('aiScaffoldingEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
+                                disabled={hasPairedDevices}
+                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1">
                                 <label htmlFor="baseAiScaffoldingEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
@@ -173,7 +197,8 @@ export const SettingsPage: React.FC = () => {
                                 id="baseSummarisationEnabled"
                                 checked={baseConfig.summarisationEnabled}
                                 onChange={(e) => updateConfig('summarisationEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
+                                disabled={hasPairedDevices}
+                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1">
                                 <label htmlFor="baseSummarisationEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
@@ -193,7 +218,8 @@ export const SettingsPage: React.FC = () => {
                             <select
                                 value={baseConfig.mascotSelection}
                                 onChange={(e) => updateConfig('mascotSelection', e.target.value as MascotSelection)}
-                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                disabled={hasPairedDevices}
+                                className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="NONE">None</option>
                                 <option value="MASCOT1">Mascot 1</option>
@@ -212,8 +238,8 @@ export const SettingsPage: React.FC = () => {
                 <div className="pt-6 border-t border-gray-100 mt-8">
                     <button
                         onClick={handleSave}
-                        disabled={isSaving || !baseConfig}
-                        className="px-8 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50"
+                        disabled={isSaving || !baseConfig || hasPairedDevices}
+                        className="px-8 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
