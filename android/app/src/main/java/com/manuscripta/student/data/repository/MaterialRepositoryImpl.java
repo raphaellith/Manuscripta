@@ -282,9 +282,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     @Override
     public void setMaterialAvailableCallback(@Nullable MaterialAvailableCallback callback) {
-        synchronized (lock) {
-            this.materialAvailableCallback = callback;
-        }
+        this.materialAvailableCallback = callback;
     }
 
     @Override
