@@ -92,15 +92,10 @@ public final class MaterialMapper {
         }
 
         String typeStr = dto.getType();
-        MaterialType type;
-        try {
-            type = typeStr != null
-                    ? MaterialType.valueOf(typeStr.trim().toUpperCase(Locale.ROOT))
-                    : MaterialType.READING;
-        } catch (IllegalArgumentException e) {
-            // Unknown type - silently default to READING
-            type = MaterialType.READING;
+        if (typeStr == null || typeStr.trim().isEmpty()) {
+            throw new IllegalArgumentException("MaterialDto type cannot be null or empty");
         }
+        MaterialType type = MaterialType.valueOf(typeStr.trim().toUpperCase(Locale.ROOT));
 
         String title = dto.getTitle();
         if (title == null || title.trim().isEmpty()) {
