@@ -162,13 +162,11 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     public Material getMaterialById(@NonNull String materialId) {
         validateNotEmpty(materialId, "Material ID");
 
-        synchronized (lock) {
-            MaterialEntity entity = materialDao.getById(materialId);
-            if (entity == null) {
-                return null;
-            }
-            return MaterialMapper.toDomain(entity);
+        MaterialEntity entity = materialDao.getById(materialId);
+        if (entity == null) {
+            return null;
         }
+        return MaterialMapper.toDomain(entity);
     }
 
     @Override
@@ -270,7 +268,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     }
 
     @Override
+    public int getMaterialCount() {
         return materialDao.getCount();
+    }
 
     @Override
     public void setMaterialAvailableCallback(@Nullable MaterialAvailableCallback callback) {
