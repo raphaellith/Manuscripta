@@ -1832,21 +1832,20 @@ public class TeacherPortalHubTests
             .Setup(s => s.GetOverride(deviceId2))
             .Returns(device2Override);
 
-        // Act
-        await _hub.UpdateBaseConfiguration(newBaseConfig);
-
-        // Assert
+        // Simulate implementation behavior: UpdateDefaultsAsync throws when devices are paired
+        _mockConfigurationService
+            .Setup(s => s.UpdateDefaultsAsync(It.IsAny<ConfigurationEntity>()))
+            .ThrowsAsync(new InvalidOperationException("Cannot update base configuration while devices are paired."));
+        // Act & Assert: hub should surface the InvalidOperationException
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await _hub.UpdateBaseConfiguration(newBaseConfig);
+        });
+        // Verify that UpdateDefaultsAsync was invoked and no further reconciliation occurred
         _mockConfigurationService.Verify(s => s.UpdateDefaultsAsync(newBaseConfig), Times.Once);
-        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Once);
-
-        // Device 1: SetOverride should be called with only FeedbackStyle override remaining
-        _mockConfigurationService.Verify(s => s.SetOverride(deviceId1, It.Is<ConfigurationOverride>(o =>
-            o.TextSize == null &&
-            o.FeedbackStyle == FeedbackStyle.IMMEDIATE &&
-            o.TtsEnabled == null)), Times.Once);
-
-        // Device 2: RemoveOverride should be called (all values match)
-        _mockConfigurationService.Verify(s => s.RemoveOverride(deviceId2), Times.Once);
+        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Never);
+        _mockConfigurationService.Verify(s => s.SetOverride(It.IsAny<Guid>(), It.IsAny<ConfigurationOverride>()), Times.Never);
+        _mockConfigurationService.Verify(s => s.RemoveOverride(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
@@ -1866,16 +1865,14 @@ public class TeacherPortalHubTests
             .Setup(s => s.UpdateDefaultsAsync(It.IsAny<ConfigurationEntity>()))
             .ReturnsAsync(newBaseConfig);
 
-        _mockDeviceRegistryService
-            .Setup(s => s.GetAllAsync())
-            .ReturnsAsync(new List<PairedDeviceEntity>());
-
         // Act
         await _hub.UpdateBaseConfiguration(newBaseConfig);
 
         // Assert
+        // Per ConfigurationManagementSpecification §1(6), the service layer (not Hub) enforces
+        // the constraint that base config cannot be modified when devices are paired.
+        // When no devices are paired, UpdateDefaultsAsync should succeed.
         _mockConfigurationService.Verify(s => s.UpdateDefaultsAsync(newBaseConfig), Times.Once);
-        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Once);
     }
 
     [Fact]

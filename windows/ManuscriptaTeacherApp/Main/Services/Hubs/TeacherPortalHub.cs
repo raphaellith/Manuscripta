@@ -988,42 +988,10 @@ public class TeacherPortalHub : Hub
         if (newBaseConfiguration == null)
             throw new HubException("Base configuration cannot be null");
 
-        // Update the base configuration (per ConfigurationManagementSpecification §1(3)(a))
+        // Update the base configuration (per ConfigurationManagementSpecification §1(3)(a) and §1(6))
         var updated = await _configurationService.UpdateDefaultsAsync(newBaseConfiguration);
         
-        // Remove any device overrides that match the new base configuration
-        // Per NetworkingAPISpec §1(1)(o)(ii): "Also removes any configuration values that 
-        // match the new base configuration from all device overrides."
-        var pairedDevices = await _deviceRegistryService.GetAllAsync();
-        foreach (var device in pairedDevices)
-        {
-            var currentOverride = _configurationService.GetOverride(device.DeviceId);
-            if (currentOverride != null)
-            {
-                // Create a new override with only values that differ from the updated base
-                var newOverride = new ConfigurationOverride
-                {
-                    TextSize = (currentOverride.TextSize != null && currentOverride.TextSize != updated.TextSize) ? currentOverride.TextSize : null,
-                    FeedbackStyle = (currentOverride.FeedbackStyle != null && currentOverride.FeedbackStyle != updated.FeedbackStyle) ? currentOverride.FeedbackStyle : null,
-                    TtsEnabled = (currentOverride.TtsEnabled != null && currentOverride.TtsEnabled != updated.TtsEnabled) ? currentOverride.TtsEnabled : null,
-                    AiScaffoldingEnabled = (currentOverride.AiScaffoldingEnabled != null && currentOverride.AiScaffoldingEnabled != updated.AiScaffoldingEnabled) ? currentOverride.AiScaffoldingEnabled : null,
-                    SummarisationEnabled = (currentOverride.SummarisationEnabled != null && currentOverride.SummarisationEnabled != updated.SummarisationEnabled) ? currentOverride.SummarisationEnabled : null,
-                    MascotSelection = (currentOverride.MascotSelection != null && currentOverride.MascotSelection != updated.MascotSelection) ? currentOverride.MascotSelection : null
-                };
-
-                // If the new override is empty, remove it; otherwise update it
-                if (newOverride.IsEmpty)
-                {
-                    _configurationService.RemoveOverride(device.DeviceId);
-                }
-                else
-                {
-                    _configurationService.SetOverride(device.DeviceId, newOverride);
-                }
-            }
-        }
-
-        _logger.LogInformation("Base configuration updated and device overrides reconciled");
+        _logger.LogInformation("Base configuration updated");
     }
 
     /// <summary>

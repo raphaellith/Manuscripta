@@ -155,7 +155,7 @@ For a description of how these server methods and client handlers are expected t
 
         (i) `Task<ConfigurationEntity> GetBaseConfiguration()`: Retrieves the base configuration assumed by all devices.
 
-        (ii) `Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)`: Updates the base configuration. Also removes any configuration values that match the new base configuration from all device overrides.
+        (ii) `Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)`: Updates the base configuration.
 
         (iii) `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`: Retrieves the configuration used by a device, identified by its UUID.
 
