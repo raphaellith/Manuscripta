@@ -783,6 +783,7 @@ export const ClassroomPage: React.FC = () => {
                                         setConfigDeviceName(device.name);
                                     }}
                                     title="Device Settings"
+                                    aria-label="Device configuration settings"
                                 >
                                     <SettingsIcon />
                                 </button>
@@ -838,6 +839,7 @@ export const ClassroomPage: React.FC = () => {
                                         setConfigDeviceName(device.name);
                                     }}
                                     title="Device Settings"
+                                    aria-label="Device configuration settings"
                                 >
                                     <SettingsIcon />
                                 </button>
