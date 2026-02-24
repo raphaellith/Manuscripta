@@ -96,7 +96,12 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 min={5}
                                 max={50}
                                 value={config.textSize}
-                                onChange={(e) => updateConfig('textSize', parseInt(e.target.value, 10))}
+                                onChange={(e) => {
+                                    const parsed = parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(parsed) && parsed >= 5 && parsed <= 50) {
+                                        updateConfig('textSize', parsed);
+                                    }
+                                }}
                                 className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                             />
                         </div>

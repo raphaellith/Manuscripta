@@ -120,7 +120,12 @@ export const SettingsPage: React.FC = () => {
                                 min={5}
                                 max={50}
                                 value={baseConfig.textSize}
-                                onChange={(e) => updateConfig('textSize', parseInt(e.target.value, 10))}
+                                onChange={(e) => {
+                                    const newValue = parseInt(e.target.value, 10);
+                                    if (!isNaN(newValue) && newValue >= 5 && newValue <= 50) {
+                                        updateConfig('textSize', newValue);
+                                    }
+                                }}
                                 disabled={hasPairedDevices}
                                 className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             />
