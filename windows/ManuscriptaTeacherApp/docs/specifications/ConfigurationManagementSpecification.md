@@ -31,7 +31,7 @@ This document specifies how configurations are to be managed in the Windows Appl
 
 (5) The base configuration values shall be displayed modifiably under the "Settings" tab, and the Frontend Workflow Specifications shall define the operation of that tab.
 
-(6) THe Windows application shall prevent the user from modifying the base configuration in the presence of one or more paired devices.
+(6) The Windows application shall not allow the base configuration to be modified when one or more devices is paired.
 
 
 ## Section 2 - Override of Configuration Values
