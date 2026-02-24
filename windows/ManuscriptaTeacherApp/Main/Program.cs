@@ -73,6 +73,7 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IResponseService, ResponseService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
+builder.Services.AddSingleton<Main.Services.Latex.ILatexRenderer, Main.Services.Latex.LatexRenderer>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 

@@ -17,7 +17,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
+import { InlineLatex, BlockLatex, LatexFormattingGuard, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
 import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
@@ -208,6 +208,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             // Custom extensions for Material Encoding
             InlineLatex,
             BlockLatex,
+            LatexFormattingGuard,
             QuestionRef,
             PdfEmbed,
         ],
