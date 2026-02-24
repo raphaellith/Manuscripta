@@ -415,7 +415,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             callback.onMaterialsAvailable();
         }
     }
-    }
 
     /**
      * Refreshes the materials LiveData with current database contents.
