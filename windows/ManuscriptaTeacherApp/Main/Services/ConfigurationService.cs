@@ -56,9 +56,6 @@ public class ConfigurationService : IConfigurationService
         ValidateConfiguration(entity);
         await _defaultsRepository.UpdateAsync(entity);
 
-        // §3(1)(b): When a default value is set or changed, refresh all devices.
-        await RefreshAllDevicesAsync();
-
         return entity;
     }
 
