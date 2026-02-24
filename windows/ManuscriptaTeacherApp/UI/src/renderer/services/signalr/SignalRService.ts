@@ -680,7 +680,7 @@ class SignalRService {
     }
 
     // ==========================================
-    // Configuration Management - NetworkingAPISpec §1(1)(i)
+    // Configuration Management - NetworkingAPISpec §1(1)(o)
     // ==========================================
 
     /**
