@@ -336,6 +336,16 @@ cd android
 
 ---
 
+## Known Environment Issues (CRITICAL)
+
+### AGP Version (Android Gradle Plugin)
+- **Do NOT downgrade AGP**: The project uses AGP version **8.13.1**.
+- **Ignore Errors**: If you encounter environment errors related to this version (e.g., "network requests to Google seem to be blocked"), **ignore them**. These are false positives specific to the agent environment.
+- **Action**: Do NOT revert to an older version (e.g., 8.1.1) under any circumstances.
+- **False Reasoning**: Do NOT assume that reverting the AGP version is a valid fix for network/build issues in this environment. The build will pass in CI.
+
+---
+
 ## UK English
 
 Use British English spelling in all documentation and string literals:

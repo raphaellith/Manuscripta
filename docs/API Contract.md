@@ -113,8 +113,14 @@ Tablet configuration is an object associated with lesson materials but handled s
 -   **Response:** `200 OK`
     ```json
     {
-      "KioskMode": true, // Final configuration to be determined
-      "TextSize": "medium"
+
+       // Array of ResponseEntity objects as defined in Validation Rules.md §2G, for example:
+      "TextSize": 12,
+      "FeedbackStyle": "IMMEDIATE",
+      "TtsEnabled": true,
+      "AiScaffoldingEnabled": true,
+      "SummarisationEnabled": true,
+      "MascotSelection": "MASCOT1"
     }
     ```
 
@@ -131,8 +137,8 @@ Used during the pairing handshake to register a student device with the teacher 
 -   **Body:**
     ```json
     {
-      "DeviceId": "device-uuid-generated-by-client",
-      "name": "device-name-provided-by-user"
+      "DeviceId": "550e8400-e29b-41d4-a716-446655440000",
+      "Name": "device-name-provided-by-user"
     }
     ```
 -   **Response:** `201 Created`
@@ -145,17 +151,7 @@ Used during the pairing handshake to register a student device with the teacher 
 Submits a single answer to a question. The JSON object conforms to ResponseEntity as defined in Validation Rules.md §2C.
 
 -   **Endpoint:** `POST /responses`
--   **Body:**
-    ```json
-    {
-      "Id": "resp-uuid-generated-by-client",
-      "QuestionId": "q-uuid-1",
-      "MaterialId": "mat-uuid-1",
-      "StudentId": "device-id-or-student-uuid",
-      "Answer": "3",
-      "Timestamp": "2023-10-27T10:05:00Z"
-    }
-    ```
+-   **Body:** A JSON object representing a `ResponseEntity` as defined in `Validation Rules.md` §2C.
 -   **Response:** `201 Created`
     ```json
     {} // Empty 201 to confirm submission
@@ -169,7 +165,7 @@ Submits multiple responses at once (e.g., when reconnecting after offline mode).
     ```json
     {
       "Responses": [
-        // Array of response objects as above
+        // Array of ResponseEntity objects as defined in Validation Rules.md §2C
       ]
     }
     ```
@@ -271,7 +267,7 @@ Used during the pairing handshake to establish TCP connectivity. See `Pairing Pr
 **Example: Pairing Request Message**
 ```
 Byte 0: 0x20 (PAIRING_REQUEST opcode)
-Bytes 1-N: "device-uuid" (UTF-8 encoded device ID)
+Bytes 1-36: "550e8400-e29b-41d4-a716-446655440000" (UTF-8 encoded device UUID)
 ```
 
 #### Server → Client Pairing Acknowledgement
@@ -291,8 +287,8 @@ Byte 0: 0x21 (PAIRING_ACK opcode)
 |--------|------|---------|-------------|
 | `0x10` | STATUS_UPDATE | JSON payload | Reports device status to teacher |
 | `0x11` | HAND_RAISED | Device ID (UTF-8 string) | Student requests help |
-| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of materials via HTTP `GET /distribution/{deviceId}` |
-| `0x13` | FEEDBACK_ACK | Device ID (UTF-8 string) | Acknowledges successful receipt of feedback via HTTP `GET /feedback/{deviceId}` |
+| `0x12` | DISTRIBUTE_ACK | Device ID (UTF-8 string, null-terminated) + Material ID (UTF-8 string) | Acknowledges successful receipt of a single material. One message per material. See §3.6.2 |
+| `0x13` | FEEDBACK_ACK | Device ID (UTF-8 string, null-terminated) + Feedback ID (UTF-8 string) | Acknowledges successful receipt of a single feedback entity. One message per feedback. See §3.6.2 |
 
 **Example: Status Update Message**
 ```
@@ -303,7 +299,7 @@ Bytes 1-N: JSON payload (see below)
 Status Update JSON payload must conform to the `DeviceStatusEntity` as defined in `Validation Rules.md` §2E:
 ```json
 {
-  "DeviceId": "device-123",
+  "DeviceId": "550e8400-e29b-41d4-a716-446655440000",
   "Status": "ON_TASK",
   "BatteryLevel": 85,
   "CurrentMaterialId": "mat-uuid-1",
@@ -315,7 +311,7 @@ Status Update JSON payload must conform to the `DeviceStatusEntity` as defined i
 **Example: Hand Raised Message**
 ```
 Byte 0: 0x11 (HAND_RAISED opcode)
-Bytes 1-N: "device-123" (UTF-8 encoded device ID)
+Bytes 1-36: "550e8400-e29b-41d4-a716-446655440000" (UTF-8 encoded device UUID)
 ```
 
 ### 3.6.1. Acknowledgement Patterns
@@ -343,6 +339,35 @@ The following messages rely on implicit acknowledgement through subsequent obser
 | `REFRESH_CONFIG (0x03)` | Server observes subsequent `GET /config` HTTP request |
 | `UNPAIR (0x04)` | TCP connection terminates; no ACK possible |
 
+### 3.6.2. Per-Entity Acknowledgement Format
+
+`DISTRIBUTE_ACK` (0x12) and `FEEDBACK_ACK` (0x13) use a per-entity acknowledgement pattern: the Android client sends **one message per entity** (material or feedback) rather than a single message per distribution or feedback batch.
+
+The operand is encoded as two concatenated UTF-8 strings separated by a null byte (`0x00`):
+
+| Field | Offset | Size | Description |
+|-------|--------|------|-------------|
+| Device ID | 1 | Variable | UTF-8 encoded device ID, null-terminated |
+| Entity ID | After null | Variable | UTF-8 encoded material ID (for 0x12) or feedback ID (for 0x13) |
+
+**Example: DISTRIBUTE_ACK for device "550e8400-e29b-41d4-a716-446655440000" acknowledging material "mat-uuid-1"**
+```
+Byte 0:      0x12                                     (DISTRIBUTE_ACK opcode)
+Bytes 1-36:  "550e8400-e29b-41d4-a716-446655440000"   (UTF-8 device UUID)
+Byte 37:     0x00                                     (null separator)
+Bytes 38-47: "mat-uuid-1"                             (UTF-8 material ID)
+```
+
+**Example: FEEDBACK_ACK for device "550e8400-e29b-41d4-a716-446655440000" acknowledging feedback "fb-uuid-5"**
+```
+Byte 0:      0x13                                     (FEEDBACK_ACK opcode)
+Bytes 1-36:  "550e8400-e29b-41d4-a716-446655440000"   (UTF-8 device UUID)
+Byte 37:     0x00                                     (null separator)
+Bytes 38-46: "fb-uuid-5"                              (UTF-8 feedback ID)
+```
+
+This allows the Windows client to track distribution and feedback delivery state at the individual entity level.
+
 ### 3.7. Extensibility
 
 Additional opcodes can be defined as needed. Both applications should:
@@ -364,7 +389,7 @@ All data models in this contract must conform to Validation Rules.md. This docum
 ### 4.2. Material Types
 See Validation Rules.md §2A(1)(a) for the authoritative MaterialType enum.
 -   `READING`: Reading material or informational content.
--   `QUIZ`: Interactive questions with immediate feedback.
+
 -   `WORKSHEET`: Content for reading and annotation.
 -   `POLL`: Quick class voting.
 
