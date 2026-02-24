@@ -187,10 +187,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             throw new IllegalArgumentException("Material type cannot be null");
         }
 
-        synchronized (lock) {
-            List<MaterialEntity> entities = materialDao.getByType(type);
-            return mapEntitiesToDomain(entities);
-        }
+        List<MaterialEntity> entities = materialDao.getByType(type);
+        return mapEntitiesToDomain(entities);
     }
 
     @Override
