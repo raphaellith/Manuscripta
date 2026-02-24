@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Main.Models.Entities;
 using Main.Models.Enums;
@@ -47,6 +48,10 @@ public class ConfigurationService : IConfigurationService
     {
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
+
+        var pairedDevices = await _deviceRegistryService.GetAllAsync();
+        if (pairedDevices.Any())
+            throw new InvalidOperationException("Base configuration cannot be modified while devices are paired.");
 
         ValidateConfiguration(entity);
         await _defaultsRepository.UpdateAsync(entity);
