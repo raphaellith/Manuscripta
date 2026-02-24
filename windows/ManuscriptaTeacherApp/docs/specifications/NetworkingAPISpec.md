@@ -150,6 +150,16 @@ For a description of how these server methods and client handlers are expected t
         (vi) [DELETED]
 
         (vii) `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified reMarkable devices by generating a PDF and uploading it to each device's reMarkable cloud via rmapi. Returns when all uploads are complete or have failed.
+    
+    (o) Methods for base configuration and device-specific overrides.
+
+        (i) `Task<ConfigurationEntity> GetBaseConfiguration()`: Retrieves the base configuration assumed by all devices.
+
+        (ii) `Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)`: Updates the base configuration. Also removes any configuration values that match the new base configuration from all device overrides.
+
+        (iii) `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`: Retrieves the configuration used by a device, identified by its UUID.
+
+        (iv) `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`: Updates the overrides associated with a device, identified by its UUID. The overrides are determined by comparing the new device configuration with the base configuration.
 
 
 ### Section 2 - Frontend handlers

@@ -52,6 +52,9 @@ public class TeacherPortalHub : Hub
     private readonly IReMarkableDeploymentService _remarkableDeploymentService;
     private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
 
+    // Configuration dependencies - NetworkingAPISpec §1(1)(o)
+    private readonly IConfigurationService _configurationService;
+
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
         IUnitService unitService,
@@ -79,7 +82,8 @@ public class TeacherPortalHub : Hub
         IRmapiService rmapiService,
         IReMarkableDeviceRepository remarkableDeviceRepository,
         IReMarkableDeploymentService remarkableDeploymentService,
-        IRuntimeDependencyRegistry runtimeDependencyRegistry)
+        IRuntimeDependencyRegistry runtimeDependencyRegistry,
+        IConfigurationService configurationService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -108,6 +112,7 @@ public class TeacherPortalHub : Hub
         _remarkableDeviceRepository = remarkableDeviceRepository ?? throw new ArgumentNullException(nameof(remarkableDeviceRepository));
         _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -958,5 +963,135 @@ public class TeacherPortalHub : Hub
     }
 
     #endregion
-}
 
+    #region Configuration Methods - NetworkingAPISpec §1(1)(o)
+
+    /// <summary>
+    /// Retrieves the base configuration assumed by all devices.
+    /// Per NetworkingAPISpec §1(1)(o)(i) and ConfigurationManagementSpecification §1(3)(a).
+    /// </summary>
+    public async Task<ConfigurationEntity> GetBaseConfiguration()
+    {
+        _logger.LogInformation("GetBaseConfiguration called");
+        return await _configurationService.GetDefaultsAsync();
+    }
+
+    /// <summary>
+    /// Updates the base configuration and removes device overrides that match the new defaults.
+    /// Per NetworkingAPISpec §1(1)(o)(ii) and ConfigurationManagementSpecification §1(6) and §3(1)(b).
+    /// </summary>
+    /// <param name="newBaseConfiguration">The new base configuration.</param>
+    public async Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)
+    {
+        _logger.LogInformation("UpdateBaseConfiguration called");
+        
+        if (newBaseConfiguration == null)
+            throw new HubException("Base configuration cannot be null");
+
+        // Update the base configuration (per ConfigurationManagementSpecification §1(3)(a))
+        var updated = await _configurationService.UpdateDefaultsAsync(newBaseConfiguration);
+        
+        // Remove any device overrides that match the new base configuration
+        // Per NetworkingAPISpec §1(1)(o)(ii): "Also removes any configuration values that 
+        // match the new base configuration from all device overrides."
+        var pairedDevices = await _deviceRegistryService.GetAllAsync();
+        foreach (var device in pairedDevices)
+        {
+            var currentOverride = _configurationService.GetOverride(device.DeviceId);
+            if (currentOverride != null)
+            {
+                // Create a new override with only values that differ from the updated base
+                var newOverride = new ConfigurationOverride
+                {
+                    TextSize = (currentOverride.TextSize != null && currentOverride.TextSize != updated.TextSize) ? currentOverride.TextSize : null,
+                    FeedbackStyle = (currentOverride.FeedbackStyle != null && currentOverride.FeedbackStyle != updated.FeedbackStyle) ? currentOverride.FeedbackStyle : null,
+                    TtsEnabled = (currentOverride.TtsEnabled != null && currentOverride.TtsEnabled != updated.TtsEnabled) ? currentOverride.TtsEnabled : null,
+                    AiScaffoldingEnabled = (currentOverride.AiScaffoldingEnabled != null && currentOverride.AiScaffoldingEnabled != updated.AiScaffoldingEnabled) ? currentOverride.AiScaffoldingEnabled : null,
+                    SummarisationEnabled = (currentOverride.SummarisationEnabled != null && currentOverride.SummarisationEnabled != updated.SummarisationEnabled) ? currentOverride.SummarisationEnabled : null,
+                    MascotSelection = (currentOverride.MascotSelection != null && currentOverride.MascotSelection != updated.MascotSelection) ? currentOverride.MascotSelection : null
+                };
+
+                // If the new override is empty, remove it; otherwise update it
+                if (newOverride.IsEmpty)
+                {
+                    _configurationService.RemoveOverride(device.DeviceId);
+                }
+                else
+                {
+                    _configurationService.SetOverride(device.DeviceId, newOverride);
+                }
+            }
+        }
+
+        _logger.LogInformation("Base configuration updated and device overrides reconciled");
+    }
+
+    /// <summary>
+    /// Retrieves the configuration used by a specific device (defaults merged with overrides).
+    /// Per NetworkingAPISpec §1(1)(o)(iii) and ConfigurationManagementSpecification §2(2)(b).
+    /// </summary>
+    /// <param name="deviceId">The device identifier.</param>
+    /// <returns>The compiled configuration for the device.</returns>
+    public async Task<ConfigurationEntity> GetDeviceConfiguration(Guid deviceId)
+    {
+        _logger.LogInformation("GetDeviceConfiguration called for device {DeviceId}", deviceId);
+        
+        // Verify the device is paired
+        var isPaired = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
+        if (!isPaired)
+            throw new HubException($"Device {deviceId} is not paired");
+
+        // Compile and return the configuration (defaults merged with overrides per §2(2)(b))
+        return await _configurationService.CompileConfigAsync(deviceId);
+    }
+
+    /// <summary>
+    /// Updates the configuration overrides for a specific device.
+    /// Per NetworkingAPISpec §1(1)(o)(iv) and ConfigurationManagementSpecification §2(1) and §3(1)(c).
+    /// The overrides are determined by comparing the new device configuration with the base configuration.
+    /// </summary>
+    /// <param name="deviceId">The device identifier.</param>
+    /// <param name="newDeviceConfiguration">The new device configuration (full, not just overrides).</param>
+    public async Task UpdateDeviceConfiguration(Guid deviceId, ConfigurationEntity newDeviceConfiguration)
+    {
+        _logger.LogInformation("UpdateDeviceConfiguration called for device {DeviceId}", deviceId);
+        
+        if (newDeviceConfiguration == null)
+            throw new HubException("Device configuration cannot be null");
+
+        // Verify the device is paired
+        var isPaired = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
+        if (!isPaired)
+            throw new HubException($"Device {deviceId} is not paired");
+
+        // Get the base configuration
+        var baseConfig = await _configurationService.GetDefaultsAsync();
+
+        // Determine which values differ from the base and create override
+        // Per NetworkingAPISpec §1(1)(o)(iv): "The overrides are determined by comparing 
+        // the new device configuration with the base configuration."
+        var newOverride = new ConfigurationOverride
+        {
+            TextSize = (newDeviceConfiguration.TextSize != baseConfig.TextSize) ? newDeviceConfiguration.TextSize : null,
+            FeedbackStyle = (newDeviceConfiguration.FeedbackStyle != baseConfig.FeedbackStyle) ? newDeviceConfiguration.FeedbackStyle : null,
+            TtsEnabled = (newDeviceConfiguration.TtsEnabled != baseConfig.TtsEnabled) ? newDeviceConfiguration.TtsEnabled : null,
+            AiScaffoldingEnabled = (newDeviceConfiguration.AiScaffoldingEnabled != baseConfig.AiScaffoldingEnabled) ? newDeviceConfiguration.AiScaffoldingEnabled : null,
+            SummarisationEnabled = (newDeviceConfiguration.SummarisationEnabled != baseConfig.SummarisationEnabled) ? newDeviceConfiguration.SummarisationEnabled : null,
+            MascotSelection = (newDeviceConfiguration.MascotSelection != baseConfig.MascotSelection) ? newDeviceConfiguration.MascotSelection : null
+        };
+
+        // Set (or remove if empty) the override
+        if (newOverride.IsEmpty)
+        {
+            _configurationService.RemoveOverride(deviceId);
+        }
+        else
+        {
+            _configurationService.SetOverride(deviceId, newOverride);
+        }
+
+        _logger.LogInformation("Device configuration updated for device {DeviceId}", deviceId);
+    }
+
+    #endregion
+}

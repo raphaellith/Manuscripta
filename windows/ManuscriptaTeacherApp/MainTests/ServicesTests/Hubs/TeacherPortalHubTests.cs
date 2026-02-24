@@ -53,6 +53,7 @@ public class TeacherPortalHubTests
     private readonly Mock<IReMarkableDeviceRepository> _mockReMarkableDeviceRepository;
     private readonly Mock<IReMarkableDeploymentService> _mockReMarkableDeploymentService;
     private readonly Mock<IRuntimeDependencyRegistry> _mockRuntimeDependencyRegistry;
+    private readonly Mock<IConfigurationService> _mockConfigurationService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -84,6 +85,7 @@ public class TeacherPortalHubTests
         _mockReMarkableDeviceRepository = new Mock<IReMarkableDeviceRepository>();
         _mockReMarkableDeploymentService = new Mock<IReMarkableDeploymentService>();
         _mockRuntimeDependencyRegistry = new Mock<IRuntimeDependencyRegistry>();
+        _mockConfigurationService = new Mock<IConfigurationService>();
 
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -112,7 +114,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object);
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object);
     }
 
     #region Constructor Tests
@@ -147,7 +150,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -180,7 +184,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -213,7 +218,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -246,7 +252,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -279,7 +286,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -312,7 +320,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -345,7 +354,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -378,7 +388,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -411,7 +422,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -444,7 +456,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -477,7 +490,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -510,7 +524,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -543,7 +558,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -576,7 +592,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     [Fact]
@@ -609,7 +626,8 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object));
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object));
     }
 
     #endregion
@@ -1712,6 +1730,370 @@ public class TeacherPortalHubTests
         protected override Task PerformInstallDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress) => Task.CompletedTask;
         public override Task<bool> UninstallDependencyAsync() => Task.FromResult(true);
         protected override Task<IDependencyService> ProvideDependencyServiceAsync() => Task.FromResult<IDependencyService>(null!);
+    }
+
+    #endregion
+
+    #region Configuration Methods Tests - NetworkingAPISpec §1(1)(o)
+
+    [Fact]
+    public async Task GetBaseConfiguration_ReturnsBaseConfig()
+    {
+        // Arrange
+        var expectedConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        _mockConfigurationService
+            .Setup(s => s.GetDefaultsAsync())
+            .ReturnsAsync(expectedConfig);
+
+        // Act
+        var result = await _hub.GetBaseConfiguration();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(expectedConfig.TextSize, result.TextSize);
+        Assert.Equal(expectedConfig.FeedbackStyle, result.FeedbackStyle);
+        Assert.Equal(expectedConfig.TtsEnabled, result.TtsEnabled);
+        _mockConfigurationService.Verify(s => s.GetDefaultsAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateBaseConfiguration_NullConfig_ThrowsHubException()
+    {
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => _hub.UpdateBaseConfiguration(null!));
+        Assert.Contains("cannot be null", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateBaseConfiguration_UpdatesConfigAndRemovesMatchingOverrides()
+    {
+        // Arrange
+        var deviceId1 = Guid.NewGuid();
+        var deviceId2 = Guid.NewGuid();
+
+        var newBaseConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 14,
+            feedbackStyle: FeedbackStyle.NEUTRAL,
+            ttsEnabled: false,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT2);
+
+        var pairedDevices = new List<PairedDeviceEntity>
+        {
+            new PairedDeviceEntity { DeviceId = deviceId1 },
+            new PairedDeviceEntity { DeviceId = deviceId2 }
+        };
+
+        // Device 1 override: textSize=14 (matches new base), ttsEnabled=false (matches new base)
+        var device1Override = new ConfigurationOverride
+        {
+            TextSize = 14,
+            FeedbackStyle = FeedbackStyle.IMMEDIATE,
+            TtsEnabled = false,
+            AiScaffoldingEnabled = null,
+            SummarisationEnabled = null,
+            MascotSelection = null
+        };
+
+        // Device 2 override: all match new base (should be removed entirely)
+        var device2Override = new ConfigurationOverride
+        {
+            TextSize = 14,
+            FeedbackStyle = FeedbackStyle.NEUTRAL,
+            TtsEnabled = false,
+            AiScaffoldingEnabled = true,
+            SummarisationEnabled = true,
+            MascotSelection = MascotSelection.MASCOT2
+        };
+
+        _mockConfigurationService
+            .Setup(s => s.UpdateDefaultsAsync(It.IsAny<ConfigurationEntity>()))
+            .ReturnsAsync(newBaseConfig);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.GetAllAsync())
+            .ReturnsAsync(pairedDevices);
+
+        _mockConfigurationService
+            .Setup(s => s.GetOverride(deviceId1))
+            .Returns(device1Override);
+
+        _mockConfigurationService
+            .Setup(s => s.GetOverride(deviceId2))
+            .Returns(device2Override);
+
+        // Act
+        await _hub.UpdateBaseConfiguration(newBaseConfig);
+
+        // Assert
+        _mockConfigurationService.Verify(s => s.UpdateDefaultsAsync(newBaseConfig), Times.Once);
+        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Once);
+
+        // Device 1: SetOverride should be called with only FeedbackStyle override remaining
+        _mockConfigurationService.Verify(s => s.SetOverride(deviceId1, It.Is<ConfigurationOverride>(o =>
+            o.TextSize == null &&
+            o.FeedbackStyle == FeedbackStyle.IMMEDIATE &&
+            o.TtsEnabled == null)), Times.Once);
+
+        // Device 2: RemoveOverride should be called (all values match)
+        _mockConfigurationService.Verify(s => s.RemoveOverride(deviceId2), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateBaseConfiguration_NoDevicesOverrides_UpdatesSuccessfully()
+    {
+        // Arrange
+        var newBaseConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 15,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        _mockConfigurationService
+            .Setup(s => s.UpdateDefaultsAsync(It.IsAny<ConfigurationEntity>()))
+            .ReturnsAsync(newBaseConfig);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>());
+
+        // Act
+        await _hub.UpdateBaseConfiguration(newBaseConfig);
+
+        // Assert
+        _mockConfigurationService.Verify(s => s.UpdateDefaultsAsync(newBaseConfig), Times.Once);
+        _mockDeviceRegistryService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDeviceConfiguration_UnpairedDevice_ThrowsHubException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => _hub.GetDeviceConfiguration(deviceId));
+        Assert.Contains("not paired", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetDeviceConfiguration_PairedDevice_ReturnsCompiledConfig()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        var compiledConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 16,
+            feedbackStyle: FeedbackStyle.NEUTRAL,
+            ttsEnabled: false,
+            aiScaffoldingEnabled: false,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT3);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(true);
+
+        _mockConfigurationService
+            .Setup(s => s.CompileConfigAsync(deviceId))
+            .ReturnsAsync(compiledConfig);
+
+        // Act
+        var result = await _hub.GetDeviceConfiguration(deviceId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(compiledConfig.TextSize, result.TextSize);
+        Assert.Equal(compiledConfig.FeedbackStyle, result.FeedbackStyle);
+        Assert.False(result.TtsEnabled);
+        _mockDeviceRegistryService.Verify(s => s.IsDevicePairedAsync(deviceId), Times.Once);
+        _mockConfigurationService.Verify(s => s.CompileConfigAsync(deviceId), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_NullConfig_ThrowsHubException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => 
+            _hub.UpdateDeviceConfiguration(deviceId, null!));
+        Assert.Contains("cannot be null", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_UnpairedDevice_ThrowsHubException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        var config = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => 
+            _hub.UpdateDeviceConfiguration(deviceId, config));
+        Assert.Contains("not paired", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_AllValuesDifferFromBase_SetsOverrides()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        var baseConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        var deviceConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 18,
+            feedbackStyle: FeedbackStyle.NEUTRAL,
+            ttsEnabled: false,
+            aiScaffoldingEnabled: false,
+            summarisationEnabled: false,
+            mascotSelection: MascotSelection.MASCOT3);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(true);
+
+        _mockConfigurationService
+            .Setup(s => s.GetDefaultsAsync())
+            .ReturnsAsync(baseConfig);
+
+        // Act
+        await _hub.UpdateDeviceConfiguration(deviceId, deviceConfig);
+
+        // Assert
+        _mockConfigurationService.Verify(s => s.SetOverride(deviceId, It.Is<ConfigurationOverride>(o =>
+            o.TextSize == 18 &&
+            o.FeedbackStyle == FeedbackStyle.NEUTRAL &&
+            o.TtsEnabled == false &&
+            o.AiScaffoldingEnabled == false &&
+            o.SummarisationEnabled == false &&
+            o.MascotSelection == MascotSelection.MASCOT3)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_SomeValuesDiffer_SetsPartialOverrides()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        var baseConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        // Device config: only textSize and feedbackStyle differ
+        var deviceConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 20,
+            feedbackStyle: FeedbackStyle.NEUTRAL,
+            ttsEnabled: true,  // Same as base
+            aiScaffoldingEnabled: true,  // Same as base
+            summarisationEnabled: true,  // Same as base
+            mascotSelection: MascotSelection.MASCOT1);  // Same as base
+
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(true);
+
+        _mockConfigurationService
+            .Setup(s => s.GetDefaultsAsync())
+            .ReturnsAsync(baseConfig);
+
+        // Act
+        await _hub.UpdateDeviceConfiguration(deviceId, deviceConfig);
+
+        // Assert
+        _mockConfigurationService.Verify(s => s.SetOverride(deviceId, It.Is<ConfigurationOverride>(o =>
+            o.TextSize == 20 &&
+            o.FeedbackStyle == FeedbackStyle.NEUTRAL &&
+            o.TtsEnabled == null &&
+            o.AiScaffoldingEnabled == null &&
+            o.SummarisationEnabled == null &&
+            o.MascotSelection == null)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_NoValuesDiffer_RemovesOverrides()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+
+        var baseConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        // Device config: identical to base (no overrides)
+        var deviceConfig = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        _mockDeviceRegistryService
+            .Setup(s => s.IsDevicePairedAsync(deviceId))
+            .ReturnsAsync(true);
+
+        _mockConfigurationService
+            .Setup(s => s.GetDefaultsAsync())
+            .ReturnsAsync(baseConfig);
+
+        // Act
+        await _hub.UpdateDeviceConfiguration(deviceId, deviceConfig);
+
+        // Assert
+        _mockConfigurationService.Verify(s => s.RemoveOverride(deviceId), Times.Once);
+        _mockConfigurationService.Verify(s => s.SetOverride(It.IsAny<Guid>(), It.IsAny<ConfigurationOverride>()), 
+            Times.Never);
     }
 
     #endregion

@@ -747,6 +747,15 @@ For a list of all server method and client handlers to be implemented for commun
     (c) the frontend shall clearly indicate the status of deployment to each device type separately.
 
 
+## Section 5H - Device configuration
+
+(1) The frontend shall provide means to
+
+    (i) display the configuration associated with any selected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
+
+    (ii) modify any value in the selected device's configuration via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+
+
 ## Section 6 - Functionalities for the "Responses" tab
 
 
@@ -855,4 +864,6 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 7 - Functionalities for the "Settings" tab
 
-**To be confirmed.**
+(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all devices.
+
+(2) The frontend shall provide means to modify any value in the base configuration.
