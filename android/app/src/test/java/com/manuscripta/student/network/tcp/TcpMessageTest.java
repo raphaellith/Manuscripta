@@ -6,12 +6,14 @@ import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 import com.manuscripta.student.network.tcp.message.HandAckMessage;
 import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
 import com.manuscripta.student.network.tcp.message.PairingAckMessage;
 import com.manuscripta.student.network.tcp.message.PairingRequestMessage;
 import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
 import com.manuscripta.student.network.tcp.message.UnpairMessage;
@@ -144,6 +146,33 @@ public class TcpMessageTest {
         DistributeMaterialMessage message = new DistributeMaterialMessage();
         String toString = message.toString();
         assertTrue(toString.contains("DistributeMaterialMessage"));
+    }
+
+    // ==================== ReturnFeedbackMessage Tests ====================
+
+    @Test
+    public void testReturnFeedbackMessage_opcode() {
+        ReturnFeedbackMessage message = new ReturnFeedbackMessage();
+        assertEquals(TcpOpcode.RETURN_FEEDBACK, message.getOpcode());
+    }
+
+    @Test
+    public void testReturnFeedbackMessage_operand_isEmpty() {
+        ReturnFeedbackMessage message = new ReturnFeedbackMessage();
+        assertEquals(0, message.getOperand().length);
+    }
+
+    @Test
+    public void testReturnFeedbackMessage_hasOperand_returnsFalse() {
+        ReturnFeedbackMessage message = new ReturnFeedbackMessage();
+        assertFalse(message.hasOperand());
+    }
+
+    @Test
+    public void testReturnFeedbackMessage_toString() {
+        ReturnFeedbackMessage message = new ReturnFeedbackMessage();
+        String toString = message.toString();
+        assertTrue(toString.contains("ReturnFeedbackMessage"));
     }
 
     // ==================== PairingAckMessage Tests ====================
@@ -364,6 +393,52 @@ public class TcpMessageTest {
         assertTrue(toString.contains("my-device"));
     }
 
+    // ==================== FeedbackAckMessage Tests ====================
+
+    @Test
+    public void testFeedbackAckMessage_opcode() {
+        FeedbackAckMessage message = new FeedbackAckMessage("device-123");
+        assertEquals(TcpOpcode.FEEDBACK_ACK, message.getOpcode());
+    }
+
+    @Test
+    public void testFeedbackAckMessage_deviceId() {
+        String deviceId = "tablet-abc-456";
+        FeedbackAckMessage message = new FeedbackAckMessage(deviceId);
+        assertEquals(deviceId, message.getDeviceId());
+    }
+
+    @Test
+    public void testFeedbackAckMessage_operand_containsUtf8DeviceId() {
+        String deviceId = "device-xyz";
+        FeedbackAckMessage message = new FeedbackAckMessage(deviceId);
+        byte[] operand = message.getOperand();
+        assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testFeedbackAckMessage_hasOperand_returnsTrue() {
+        FeedbackAckMessage message = new FeedbackAckMessage("device");
+        assertTrue(message.hasOperand());
+    }
+
+    @Test
+    public void testFeedbackAckMessage_operand_isDefensiveCopy() {
+        FeedbackAckMessage message = new FeedbackAckMessage("device-123");
+        byte[] operand1 = message.getOperand();
+        byte[] operand2 = message.getOperand();
+        operand1[0] = 0;
+        assertFalse(operand1[0] == operand2[0]);
+    }
+
+    @Test
+    public void testFeedbackAckMessage_toString() {
+        FeedbackAckMessage message = new FeedbackAckMessage("my-device");
+        String toString = message.toString();
+        assertTrue(toString.contains("FeedbackAckMessage"));
+        assertTrue(toString.contains("my-device"));
+    }
+
     // ==================== PairingRequestMessage Tests ====================
 
     @Test
@@ -424,6 +499,14 @@ public class TcpMessageTest {
     @Test
     public void testDistributeAckMessage_emptyDeviceId() {
         DistributeAckMessage message = new DistributeAckMessage("");
+        assertEquals("", message.getDeviceId());
+        assertEquals(0, message.getOperand().length);
+        assertFalse(message.hasOperand());
+    }
+
+    @Test
+    public void testFeedbackAckMessage_emptyDeviceId() {
+        FeedbackAckMessage message = new FeedbackAckMessage("");
         assertEquals("", message.getDeviceId());
         assertEquals(0, message.getOperand().length);
         assertFalse(message.hasOperand());

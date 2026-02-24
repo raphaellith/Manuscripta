@@ -12,8 +12,9 @@ import androidx.core.content.ContextCompat;
 /**
  * Manages the acquisition and release of multicast locks for UDP broadcast reception.
  *
- * <p>On Android 12+, some devices require a multicast lock to receive UDP broadcast
- * packets. This utility encapsulates the lock management and permission checking.</p>
+ * <p>Android devices filter out multicast/broadcast packets by default to save power.
+ * A multicast lock must be held to receive UDP broadcast packets. This utility
+ * encapsulates the lock management and permission checking.</p>
  *
  * <p>Usage:</p>
  * <pre>

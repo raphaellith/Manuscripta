@@ -771,7 +771,39 @@ Create DTOs for device status reporting.
 
 ---
 
-### 3.5 [Android] Define API Endpoints in ApiService
+### 3.5 [Android] Create Feedback DTOs
+
+- Labels: `android`, `network-layer`
+
+**Description:**
+Create DTOs for feedback-related API communication. Feedback is returned by the teacher (Windows) app for student responses to questions without auto-graded `CorrectAnswer` (e.g., written answers).
+
+**Important:** Feedback IDs are assigned by the Windows teacher application. The Android client must preserve these IDs exactly as received.
+
+**Related Requirements:** `Validation Rules.md` §2F, `API Contract.md` §2.6, `Session Interaction.md` §7
+
+**Tasks:**
+- Create `FeedbackDto.java` with @SerializedName annotations:
+  - `id` (String/UUID - assigned by Windows)
+  - `responseId` (String/UUID - references ResponseEntity)
+  - `text` (String, optional - textual feedback)
+  - `marks` (Integer, optional - numerical marks)
+- Create `FeedbackListResponseDto.java` wrapping `List<FeedbackDto>`
+- Create mapper methods (DTO → Domain → Entity)
+- Write unit tests
+
+**Acceptance Criteria:**
+- [ ] FeedbackDto with proper JSON annotations
+- [ ] FeedbackListResponseDto created
+- [ ] Mappers preserve Windows-assigned IDs
+- [ ] Optional fields (`text`, `marks`) handled correctly
+- [ ] 100% test coverage
+
+**Dependencies:** Issue 1.10 (FeedbackEntity from #163)
+
+---
+
+### 3.6 [Android] Define API Endpoints in ApiService
 
 - Labels: `android`, `network-layer`
 
@@ -802,7 +834,7 @@ Define all Retrofit API endpoints for HTTP communication with teacher server, in
 
 ---
 
-### 3.6 [Android] Implement Network Interceptors
+### 3.7 [Android] Implement Network Interceptors
 
 - Labels: `android`, `network-layer`
 
@@ -824,7 +856,7 @@ Create interceptors for logging, error handling, and authentication.
 
 ---
 
-### 3.7 [Android] Implement Connection Manager
+### 3.8 [Android] Implement Connection Manager
 
 - Labels: `android`, `network-layer`
 
@@ -846,7 +878,7 @@ Create utility class for monitoring network connectivity and server reachability
 
 ---
 
-### 3.8 [Android] Implement Retry Policy
+### 3.9 [Android] Implement Retry Policy
 
 - Labels: `android`, `network-layer`
 
@@ -868,7 +900,7 @@ Create retry logic for failed network requests with exponential backoff.
 
 ---
 
-### 3.9 [Android] Implement Response Network Sync
+### 3.10 [Android] Implement Response Network Sync
 
 - Labels: `android`, `network-layer`, `repository-layer`
 

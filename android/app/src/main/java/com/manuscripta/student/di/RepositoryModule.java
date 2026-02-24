@@ -2,18 +2,21 @@ package com.manuscripta.student.di;
 
 import android.content.Context;
 
-import androidx.annotation.Nullable;
-
+import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.FeedbackRepository;
+import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.MaterialRepository;
 import com.manuscripta.student.data.repository.MaterialRepositoryImpl;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
@@ -109,14 +112,47 @@ public class RepositoryModule {
      *
      * @param materialDao        The MaterialDao instance
      * @param fileStorageManager The FileStorageManager instance
-     * @param tcpSocketManager   The TcpSocketManager for sending ACKs (nullable)
+     * @param apiService         The ApiService instance
+     * @param tcpSocketManager   The TcpSocketManager instance
+     * @param pairingManager     The PairingManager instance
      * @return MaterialRepository instance
      */
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
                                                         FileStorageManager fileStorageManager,
-                                                        @Nullable TcpSocketManager tcpSocketManager) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager, tcpSocketManager);
+                                                        ApiService apiService,
+                                                        TcpSocketManager tcpSocketManager,
+                                                        PairingManager pairingManager) {
+        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
+                tcpSocketManager, pairingManager);
+    }
+
+    /**
+     * Provides the FeedbackDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return FeedbackDao instance
+     */
+    @Provides
+    @Singleton
+    public FeedbackDao provideFeedbackDao(ManuscriptaDatabase database) {
+        return database.feedbackDao();
+    }
+
+    /**
+     * Provides the FeedbackRepository implementation.
+     *
+     * @param feedbackDao      The FeedbackDao instance
+     * @param apiService       The ApiService instance
+     * @param tcpSocketManager The TcpSocketManager instance
+     * @return FeedbackRepository instance
+     */
+    @Provides
+    @Singleton
+    public FeedbackRepository provideFeedbackRepository(FeedbackDao feedbackDao,
+                                                        ApiService apiService,
+                                                        TcpSocketManager tcpSocketManager) {
+        return new FeedbackRepositoryImpl(feedbackDao, apiService, tcpSocketManager);
     }
 }

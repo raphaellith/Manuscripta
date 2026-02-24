@@ -80,6 +80,7 @@ dependencies {
     testImplementation(libs.androidx.arch.core.testing)
     testImplementation(libs.androidx.core)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.android.compiler)
 
     androidTestImplementation(libs.androidx.junit)
