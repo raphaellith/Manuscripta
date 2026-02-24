@@ -685,7 +685,7 @@ class SignalRService {
 
     /**
      * Retrieves the base configuration assumed by all devices.
-     * Per NetworkingAPISpec §1(1)(i)(i) and FrontendWorkflowSpecifications §7(1).
+     * Per NetworkingAPISpec §1(1)(o)(i) and FrontendWorkflowSpecifications §7(1).
      */
     public async getBaseConfiguration(): Promise<ConfigurationEntity> {
         return await this.getConnection().invoke<ConfigurationEntity>("GetBaseConfiguration");
