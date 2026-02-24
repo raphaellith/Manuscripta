@@ -12,7 +12,7 @@ namespace Main.Services;
 /// Implements the two-tier model per ConfigurationManagementSpecification:
 /// - Defaults: long-term persisted via <see cref="IDefaultConfigurationRepository"/>
 /// - Per-device overrides: short-term persisted via <see cref="IConfigurationOverrideRepository"/>
-/// Triggers config refresh per ConfigurationManagementSpecification §3(1)(b-c).
+/// Triggers config refresh per ConfigurationManagementSpecification §3(1)(c).
 /// Note: §3(1)(a) (device paired) is handled by <see cref="ConfigurationRefreshListener"/> (singleton).
 /// </summary>
 public class ConfigurationService : IConfigurationService
