@@ -553,7 +553,7 @@ For a list of all server method and client handlers to be implemented for commun
     The frontend shall provide a means for the user to unpair one or more selected devices by calling `Task UnpairDevices(List<Guid> deviceIds)`.
 
 
-## Section 5B — Device Display and Status
+## Section 5B — Device Display, Status and Configuration
 
 (1) The frontend shall display all paired devices in a grid layout.
 
@@ -570,6 +570,8 @@ For a list of all server method and client handlers to be implemented for commun
         (ii) a help request shall be considered acknowledged by the user when the user triggers acknowledgement by dismissing the relevant alert per s5D(2)(c) of this specification.
 
         (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
+    
+    (d) a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
 
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
 
@@ -747,13 +749,16 @@ For a list of all server method and client handlers to be implemented for commun
     (c) the frontend shall clearly indicate the status of deployment to each device type separately.
 
 
-## Section 5H - Device configuration
+## Section 5H - Configuration modal
 
-(1) The frontend shall provide means to
+(1) When the settings button for a displayed device is pressed, the frontend shall display a configuration modal which -
 
-    (i) display the configuration associated with any selected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
+    (a) shows the configuration currently associated with the seelected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
 
-    (ii) modify any value in the selected device's configuration via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+    (b) allows the user to modify any value(s) in the selected device's configuration.
+    
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+
 
 
 ## Section 6 - Functionalities for the "Responses" tab
