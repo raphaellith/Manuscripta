@@ -18,7 +18,9 @@ public class LatexRenderer : ILatexRenderer
         {
             var painter = new MathPainter
             {
-                LaTeX = latex,
+                // CSharpMath has no display mode property; use \displaystyle LaTeX command
+                // to produce larger fractions/sums/integrals for block rendering
+                LaTeX = displayMode ? $@"\displaystyle{{{latex}}}" : latex,
                 FontSize = fontSize,
             };
 
