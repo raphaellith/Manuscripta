@@ -978,7 +978,7 @@ public class TeacherPortalHub : Hub
 
     /// <summary>
     /// Updates the base configuration and removes device overrides that match the new defaults.
-    /// Per NetworkingAPISpec §1(1)(o)(ii) and ConfigurationManagementSpecification §1(6) and §3(1)(b).
+    /// Per NetworkingAPISpec §1(1)(o)(ii) and ConfigurationManagementSpecification §1(6).
     /// </summary>
     /// <param name="newBaseConfiguration">The new base configuration.</param>
     public async Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)
