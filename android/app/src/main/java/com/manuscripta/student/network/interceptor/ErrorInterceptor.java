@@ -42,19 +42,19 @@ public class ErrorInterceptor implements Interceptor {
 
         // Check for HTTP errors
         if (!response.isSuccessful()) {
-            handleError(request, response);
+            logError(request, response);
         }
 
         return response;
     }
 
     /**
-     * Handles HTTP error responses by logging detailed error information.
+     * Logs HTTP error responses with detailed error information.
      *
      * @param request  The HTTP request that resulted in an error
      * @param response The error response
      */
-    private void handleError(@NonNull Request request, @NonNull Response response) {
+    private void logError(@NonNull Request request, @NonNull Response response) {
         int statusCode = response.code();
         String method = request.method();
         String url = request.url().toString();
