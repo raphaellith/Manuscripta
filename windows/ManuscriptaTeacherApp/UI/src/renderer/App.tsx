@@ -11,6 +11,7 @@ import { GlobalAlerts } from './components/layout/GlobalAlerts';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
 import { ClassroomPage } from './components/pages/ClassroomPage';
 import { ResponsesPage } from './components/pages/ResponsesPage';
+import { SettingsPage } from './components/pages/SettingsPage';
 
 type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
@@ -18,6 +19,14 @@ const AppContent: React.FC = () => {
     const { isLoading, error, isConnected, backendState, refreshData } = useAppContext();
     const [activeView, setActiveView] = useState<View>('lesson-library');
 
+    React.useEffect(() => {
+        const handleNavigate = (e: Event) => {
+            const customEvent = e as CustomEvent<{ view: View }>;
+            setActiveView(customEvent.detail.view);
+        };
+        window.addEventListener('app-navigate', handleNavigate);
+        return () => window.removeEventListener('app-navigate', handleNavigate);
+    }, []);
     /**
      * Render connection status indicator.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i): Display reconnecting indicator.
@@ -79,6 +88,8 @@ const AppContent: React.FC = () => {
                 return <ClassroomPage />;
             case 'responses':
                 return <ResponsesPage />;
+            case 'settings':
+                return <SettingsPage />;
             default:
                 return (
                     <div className="text-center py-12">

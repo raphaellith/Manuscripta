@@ -6,21 +6,55 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Manuscripta.Main.Migrations
 {
     /// <inheritdoc />
-    public partial class AddReMarkableDevices : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ReMarkableDevices",
+                name: "Configurations",
                 columns: table => new
                 {
-                    DeviceId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TextSize = table.Column<int>(type: "INTEGER", nullable: false),
+                    FeedbackStyle = table.Column<string>(type: "TEXT", nullable: false),
+                    TtsEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    AiScaffoldingEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    SummarisationEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    MascotSelection = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ReMarkableDevices", x => x.DeviceId);
+                    table.PrimaryKey("PK_Configurations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmailCredentials",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    EmailAddress = table.Column<string>(type: "TEXT", nullable: false),
+                    SmtpHost = table.Column<string>(type: "TEXT", nullable: false),
+                    SmtpPort = table.Column<int>(type: "INTEGER", nullable: false),
+                    Password = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmailCredentials", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ExternalDevices",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Type = table.Column<string>(type: "TEXT", nullable: false),
+                    ConfigurationData = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExternalDevices", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -216,10 +250,16 @@ namespace Manuscripta.Main.Migrations
                 name: "Attachments");
 
             migrationBuilder.DropTable(
-                name: "Questions");
+                name: "Configurations");
 
             migrationBuilder.DropTable(
-                name: "ReMarkableDevices");
+                name: "EmailCredentials");
+
+            migrationBuilder.DropTable(
+                name: "ExternalDevices");
+
+            migrationBuilder.DropTable(
+                name: "Questions");
 
             migrationBuilder.DropTable(
                 name: "SourceDocuments");

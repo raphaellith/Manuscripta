@@ -9,24 +9,7 @@ interface RuntimeDependencyInstallModalProps {
 
 type InstallState = 'prompt' | 'installing' | 'failed';
 
-const DEPENDENCY_METADATA: Record<string, {
-    name: string;
-    description: string;
-    manualUrl: string;
-    manualPathInfo: React.ReactNode;
-}> = {
-    'rmapi': {
-        name: 'rmapi',
-        description: 'The rmapi tool is required to communicate with reMarkable devices.',
-        manualUrl: 'https://github.com/ddvk/rmapi/releases',
-        manualPathInfo: (
-            <>
-                Download <span className="font-mono">rmapi</span> from GitHub and place it at{' '}
-                <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe</span>
-            </>
-        )
-    }
-};
+import { DEPENDENCY_METADATA } from '../../constants/dependencies';
 
 /**
  * Modal component for handling the installation of runtime dependencies.
@@ -113,7 +96,7 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-md space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">
                     Missing Dependencies Required

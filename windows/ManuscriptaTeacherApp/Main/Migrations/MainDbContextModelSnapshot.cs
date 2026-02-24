@@ -70,6 +70,54 @@ namespace Manuscripta.Main.Migrations
                     b.ToTable("Configurations");
                 });
 
+            modelBuilder.Entity("Main.Models.Entities.EmailCredentialEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SmtpHost")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailCredentials");
+                });
+
+            modelBuilder.Entity("Main.Models.Entities.ExternalDeviceEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConfigurationData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExternalDevices");
+                });
+
             modelBuilder.Entity("Main.Models.Entities.LessonEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -177,21 +225,6 @@ namespace Manuscripta.Main.Migrations
                     b.HasIndex("QuestionType");
 
                     b.ToTable("Questions");
-                });
-
-            modelBuilder.Entity("Main.Models.Entities.ReMarkableDeviceEntity", b =>
-                {
-                    b.Property<Guid>("DeviceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("DeviceId");
-
-                    b.ToTable("ReMarkableDevices");
                 });
 
             modelBuilder.Entity("Main.Models.Entities.SourceDocumentEntity", b =>

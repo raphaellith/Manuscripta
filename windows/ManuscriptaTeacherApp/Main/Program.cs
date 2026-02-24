@@ -77,13 +77,15 @@ builder.Services.AddSingleton<Main.Services.Latex.ILatexRenderer, Main.Services.
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
-// Register reMarkable services - NetworkingAPISpec §1(1)(n)
-builder.Services.AddScoped<Main.Services.Repositories.IReMarkableDeviceRepository, Main.Services.Repositories.EfReMarkableDeviceRepository>();
+// Register external device and email services - NetworkingAPISpec §1(1)(n) and §1(1)(o)
+builder.Services.AddScoped<Main.Services.Repositories.IExternalDeviceRepository, Main.Services.Repositories.EfExternalDeviceRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IEmailCredentialRepository, Main.Services.Repositories.EfEmailCredentialRepository>();
 builder.Services.AddSingleton<IRmapiService>(sp =>
     new RmapiService(
         sp.GetRequiredService<ILogger<RmapiService>>(),
         new HttpClient()));
-builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
 
 // Register Runtime Dependency Management
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
@@ -171,7 +173,7 @@ if (!app.Environment.IsEnvironment("Testing"))
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        context.Database.EnsureCreated();
+        // context.Database.Migrate(); // Removed to prevent conflict with EF Core tools
         // DbInitializer.Initialize(context);
 
         // Orphan file removal per PersistenceAndCascadingRules §3
@@ -220,25 +222,28 @@ if (!app.Environment.IsEnvironment("Testing"))
 
         if (Directory.Exists(rmapiConfigDir))
         {
-            var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
-            var allDevices = await remarkableRepo.GetAllAsync();
-            var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+            var externalRepo = services.GetRequiredService<Main.Services.Repositories.IExternalDeviceRepository>();
+            var allDevices = await externalRepo.GetAllAsync();
+            
+            // Only consider REMARKABLE type devices for rmapi config cleanup (PersistenceAndCascadingRules §3(2))
+            var remarkableDevices = allDevices.Where(d => d.Type == Main.Models.Entities.ExternalDeviceType.REMARKABLE).ToList();
+            var validDeviceIds = new HashSet<string>(remarkableDevices.Select(d => d.Id.ToString().ToLowerInvariant()));
 
             var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
                 .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
 
-            foreach (var device in allDevices)
+            foreach (var device in remarkableDevices)
             {
-                if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
+                if (!existingConfigFiles.Contains(device.Id.ToString().ToLowerInvariant()))
                 {
                     try
                     {
-                        await remarkableRepo.DeleteAsync(device.DeviceId);
-                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                        await externalRepo.DeleteAsync(device.Id);
+                        Console.WriteLine($"Deleted orphan ExternalDeviceEntity: {device.Id}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Failed to delete orphan entity {device.DeviceId}: {ex.Message}");
+                        Console.WriteLine($"Failed to delete orphan entity {device.Id}: {ex.Message}");
                     }
                 }
             }
