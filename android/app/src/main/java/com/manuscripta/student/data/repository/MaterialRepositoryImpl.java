@@ -274,11 +274,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     }
 
     @Override
-    public int getMaterialCount() {
-        synchronized (lock) {
-            return materialDao.getCount();
-        }
-    }
+        return materialDao.getCount();
 
     @Override
     public void setMaterialAvailableCallback(@Nullable MaterialAvailableCallback callback) {
