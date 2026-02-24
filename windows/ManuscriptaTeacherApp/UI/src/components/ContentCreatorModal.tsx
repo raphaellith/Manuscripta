@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import type { ContentType, LessonFolder } from '../types';
+import { ModalOverlay } from '../renderer/components/modals/ModalOverlay';
 
 const ageGroupLevels = [
     { value: 0, label: "4-6" },
@@ -48,7 +49,7 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
     }
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
+        <ModalOverlay priority="standard">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-2xl space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">
                     Add Content to <span className="italic">"{unit}"</span>
@@ -168,6 +169,6 @@ export const ContentCreatorModal: React.FC<ContentCreatorModalProps> = ({ unit, 
                 }
                 .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
             `}</style>
-        </div>
+        </ModalOverlay>
     );
 };

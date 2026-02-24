@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import type { ContentItem, VocabularyTerm } from '../types';
 import { stripLinksFromHtml } from '../utils/htmlSanitizer';
+import { ModalOverlay } from '../renderer/components/modals/ModalOverlay';
 
 interface ContentEditorModalProps {
     contentItem: ContentItem;
@@ -132,7 +133,7 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
+        <ModalOverlay priority="standard">
             <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl animate-fade-in-up flex flex-col" style={{ maxHeight: '90vh' }}>
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex-shrink-0">
@@ -189,6 +190,6 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
                 }
                 .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
             `}</style>
-        </div>
+        </ModalOverlay>
     );
 };
