@@ -16,6 +16,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -274,9 +275,9 @@ public class LoggingInterceptorTest {
     }
 
     @Test
-    public void testIntercept_oneShotRequestBody_doesNotConsumeBody() throws IOException {
+    public void testIntercept_oneShotRequestBody_skipsLogging() throws IOException {
         // Arrange
-        final boolean[] bodyWritten = {false};
+        final boolean[] bodyConsumed = {false};
         RequestBody oneShotBody = new RequestBody() {
             @Override
             public okhttp3.MediaType contentType() {
@@ -295,7 +296,8 @@ public class LoggingInterceptorTest {
 
             @Override
             public void writeTo(okio.BufferedSink sink) throws IOException {
-                bodyWritten[0] = true;
+                // If this gets called during logging, it means the body was consumed
+                bodyConsumed[0] = true;
                 sink.writeUtf8("test-data");
             }
         };
@@ -318,11 +320,11 @@ public class LoggingInterceptorTest {
         // Act
         Response result = interceptor.intercept(mockChain);
 
-        // Assert - verify the one-shot body can still be written
+        // Assert - verify the interceptor did NOT consume the one-shot body during logging
         assertNotNull(result);
         assertEquals(200, result.code());
-        // The body should be writable by chain.proceed(), not consumed by logging
-        assertTrue(bodyWritten[0]);
+        // The body should NOT have been written to during logging (one-shot bodies are skipped)
+        assertFalse(bodyConsumed[0]);
     }
 
     // ========== Network error tests ==========
