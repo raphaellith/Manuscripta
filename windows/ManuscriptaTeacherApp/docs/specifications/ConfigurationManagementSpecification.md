@@ -2,7 +2,9 @@
 
 ## Explanatory Note
 
-This document specifies how configurations are to be managed in the Windows Application.
+This document specifies how configurations of Android devices are to be managed in the Windows Application.
+
+This document is applicable only to Android devices. Non-Android devices do not have configurations.
 
 [Explanatory Note: The provisions defining the obligations of Frontend Workflow Specifications should be replaced with appropriate cross-references when corresponding specifications are written there, and when SignalR endpoints are defined.]
 
@@ -18,6 +20,8 @@ This document specifies how configurations are to be managed in the Windows Appl
     (c) the "base configuration" refers to the configuration assumed by all Android devices in the absence of overrides.
 
     (d) a specific Android device is said to have "overridden" the base configuration if its configuration differs from the base configuration. The list of differences is known as its "override".
+
+    (e) a "device" refers to an Android device, unless otherwise specified.
 
 (2) A configuration shall be represented with a `ConfigurationEntity` object, as specified in the Section 2G of the Validation Rules.
 

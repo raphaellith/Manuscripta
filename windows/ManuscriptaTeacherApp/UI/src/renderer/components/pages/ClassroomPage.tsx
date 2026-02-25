@@ -830,19 +830,8 @@ export const ClassroomPage: React.FC = () => {
                                     reMarkable
                                 </span>
 
-                                {/* §5B(2)(d): Settings button for device configuration */}
-                                <button
-                                    className="absolute bottom-2 right-2 p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-sm border border-gray-200 transition-colors"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setConfigDeviceId(device.deviceId);
-                                        setConfigDeviceName(device.name);
-                                    }}
-                                    title="Device Settings"
-                                    aria-label="Device configuration settings"
-                                >
-                                    <SettingsIcon />
-                                </button>
+                                {/* Per ConfigurationManagementSpecification §1(1): configurations only for Android devices */}
+                                {/* No settings button for reMarkable devices */}
                             </div>
                         );
                     })}

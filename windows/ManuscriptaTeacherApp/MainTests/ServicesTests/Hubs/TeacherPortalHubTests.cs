@@ -1880,13 +1880,15 @@ public class TeacherPortalHubTests
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        _mockDeviceRegistryService
-            .Setup(s => s.IsDevicePairedAsync(deviceId))
-            .ReturnsAsync(false);
+        
+        // Mock ValidateAndroidDeviceAsync to throw for non-Android device
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .ThrowsAsync(new ArgumentException($"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.", nameof(deviceId)));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<HubException>(() => _hub.GetDeviceConfiguration(deviceId));
-        Assert.Contains("not paired", ex.Message);
+        Assert.Contains("not a valid Android device", ex.Message);
     }
 
     [Fact]
@@ -1904,9 +1906,10 @@ public class TeacherPortalHubTests
             summarisationEnabled: true,
             mascotSelection: MascotSelection.MASCOT3);
 
-        _mockDeviceRegistryService
-            .Setup(s => s.IsDevicePairedAsync(deviceId))
-            .ReturnsAsync(true);
+        // Mock successful validation
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .Returns(Task.CompletedTask);
 
         _mockConfigurationService
             .Setup(s => s.CompileConfigAsync(deviceId))
@@ -1916,12 +1919,29 @@ public class TeacherPortalHubTests
         var result = await _hub.GetDeviceConfiguration(deviceId);
 
         // Assert
+        Assert.Equal(compiledConfig, result);
         Assert.NotNull(result);
         Assert.Equal(compiledConfig.TextSize, result.TextSize);
         Assert.Equal(compiledConfig.FeedbackStyle, result.FeedbackStyle);
         Assert.False(result.TtsEnabled);
-        _mockDeviceRegistryService.Verify(s => s.IsDevicePairedAsync(deviceId), Times.Once);
+        _mockConfigurationService.Verify(s => s.ValidateAndroidDeviceAsync(deviceId), Times.Once);
         _mockConfigurationService.Verify(s => s.CompileConfigAsync(deviceId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDeviceConfiguration_ReMarkableDevice_ThrowsHubException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        
+        // Mock ValidateAndroidDeviceAsync to throw for non-Android device
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .ThrowsAsync(new ArgumentException($"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.", nameof(deviceId)));
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => _hub.GetDeviceConfiguration(deviceId));
+        Assert.Contains("not a valid Android device", ex.Message);
     }
 
     [Fact]
@@ -1950,14 +1970,15 @@ public class TeacherPortalHubTests
             summarisationEnabled: true,
             mascotSelection: MascotSelection.MASCOT1);
 
-        _mockDeviceRegistryService
-            .Setup(s => s.IsDevicePairedAsync(deviceId))
-            .ReturnsAsync(false);
+        // Mock ValidateAndroidDeviceAsync to throw for non-Android device
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .ThrowsAsync(new ArgumentException($"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.", nameof(deviceId)));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<HubException>(() => 
+        var ex = await Assert.ThrowsAsync<HubException>(() =>
             _hub.UpdateDeviceConfiguration(deviceId, config));
-        Assert.Contains("not paired", ex.Message);
+        Assert.Contains("not a valid Android device", ex.Message);
     }
 
     [Fact]
@@ -1975,6 +1996,11 @@ public class TeacherPortalHubTests
             summarisationEnabled: true,
             mascotSelection: MascotSelection.MASCOT1);
 
+        // Mock successful validation
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .Returns(Task.CompletedTask);
+
         var deviceConfig = new ConfigurationEntity(
             id: Guid.NewGuid(),
             textSize: 18,
@@ -1983,10 +2009,6 @@ public class TeacherPortalHubTests
             aiScaffoldingEnabled: false,
             summarisationEnabled: false,
             mascotSelection: MascotSelection.MASCOT3);
-
-        _mockDeviceRegistryService
-            .Setup(s => s.IsDevicePairedAsync(deviceId))
-            .ReturnsAsync(true);
 
         _mockConfigurationService
             .Setup(s => s.GetDefaultsAsync())
@@ -2034,6 +2056,10 @@ public class TeacherPortalHubTests
             .Setup(s => s.IsDevicePairedAsync(deviceId))
             .ReturnsAsync(true);
 
+        _mockReMarkableDeviceRepository
+            .Setup(r => r.GetByIdAsync(deviceId))
+            .ReturnsAsync((ReMarkableDeviceEntity?)null);
+
         _mockConfigurationService
             .Setup(s => s.GetDefaultsAsync())
             .ReturnsAsync(baseConfig);
@@ -2080,6 +2106,10 @@ public class TeacherPortalHubTests
             .Setup(s => s.IsDevicePairedAsync(deviceId))
             .ReturnsAsync(true);
 
+        _mockReMarkableDeviceRepository
+            .Setup(r => r.GetByIdAsync(deviceId))
+            .ReturnsAsync((ReMarkableDeviceEntity?)null);
+
         _mockConfigurationService
             .Setup(s => s.GetDefaultsAsync())
             .ReturnsAsync(baseConfig);
@@ -2091,6 +2121,31 @@ public class TeacherPortalHubTests
         _mockConfigurationService.Verify(s => s.RemoveOverride(deviceId), Times.Once);
         _mockConfigurationService.Verify(s => s.SetOverride(It.IsAny<Guid>(), It.IsAny<ConfigurationOverride>()), 
             Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateDeviceConfiguration_ReMarkableDevice_ThrowsHubException()
+    {
+        // Arrange
+        var deviceId = Guid.NewGuid();
+        var config = new ConfigurationEntity(
+            id: Guid.NewGuid(),
+            textSize: 12,
+            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            ttsEnabled: true,
+            aiScaffoldingEnabled: true,
+            summarisationEnabled: true,
+            mascotSelection: MascotSelection.MASCOT1);
+
+        // Mock ValidateAndroidDeviceAsync to throw for non-Android device
+        _mockConfigurationService
+            .Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .ThrowsAsync(new ArgumentException($"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.", nameof(deviceId)));
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<HubException>(() => 
+            _hub.UpdateDeviceConfiguration(deviceId, config));
+        Assert.Contains("not a valid Android device", ex.Message);
     }
 
     #endregion

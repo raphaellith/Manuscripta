@@ -997,6 +997,8 @@ public class TeacherPortalHub : Hub
     /// <summary>
     /// Retrieves the configuration used by a specific device (defaults merged with overrides).
     /// Per NetworkingAPISpec §1(1)(o)(iii) and ConfigurationManagementSpecification §2(2)(b).
+    /// Note: Configurations are only applicable to Android devices, not reMarkable devices.
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices."
     /// </summary>
     /// <param name="deviceId">The device identifier.</param>
     /// <returns>The compiled configuration for the device.</returns>
@@ -1004,10 +1006,15 @@ public class TeacherPortalHub : Hub
     {
         _logger.LogInformation("GetDeviceConfiguration called for device {DeviceId}", deviceId);
         
-        // Verify the device is paired
-        var isPaired = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
-        if (!isPaired)
-            throw new HubException($"Device {deviceId} is not paired");
+        // Validate device is an Android device (per ConfigurationManagementSpecification)
+        try
+        {
+            await _configurationService.ValidateAndroidDeviceAsync(deviceId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new HubException(ex.Message);
+        }
 
         // Compile and return the configuration (defaults merged with overrides per §2(2)(b))
         return await _configurationService.CompileConfigAsync(deviceId);
@@ -1017,6 +1024,8 @@ public class TeacherPortalHub : Hub
     /// Updates the configuration overrides for a specific device.
     /// Per NetworkingAPISpec §1(1)(o)(iv) and ConfigurationManagementSpecification §2(1) and §3(1)(c).
     /// The overrides are determined by comparing the new device configuration with the base configuration.
+    /// Note: Configuration updates are only applicable to Android devices, not reMarkable devices.
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices."
     /// </summary>
     /// <param name="deviceId">The device identifier.</param>
     /// <param name="newDeviceConfiguration">The new device configuration (full, not just overrides).</param>
@@ -1027,10 +1036,15 @@ public class TeacherPortalHub : Hub
         if (newDeviceConfiguration == null)
             throw new HubException("Device configuration cannot be null");
 
-        // Verify the device is paired
-        var isPaired = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
-        if (!isPaired)
-            throw new HubException($"Device {deviceId} is not paired");
+        // Validate device is an Android device (per ConfigurationManagementSpecification)
+        try
+        {
+            await _configurationService.ValidateAndroidDeviceAsync(deviceId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new HubException(ex.Message);
+        }
 
         // Get the base configuration
         var baseConfig = await _configurationService.GetDefaultsAsync();

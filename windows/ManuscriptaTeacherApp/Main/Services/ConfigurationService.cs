@@ -188,4 +188,22 @@ public class ConfigurationService : IConfigurationService
     }
 
     #endregion
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices. 
+    /// Non-Android devices do not have configurations."
+    /// This method uses positive detection to verify the device is an Android device (paired in the registry).
+    /// </remarks>
+    public async Task ValidateAndroidDeviceAsync(Guid deviceId)
+    {
+        // Positively check if device is an Android device in the registry
+        var isAndroidDevice = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
+        if (!isAndroidDevice)
+        {
+            throw new ArgumentException(
+                $"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.",
+                nameof(deviceId));
+        }
+    }
 }

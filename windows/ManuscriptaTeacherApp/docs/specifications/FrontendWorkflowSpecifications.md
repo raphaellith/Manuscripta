@@ -869,10 +869,10 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 7 - Functionalities for the "Settings" tab
 
-(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all devices.
+(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
 
 (2) The frontend shall -
 
-    (a) when there are no paired devices, provide means to modify any value in the base configuration; and
+    (a) when there are no paired Android devices, provide means to modify any value in the base configuration; and
 
-    (b) when there are paired devices, prevent the user from modifying the base configuration.
+    (b) when there are paired Android devices, prevent the user from modifying the base configuration.
