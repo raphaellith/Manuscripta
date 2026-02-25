@@ -1,0 +1,62 @@
+
+> manuscripta-teacher-portal@1.0.0 lint
+> eslint --ext .ts,.tsx .
+
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/LessonCreator.tsx
+  3:10  warning  'ContentHeader' is defined but never used            @typescript-eslint/no-unused-vars
+  6:7   warning  'ageGroupLevels' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/LibraryVariantCards.tsx
+  262:46  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  270:49  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  351:47  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/LibraryVariantColumns.tsx
+  23:7  warning  'getTypeStyles' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/LibraryVariantTree.tsx
+  31:7  warning  'CollectionIcon' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  40:7  warning  'UnitIcon' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  48:7  warning  'LessonFolderIcon' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/MaterialFlowVisualizer.tsx
+  10:7  warning  'flowSteps' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  28:7  warning  'materialTypes' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/ResponsesView.tsx
+  192:11  warning  'toggleMark' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/components/Settings.tsx
+  3:10  warning  'ContentHeader' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/main/index.ts
+  41:33  error  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/renderer.d.ts
+  4:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  4:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/renderer/components/editor/EditorModal.tsx
+   11:8   warning  Using exported name 'StarterKit' as identifier for default import   import/no-named-as-default
+   12:8   warning  Using exported name 'Placeholder' as identifier for default import  import/no-named-as-default
+   13:8   warning  Using exported name 'Gapcursor' as identifier for default import    import/no-named-as-default
+   18:8   warning  Using exported name 'Link' as identifier for default import         import/no-named-as-default
+   19:8   warning  Using exported name 'TextAlign' as identifier for default import    import/no-named-as-default
+   20:8   warning  Using exported name 'Underline' as identifier for default import    import/no-named-as-default
+  312:40  warning  '_slice' is defined but never used                                  @typescript-eslint/no-unused-vars
+  834:36  warning  '_e' is defined but never used                                      @typescript-eslint/no-unused-vars
+  841:46  warning  '_e' is defined but never used                                      @typescript-eslint/no-unused-vars
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/renderer/components/modals/RuntimeDependencyInstallModal.tsx
+  88:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/renderer/components/pages/ResponsesPage.tsx
+  14:5   warning  'QuestionEntity' is defined but never used  @typescript-eslint/no-unused-vars
+  98:38  warning  Forbidden non-null assertion                @typescript-eslint/no-non-null-assertion
+
+/Users/nemoshu/Computer science experiments/UCL/COMP0016/Manuscripta/Manuscripta/windows/ManuscriptaTeacherApp/UI/src/renderer/services/signalr/SignalRService.ts
+  151:16  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+✖ 29 problems (1 error, 28 warnings)
+

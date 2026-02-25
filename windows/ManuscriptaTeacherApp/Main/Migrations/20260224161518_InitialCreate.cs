@@ -28,6 +28,7 @@ namespace Manuscripta.Main.Migrations
                     table.PrimaryKey("PK_Configurations", x => x.Id);
                 });
 
+
             migrationBuilder.CreateTable(
                 name: "EmailCredentials",
                 columns: table => new
@@ -241,16 +242,15 @@ namespace Manuscripta.Main.Migrations
                 name: "IX_Units_UnitCollectionId",
                 table: "Units",
                 column: "UnitCollectionId");
+
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Attachments");
-
-            migrationBuilder.DropTable(
                 name: "Configurations");
+
 
             migrationBuilder.DropTable(
                 name: "EmailCredentials");
@@ -275,6 +275,7 @@ namespace Manuscripta.Main.Migrations
 
             migrationBuilder.DropTable(
                 name: "UnitCollections");
+
         }
     }
 }

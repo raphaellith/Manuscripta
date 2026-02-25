@@ -149,3 +149,31 @@ export interface EmailCredentialEntity {
     password?: string; // May be returned as '********' by backend
 }
 
+// ==========================================
+// Configuration Entities - FrontendWorkflowSpec §5H and §7
+// ==========================================
+
+/**
+ * Feedback style values per Validation Rules §2G(1)(b).
+ */
+export type FeedbackStyle = 'IMMEDIATE' | 'NEUTRAL';
+
+/**
+ * Mascot selection values per Validation Rules §2G(1)(f).
+ */
+export type MascotSelection = 'NONE' | 'MASCOT1' | 'MASCOT2' | 'MASCOT3' | 'MASCOT4' | 'MASCOT5';
+
+/**
+ * Configuration entity per Validation Rules §2G(1) and ConfigurationManagementSpecification §1(2).
+ * Represents device configuration settings.
+ */
+export interface ConfigurationEntity {
+    id: string;
+    textSize: number;
+    feedbackStyle: FeedbackStyle;
+    ttsEnabled: boolean;
+    aiScaffoldingEnabled: boolean;
+    summarisationEnabled: boolean;
+    mascotSelection: MascotSelection;
+}
+

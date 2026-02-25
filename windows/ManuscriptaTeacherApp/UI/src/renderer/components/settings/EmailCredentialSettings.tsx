@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import type { EmailCredentialEntity } from '../../models';
 import { useAlertContext } from '../../state/AlertContext';
+import { SETTINGS_SECTION_MAX_WIDTH } from '../../constants/ui';
 
 export const EmailCredentialSettings: React.FC = () => {
     const { addAlert } = useAlertContext();
@@ -106,7 +107,7 @@ export const EmailCredentialSettings: React.FC = () => {
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-8 max-w-2xl mx-auto">
+        <div className={`bg-white rounded-xl shadow-soft border border-gray-100 p-8 ${SETTINGS_SECTION_MAX_WIDTH}`}>
             <h2 className="text-2xl font-serif text-text-heading mb-6 border-b border-gray-100 pb-4">
                 SMTP Email Credentials
             </h2>

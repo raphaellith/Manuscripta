@@ -39,11 +39,6 @@ public class NonTestingWebApplicationFactory : WebApplicationFactory<Program>
             }
 
             services.AddDbContext<MainDbContext>(options => options.UseSqlite(_connection));
-
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-            db.Database.EnsureCreated();
         });
 
         builder.UseEnvironment("Development");

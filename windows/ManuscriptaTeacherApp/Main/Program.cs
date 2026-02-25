@@ -173,7 +173,14 @@ if (!app.Environment.IsEnvironment("Testing"))
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        // context.Database.Migrate(); // Removed to prevent conflict with EF Core tools
+        
+        // Only run migrations if we are NOT running from EF Core tools (to prevent DB lock issues during design time)
+        bool isEfCoreTool = AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "ef");
+        if (!isEfCoreTool)
+        {
+            context.Database.Migrate();
+        }
+        
         // DbInitializer.Initialize(context);
 
         // Orphan file removal per PersistenceAndCascadingRules §3

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
+import { ModalOverlay } from './ModalOverlay';
 
 interface RuntimeDependencyInstallModalProps {
     dependencyIds: string[];
@@ -47,9 +48,9 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                 setState('failed');
                 setErrorMessage('Installation failed to start.');
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             setState('failed');
-            setErrorMessage(e.message || 'An error occurred during installation.');
+            setErrorMessage((e as Error).message || 'An error occurred during installation.');
         }
     };
 
@@ -96,7 +97,7 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <ModalOverlay priority="high">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-md space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">
                     Missing Dependencies Required
@@ -167,6 +168,6 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                 }
                 .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
             `}</style>
-        </div>
+        </ModalOverlay>
     );
 };

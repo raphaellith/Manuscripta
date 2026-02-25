@@ -19,6 +19,8 @@ import type {
 import { RenameDeviceModal } from '../modals/RenameDeviceModal';
 import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { ExternalDevicePairingModal } from '../modals/ExternalDevicePairingModal';
+import { DeviceConfigurationModal } from '../modals/DeviceConfigurationModal';
+import { MissingEmailCredentialsModal } from '../modals/MissingEmailCredentialsModal';
 
 // Icons
 const TabletIcon = () => (
@@ -37,6 +39,13 @@ const EReaderIcon = () => (
 const HandRaisedIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+    </svg>
+);
+
+const SettingsIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
 
@@ -127,6 +136,9 @@ export const ClassroomPage: React.FC = () => {
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
     const [isExternalPairingModalOpen, setIsExternalPairingModalOpen] = useState(false);
+    const [configDeviceId, setConfigDeviceId] = useState<string | null>(null);
+    const [configDeviceName, setConfigDeviceName] = useState<string>('');
+    const [isMissingEmailModalOpen, setIsMissingEmailModalOpen] = useState(false);
 
     // Deployment state - per device progress
     const [deployingDevices, setDeployingDevices] = useState<Set<string>>(new Set());
@@ -215,8 +227,7 @@ export const ClassroomPage: React.FC = () => {
 
         // Subscribe to email credentials specific error
         const unsubEmailNotConfigured = signalRService.onEmailCredentialsNotConfigured(() => {
-            addAlert('control_failed', undefined,
-                `Email credentials are not configured. Please open Settings to configure SMTP credentials.`);
+            setIsMissingEmailModalOpen(true);
         });
 
         // §3A(1): subscribe to missing runtime dependencies
@@ -357,8 +368,7 @@ export const ClassroomPage: React.FC = () => {
         } catch (error: any) {
             console.error('Deploy failed:', error);
             if (error?.message?.includes('EmailCredentialsNotConfigured')) {
-                addAlert('control_failed', undefined, 'SMTP Credentials are not configured. Navigating to Settings.');
-                window.dispatchEvent(new CustomEvent('app-navigate', { detail: { view: 'settings' } }));
+                setIsMissingEmailModalOpen(true);
             } else if (error?.message?.includes('ExternalDeviceAuthInvalid')) {
                 addAlert('control_failed', undefined, 'External Device authentication is invalid. Please repair the device.');
             } else {
@@ -541,6 +551,15 @@ export const ClassroomPage: React.FC = () => {
                     }}
                     pairDevice={(name, type, configurationData) => signalRService.pairExternalDevice(name, type, configurationData)}
                     onDependencyMissing={(dependencyIds) => setMissingDependencyIds(dependencyIds)}
+                />
+            )}
+
+            {/* Device Configuration Modal — per §5H */}
+            {configDeviceId && (
+                <DeviceConfigurationModal
+                    deviceId={configDeviceId}
+                    deviceName={configDeviceName}
+                    onClose={() => setConfigDeviceId(null)}
                 />
             )}
 
@@ -737,7 +756,7 @@ export const ClassroomPage: React.FC = () => {
                                         toggleDeviceSelection(device.deviceId);
                                     }
                                 }}
-                                className={`rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border
+                                className={`relative rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border
                   ${backgroundClass} ${isSelected ? `ring-2 ${effectiveStyle.ringColor} ring-offset-2 ring-offset-brand-cream` : ''} 
                   ${isNeedingHelp ? 'animate-pulse-border' : ''}
                   focus:outline-none focus:ring-2 ${effectiveStyle.ringColor}`}
@@ -773,6 +792,20 @@ export const ClassroomPage: React.FC = () => {
                                         Acknowledge
                                     </button>
                                 )}
+
+                                {/* §5B(5): Settings button for device configuration */}
+                                <button
+                                    className="absolute bottom-2 right-2 p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-sm border border-gray-200 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setConfigDeviceId(device.deviceId);
+                                        setConfigDeviceName(device.name);
+                                    }}
+                                    title="Device Settings"
+                                    aria-label="Device configuration settings"
+                                >
+                                    <SettingsIcon />
+                                </button>
                             </div>
                         );
                     })}
@@ -795,7 +828,7 @@ export const ClassroomPage: React.FC = () => {
                                         toggleExternalSelection(device.id);
                                     }
                                 }}
-                                className={`rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border relative
+                                className={`relative rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border
                   ${isSelected ? 'bg-gray-200 border-gray-400 ring-2 ring-gray-500 ring-offset-2 ring-offset-brand-cream' : 'bg-gray-50 border-gray-200'}
                   focus:outline-none focus:ring-2 ring-gray-500`}
                             >
@@ -815,10 +848,24 @@ export const ClassroomPage: React.FC = () => {
                                 <span className="text-xs font-semibold px-2 py-1 rounded-full mt-2 uppercase tracking-wide bg-gray-600 text-white">
                                     {device.type === 'REMARKABLE' ? 'reMarkable' : 'Kindle'}
                                 </span>
+
+                                {/* Per ConfigurationManagementSpecification §1(1): configurations only for Android devices */}
+                                {/* No settings button for reMarkable devices */}
                             </div>
                         );
                     })}
                 </div>
+            )}
+
+            {isMissingEmailModalOpen && (
+                <MissingEmailCredentialsModal
+                    isOpen={isMissingEmailModalOpen}
+                    onClose={() => setIsMissingEmailModalOpen(false)}
+                    onGoToSettings={() => {
+                        setIsMissingEmailModalOpen(false);
+                        window.dispatchEvent(new CustomEvent('app-navigate', { detail: { view: 'settings' } }));
+                    }}
+                />
             )}
 
             <style>{`

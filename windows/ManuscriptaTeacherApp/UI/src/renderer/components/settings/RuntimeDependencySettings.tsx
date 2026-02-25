@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import { DEPENDENCY_METADATA } from '../../constants/dependencies';
+import { SETTINGS_SECTION_MAX_WIDTH } from '../../constants/ui';
 
 type InstallState = 'idle' | 'checking' | 'installing' | 'failed' | 'success';
 
@@ -26,7 +27,6 @@ const DependencyItem: React.FC<{ id: string }> = ({ id }) => {
     // Check availability on mount
     useEffect(() => {
         checkAvailability();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     // Subscribe to install progress
@@ -76,11 +76,11 @@ const DependencyItem: React.FC<{ id: string }> = ({ id }) => {
                 isAvailable: available,
                 state: 'idle',
             }));
-        } catch (e: any) {
+        } catch (e: unknown) {
             setDep(prev => ({
                 ...prev,
                 state: 'failed',
-                errorMessage: e.message || 'Failed to check status.'
+                errorMessage: (e as Error).message || 'Failed to check status.'
             }));
         }
     };
@@ -103,11 +103,11 @@ const DependencyItem: React.FC<{ id: string }> = ({ id }) => {
                     errorMessage: 'Installation failed to start.'
                 }));
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             setDep(prev => ({
                 ...prev,
                 state: 'failed',
-                errorMessage: e.message || 'An error occurred during installation.'
+                errorMessage: (e as Error).message || 'An error occurred during installation.'
             }));
         }
     };
@@ -192,7 +192,7 @@ export const RuntimeDependencySettings: React.FC = () => {
     const dependencyIds = Object.keys(DEPENDENCY_METADATA);
 
     return (
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-8 max-w-2xl mx-auto">
+        <div className={`bg-white rounded-xl shadow-soft border border-gray-100 p-8 ${SETTINGS_SECTION_MAX_WIDTH}`}>
             <h2 className="text-2xl font-serif text-text-heading mb-6 border-b border-gray-100 pb-4">
                 Runtime Dependencies
             </h2>

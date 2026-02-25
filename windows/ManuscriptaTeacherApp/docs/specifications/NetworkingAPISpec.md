@@ -157,6 +157,16 @@ For a description of how these server methods and client handlers are expected t
 
         (iv) `Task<bool> CheckEmailCredentialAvailability()`: Checks whether valid email credentials have been configured per Email Handling Specification Section 2A(1). Returns `true` if available, `false` otherwise.
 
+    (p) Methods for base configuration and device-specific overrides.
+
+        (i) `Task<ConfigurationEntity> GetBaseConfiguration()`: Retrieves the base configuration assumed by all Android devices.
+
+        (ii) `Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)`: Updates the base configuration.
+
+        (iii) `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`: Retrieves the configuration used by an Android device, identified by its UUID.
+
+        (iv) `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`: Updates the overrides associated with an Android device, identified by its UUID. The overrides are determined by comparing the new device configuration with the base configuration.
+
 
 ### Section 2 - Frontend handlers
 
