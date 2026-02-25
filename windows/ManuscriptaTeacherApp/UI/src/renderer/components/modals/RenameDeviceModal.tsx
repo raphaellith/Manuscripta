@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ModalOverlay } from './ModalOverlay';
 
 interface RenameDeviceModalProps {
     currentName: string;
@@ -44,7 +45,7 @@ export const RenameDeviceModal: React.FC<RenameDeviceModalProps> = ({ currentNam
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <ModalOverlay priority="low">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-md space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">Rename Device</h2>
 
@@ -86,6 +87,6 @@ export const RenameDeviceModal: React.FC<RenameDeviceModalProps> = ({ currentNam
         }
         .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
       `}</style>
-        </div>
+        </ModalOverlay>
     );
 };
