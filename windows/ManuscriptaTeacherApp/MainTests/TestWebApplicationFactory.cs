@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
 using Main.Data;
@@ -18,16 +20,16 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     public TestWebApplicationFactory()
     {
-        _keepAliveConnection = new SqliteConnection($"Data Source={_databaseName};Mode=Memory;Cache=Shared");
-        _keepAliveConnection.Open();
-    }
-
-    public TestWebApplicationFactory()
-    {
         // Disable ChromaDB auto-start for tests
         // Use the __ separator convention so .NET configuration maps this
         // to the "ChromaDB:AutoStart" key read by Program.cs.
         Environment.SetEnvironmentVariable("ChromaDB__AutoStart", "false");
+        
+        // Set the environment to Testing before the host is built
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
+
+        _keepAliveConnection = new SqliteConnection($"Data Source={_databaseName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection.Open();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -51,9 +53,12 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             }
 
             // Add a unique in-memory SQLite database for this test
+            // Configure to suppress PendingModelChangesWarning since we're using an in-memory database
             services.AddDbContext<MainDbContext>(options =>
             {
                 options.UseSqlite($"Data Source={_databaseName};Mode=Memory;Cache=Shared");
+                options.ConfigureWarnings(w => 
+                    w.Ignore(RelationalEventId.PendingModelChangesWarning));
             });
 
             // Ensure the database is created
@@ -62,8 +67,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var db = scope.ServiceProvider.GetRequiredService<MainDbContext>();
             db.Database.EnsureCreated();
         });
-
-        builder.UseEnvironment("Testing");
     }
 
     protected override void Dispose(bool disposing)

@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Main.Data;
 
@@ -42,7 +43,13 @@ public class NonTestingWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(dbContextDescriptor);
             }
 
-            services.AddDbContext<MainDbContext>(options => options.UseSqlite(_connection));
+            services.AddDbContext<MainDbContext>(options => 
+            {
+                options.UseSqlite(_connection);
+                // Suppress PendingModelChangesWarning since we're using an in-memory database for testing
+                options.ConfigureWarnings(w => 
+                    w.Ignore(RelationalEventId.PendingModelChangesWarning));
+            });
 
             // Program.cs runs migrations in non-Testing environments; avoid EnsureCreated to prevent conflicts.
         });

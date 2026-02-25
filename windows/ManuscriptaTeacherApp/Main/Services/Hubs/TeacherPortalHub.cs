@@ -62,13 +62,6 @@ public class TeacherPortalHub : Hub
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
 
-
-    private readonly IMaterialGenerationService _materialGenerationService;
-    private readonly IContentModificationService _contentModificationService;
-    private readonly IEmbeddingStatusService _embeddingStatusService;
-    private readonly FeedbackQueueService _feedbackQueueService;
-    private readonly IEmbeddingService _documentEmbeddingService;
-
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
         IUnitService unitService,

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using ChromaDB.Client;
 using System.Diagnostics;
 using System.Net.Http;
@@ -51,7 +52,15 @@ else
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
-    options.UseSqlite(dbConnectionString));
+{
+    options.UseSqlite(dbConnectionString);
+    // Suppress PendingModelChangesWarning in Testing environment (for integration tests with in-memory databases)
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        options.ConfigureWarnings(w => 
+            w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+});
 
 // Configure ChromaDB for client-server mode
 // See GenAISpec.md §2(3)
