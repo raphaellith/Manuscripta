@@ -952,6 +952,11 @@ public class TeacherPortalHub : Hub
 
     public async Task SaveEmailCredentials(EmailCredentialEntity credentials)
     {
+        if (string.IsNullOrWhiteSpace(credentials.Password))
+        {
+            throw new HubException("Password must be explicitly provided or match the placeholder exactly.");
+        }
+
         if (credentials.Password == "********")
         {
             var existing = await _emailCredentialRepository.GetCredentialsAsync();

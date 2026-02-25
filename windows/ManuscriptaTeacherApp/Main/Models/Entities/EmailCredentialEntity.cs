@@ -20,7 +20,8 @@ public class EmailCredentialEntity
     /// The encrypted password or app-specific password.
     /// Decryption/Encryption MUST be handled via DPAPI before saving or using.
     /// </summary>
-    public string Password { get; set; }
+    [JsonInclude]
+    public string Password { get; internal set; }
 
     public EmailCredentialEntity() { }
 

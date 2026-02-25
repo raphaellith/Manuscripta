@@ -37,6 +37,8 @@ public class ExternalDeviceEntity
     /// </summary>
     public string? ConfigurationData { get; set; }
 
+    public ExternalDeviceEntity() { }
+
     public ExternalDeviceEntity(Guid id, string name, ExternalDeviceType type)
     {
         Id = id;
