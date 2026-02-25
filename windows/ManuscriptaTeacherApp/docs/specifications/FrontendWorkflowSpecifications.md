@@ -571,7 +571,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
     
-    (d) a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
+    (d) [Deleted]
 
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
 
@@ -583,6 +583,9 @@ For a list of all server method and client handlers to be implemented for commun
     (a) by calling `Task UpdatePairedDevice(PairedDeviceEntity entity)` as defined in the Networking API Specification;
 
     (b) the new name shall be persisted on the Windows device and shall not affect the Android device.
+
+
+(5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
 
 
 ## Section 5C — Device Control
@@ -751,7 +754,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 5H - Configuration modal
 
-(1) When the settings button for a displayed device is pressed, the frontend shall display a configuration modal which -
+(1) When the settings button for a displayed Android device is pressed, the frontend shall display a configuration modal which -
 
     (a) shows the configuration currently associated with the selected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
 

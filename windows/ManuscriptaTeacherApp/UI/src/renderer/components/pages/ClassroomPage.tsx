@@ -774,7 +774,7 @@ export const ClassroomPage: React.FC = () => {
                                     </button>
                                 )}
 
-                                {/* §5B(2)(d): Settings button for device configuration */}
+                                {/* §5B(5): Settings button for device configuration */}
                                 <button
                                     className="absolute bottom-2 right-2 p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-sm border border-gray-200 transition-colors"
                                     onClick={(e) => {
