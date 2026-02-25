@@ -95,17 +95,22 @@ public class LoggingInterceptor implements Interceptor {
         // Log request body if present and within size limit
         if (request.body() != null) {
             try {
-                long contentLength = request.body().contentLength();
-                if (contentLength < 0) {
-                    Log.d(TAG, "│ Body: <unknown length, skipped>");
-                } else if (contentLength > MAX_BODY_SIZE) {
-                    Log.d(TAG, String.format("│ Body: <too large to log: %d bytes>", contentLength));
+                // Skip logging one-shot bodies (file uploads, streams) to avoid consuming them
+                if (request.body().isOneShot()) {
+                    Log.d(TAG, "│ Body: <one-shot body, skipped to preserve content>");
                 } else {
-                    Buffer buffer = new Buffer();
-                    request.body().writeTo(buffer);
-                    String body = buffer.readUtf8();
-                    Log.d(TAG, "│ Body:");
-                    Log.d(TAG, "│   " + body);
+                    long contentLength = request.body().contentLength();
+                    if (contentLength < 0) {
+                        Log.d(TAG, "│ Body: <unknown length, skipped>");
+                    } else if (contentLength > MAX_BODY_SIZE) {
+                        Log.d(TAG, String.format("│ Body: <too large to log: %d bytes>", contentLength));
+                    } else {
+                        Buffer buffer = new Buffer();
+                        request.body().writeTo(buffer);
+                        String body = buffer.readUtf8();
+                        Log.d(TAG, "│ Body:");
+                        Log.d(TAG, "│   " + body);
+                    }
                 }
             } catch (IOException e) {
                 Log.e(TAG, "│ Failed to read request body: " + e.getMessage());
