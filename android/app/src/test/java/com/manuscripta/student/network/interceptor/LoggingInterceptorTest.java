@@ -18,6 +18,7 @@ import okhttp3.ResponseBody;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -321,7 +322,7 @@ public class LoggingInterceptorTest {
         assertNotNull(result);
         assertEquals(200, result.code());
         // The body should be writable by chain.proceed(), not consumed by logging
-        assertTrue("One-shot request body should be writable after logging", bodyWritten[0]);
+        assertTrue(bodyWritten[0]);
     }
 
     // ========== Network error tests ==========
