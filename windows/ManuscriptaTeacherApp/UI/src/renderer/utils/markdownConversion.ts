@@ -6,6 +6,7 @@
 
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import { stripLinksFromHtml } from '../../utils/htmlSanitizer';
 
 // Configure Turndown for HTML → Markdown conversion
 const turndownService = new TurndownService({
@@ -14,7 +15,9 @@ const turndownService = new TurndownService({
     bulletListMarker: '-',
     emDelimiter: '*',
     strongDelimiter: '**',
-    // Handle empty/blank elements - needed for question refs and pdf embeds
+    // Handle empty/blank elements - needed for question refs, pdf embeds, and LaTeX
+    // Turndown skips all custom addRule rules for blank nodes (no text content)
+    // and goes straight to blankReplacement, so all blank-element conversions must live here.
     blankReplacement: function (content, node) {
         const element = node as HTMLElement;
         if (element.nodeName === 'DIV' && element.hasAttribute('data-question-id')) {
@@ -24,6 +27,47 @@ const turndownService = new TurndownService({
         if (element.nodeName === 'DIV' && element.hasAttribute('data-pdf-id')) {
             const pdfId = element.getAttribute('data-pdf-id');
             return `\n!!! pdf id="${pdfId}"\n`;
+        }
+        // Inline LaTeX per Material Encoding Spec §2(7)(a)
+        // collapseWhitespace strips spaces from text nodes adjacent to empty inline elements,
+        // so we compensate by adding spaces when adjacent text nodes have lost their spacing.
+        if (element.nodeName === 'SPAN' && element.hasAttribute('data-latex')) {
+            const latex = element.getAttribute('data-latex') || '';
+            const prev = element.previousSibling;
+            const next = element.nextSibling;
+            // Add leading space if previous text doesn't already end with whitespace
+            const needsLeadingSpace = prev && prev.nodeType === 3 && !/\s$/.test(prev.nodeValue || '');
+            // Add trailing space if next text doesn't already start with whitespace
+            const needsTrailingSpace = next && next.nodeType === 3 && !/^\s/.test(next.nodeValue || '');
+            return (needsLeadingSpace ? ' ' : '') + `$${latex}$` + (needsTrailingSpace ? ' ' : '');
+        }
+        // Block LaTeX per Material Encoding Spec §2(7)(b)
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-block-latex')) {
+            const latex = element.getAttribute('data-block-latex') || '';
+            return `\n$$${latex}$$\n`;
+        }
+        // When a P/DIV is blank because it only contains empty LaTeX spans,
+        // Turndown considers the parent blank and never processes the children.
+        // Scan children and serialize any LaTeX nodes found.
+        if (element.nodeName === 'P' || element.nodeName === 'DIV') {
+            const children = element.childNodes;
+            let latexParts = '';
+            let hasLatex = false;
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i] as HTMLElement;
+                if (child.nodeType === 1) { // Element node
+                    if (child.nodeName === 'SPAN' && child.hasAttribute('data-latex')) {
+                        latexParts += `$${child.getAttribute('data-latex') || ''}$`;
+                        hasLatex = true;
+                    } else if (child.nodeName === 'DIV' && child.hasAttribute('data-block-latex')) {
+                        latexParts += `$$${child.getAttribute('data-block-latex') || ''}$$`;
+                        hasLatex = true;
+                    }
+                }
+            }
+            if (hasLatex) {
+                return '\n\n' + latexParts + '\n\n';
+            }
         }
         // Default behavior for other blank elements
         return node.nodeName === 'DIV' || node.nodeName === 'P' ? '\n\n' : '';
@@ -142,6 +186,7 @@ turndownService.addRule('pdfEmbed', {
     }
 });
 
+
 // Prevent Turndown from stripping these custom divs (they have no visible content)
 turndownService.keep(function (node) {
     const element = node as HTMLElement;
@@ -154,7 +199,7 @@ turndownService.keep(function (node) {
  */
 export function htmlToMarkdown(html: string): string {
     if (!html || html.trim() === '') return '';
-    return turndownService.turndown(html);
+    return turndownService.turndown(stripLinksFromHtml(html));
 }
 
 /**
@@ -183,6 +228,20 @@ export function markdownToHtml(markdown: string): string {
     processed = processed.replace(
         /^!!! pdf id="([^"]+)"$/gm,
         '<div class="pdf-embed" data-pdf-id="$1">[PDF: $1]</div>'
+    );
+
+    // Convert block LaTeX $$...$$ to TipTap block latex nodes per §2(7)(b)
+    // Must be processed before inline LaTeX to prevent $$ being matched by single $
+    processed = processed.replace(
+        /\$\$([\s\S]*?)\$\$/g,
+        (_match, latex) => `<div data-block-latex="${latex.trim()}"></div>`
+    );
+
+    // Convert inline LaTeX $...$ to TipTap inline latex nodes per §2(7)(a)
+    // Negative lookbehind/lookahead for $ to avoid matching $$ remnants
+    processed = processed.replace(
+        /(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g,
+        (_match, latex) => `<span data-latex="${latex.trim()}"></span>`
     );
 
     // Convert !!! question markers to placeholder divs
@@ -224,7 +283,7 @@ export function markdownToHtml(markdown: string): string {
         }
     );
 
-    return html;
+    return stripLinksFromHtml(html);
 }
 
 /**

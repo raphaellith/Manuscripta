@@ -11,6 +11,7 @@ import { GlobalAlerts } from './components/layout/GlobalAlerts';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
 import { ClassroomPage } from './components/pages/ClassroomPage';
 import { ResponsesPage } from './components/pages/ResponsesPage';
+import { SettingsPage } from './components/pages/SettingsPage';
 
 type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
@@ -79,6 +80,8 @@ const AppContent: React.FC = () => {
                 return <ClassroomPage />;
             case 'responses':
                 return <ResponsesPage />;
+            case 'settings':
+                return <SettingsPage />;
             default:
                 return (
                     <div className="text-center py-12">
@@ -97,7 +100,7 @@ const AppContent: React.FC = () => {
             {renderApplicationStatus()}
 
             {/* Floating Header Wrapper */}
-            <div className="absolute top-0 left-0 w-full z-40 pointer-events-none">
+            <div className="absolute top-0 left-0 w-full z-10 pointer-events-none">
                 <Header activeView={activeView} setActiveView={setActiveView} />
             </div>
 
@@ -107,7 +110,7 @@ const AppContent: React.FC = () => {
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-yellow rounded-full blur-3xl opacity-20 pointer-events-none -z-0 translate-x-1/3 -translate-y-1/3 mix-blend-multiply"></div>
                     <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-blue rounded-full blur-3xl opacity-20 pointer-events-none -z-0 -translate-x-1/3 translate-y-1/3 mix-blend-multiply"></div>
 
-                    <div className="relative z-10">
+                    <div className="relative">
                         {renderView()}
                     </div>
                 </div>

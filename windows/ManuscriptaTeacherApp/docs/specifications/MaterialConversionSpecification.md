@@ -91,7 +91,12 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 (6) **LaTeX**. Mathematical notation (§2(7) of Material Encoding Specification) shall be rendered as follows:
 
-    (a) Inline LaTeX (`$...$`) shall be rendered inline with surrounding text.
+    (a) Inline LaTeX (`$...$`) shall be rendered inline with surrounding text, using the QuestPDF `Text` descriptor's `Element()` method to embed rendered images within the text flow.
+
+    Paragraphs containing inline LaTeX shall be rendered as plain text with embedded LaTeX images. Standard markdown formatting (bold, italic) within such paragraphs shall not be preserved.
+
+    [Explanatory Note: QuestPDF.Markdown does not support inline image embedding. Paragraphs containing inline LaTeX therefore bypass the Markdown extension and use the QuestPDF Text API directly, which supports inline element embedding but not automatic markdown parsing.]
+
     (b) Block LaTeX (`$$...$$`) shall be rendered as a centred block element.
     (c) The service shall use a LaTeX rendering engine to convert notation to vector graphics or high-resolution images.
 

@@ -17,7 +17,8 @@ This document is effective for the Windows app only.
     (e) `LessonDataEntity`.
     (f) `SourceDocumentEntity`.
     (g) `AttachmentEntity`.
-    (h) `ReMarkableDeviceEntity`.
+    (h) `ConfigurationEntity`, for the purpose of storing default configuration values, as defined in Configuration Management Specification.
+    (i) `ReMarkableDeviceEntity`.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
@@ -82,3 +83,4 @@ This document is effective for the Windows app only.
     (a) Retrieve all `ReMarkableDeviceEntity` entities from the database.
     (b) For each `.conf` file placed under the `%AppData%\ManuscriptaTeacherApp\rmapi` directory, check if its base name (without extension) matches a `DeviceId` of a `ReMarkableDeviceEntity`.
     (c) If a file is not associated with a `ReMarkableDeviceEntity`, delete the file.
+    (d) If a `RemarkableDeviceEntity` is not associated with a `.conf` file, delete the entity.

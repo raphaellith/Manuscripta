@@ -4,6 +4,9 @@ using Xunit;
 
 namespace MainTests.ControllersTests;
 
+using Microsoft.Extensions.DependencyInjection;
+using Main.Services;
+
 /// <summary>
 /// Integration tests for host-based routing in non-Testing environments.
 /// Verifies controllers are restricted to HTTP API port, while health and SignalR stay open.
@@ -21,7 +24,16 @@ public class ApiPortRoutingTests : IClassFixture<NonTestingWebApplicationFactory
     public async Task Controllers_Accessible_OnHttpPort_InNonTesting()
     {
         using var client = _factory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/config/{Guid.NewGuid()}");
+        var deviceId = Guid.NewGuid();
+
+        // Register the device so the request is not rejected
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var deviceRegistry = scope.ServiceProvider.GetRequiredService<IDeviceRegistryService>();
+            await deviceRegistry.RegisterDeviceAsync(deviceId, "Test Device");
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/config/{deviceId}");
         request.Headers.Host = "localhost:5911";
 
         var response = await client.SendAsync(request);

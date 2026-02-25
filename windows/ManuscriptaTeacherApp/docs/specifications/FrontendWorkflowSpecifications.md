@@ -211,6 +211,53 @@ For a list of all server method and client handlers to be implemented for commun
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
 
+## Section 3A - Runtime Dependency Management
+
+(1) The backend may notify the frontend of a missing runtime dependency by invoking the `RuntimeDependencyNotInstalled` handler specified in the Networking API Specification Section 2(1)(f)(i).
+
+(2) When such notification is received, the frontend shall —
+
+    (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies;
+
+    (b) if confirmation is received, for each missing runtime dependency, sequentially —
+
+        (i) call `Task<bool> InstallRuntimeDependency(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(ii);
+
+        (ii) subscribe to the `RuntimeDependencyInstallProgress` handler specified in the Networking API Specification Section 2(1)(f)(ii);
+
+        (iii) display a modal with —
+
+            (A) the current phase of the installation process, being one of "Downloading", "Verifying", "Installing";
+
+            (B) where the phase is "Downloading", a progress bar indicating the percentage of the download completed;
+
+            (C) where the phase is "Verifying" or "Installing", an indeterminate progress indicator;
+
+    (c) [DELETED]
+
+    (d) if the installation fails —
+
+        (i) display an error message with the error details received from the `RuntimeDependencyInstallProgress` handler;
+
+        (ii) offer the user the option to install manually per subsection (3); and
+
+        (iii) offer the user the option to cancel the operation.
+
+(3) When manual installation is selected, or when automatic installation fails and the user selects manual installation, the frontend shall —
+
+    (a) open the user's default browser to the download page for the dependency;
+
+    (b) display instructions for the user to download and place the binary at the expected path; and
+
+    (c) provide a button to re-check the availability of the dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(i).
+
+(4) The frontend shall provide an option in the Settings interface to —
+
+    (a) re-check the availability of each runtime dependency by calling the method in paragraph (3)(c); and
+
+    (b) reinstall each runtime dependency by calling the method in subparagraph (2)(b)(i).
+
+
 ## Section 4 - Functionalities for the "Library" tab
 
 (1) When the "Library" tab is open on the frontend, the lesson library must show all unit collections, units, lessons and materials in accordance with the entities previously retrieved during initialisation in S3(1).
@@ -348,11 +395,21 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) undo and redo changes to the material.  
 
+(2A) **LaTeX Formatting**
+
+    The frontend shall disable rich text formatting (bold, italic, underline) in paragraphs containing inline or block LaTeX nodes. When a LaTeX node is inserted into a paragraph, any existing formatting marks in that paragraph shall be removed.
+
+    [Explanatory Note: Pursuitant to Material Conversion Specifications, Section 3A(6)(a), LaTeX and markdown formatting may not coexist in the same paragraph.]
+
 (3) **Saving Content**
 
     The editor modal shall -
 
     (a) automatically save any changes to the material (not including embedded questions) by calling the appropriate update endpoint, as specified in s1(1)(d)(ii) of the Networking API Specification, at most one second after each change.
+
+    (a1) strip any syntax or tags that is not permitted per Material Encoding Specification §1(4) from the material content before saving, preserving only the visible text content within such tags. This includes -
+
+        (i) hyperlinks.
 
     (b) provide a "save" button when creating or editing an embedded question. When it is clicked -
 
@@ -561,7 +618,7 @@ For a list of all server method and client handlers to be implemented for commun
     The frontend shall provide a means for the user to unpair one or more selected devices by calling `Task UnpairDevices(List<Guid> deviceIds)`.
 
 
-## Section 5B — Device Display and Status
+## Section 5B — Device Display, Status and Configuration
 
 (1) The frontend shall display all paired devices in a grid layout.
 
@@ -578,6 +635,8 @@ For a list of all server method and client handlers to be implemented for commun
         (ii) a help request shall be considered acknowledged by the user when the user triggers acknowledgement by dismissing the relevant alert per s5D(2)(c) of this specification.
 
         (iii) the frontend shall provide button, within the grid, to acknowledge a help request. When the user clicks this button, the help request shall also be considered acknowledged.
+    
+    (d) [Deleted]
 
 (3) The frontend shall update the displayed status when the backend invokes the `UpdateDeviceStatus` client handler, as defined in s2(1)(a) of the Networking API Specification.
 
@@ -589,6 +648,9 @@ For a list of all server method and client handlers to be implemented for commun
     (a) by calling `Task UpdatePairedDevice(PairedDeviceEntity entity)` as defined in the Networking API Specification;
 
     (b) the new name shall be persisted on the Windows device and shall not affect the Android device.
+
+
+(5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
 
 
 ## Section 5C — Device Control
@@ -671,31 +733,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 5E — rmapi Availability and Installation
 
-(1) **Triggering the Check**
-
-    When the frontend initiates any reMarkable-related operation, it shall first call `Task<bool> CheckRmapiAvailability()`, as defined in §1(1)(n)(v) of the Networking API Specification.
-
-(2) **Handling Unavailability**
-
-    If the check in (1) returns `false`, the frontend shall prompt the user with the following options —
-
-    (a) **Install Automatically** — the frontend shall call `Task<bool> InstallRmapi()`, as defined in §1(1)(n)(vi) of the Networking API Specification, and display a progress indicator while installation is in progress;
-
-    (b) **Install Manually** — the frontend shall open the user's default browser to `https://github.com/ddvk/rmapi/releases` and display instructions for the user to download and place the binary at `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`;
-
-    (c) **Cancel** — the frontend shall abort the reMarkable operation and return the user to the previous screen.
-
-(3) **Installation Failure**
-
-    If the installation in (2)(a) fails, the frontend shall display an error message and offer the user the options in (2)(b) and (2)(c).
-
-(4) **Settings Interface**
-
-    The frontend shall provide an option in the Settings interface to —
-
-    (a) re-check the availability of `rmapi` by calling the method in (1);
-
-    (b) reinstall `rmapi` by calling the method in (2)(a).
+[DELETED. See Section 3A for generalised runtime dependency management.]
 
 
 ## Section 5F — reMarkable Device Pairing
@@ -777,6 +815,18 @@ For a list of all server method and client handlers to be implemented for commun
     (b) the frontend shall call `DeployMaterialToReMarkable` for reMarkable devices per this section;
 
     (c) the frontend shall clearly indicate the status of deployment to each device type separately.
+
+
+## Section 5H - Configuration modal
+
+(1) When the settings button for a displayed Android device is pressed, the frontend shall display a configuration modal which -
+
+    (a) shows the configuration currently associated with the selected device, retrieved via `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`.
+
+    (b) allows the user to modify any value(s) in the selected device's configuration.
+    
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+
 
 
 ## Section 6 - Functionalities for the "Responses" tab
@@ -921,4 +971,10 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 7 - Functionalities for the "Settings" tab
 
-**To be confirmed.**
+(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
+
+(2) The frontend shall -
+
+    (a) when there are no paired Android devices, provide means to modify any value in the base configuration; and
+
+    (b) when there are paired Android devices, prevent the user from modifying the base configuration.

@@ -40,6 +40,36 @@ namespace Manuscripta.Main.Migrations
                     b.ToTable("Attachments");
                 });
 
+            modelBuilder.Entity("Main.Models.Entities.ConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AiScaffoldingEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FeedbackStyle")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MascotSelection")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SummarisationEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TextSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TtsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Configurations");
+                });
+
             modelBuilder.Entity("Main.Models.Entities.LessonEntity", b =>
                 {
                     b.Property<Guid>("Id")

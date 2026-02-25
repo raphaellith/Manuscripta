@@ -1,6 +1,8 @@
 
 import React, { useRef, useState } from 'react';
 import type { ContentItem, VocabularyTerm } from '../types';
+import { stripLinksFromHtml } from '../utils/htmlSanitizer';
+import { ModalOverlay } from '../renderer/components/modals/ModalOverlay';
 
 interface ContentEditorModalProps {
     contentItem: ContentItem;
@@ -33,6 +35,8 @@ const EditorToolbar: React.FC = () => {
         </div>
     );
 };
+
+
 
 interface VocabularyEditorProps {
     terms: VocabularyTerm[];
@@ -119,15 +123,17 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
     const [vocabularyTerms, setVocabularyTerms] = useState<VocabularyTerm[]>(contentItem.vocabularyTerms || []);
     
     const handleSave = () => {
+        const rawContent = editorRef.current?.innerHTML || '';
+        const cleanContent = stripLinksFromHtml(rawContent);
         onSave({
             ...contentItem,
-            content: editorRef.current?.innerHTML || '',
+            content: cleanContent,
             vocabularyTerms: vocabularyTerms.length > 0 ? vocabularyTerms : undefined,
         });
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <ModalOverlay priority="low">
             <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl animate-fade-in-up flex flex-col" style={{ maxHeight: '90vh' }}>
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex-shrink-0">
@@ -184,6 +190,6 @@ export const ContentEditorModal: React.FC<ContentEditorModalProps> = ({ contentI
                 }
                 .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
             `}</style>
-        </div>
+        </ModalOverlay>
     );
 };

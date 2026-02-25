@@ -34,6 +34,13 @@ public class MainDbContext : DbContext
     /// Per PersistenceAndCascadingRules.md §1(1)(g).
     /// </summary>
     public DbSet<AttachmentEntity> Attachments { get; set; }
+
+    /// <summary>
+    /// Default configuration values.
+    /// Per PersistenceAndCascadingRules.md §1(1)(h).
+    /// Per ConfigurationManagementSpecification §1(3)(a).
+    /// </summary>
+    public DbSet<ConfigurationEntity> Configurations { get; set; }
     
     /// <summary>
     /// Paired reMarkable devices.
@@ -143,6 +150,15 @@ public class MainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Configure ConfigurationEntity for default configuration values
+        // Per PersistenceAndCascadingRules.md §1(1)(h), ConfigurationManagementSpecification §1(3)(a)
+        modelBuilder.Entity<ConfigurationEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FeedbackStyle).HasConversion<string>();
+            entity.Property(e => e.MascotSelection).HasConversion<string>();
+        });
+        
         // Configure ReMarkableDeviceEntity
         // Per PersistenceAndCascadingRules.md §1(1)(h)
         modelBuilder.Entity<ReMarkableDeviceEntity>(entity =>

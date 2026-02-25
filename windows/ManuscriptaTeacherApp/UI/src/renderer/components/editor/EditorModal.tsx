@@ -15,10 +15,9 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import { InlineLatex, BlockLatex, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
+import { InlineLatex, BlockLatex, LatexFormattingGuard, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
 import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
@@ -183,6 +182,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 heading: {
                     levels: [1, 2, 3],
                 },
+                link: false, // Prevent link creation per Material Encoding Spec §1(4)
             }),
             Placeholder.configure({
                 placeholder: 'Start writing your material content...',
@@ -201,9 +201,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             AttachmentImage.configure({
                 inline: true,
             }),
-            Link.configure({
-                openOnClick: false,
-            }),
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
             }),
@@ -211,6 +208,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             // Custom extensions for Material Encoding
             InlineLatex,
             BlockLatex,
+            LatexFormattingGuard,
             QuestionRef,
             PdfEmbed,
         ],
@@ -1357,14 +1355,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         isActive={editor.isActive({ textAlign: 'left' })}
                         title="Align Left"
                     >
-                        ⬅
+                        <span className="material-symbols-outlined text-base">format_align_left</span>
                     </ToolbarButton>
                     <ToolbarButton
                         onClick={() => editor.chain().focus().setTextAlign('center').run()}
                         isActive={editor.isActive({ textAlign: 'center' })}
                         title="Align Center"
                     >
-                        ⬌
+                        <span className="material-symbols-outlined text-base">format_align_center</span>
                     </ToolbarButton>
 
                     <ToolbarDivider />
@@ -1375,14 +1373,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                         isActive={editor.isActive('blockquote')}
                         title="Blockquote"
                     >
-                        ❝
+                        <span className="material-symbols-outlined text-base">format_indent_increase</span>
                     </ToolbarButton>
                     <ToolbarButton
                         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
                         isActive={editor.isActive('codeBlock')}
                         title="Code Block"
                     >
-                        {'</>'}
+                        <span className="material-symbols-outlined text-base">code</span>
                     </ToolbarButton>
                     <ToolbarButton
                         onClick={() => editor.chain().focus().setHorizontalRule().run()}
@@ -1395,7 +1393,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
                     {/* Insert */}
                     <ToolbarButton onClick={insertTable} title="Insert Table">
-                        📊
+                        <span className="material-symbols-outlined text-base">table_chart</span>
                     </ToolbarButton>
 
                     {/* Table Controls - only show when cursor is in a table */}
@@ -1404,25 +1402,31 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                             <ToolbarDivider />
                             <span className="text-xs text-gray-500 px-1 self-center">Table:</span>
                             <ToolbarButton onClick={addColumnBefore} title="Add Column Before">
-                                ⬅+
+                                <span className="material-symbols-outlined text-base">add_column_left</span>
                             </ToolbarButton>
                             <ToolbarButton onClick={addColumnAfter} title="Add Column After">
-                                +➡
-                            </ToolbarButton>
-                            <ToolbarButton onClick={deleteColumn} title="Delete Column">
-                                🗑️↔
+                                <span className="material-symbols-outlined text-base">add_column_right</span>
                             </ToolbarButton>
                             <ToolbarButton onClick={addRowBefore} title="Add Row Above">
-                                ⬆+
+                                <span className="material-symbols-outlined text-base">add_row_above</span>
                             </ToolbarButton>
                             <ToolbarButton onClick={addRowAfter} title="Add Row Below">
-                                +⬇
+                                <span className="material-symbols-outlined text-base">add_row_below</span>
                             </ToolbarButton>
                             <ToolbarButton onClick={deleteRow} title="Delete Row">
-                                🗑️↕
+                                <span className="material-symbols-outlined text-base">delete</span>
+                                <span className="material-symbols-outlined text-base">
+                                arrows_left_right_circle
+                                </span>
+                            </ToolbarButton>
+                            <ToolbarButton onClick={deleteColumn} title="Delete Column">
+                                <span className="material-symbols-outlined text-base">delete</span>
+                                <span className="material-symbols-outlined text-base">
+                                arrows_up_down_circle
+                                </span>
                             </ToolbarButton>
                             <ToolbarButton onClick={deleteTable} title="Delete Table">
-                                🗑️📊
+                                <span className="material-symbols-outlined text-base">remove_selection</span>
                             </ToolbarButton>
                         </>
                     )}
@@ -1431,10 +1435,10 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
                     {/* LaTeX */}
                     <ToolbarButton onClick={insertInlineLatex} title="Inline LaTeX ($...$)">
-                        ∑
+                        Inline Maths
                     </ToolbarButton>
                     <ToolbarButton onClick={insertBlockLatex} title="Block LaTeX ($$...$$)">
-                        ∫
+                        Display Maths
                     </ToolbarButton>
 
                     <ToolbarDivider />
@@ -1449,13 +1453,13 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                                 ? 'Poll materials can only contain one question'
                                 : 'Insert Question Reference'}
                     >
-                        📝
+                        <span className="material-symbols-outlined text-base">quiz</span>
                     </ToolbarButton>
                     <ToolbarButton onClick={insertPdf} title="Insert PDF Embed">
-                        📄
+                        <span className="material-symbols-outlined text-base">picture_as_pdf</span>
                     </ToolbarButton>
                     <ToolbarButton onClick={insertAttachment} title="Attach File (PNG, JPEG, PDF)">
-                        📎
+                        <span className="material-symbols-outlined text-base">attach_file</span>
                     </ToolbarButton>
 
                     <ToolbarDivider />
