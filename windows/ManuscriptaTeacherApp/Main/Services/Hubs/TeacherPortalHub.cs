@@ -8,6 +8,8 @@ using Main.Models.Enums;
 using Main.Services.Repositories;
 using Main.Services.GenAI;
 using Main.Services.Network;
+using Main.Services.RuntimeDependencies;
+using Main.Models;
 
 namespace Main.Services.Hubs;
 
@@ -49,6 +51,16 @@ public class TeacherPortalHub : Hub
     private readonly IRmapiService _rmapiService;
     private readonly IReMarkableDeviceRepository _remarkableDeviceRepository;
     private readonly IReMarkableDeploymentService _remarkableDeploymentService;
+    private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
+
+    // Configuration dependencies - NetworkingAPISpec §1(1)(o)
+    private readonly IConfigurationService _configurationService;
+
+    private readonly IMaterialGenerationService _materialGenerationService;
+    private readonly IContentModificationService _contentModificationService;
+    private readonly IEmbeddingStatusService _embeddingStatusService;
+    private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly IEmbeddingService _documentEmbeddingService;
 
 
     private readonly IMaterialGenerationService _materialGenerationService;
@@ -84,6 +96,8 @@ public class TeacherPortalHub : Hub
         IRmapiService rmapiService,
         IReMarkableDeviceRepository remarkableDeviceRepository,
         IReMarkableDeploymentService remarkableDeploymentService,
+        IRuntimeDependencyRegistry runtimeDependencyRegistry,
+        IConfigurationService configurationService,
         IMaterialGenerationService materialGenerationService,
         IContentModificationService contentModificationService,
         IEmbeddingStatusService embeddingStatusService,
@@ -124,6 +138,8 @@ public class TeacherPortalHub : Hub
         _rmapiService = rmapiService ?? throw new ArgumentNullException(nameof(rmapiService));
         _remarkableDeviceRepository = remarkableDeviceRepository ?? throw new ArgumentNullException(nameof(remarkableDeviceRepository));
         _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
+        _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -810,7 +826,10 @@ public class TeacherPortalHub : Hub
 
         // Per §2(1): check rmapi availability first
         if (!await _rmapiService.CheckAvailabilityAsync())
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
             throw new HubException("rmapi is not available. Please install it first.");
+        }
 
         // Generate UUID for the device
         var deviceId = Guid.NewGuid();
@@ -866,23 +885,41 @@ public class TeacherPortalHub : Hub
         await _remarkableDeviceRepository.UpdateAsync(entity);
     }
 
+    #region Runtime Dependency Management - NetworkingAPISpec §1(1)(nz)
+
     /// <summary>
-    /// Checks whether rmapi is available and functional.
-    /// Per NetworkingAPISpec §1(1)(n)(v) and RemarkableIntegrationSpecification §2.
+    /// Checks whether the runtime dependency with the specified dependencyId is available and functional.
+    /// Per NetworkingAPISpec §1(1)(nz)(i) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
     /// </summary>
-    public async Task<bool> CheckRmapiAvailability()
+    public async Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)
     {
-        return await _rmapiService.CheckAvailabilityAsync();
+        var manager = _runtimeDependencyRegistry.GetManager(dependencyId);
+        if (manager == null)
+            throw new HubException($"Dependency {dependencyId} not found");
+
+        return await manager.CheckDependencyAvailabilityAsync();
     }
 
     /// <summary>
-    /// Downloads and installs rmapi.
-    /// Per NetworkingAPISpec §1(1)(n)(vi) and RemarkableIntegrationSpecification §2(4).
+    /// Installs the runtime dependency with the specified dependencyId.
+    /// Per NetworkingAPISpec §1(1)(nz)(ii) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
     /// </summary>
-    public async Task<bool> InstallRmapi()
+    public async Task<bool> InstallRuntimeDependency(string dependencyId)
     {
-        return await _rmapiService.InstallAsync();
+        var manager = _runtimeDependencyRegistry.GetManager(dependencyId);
+        if (manager == null)
+            throw new HubException($"Dependency {dependencyId} not found");
+
+        var progress = new Progress<RuntimeDependencyProgress>(p =>
+        {
+            Clients.Caller.SendAsync("RuntimeDependencyInstallProgress", 
+                dependencyId, p.Phase, p.ProgressPercentage, p.ErrorMessage);
+        });
+
+        return await manager.InstallDependencyAsync(progress);
     }
+    
+    #endregion
 
     /// <summary>
     /// Deploys a material to the specified reMarkable devices.
@@ -892,7 +929,10 @@ public class TeacherPortalHub : Hub
     {
         // Per §4(1): check rmapi availability
         if (!await _rmapiService.CheckAvailabilityAsync())
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
             throw new HubException("rmapi is not available. Please install it first.");
+        }
 
         var results = await _remarkableDeploymentService.DeployAsync(materialId, deviceIds);
 
@@ -909,6 +949,119 @@ public class TeacherPortalHub : Hub
             var messages = string.Join("; ", failures.Select(f => $"Device {f.DeviceId}: {f.ErrorMessage}"));
             throw new HubException($"Deployment failed for some devices: {messages}");
         }
+    }
+
+    #endregion
+
+    #region Configuration Methods - NetworkingAPISpec §1(1)(o)
+
+    /// <summary>
+    /// Retrieves the base configuration assumed by all devices.
+    /// Per NetworkingAPISpec §1(1)(o)(i) and ConfigurationManagementSpecification §1(3)(a).
+    /// </summary>
+    public async Task<ConfigurationEntity> GetBaseConfiguration()
+    {
+        _logger.LogInformation("GetBaseConfiguration called");
+        return await _configurationService.GetDefaultsAsync();
+    }
+
+    /// <summary>
+    /// Updates the base configuration and removes device overrides that match the new defaults.
+    /// Per NetworkingAPISpec §1(1)(o)(ii) and ConfigurationManagementSpecification §1(6).
+    /// </summary>
+    /// <param name="newBaseConfiguration">The new base configuration.</param>
+    public async Task UpdateBaseConfiguration(ConfigurationEntity newBaseConfiguration)
+    {
+        _logger.LogInformation("UpdateBaseConfiguration called");
+        
+        if (newBaseConfiguration == null)
+            throw new HubException("Base configuration cannot be null");
+
+        // Update the base configuration (per ConfigurationManagementSpecification §1(3)(a) and §1(6))
+        var updated = await _configurationService.UpdateDefaultsAsync(newBaseConfiguration);
+        
+        _logger.LogInformation("Base configuration updated");
+    }
+
+    /// <summary>
+    /// Retrieves the configuration used by a specific device (defaults merged with overrides).
+    /// Per NetworkingAPISpec §1(1)(o)(iii) and ConfigurationManagementSpecification §2(2)(b).
+    /// Note: Configurations are only applicable to Android devices, not reMarkable devices.
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices."
+    /// </summary>
+    /// <param name="deviceId">The device identifier.</param>
+    /// <returns>The compiled configuration for the device.</returns>
+    public async Task<ConfigurationEntity> GetDeviceConfiguration(Guid deviceId)
+    {
+        _logger.LogInformation("GetDeviceConfiguration called for device {DeviceId}", deviceId);
+        
+        // Validate device is an Android device (per ConfigurationManagementSpecification)
+        try
+        {
+            await _configurationService.ValidateAndroidDeviceAsync(deviceId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new HubException(ex.Message);
+        }
+
+        // Compile and return the configuration (defaults merged with overrides per §2(2)(b))
+        return await _configurationService.CompileConfigAsync(deviceId);
+    }
+
+    /// <summary>
+    /// Updates the configuration overrides for a specific device.
+    /// Per NetworkingAPISpec §1(1)(o)(iv) and ConfigurationManagementSpecification §2(1) and §3(1)(c).
+    /// The overrides are determined by comparing the new device configuration with the base configuration.
+    /// Note: Configuration updates are only applicable to Android devices, not reMarkable devices.
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices."
+    /// </summary>
+    /// <param name="deviceId">The device identifier.</param>
+    /// <param name="newDeviceConfiguration">The new device configuration (full, not just overrides).</param>
+    public async Task UpdateDeviceConfiguration(Guid deviceId, ConfigurationEntity newDeviceConfiguration)
+    {
+        _logger.LogInformation("UpdateDeviceConfiguration called for device {DeviceId}", deviceId);
+        
+        if (newDeviceConfiguration == null)
+            throw new HubException("Device configuration cannot be null");
+
+        // Validate device is an Android device (per ConfigurationManagementSpecification)
+        try
+        {
+            await _configurationService.ValidateAndroidDeviceAsync(deviceId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new HubException(ex.Message);
+        }
+
+        // Get the base configuration
+        var baseConfig = await _configurationService.GetDefaultsAsync();
+
+        // Determine which values differ from the base and create override
+        // Per NetworkingAPISpec §1(1)(o)(iv): "The overrides are determined by comparing 
+        // the new device configuration with the base configuration."
+        var newOverride = new ConfigurationOverride
+        {
+            TextSize = (newDeviceConfiguration.TextSize != baseConfig.TextSize) ? newDeviceConfiguration.TextSize : null,
+            FeedbackStyle = (newDeviceConfiguration.FeedbackStyle != baseConfig.FeedbackStyle) ? newDeviceConfiguration.FeedbackStyle : null,
+            TtsEnabled = (newDeviceConfiguration.TtsEnabled != baseConfig.TtsEnabled) ? newDeviceConfiguration.TtsEnabled : null,
+            AiScaffoldingEnabled = (newDeviceConfiguration.AiScaffoldingEnabled != baseConfig.AiScaffoldingEnabled) ? newDeviceConfiguration.AiScaffoldingEnabled : null,
+            SummarisationEnabled = (newDeviceConfiguration.SummarisationEnabled != baseConfig.SummarisationEnabled) ? newDeviceConfiguration.SummarisationEnabled : null,
+            MascotSelection = (newDeviceConfiguration.MascotSelection != baseConfig.MascotSelection) ? newDeviceConfiguration.MascotSelection : null
+        };
+
+        // Set (or remove if empty) the override
+        if (newOverride.IsEmpty)
+        {
+            _configurationService.RemoveOverride(deviceId);
+        }
+        else
+        {
+            _configurationService.SetOverride(deviceId, newOverride);
+        }
+
+        _logger.LogInformation("Device configuration updated for device {DeviceId}", deviceId);
     }
 
     #endregion

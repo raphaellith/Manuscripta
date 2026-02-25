@@ -84,6 +84,15 @@ builder.Services.AddSingleton<Main.Services.Repositories.IFeedbackRepository, Ma
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
 
+// Register configuration — two-tier model per ConfigurationManagementSpecification
+// Defaults: long-term persisted (EF Core) per PersistenceAndCascadingRules §1(1)(h)
+builder.Services.AddScoped<Main.Services.Repositories.IDefaultConfigurationRepository, Main.Services.Repositories.EfDefaultConfigurationRepository>();
+// Overrides: short-term persisted (in-memory) per PersistenceAndCascadingRules §1(2)
+builder.Services.AddSingleton<Main.Services.Repositories.IConfigurationOverrideRepository, Main.Services.Repositories.InMemoryConfigurationOverrideRepository>();
+builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+// Singleton listener for §3(1)(a): DevicePaired → config refresh
+builder.Services.AddSingleton<ConfigurationRefreshListener>();
+
 // Register CRUD services for hub
 builder.Services.AddScoped<IUnitCollectionService, UnitCollectionService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
@@ -93,6 +102,7 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IResponseService, ResponseService>();
 builder.Services.AddScoped<ISourceDocumentService, SourceDocumentService>();
 builder.Services.AddSingleton<IFileService, FileService>();
+builder.Services.AddSingleton<Main.Services.Latex.ILatexRenderer, Main.Services.Latex.LatexRenderer>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
@@ -119,6 +129,17 @@ builder.Services.AddSingleton<FeedbackQueueService>();
 builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
 builder.Services.AddScoped<OutputValidationService>();
 builder.Services.AddScoped<QuestionExtractionService>();
+
+// Register Runtime Dependency Management
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependencyRegistry>(sp =>
+{
+    var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
+    var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    registry.Register(rmapiManager);
+    return registry;
+});
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
@@ -174,6 +195,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Eagerly resolve singleton so its DevicePaired event subscription is active
+app.Services.GetRequiredService<ConfigurationRefreshListener>();
 // Configure QuestPDF license once at startup (before any PDFs are generated)
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
@@ -193,7 +216,7 @@ if (!app.Environment.IsEnvironment("Testing"))
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
         // DbInitializer.Initialize(context);
 
     // Initialize embedding startup handler per GenAISpec.md §3A(8)
@@ -249,6 +272,25 @@ if (!app.Environment.IsEnvironment("Testing"))
             var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
             var allDevices = await remarkableRepo.GetAllAsync();
             var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+
+            var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
+                .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
+
+            foreach (var device in allDevices)
+            {
+                if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
+                {
+                    try
+                    {
+                        await remarkableRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete orphan entity {device.DeviceId}: {ex.Message}");
+                    }
+                }
+            }
 
             foreach (var configFile in Directory.GetFiles(rmapiConfigDir, "*.conf"))
             {

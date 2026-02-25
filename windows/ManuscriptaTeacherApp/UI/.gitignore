@@ -90,3 +90,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Build and Deployment Spec §(3)(a): backend build output
+resources/backend/

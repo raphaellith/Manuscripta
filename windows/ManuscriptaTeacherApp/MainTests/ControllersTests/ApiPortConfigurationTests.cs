@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Main.Services;
 using Main.Services.Network;
 using Xunit;
 
@@ -118,6 +119,13 @@ public class ApiPortConfigurationTests : IClassFixture<TestWebApplicationFactory
         // Arrange
         using var client = _factory.CreateClient();
         var deviceId = Guid.NewGuid();
+
+        // Register the device so the request is not rejected
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var deviceRegistry = scope.ServiceProvider.GetRequiredService<IDeviceRegistryService>();
+            await deviceRegistry.RegisterDeviceAsync(deviceId, "Test Device");
+        }
 
         // Act
         var response = await client.GetAsync($"/api/v1/config/{deviceId}");

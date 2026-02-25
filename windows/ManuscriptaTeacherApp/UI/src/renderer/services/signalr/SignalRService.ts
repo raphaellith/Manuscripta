@@ -1,4 +1,5 @@
 import * as signalR from "@microsoft/signalr";
+import { IRetryPolicy, RetryContext } from "@microsoft/signalr";
 import type {
     UnitCollectionEntity,
     UnitEntity,
@@ -11,6 +12,7 @@ import type {
     ResponseEntity,
     FeedbackEntity,
     ReMarkableDeviceEntity,
+    ConfigurationEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -25,10 +27,10 @@ import type {
  * Custom retry policy that retries indefinitely with capped exponential backoff.
  * Per FrontendWorkflowSpecifications §2(4)(a-b).
  */
-class InfiniteRetryPolicy implements signalR.IRetryPolicy {
+class InfiniteRetryPolicy implements IRetryPolicy {
     private readonly retryDelays = [0, 2000, 10000, 30000]; // 0s, 2s, 10s, 30s
 
-    nextRetryDelayInMilliseconds(retryContext: signalR.RetryContext): number | null {
+    nextRetryDelayInMilliseconds(retryContext: RetryContext): number | null {
         // Per §2(4)(b): Use delays 0s, 2s, 10s, 30s, then repeat 30s indefinitely
         if (retryContext.previousRetryCount < this.retryDelays.length) {
             return this.retryDelays[retryContext.previousRetryCount];
@@ -108,7 +110,7 @@ class SignalRService {
      */
     private applyPendingSubscriptions(): void {
         if (!this.connection) return;
-        
+
         for (const sub of this.pendingSubscriptions) {
             this.connection.on(sub.methodName, sub.callback);
         }
@@ -156,7 +158,7 @@ class SignalRService {
      */
     public async startConnection(maxRetries = 5, retryDelayMs = 2000): Promise<void> {
         const connection = await this.ensureInitialized();
-        
+
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 if (connection.state === signalR.HubConnectionState.Connected) {
@@ -650,7 +652,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(n)(i).
      */
     public async pairReMarkableDevice(name: string, oneTimeCode: string): Promise<string> {
-        return await this.connection.invoke<string>("PairReMarkableDevice", name, oneTimeCode);
+        return await this.getConnection().invoke<string>("PairReMarkableDevice", name, oneTimeCode);
     }
 
     /**
@@ -658,7 +660,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(n)(ii).
      */
     public async unpairReMarkableDevice(deviceId: string): Promise<void> {
-        await this.connection.invoke("UnpairReMarkableDevice", deviceId);
+        await this.getConnection().invoke("UnpairReMarkableDevice", deviceId);
     }
 
     /**
@@ -666,7 +668,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(n)(iii).
      */
     public async getAllReMarkableDevices(): Promise<ReMarkableDeviceEntity[]> {
-        return await this.connection.invoke<ReMarkableDeviceEntity[]>("GetAllReMarkableDevices");
+        return await this.getConnection().invoke<ReMarkableDeviceEntity[]>("GetAllReMarkableDevices");
     }
 
     /**
@@ -674,23 +676,79 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(n)(iv).
      */
     public async updateReMarkableDevice(entity: ReMarkableDeviceEntity): Promise<void> {
-        await this.connection.invoke("UpdateReMarkableDevice", entity);
+        await this.getConnection().invoke("UpdateReMarkableDevice", entity);
+    }
+
+    // ==========================================
+    // Configuration Management - NetworkingAPISpec §1(1)(o)
+    // ==========================================
+
+    /**
+     * Retrieves the base configuration assumed by all devices.
+     * Per NetworkingAPISpec §1(1)(o)(i) and FrontendWorkflowSpecifications §7(1).
+     */
+    public async getBaseConfiguration(): Promise<ConfigurationEntity> {
+        return await this.getConnection().invoke<ConfigurationEntity>("GetBaseConfiguration");
     }
 
     /**
-     * Checks whether rmapi is available.
-     * Per NetworkingAPISpec §1(1)(n)(v).
+     * Updates the base configuration.
+     * Per NetworkingAPISpec §1(1)(o)(ii).
      */
-    public async checkRmapiAvailability(): Promise<boolean> {
-        return await this.connection.invoke<boolean>("CheckRmapiAvailability");
+    public async updateBaseConfiguration(entity: ConfigurationEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateBaseConfiguration", entity);
     }
 
     /**
-     * Installs rmapi binary.
-     * Per NetworkingAPISpec §1(1)(n)(vi).
+     * Retrieves the configuration used by a device.
+     * Per NetworkingAPISpec §1(1)(o)(iii) and FrontendWorkflowSpecifications §5H(1)(a).
      */
-    public async installRmapi(): Promise<boolean> {
-        return await this.connection.invoke<boolean>("InstallRmapi");
+    public async getDeviceConfiguration(deviceId: string): Promise<ConfigurationEntity> {
+        return await this.getConnection().invoke<ConfigurationEntity>("GetDeviceConfiguration", deviceId);
+    }
+
+    /**
+     * Updates the overrides associated with a device.
+     * Per NetworkingAPISpec §1(1)(o)(iv) and FrontendWorkflowSpecifications §5H(1)(c).
+     */
+    public async updateDeviceConfiguration(deviceId: string, newDeviceConfiguration: ConfigurationEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateDeviceConfiguration", deviceId, newDeviceConfiguration);
+    }
+
+    // ==========================================
+    // Runtime Dependency Management - NetworkingAPISpec §1(1)(nz)
+    // ==========================================
+
+    /**
+     * Checks whether a runtime dependency is available.
+     * Per NetworkingAPISpec §1(1)(nz)(i) and FrontendWorkflowSpecifications §3A.
+     */
+    public async checkRuntimeDependencyAvailability(dependencyId: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CheckRuntimeDependencyAvailability", dependencyId);
+    }
+
+    /**
+     * Installs a runtime dependency.
+     * Per NetworkingAPISpec §1(1)(nz)(ii) and FrontendWorkflowSpecifications §3A(2)(b).
+     */
+    public async installRuntimeDependency(dependencyId: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("InstallRuntimeDependency", dependencyId);
+    }
+
+    /**
+     * Subscribe to runtime dependency not installed events.
+     * Per NetworkingAPISpec §2(1)(f)(i) and FrontendWorkflowSpecifications §3A(1) and §3A(2).
+     */
+    public onRuntimeDependencyNotInstalled(callback: (dependencyIds: string[]) => void): () => void {
+        return this.subscribe("RuntimeDependencyNotInstalled", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to runtime dependency install progress events.
+     * Per NetworkingAPISpec §2(1)(f)(ii) and FrontendWorkflowSpecifications §3A(2)(b)(ii).
+     */
+    public onRuntimeDependencyInstallProgress(callback: (dependencyId: string, phase: string, progressPercentage: number | null, errorMessage: string | null) => void): () => void {
+        return this.subscribe("RuntimeDependencyInstallProgress", callback as (...args: unknown[]) => void);
     }
 
     /**
@@ -698,7 +756,7 @@ class SignalRService {
      * Per NetworkingAPISpec §1(1)(n)(vii).
      */
     public async deployMaterialToReMarkable(materialId: string, deviceIds: string[]): Promise<void> {
-        await this.connection.invoke("DeployMaterialToReMarkable", materialId, deviceIds);
+        await this.getConnection().invoke("DeployMaterialToReMarkable", materialId, deviceIds);
     }
 
     /**
@@ -706,8 +764,7 @@ class SignalRService {
      * Per NetworkingAPISpec §2(1)(f).
      */
     public onReMarkableAuthInvalid(callback: (deviceId: string) => void): () => void {
-        this.connection.on("ReMarkableAuthInvalid", callback);
-        return () => this.connection.off("ReMarkableAuthInvalid", callback);
+        return this.subscribe("ReMarkableAuthInvalid", callback as (...args: unknown[]) => void);
     }
 }
 

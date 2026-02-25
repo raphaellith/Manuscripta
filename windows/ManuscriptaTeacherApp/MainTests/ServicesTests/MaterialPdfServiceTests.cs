@@ -10,6 +10,7 @@ using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
 using Main.Services;
+using Main.Services.Latex;
 using Main.Services.Repositories;
 
 namespace MainTests.ServicesTests;
@@ -24,6 +25,7 @@ public class MaterialPdfServiceTests
     private readonly Mock<IQuestionRepository> _mockQuestionRepo;
     private readonly Mock<IAttachmentRepository> _mockAttachmentRepo;
     private readonly Mock<IFileService> _mockFileService;
+    private readonly Mock<ILatexRenderer> _mockLatexRenderer;
     private readonly MaterialPdfService _service;
     private readonly Guid _testMaterialId = Guid.NewGuid();
     private readonly Guid _testLessonId = Guid.NewGuid();
@@ -37,12 +39,14 @@ public class MaterialPdfServiceTests
         _mockQuestionRepo = new Mock<IQuestionRepository>();
         _mockAttachmentRepo = new Mock<IAttachmentRepository>();
         _mockFileService = new Mock<IFileService>();
+        _mockLatexRenderer = new Mock<ILatexRenderer>();
 
         _service = new MaterialPdfService(
             _mockMaterialRepo.Object,
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
-            _mockFileService.Object);
+            _mockFileService.Object,
+            _mockLatexRenderer.Object);
     }
 
     #region Constructor Tests
@@ -55,7 +59,8 @@ public class MaterialPdfServiceTests
             null!,
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
-            _mockFileService.Object));
+            _mockFileService.Object,
+            _mockLatexRenderer.Object));
     }
 
     [Fact]
@@ -66,7 +71,8 @@ public class MaterialPdfServiceTests
             _mockMaterialRepo.Object,
             null!,
             _mockAttachmentRepo.Object,
-            _mockFileService.Object));
+            _mockFileService.Object,
+            _mockLatexRenderer.Object));
     }
 
     [Fact]
@@ -77,7 +83,8 @@ public class MaterialPdfServiceTests
             _mockMaterialRepo.Object,
             _mockQuestionRepo.Object,
             null!,
-            _mockFileService.Object));
+            _mockFileService.Object,
+            _mockLatexRenderer.Object));
     }
 
     [Fact]
@@ -88,6 +95,19 @@ public class MaterialPdfServiceTests
             _mockMaterialRepo.Object,
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
+            null!,
+            _mockLatexRenderer.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullLatexRenderer_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
             null!));
     }
 
@@ -99,7 +119,8 @@ public class MaterialPdfServiceTests
             _mockMaterialRepo.Object,
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
-            _mockFileService.Object);
+            _mockFileService.Object,
+            _mockLatexRenderer.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -624,6 +645,125 @@ public class MaterialPdfServiceTests
             if (Directory.Exists(tempDir) && !Directory.EnumerateFileSystemEntries(tempDir).Any())
                 Directory.Delete(tempDir);
         }
+    }
+
+    #endregion
+
+    #region LaTeX Tests
+
+    [Fact]
+    public async Task GeneratePdfAsync_MaterialWithInlineLatex_ReturnsValidPdf()
+    {
+        // Arrange
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "LaTeX Worksheet",
+            "Solve: $x^2 + 2x + 1 = 0$"
+        );
+
+        // Mock renderer returns a minimal 1x1 PNG
+        var fakePng = CreateMinimalPng();
+        _mockLatexRenderer.Setup(r => r.RenderToImage(It.IsAny<string>(), false, It.IsAny<float>()))
+            .Returns(fakePng);
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+        _mockLatexRenderer.Verify(r => r.RenderToImage("x^2 + 2x + 1 = 0", false, It.IsAny<float>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_MaterialWithBlockLatex_ReturnsValidPdf()
+    {
+        // Arrange
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "LaTeX Worksheet",
+            "$$\\int_0^1 f(x) dx$$"
+        );
+
+        var fakePng = CreateMinimalPng();
+        _mockLatexRenderer.Setup(r => r.RenderToImage(It.IsAny<string>(), true, It.IsAny<float>()))
+            .Returns(fakePng);
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+        _mockLatexRenderer.Verify(r => r.RenderToImage(It.IsAny<string>(), true, It.IsAny<float>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_LatexRenderingFails_FallsBackToRawText()
+    {
+        // Arrange - LaTeX renderer returns null (failure) per §6(4)
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "LaTeX Failure",
+            "Solve: $\\invalid{latex}$"
+        );
+
+        _mockLatexRenderer.Setup(r => r.RenderToImage(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<float>()))
+            .Returns((byte[]?)null);
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act - should not throw, fallback to raw text
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    /// <summary>
+    /// Creates a minimal 1x1 transparent PNG for test purposes.
+    /// </summary>
+    private static byte[] CreateMinimalPng()
+    {
+        // Minimal valid PNG: 1x1 pixel, RGBA, transparent
+        return new byte[]
+        {
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, // 8-bit RGBA
+            0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
+            0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE5, // compressed data
+            0x27, 0xDE, 0xFC,
+            0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
+            0xAE, 0x42, 0x60, 0x82
+        };
     }
 
     #endregion

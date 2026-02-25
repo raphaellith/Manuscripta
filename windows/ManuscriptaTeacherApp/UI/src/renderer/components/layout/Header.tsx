@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
     ];
 
     return (
-        <div className="w-full flex justify-center p-6 pb-0 z-50">
+        <div className="w-full flex justify-center p-6 pb-0 z-20">
             <header className="bg-white/95 backdrop-blur-xl border border-white/20 px-8 h-20 flex justify-between items-center shadow-soft w-full max-w-7xl rounded-2xl ring-1 ring-gray-900/5 transition-all pointer-events-auto">
                 <div className="flex items-center gap-10 h-full">
                     <h2 className="text-2xl font-serif text-text-heading flex items-center gap-3 tracking-tight cursor-default select-none group">

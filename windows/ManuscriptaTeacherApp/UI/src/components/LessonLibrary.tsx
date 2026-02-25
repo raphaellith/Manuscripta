@@ -7,6 +7,7 @@ import { ContentViewerModal } from './ContentViewerModal';
 import { LibraryVariantTree } from './LibraryVariantTree';
 import { LibraryVariantColumns } from './LibraryVariantColumns';
 import { UnitSettingsModal } from './UnitSettingsModal';
+import { ModalOverlay } from '../renderer/components/modals/ModalOverlay';
 
 interface LessonFolderCreatorModalProps {
     unit: string;
@@ -27,7 +28,7 @@ const LessonFolderCreatorModal: React.FC<LessonFolderCreatorModalProps> = ({ uni
     }
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <ModalOverlay priority="low">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-lg space-y-6">
                 <h2 className="text-2xl font-serif text-text-heading">Add Lesson Folder to "{unit}"</h2>
                 
@@ -52,6 +53,7 @@ const LessonFolderCreatorModal: React.FC<LessonFolderCreatorModalProps> = ({ uni
                 </div>
             </div>
         </div>
+        </ModalOverlay>
     );
 };
 
@@ -215,7 +217,7 @@ export const LessonLibrary: React.FC<LessonLibraryProps> = ({
       )}
       
       {/* Floating View Switcher - positioned like ThemeSwitcher but on the left */}
-      <div className="fixed bottom-4 left-4 z-50">
+      <div className="fixed bottom-4 left-4 z-[50]">
         {!isViewSwitcherOpen && (
           <button
             onClick={() => setIsViewSwitcherOpen(true)}

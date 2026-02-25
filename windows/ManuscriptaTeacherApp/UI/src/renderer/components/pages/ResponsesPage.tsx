@@ -9,6 +9,7 @@ import { Card } from '../common/Card';
 import { useAppContext } from '../../state/AppContext';
 import { useAlertContext } from '../../state/AlertContext';
 import signalRService from '../../services/signalr/SignalRService';
+import { ModalOverlay } from '../modals/ModalOverlay';
 import type {
     MaterialEntity,
     QuestionEntity,
@@ -753,7 +754,7 @@ export const ResponsesPage: React.FC = () => {
             )}
             {/* Device List Popup per §6(4)(c)(iv) */}
             {devicePopup.isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setDevicePopup(prev => ({ ...prev, isOpen: false }))}>
+                <ModalOverlay priority="low" onClick={() => setDevicePopup(prev => ({ ...prev, isOpen: false }))}>
                     <div className="bg-white rounded-lg p-6 max-w-md w-full m-4 shadow-xl" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-lg text-text-heading">{devicePopup.title}</h3>
@@ -784,7 +785,7 @@ export const ResponsesPage: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </ModalOverlay>
             )}
         </div>
     );
