@@ -12,6 +12,7 @@ import type {
     ResponseEntity,
     FeedbackEntity,
     ReMarkableDeviceEntity,
+    ConfigurationEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -676,6 +677,42 @@ class SignalRService {
      */
     public async updateReMarkableDevice(entity: ReMarkableDeviceEntity): Promise<void> {
         await this.getConnection().invoke("UpdateReMarkableDevice", entity);
+    }
+
+    // ==========================================
+    // Configuration Management - NetworkingAPISpec §1(1)(o)
+    // ==========================================
+
+    /**
+     * Retrieves the base configuration assumed by all devices.
+     * Per NetworkingAPISpec §1(1)(o)(i) and FrontendWorkflowSpecifications §7(1).
+     */
+    public async getBaseConfiguration(): Promise<ConfigurationEntity> {
+        return await this.getConnection().invoke<ConfigurationEntity>("GetBaseConfiguration");
+    }
+
+    /**
+     * Updates the base configuration.
+     * Per NetworkingAPISpec §1(1)(o)(ii).
+     */
+    public async updateBaseConfiguration(entity: ConfigurationEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateBaseConfiguration", entity);
+    }
+
+    /**
+     * Retrieves the configuration used by a device.
+     * Per NetworkingAPISpec §1(1)(o)(iii) and FrontendWorkflowSpecifications §5H(1)(a).
+     */
+    public async getDeviceConfiguration(deviceId: string): Promise<ConfigurationEntity> {
+        return await this.getConnection().invoke<ConfigurationEntity>("GetDeviceConfiguration", deviceId);
+    }
+
+    /**
+     * Updates the overrides associated with a device.
+     * Per NetworkingAPISpec §1(1)(o)(iv) and FrontendWorkflowSpecifications §5H(1)(c).
+     */
+    public async updateDeviceConfiguration(deviceId: string, newDeviceConfiguration: ConfigurationEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateDeviceConfiguration", deviceId, newDeviceConfiguration);
     }
 
     // ==========================================

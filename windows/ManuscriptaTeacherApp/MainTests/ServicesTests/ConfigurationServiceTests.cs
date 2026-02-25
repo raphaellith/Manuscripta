@@ -123,6 +123,24 @@ public class ConfigurationServiceTests
     }
 
     [Fact]
+    public async Task UpdateDefaultsAsync_WhenDevicesPaired_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var config = ConfigurationEntity.CreateDefault();
+        var pairedDevices = new[]
+        {
+            new PairedDeviceEntity(Guid.NewGuid(), "Device-1")
+        };
+        _mockDeviceRegistry.Setup(d => d.GetAllAsync())
+            .ReturnsAsync(pairedDevices);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateDefaultsAsync(config));
+        _mockDefaultsRepo.Verify(r => r.UpdateAsync(It.IsAny<ConfigurationEntity>()), Times.Never);
+        _mockTcpService.Verify(s => s.SendRefreshConfigAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task UpdateDefaultsAsync_NullEntity_ThrowsArgumentNullException()
     {
         await Assert.ThrowsAsync<ArgumentNullException>(() => _service.UpdateDefaultsAsync(null!));
@@ -382,24 +400,20 @@ public class ConfigurationServiceTests
     #region §3 Config Refresh Trigger Tests
 
     [Fact]
-    public async Task UpdateDefaultsAsync_RefreshesAllPairedDevices()
+    public async Task UpdateDefaultsAsync_WhenNoDevicesPaired_DoesNotRefresh()
     {
-        // Arrange — §3(1)(b): refresh all devices on default change
-        var device1 = new PairedDeviceEntity(Guid.NewGuid(), "Device1");
-        var device2 = new PairedDeviceEntity(Guid.NewGuid(), "Device2");
+        // Arrange — §3(1)(b): refresh all devices on default change (none paired)
         _mockDeviceRegistry.Setup(d => d.GetAllAsync())
-            .ReturnsAsync(new[] { device1, device2 });
+            .ReturnsAsync(Array.Empty<PairedDeviceEntity>());
 
         var config = ConfigurationEntity.CreateDefault();
 
         // Act
         await _service.UpdateDefaultsAsync(config);
 
-        // Assert — refresh sent to both devices
+        // Assert
         _mockTcpService.Verify(
-            t => t.SendRefreshConfigAsync(device1.DeviceId.ToString()), Times.Once);
-        _mockTcpService.Verify(
-            t => t.SendRefreshConfigAsync(device2.DeviceId.ToString()), Times.Once);
+            t => t.SendRefreshConfigAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

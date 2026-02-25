@@ -16,18 +16,15 @@ public class ConfigController : ControllerBase
     private readonly ILogger<ConfigController> _logger;
     private readonly IRefreshConfigTracker _refreshTracker;
     private readonly IConfigurationService _configurationService;
-    private readonly IDeviceRegistryService _deviceRegistryService;
 
     public ConfigController(
         ILogger<ConfigController> logger,
         IRefreshConfigTracker refreshTracker,
-        IConfigurationService configurationService,
-        IDeviceRegistryService deviceRegistryService)
+        IConfigurationService configurationService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _refreshTracker = refreshTracker ?? throw new ArgumentNullException(nameof(refreshTracker));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
-        _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
     }
 
     /// <summary>
@@ -35,9 +32,10 @@ public class ConfigController : ControllerBase
     /// Per API Contract.md §2.2: GET /config/{deviceId}
     /// Per ConfigurationManagementSpecification §2(2)(b).
     /// Also serves as implicit ACK for REFRESH_CONFIG per Session Interaction.md §6(3).
+    /// Configuration is only applicable to Android devices per ConfigurationManagementSpecification.
     /// </summary>
     /// <param name="deviceId">The device requesting configuration.</param>
-    /// <returns>200 OK with compiled configuration.</returns>
+    /// <returns>200 OK with compiled configuration; 403 Forbidden for non-Android devices.</returns>
     [HttpGet("config/{deviceId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -52,11 +50,15 @@ public class ConfigController : ControllerBase
             return BadRequest("Invalid device ID format.");
         }
 
-        // Reject requests from unpaired devices per Pairing Process §1(3)
-        if (!await _deviceRegistryService.IsDevicePairedAsync(deviceGuid))
+        // Validate device is Android using positive detection (checks if paired in Android registry)
+        try
         {
-            _logger.LogInformation("Configuration request from unpaired device {DeviceId}", deviceId);
-            return StatusCode(StatusCodes.Status403Forbidden, "Device is not paired.");
+            await _configurationService.ValidateAndroidDeviceAsync(deviceGuid);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogInformation("Configuration request from non-Android device {DeviceId}: {Reason}", deviceId, ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, "Device is not a valid Android device for configuration management.");
         }
 
         // Signal that this device has fetched config (ACK for REFRESH_CONFIG)

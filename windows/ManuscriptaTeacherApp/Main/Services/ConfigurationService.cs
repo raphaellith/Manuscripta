@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Main.Models.Entities;
 using Main.Models.Enums;
@@ -11,7 +12,7 @@ namespace Main.Services;
 /// Implements the two-tier model per ConfigurationManagementSpecification:
 /// - Defaults: long-term persisted via <see cref="IDefaultConfigurationRepository"/>
 /// - Per-device overrides: short-term persisted via <see cref="IConfigurationOverrideRepository"/>
-/// Triggers config refresh per ConfigurationManagementSpecification §3(1)(b-c).
+/// Triggers config refresh per ConfigurationManagementSpecification §3(1)(c).
 /// Note: §3(1)(a) (device paired) is handled by <see cref="ConfigurationRefreshListener"/> (singleton).
 /// </summary>
 public class ConfigurationService : IConfigurationService
@@ -48,11 +49,12 @@ public class ConfigurationService : IConfigurationService
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
+        var pairedDevices = await _deviceRegistryService.GetAllAsync();
+        if (pairedDevices.Any())
+            throw new InvalidOperationException("Base configuration cannot be modified while devices are paired.");
+
         ValidateConfiguration(entity);
         await _defaultsRepository.UpdateAsync(entity);
-
-        // §3(1)(b): When a default value is set or changed, refresh all devices.
-        await RefreshAllDevicesAsync();
 
         return entity;
     }
@@ -186,4 +188,22 @@ public class ConfigurationService : IConfigurationService
     }
 
     #endregion
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices. 
+    /// Non-Android devices do not have configurations."
+    /// This method uses positive detection to verify the device is an Android device (paired in the registry).
+    /// </remarks>
+    public async Task ValidateAndroidDeviceAsync(Guid deviceId)
+    {
+        // Positively check if device is an Android device in the registry
+        var isAndroidDevice = await _deviceRegistryService.IsDevicePairedAsync(deviceId);
+        if (!isAndroidDevice)
+        {
+            throw new ArgumentException(
+                $"Device {deviceId} is not a valid Android device for configuration management. Configuration is only supported for paired Android devices per ConfigurationManagementSpecification.",
+                nameof(deviceId));
+        }
+    }
 }

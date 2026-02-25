@@ -50,4 +50,13 @@ public interface IConfigurationService
     /// <param name="deviceId">The device identifier.</param>
     /// <returns>A compiled ConfigurationEntity conformant to Validation Rules §2G.</returns>
     Task<ConfigurationEntity> CompileConfigAsync(Guid deviceId);
+
+    /// <summary>
+    /// Validates that a device is an Android device suitable for configuration management.
+    /// Per ConfigurationManagementSpecification: "This document is applicable only to Android devices."
+    /// Non-Android devices (e.g., reMarkable) do not support configuration management.
+    /// </summary>
+    /// <param name="deviceId">The device identifier to validate.</param>
+    /// <throws>ArgumentException if the device is not a valid Android device for configuration.</throws>
+    Task ValidateAndroidDeviceAsync(Guid deviceId);
 }

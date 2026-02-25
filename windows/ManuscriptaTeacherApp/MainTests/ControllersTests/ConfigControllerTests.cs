@@ -23,19 +23,16 @@ public class ConfigControllerTests
     private readonly Mock<ILogger<ConfigController>> _mockLogger;
     private readonly Mock<IRefreshConfigTracker> _mockRefreshTracker;
     private readonly Mock<IConfigurationService> _mockConfigService;
-    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistry;
 
     public ConfigControllerTests()
     {
         _mockLogger = new Mock<ILogger<ConfigController>>();
         _mockRefreshTracker = new Mock<IRefreshConfigTracker>();
         _mockConfigService = new Mock<IConfigurationService>();
-        _mockDeviceRegistry = new Mock<IDeviceRegistryService>();
         _controller = new ConfigController(
             _mockLogger.Object,
             _mockRefreshTracker.Object,
-            _mockConfigService.Object,
-            _mockDeviceRegistry.Object);
+            _mockConfigService.Object);
     }
 
     #region Constructor Tests
@@ -44,28 +41,21 @@ public class ConfigControllerTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new ConfigController(
-            null!, _mockRefreshTracker.Object, _mockConfigService.Object, _mockDeviceRegistry.Object));
+            null!, _mockRefreshTracker.Object, _mockConfigService.Object));
     }
 
     [Fact]
     public void Constructor_NullRefreshTracker_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new ConfigController(
-            _mockLogger.Object, null!, _mockConfigService.Object, _mockDeviceRegistry.Object));
+            _mockLogger.Object, null!, _mockConfigService.Object));
     }
 
     [Fact]
     public void Constructor_NullConfigurationService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new ConfigController(
-            _mockLogger.Object, _mockRefreshTracker.Object, null!, _mockDeviceRegistry.Object));
-    }
-
-    [Fact]
-    public void Constructor_NullDeviceRegistryService_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() => new ConfigController(
-            _mockLogger.Object, _mockRefreshTracker.Object, _mockConfigService.Object, null!));
+            _mockLogger.Object, _mockRefreshTracker.Object, null!));
     }
 
     #endregion
@@ -73,7 +63,7 @@ public class ConfigControllerTests
     #region GET /api/v1/config/{deviceId} Tests
 
     [Fact]
-    public async Task GetConfig_ValidPairedDevice_ReturnsCompiledConfig()
+    public async Task GetConfig_ValidAndroidDevice_ReturnsCompiledConfig()
     {
         // Arrange
         var deviceId = Guid.NewGuid();
@@ -86,7 +76,9 @@ public class ConfigControllerTests
             summarisationEnabled: false,
             mascotSelection: MascotSelection.MASCOT3);
 
-        _mockDeviceRegistry.Setup(d => d.IsDevicePairedAsync(deviceId)).ReturnsAsync(true);
+        // Mock successful validation (device is Android)
+        _mockConfigService.Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .Returns(Task.CompletedTask);
         _mockConfigService.Setup(s => s.CompileConfigAsync(deviceId))
             .ReturnsAsync(compiledConfig);
 
@@ -96,6 +88,7 @@ public class ConfigControllerTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Same(compiledConfig, okResult.Value);
+        _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(deviceId), Times.Once);
         _mockConfigService.Verify(s => s.CompileConfigAsync(deviceId), Times.Once);
     }
 
@@ -107,16 +100,17 @@ public class ConfigControllerTests
 
         // Assert — invalid device IDs are rejected without revealing config
         Assert.IsType<BadRequestObjectResult>(result);
+        _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(It.IsAny<Guid>()), Times.Never);
         _mockConfigService.Verify(s => s.CompileConfigAsync(It.IsAny<Guid>()), Times.Never);
-        _mockDeviceRegistry.Verify(d => d.IsDevicePairedAsync(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetConfig_UnpairedDevice_Returns403Forbidden()
+    public async Task GetConfig_NonAndroidDevice_Returns403Forbidden()
     {
-        // Arrange — per Pairing Process §1(3): reject unpaired devices
+        // Arrange — per ConfigurationManagementSpecification: configs only for Android devices
         var deviceId = Guid.NewGuid();
-        _mockDeviceRegistry.Setup(d => d.IsDevicePairedAsync(deviceId)).ReturnsAsync(false);
+        _mockConfigService.Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .ThrowsAsync(new ArgumentException("Device is not a valid Android device for configuration management."));
 
         // Act
         var result = await _controller.GetConfig(deviceId.ToString());
@@ -124,16 +118,18 @@ public class ConfigControllerTests
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
+        _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(deviceId), Times.Once);
         _mockConfigService.Verify(s => s.CompileConfigAsync(It.IsAny<Guid>()), Times.Never);
         _mockRefreshTracker.Verify(t => t.MarkConfigReceived(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetConfig_PairedDevice_CallsRefreshTracker()
+    public async Task GetConfig_AndroidDevice_CallsRefreshTracker()
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        _mockDeviceRegistry.Setup(d => d.IsDevicePairedAsync(deviceId)).ReturnsAsync(true);
+        _mockConfigService.Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .Returns(Task.CompletedTask);
         _mockConfigService.Setup(s => s.CompileConfigAsync(deviceId))
             .ReturnsAsync(ConfigurationEntity.CreateDefault());
 
@@ -151,7 +147,8 @@ public class ConfigControllerTests
     {
         // Arrange
         var deviceId = Guid.NewGuid();
-        _mockDeviceRegistry.Setup(d => d.IsDevicePairedAsync(deviceId)).ReturnsAsync(true);
+        _mockConfigService.Setup(s => s.ValidateAndroidDeviceAsync(deviceId))
+            .Returns(Task.CompletedTask);
         _mockConfigService.Setup(s => s.CompileConfigAsync(deviceId))
             .ReturnsAsync(ConfigurationEntity.CreateDefault());
 

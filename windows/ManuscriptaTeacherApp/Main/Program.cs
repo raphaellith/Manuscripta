@@ -171,7 +171,7 @@ if (!app.Environment.IsEnvironment("Testing"))
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
         // DbInitializer.Initialize(context);
 
         // Orphan file removal per PersistenceAndCascadingRules §3
