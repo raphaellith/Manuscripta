@@ -435,7 +435,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) insert the attachment into the material at the point indicated by the caret's current position.
     
-    (a1) when the attachment entity is successfully created by the virtue of subparagraph (a)(ii), bugit the copy of the file cannot be saved as suggested by subparagraph (a)(iii), remove the attachment entity created in (ii) by calling the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
+    (a1) when the attachment entity is successfully created by the virtue of subparagraph (a)(ii), but the copy of the file cannot be saved as suggested by subparagraph (a)(iii), remove the attachment entity created in (ii) by calling the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
     (b) provide a "delete" button for attachments. When it is clicked -
 
