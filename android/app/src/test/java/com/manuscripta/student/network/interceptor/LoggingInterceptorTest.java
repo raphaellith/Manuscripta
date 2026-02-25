@@ -272,6 +272,58 @@ public class LoggingInterceptorTest {
         assertEquals(200, result.code());
     }
 
+    @Test
+    public void testIntercept_oneShotRequestBody_doesNotConsumeBody() throws IOException {
+        // Arrange
+        final boolean[] bodyWritten = {false};
+        RequestBody oneShotBody = new RequestBody() {
+            @Override
+            public okhttp3.MediaType contentType() {
+                return MediaType.parse("application/octet-stream");
+            }
+
+            @Override
+            public long contentLength() {
+                return 10;
+            }
+
+            @Override
+            public boolean isOneShot() {
+                return true;
+            }
+
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException {
+                bodyWritten[0] = true;
+                sink.writeUtf8("test-data");
+            }
+        };
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/upload")
+                .post(oneShotBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        // Act
+        Response result = interceptor.intercept(mockChain);
+
+        // Assert - verify the one-shot body can still be written
+        assertNotNull(result);
+        assertEquals(200, result.code());
+        // The body should be writable by chain.proceed(), not consumed by logging
+        assertTrue("One-shot request body should be writable after logging", bodyWritten[0]);
+    }
+
     // ========== Network error tests ==========
 
     @Test
