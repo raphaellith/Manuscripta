@@ -39,14 +39,13 @@ public class ExternalDeviceDeploymentServiceTests
         _mockEmailCredRepo = new Mock<IEmailCredentialRepository>();
         _mockLogger = new Mock<ILogger<ExternalDeviceDeploymentService>>();
 
-        _mockEmailCredRepo.Setup(r => r.GetCredentialsAsync()).ReturnsAsync(new EmailCredentialEntity
-        {
-            Id = Guid.NewGuid(),
-            EmailAddress = "test@example.com",
-            SmtpHost = "smtp.example.com",
-            SmtpPort = 587,
-            Password = "password"
-        });
+        _mockEmailCredRepo.Setup(r => r.GetCredentialsAsync()).ReturnsAsync(new EmailCredentialEntity(
+            Guid.NewGuid(),
+            "test@example.com",
+            "smtp.example.com",
+            587,
+            "password"
+        ));
 
         _service = new ExternalDeviceDeploymentService(
             _mockPdfService.Object,

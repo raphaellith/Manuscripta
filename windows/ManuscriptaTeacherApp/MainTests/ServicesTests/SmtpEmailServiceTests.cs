@@ -34,7 +34,7 @@ public class SmtpEmailServiceTests
     [Fact]
     public async Task TestConnectionAsync_Successful_ConnectsAndAuthenticates()
     {
-        var creds = new EmailCredentialEntity { SmtpHost = "smtp.test.com", SmtpPort = 587, EmailAddress = "test@test.com", Password = "pw" };
+        var creds = new EmailCredentialEntity(Guid.NewGuid(), "test@test.com", "smtp.test.com", 587, "pw");
 
         await _service.TestConnectionAsync(creds);
 
@@ -47,7 +47,7 @@ public class SmtpEmailServiceTests
     [Fact]
     public async Task TestConnectionAsync_Fails_ThrowsInvalidOperationException()
     {
-        var creds = new EmailCredentialEntity { SmtpHost = "smtp.test.com", SmtpPort = 587, EmailAddress = "test@test.com", Password = "pw" };
+        var creds = new EmailCredentialEntity(Guid.NewGuid(), "test@test.com", "smtp.test.com", 587, "pw");
 
         _mockSmtpClient.Setup(c => c.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<SecureSocketOptions>(), default(CancellationToken)))
             .ThrowsAsync(new Exception("Network error"));
@@ -58,7 +58,7 @@ public class SmtpEmailServiceTests
     [Fact]
     public async Task SendEmailWithAttachmentAsync_SendsMimeMessageWithAttachment()
     {
-        var creds = new EmailCredentialEntity { SmtpHost = "smtp.test.com", SmtpPort = 587, EmailAddress = "test@test.com", Password = "pw" };
+        var creds = new EmailCredentialEntity(Guid.NewGuid(), "test@test.com", "smtp.test.com", 587, "pw");
         var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // %PDF
 
         MimeMessage? sentMessage = null;
