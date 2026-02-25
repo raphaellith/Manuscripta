@@ -18,6 +18,8 @@ import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
@@ -41,7 +43,9 @@ public class RepositoryModuleTest {
     private ResponseDao mockResponseDao;
     private MaterialDao mockMaterialDao;
     private FileStorageManager mockFileStorageManager;
+    private ApiService mockApiService;
     private TcpSocketManager mockTcpSocketManager;
+    private PairingManager mockPairingManager;
 
     @Before
     public void setUp() {
@@ -51,7 +55,9 @@ public class RepositoryModuleTest {
         mockResponseDao = mock(ResponseDao.class);
         mockMaterialDao = mock(MaterialDao.class);
         mockFileStorageManager = mock(FileStorageManager.class);
+        mockApiService = mock(ApiService.class);
         mockTcpSocketManager = mock(TcpSocketManager.class);
+        mockPairingManager = mock(PairingManager.class);
     }
 
     @Test
@@ -110,18 +116,10 @@ public class RepositoryModuleTest {
     }
 
     @Test
-    public void testProvideMaterialRepository_withTcpSocketManager_returnsRepository() {
+    public void testProvideMaterialRepository_returnsRepository() {
         MaterialRepository result = repositoryModule.provideMaterialRepository(
-                mockMaterialDao, mockFileStorageManager, mockTcpSocketManager);
-
-        assertNotNull(result);
-        assertTrue(result instanceof MaterialRepositoryImpl);
-    }
-
-    @Test
-    public void testProvideMaterialRepository_withNullTcpSocketManager_returnsRepository() {
-        MaterialRepository result = repositoryModule.provideMaterialRepository(
-                mockMaterialDao, mockFileStorageManager, null);
+                mockMaterialDao, mockFileStorageManager, mockApiService,
+                mockTcpSocketManager, mockPairingManager);
 
         assertNotNull(result);
         assertTrue(result instanceof MaterialRepositoryImpl);
