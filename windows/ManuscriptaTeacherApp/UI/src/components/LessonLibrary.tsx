@@ -28,7 +28,7 @@ const LessonFolderCreatorModal: React.FC<LessonFolderCreatorModalProps> = ({ uni
     }
 
     return (
-        <ModalOverlay priority="standard">
+        <ModalOverlay priority="low">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-lg space-y-6">
                 <h2 className="text-2xl font-serif text-text-heading">Add Lesson Folder to "{unit}"</h2>
                 

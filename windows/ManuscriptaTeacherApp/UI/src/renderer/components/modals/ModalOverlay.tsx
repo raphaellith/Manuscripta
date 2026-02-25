@@ -5,14 +5,14 @@
  * based on modal priority. Eliminates duplicate overlay markup.
  * 
  * Z-Index Priority Levels:
- * - 'standard': z-[50]  - Regular modals (create/edit/view operations)
- * - 'pairing':  z-[80]  - Device pairing modal
- * - 'dependency': z-[90] - Runtime dependency installation (highest priority)
+ * - 'low':      z-[50]  - Regular modals (create/edit/view operations)
+ * - 'moderate': z-[80]  - Workflow-blocking modals (device pairing)
+ * - 'high':     z-[90]  - System-critical modals (dependency installation)
  */
 
 import React from 'react';
 
-type ModalPriority = 'standard' | 'pairing' | 'dependency';
+type ModalPriority = 'low' | 'moderate' | 'high';
 
 interface ModalOverlayProps {
   /** Priority level determining z-index stacking order */
@@ -24,9 +24,9 @@ interface ModalOverlayProps {
 }
 
 const zIndexMap: Record<ModalPriority, string> = {
-  standard: 'z-[50]',
-  pairing: 'z-[80]',
-  dependency: 'z-[90]',
+  low: 'z-[50]',
+  moderate: 'z-[80]',
+  high: 'z-[90]',
 };
 
 /**
@@ -34,7 +34,7 @@ const zIndexMap: Record<ModalPriority, string> = {
  * 
  * @example
  * ```tsx
- * <ModalOverlay priority="standard" onClick={() => onClose()}>
+ * <ModalOverlay priority="low" onClick={() => onClose()}>
  *   <div className="bg-white rounded-lg p-8 shadow-2xl...">
  *     {modalContent}
  *   </div>
@@ -42,7 +42,7 @@ const zIndexMap: Record<ModalPriority, string> = {
  * ```
  */
 export const ModalOverlay: React.FC<ModalOverlayProps> = ({
-  priority = 'standard',
+  priority = 'low',
   onClick,
   children,
 }) => {

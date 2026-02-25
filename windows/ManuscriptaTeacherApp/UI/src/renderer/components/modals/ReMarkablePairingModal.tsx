@@ -57,7 +57,7 @@ export const ReMarkablePairingModal: React.FC<ReMarkablePairingModalProps> = ({
     };
 
     return (
-        <ModalOverlay priority="pairing">
+        <ModalOverlay priority="moderate">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-md space-y-6 animate-fade-in-up border border-gray-100">
                 <h2 className="text-2xl font-serif text-text-heading">
                     Pair reMarkable Device

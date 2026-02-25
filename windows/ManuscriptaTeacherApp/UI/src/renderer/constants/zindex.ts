@@ -9,18 +9,17 @@
  * - z-0: Decorative background elements (blurred circles, etc.)
  * - z-10: Header wrapper container
  * - z-20: Header element itself
- * - z-[50]: Standard modals (create/edit/view operations)
- * - z-[80]: Device pairing modal (mid-priority)
- * - z-[90]: Dependency installation modal (highest priority - must always be on top)
+ * - z-[50]: Low priority modals (create/edit/view operations)
+ * - z-[80]: Moderate priority modals (workflow-blocking, e.g. device pairing)
+ * - z-[90]: High priority modals (system-critical, e.g. dependency installation)
  * 
  * USAGE NOTES:
- * - Standard modals (create collection, lesson, material, etc.): z-[50]
- * - ReMarkablePairingModal: z-[80] (blocking operation)
- * - RuntimeDependencyInstallModal: z-[90] (critical path blocker)
+ * - Low priority (create/edit/view): z-[50]
+ * - Moderate priority (workflow-blocking): z-[80]
+ * - High priority (system-critical): z-[90]
  * 
- * When both the ReMarkablePairingModal and RuntimeDependencyInstallModal are open,
- * the RuntimeDependencyInstallModal will appear above it because it has a higher
- * z-index value.
+ * When multiple modals are open simultaneously, higher priority modals will
+ * automatically appear above lower priority modals.
  */
 
 export const Z_INDEX = {
@@ -32,7 +31,7 @@ export const Z_INDEX = {
   HEADER: 20,
   
   // Modals (by priority)
-  STANDARD_MODAL: 50,          // create/edit/view operations
-  DEVICE_PAIRING: 80,          // ReMarkablePairingModal
-  DEPENDENCY_INSTALL: 90,      // RuntimeDependencyInstallModal (highest priority)
+  MODAL_LOW: 50,        // create/edit/view operations
+  MODAL_MODERATE: 80,   // workflow-blocking operations (device pairing)
+  MODAL_HIGH: 90,       // system-critical operations (dependency installation)
 } as const;

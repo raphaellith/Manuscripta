@@ -754,7 +754,7 @@ export const ResponsesPage: React.FC = () => {
             )}
             {/* Device List Popup per §6(4)(c)(iv) */}
             {devicePopup.isOpen && (
-                <ModalOverlay priority="standard" onClick={() => setDevicePopup(prev => ({ ...prev, isOpen: false }))}>
+                <ModalOverlay priority="low" onClick={() => setDevicePopup(prev => ({ ...prev, isOpen: false }))}>
                     <div className="bg-white rounded-lg p-6 max-w-md w-full m-4 shadow-xl" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-lg text-text-heading">{devicePopup.title}</h3>
