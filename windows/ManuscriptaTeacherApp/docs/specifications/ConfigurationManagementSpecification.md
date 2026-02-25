@@ -6,8 +6,6 @@ This document specifies how configurations of Android devices are to be managed 
 
 This document is applicable only to Android devices. Non-Android devices do not have configurations.
 
-[Explanatory Note: The provisions defining the obligations of Frontend Workflow Specifications should be replaced with appropriate cross-references when corresponding specifications are written there, and when SignalR endpoints are defined.]
-
 
 ## Section 1 - General Principles
 
@@ -33,7 +31,7 @@ This document is applicable only to Android devices. Non-Android devices do not 
 
 (4) The Windows application shall initialise the base configuration to the values provided in Appendix 1.
 
-(5) The base configuration values shall be displayed modifiably under the "Settings" tab, and the Frontend Workflow Specifications shall define the operation of that tab.
+(5) The base configuration values shall be displayed modifiably under the "Settings" tab, as outlined in S7 of Frontend Workflow Specifications.
 
 (6) The Windows application shall not allow the base configuration to be modified when one or more devices is paired.
 
@@ -52,7 +50,7 @@ This document is applicable only to Android devices. Non-Android devices do not 
         (ii) all non-overriden configuration values as obtained from the base configuration.
     
 
-(3) The Frontend Workflow Specifications shall define a manner through which the user can override base configuration values for a specific device using the device grid in the "Classroom" tab.
+(3) The user may override base configuration values for a specific Android device using the device grid in the "Classroom" tab, as outlined in S5B(5) and S5H in Frontend Workflow Specifications.
 
 
 ## Section 3 — Initiation of Config Refresh
