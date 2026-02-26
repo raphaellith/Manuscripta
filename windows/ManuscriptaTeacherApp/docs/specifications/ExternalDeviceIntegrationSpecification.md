@@ -27,6 +27,26 @@ This document specifies the integration of the application with "external device
     (a) For devices of type `REMARKABLE`, the application shall verify that `rmapi` is available in accordance with the Backend Runtime Dependency Management Specification.
     (b) For devices of type `KINDLE`, the application shall verify that Email Credentials are functional in accordance with the Email Handling Specification.
 
+## Section 2A - rmapi Runtime Dependency Manager
+
+(1) The `RmapiRuntimeDependencyManager` class shall extend the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification Section 2.
+
+(2) For the purposes of Section 2(2A) of that Specification —
+
+    (a) `DownloadDependencyAsync()` shall download version 0.0.32 Windows x64 release of `rmapi` from `https://github.com/ddvk/rmapi/releases`;
+
+    (b) `VerifyDownloadAsync()` shall verify the downloaded file using SHA256 hash comparison against the published checksums; and
+
+    (c) `PerformInstallDependencyAsync()` shall extract or copy the executable to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`.
+
+(3) The `GetDependencyServiceAsync()` method shall return an instance of `IRmapiService`, which shall provide methods for interacting with the reMarkable cloud via `rmapi`.
+
+(4) For the purposes of Section 2(2)(a) of that Specification, the availability check shall verify that —
+
+    (a) the `rmapi` executable exists at the path specified in paragraph (2)(c); and
+
+    (b) invoking `rmapi version` returns successfully.
+
 ## Section 3 - Pairing External Devices
 
 (1) To pair an external device, the application shall collect a user-friendly device name and type-specific configuration data.
