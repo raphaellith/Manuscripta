@@ -8,6 +8,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -487,8 +488,8 @@ public class MaterialRepositoryImplTest {
                 Collections.singletonList(dto), Collections.emptyList());
         when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
         when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
-        when(mockTcpSocketManager.send(any(DistributeAckMessage.class)))
-                .thenThrow(new IOException("Connection lost"));
+        doThrow(new IOException("Connection lost"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
 
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
@@ -508,8 +509,8 @@ public class MaterialRepositoryImplTest {
                 Collections.singletonList(dto), Collections.emptyList());
         when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
         when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
-        when(mockTcpSocketManager.send(any(DistributeAckMessage.class)))
-                .thenThrow(new TcpProtocolException("Invalid message"));
+        doThrow(new TcpProtocolException("Invalid message"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
 
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
