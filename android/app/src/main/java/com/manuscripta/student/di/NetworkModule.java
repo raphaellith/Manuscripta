@@ -5,6 +5,7 @@ import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
+import com.manuscripta.student.network.interceptor.RetryInterceptor;
 import com.manuscripta.student.network.tcp.PairingManager;
 
 import javax.inject.Singleton;
@@ -30,8 +31,9 @@ public class NetworkModule {
     private static final String BASE_URL = "https://api.manuscripta.example.com/";
 
     /**
-     * Provides OkHttpClient with custom interceptors for authentication,
+     * Provides OkHttpClient with custom interceptors for retry, authentication,
      * logging, and error handling.
+     * RetryInterceptor runs first so each retry attempt passes through the full chain.
      * LoggingInterceptor is only enabled in debug builds.
      * ErrorInterceptor always runs for consistent error handling; body logging
      * within it is gated behind debug builds.
@@ -48,6 +50,7 @@ public class NetworkModule {
         AuthInterceptor.DeviceIdProvider deviceIdProvider = pairingManager::getDeviceId;
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .addInterceptor(new RetryInterceptor())
                 .addInterceptor(new AuthInterceptor(deviceIdProvider));
 
         // Only add detailed request/response logging in debug builds

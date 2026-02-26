@@ -9,6 +9,7 @@ import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
+import com.manuscripta.student.network.interceptor.RetryInterceptor;
 import com.manuscripta.student.network.tcp.PairingManager;
 
 import org.junit.Before;
@@ -46,10 +47,25 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_hasInterceptors() {
         OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
 
-        // Release builds have 2 interceptors (Auth, Error);
-        // debug builds have 3 (Auth, Logging, Error)
-        assertTrue("OkHttpClient should have at least 2 interceptors",
-                   client.interceptors().size() >= 2);
+        // Release builds have 3 interceptors (Retry, Auth, Error);
+        // debug builds have 4 (Retry, Auth, Logging, Error)
+        assertTrue("OkHttpClient should have at least 3 interceptors",
+                   client.interceptors().size() >= 3);
+    }
+
+    @Test
+    public void testProvideOkHttpClient_hasRetryInterceptor() {
+        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+
+        boolean hasRetryInterceptor = false;
+        for (Interceptor interceptor : client.interceptors()) {
+            if (interceptor instanceof RetryInterceptor) {
+                hasRetryInterceptor = true;
+                break;
+            }
+        }
+
+        assertTrue("OkHttpClient should have RetryInterceptor", hasRetryInterceptor);
     }
 
     @Test
@@ -120,19 +136,21 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_interceptorOrder() {
         OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
 
-        // Order: Auth → [Logging (debug only)] → Error
-        // Release: Auth, Error (size 2); Debug: Auth, Logging, Error (size 3)
+        // Order: Retry → Auth → [Logging (debug only)] → Error
+        // Release: Retry, Auth, Error (size 3); Debug: Retry, Auth, Logging, Error (size 4)
         int size = client.interceptors().size();
-        assertTrue("OkHttpClient should have at least 2 interceptors", size >= 2);
+        assertTrue("OkHttpClient should have at least 3 interceptors", size >= 3);
 
-        assertTrue("First interceptor should be AuthInterceptor",
-                   client.interceptors().get(0) instanceof AuthInterceptor);
+        assertTrue("First interceptor should be RetryInterceptor",
+                   client.interceptors().get(0) instanceof RetryInterceptor);
+        assertTrue("Second interceptor should be AuthInterceptor",
+                   client.interceptors().get(1) instanceof AuthInterceptor);
         assertTrue("Last interceptor should be ErrorInterceptor",
                    client.interceptors().get(size - 1) instanceof ErrorInterceptor);
 
-        if (size == 3) {
-            assertTrue("Second interceptor should be LoggingInterceptor",
-                       client.interceptors().get(1) instanceof LoggingInterceptor);
+        if (size == 4) {
+            assertTrue("Third interceptor should be LoggingInterceptor",
+                       client.interceptors().get(2) instanceof LoggingInterceptor);
         }
     }
 }
