@@ -2,11 +2,14 @@ package com.manuscripta.student.di;
 
 import android.content.Context;
 
+import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
 import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.MaterialRepository;
@@ -154,5 +157,29 @@ public class RepositoryModule {
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager) {
         return new FeedbackRepositoryImpl(feedbackDao, apiService, tcpSocketManager);
+    }
+
+    /**
+     * Provides the DeviceStatusDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return DeviceStatusDao instance
+     */
+    @Provides
+    @Singleton
+    public DeviceStatusDao provideDeviceStatusDao(ManuscriptaDatabase database) {
+        return database.deviceStatusDao();
+    }
+
+    /**
+     * Provides the DeviceStatusRepository implementation.
+     *
+     * @param deviceStatusDao The DeviceStatusDao instance
+     * @return DeviceStatusRepository instance
+     */
+    @Provides
+    @Singleton
+    public DeviceStatusRepository provideDeviceStatusRepository(DeviceStatusDao deviceStatusDao) {
+        return new DeviceStatusRepositoryImpl(deviceStatusDao);
     }
 }
