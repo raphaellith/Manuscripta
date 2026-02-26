@@ -16,8 +16,10 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -270,6 +272,59 @@ public class LoggingInterceptorTest {
         // Assert - should handle exception gracefully and still return response
         assertNotNull(result);
         assertEquals(200, result.code());
+    }
+
+    @Test
+    public void testIntercept_oneShotRequestBody_skipsLogging() throws IOException {
+        // Arrange
+        final boolean[] bodyConsumed = {false};
+        RequestBody oneShotBody = new RequestBody() {
+            @Override
+            public okhttp3.MediaType contentType() {
+                return MediaType.parse("application/octet-stream");
+            }
+
+            @Override
+            public long contentLength() {
+                return 10;
+            }
+
+            @Override
+            public boolean isOneShot() {
+                return true;
+            }
+
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException {
+                // If this gets called during logging, it means the body was consumed
+                bodyConsumed[0] = true;
+                sink.writeUtf8("test-data");
+            }
+        };
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/upload")
+                .post(oneShotBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        // Act
+        Response result = interceptor.intercept(mockChain);
+
+        // Assert - verify the interceptor did NOT consume the one-shot body during logging
+        assertNotNull(result);
+        assertEquals(200, result.code());
+        // The body should NOT have been written to during logging (one-shot bodies are skipped)
+        assertFalse(bodyConsumed[0]);
     }
 
     // ========== Network error tests ==========
