@@ -6,10 +6,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
 import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.FeedbackRepositoryImpl;
 import com.manuscripta.student.data.repository.ResponseRepository;
@@ -31,6 +34,7 @@ public class RepositoryModuleTest {
     private ManuscriptaDatabase mockDatabase;
     private SessionDao mockSessionDao;
     private ResponseDao mockResponseDao;
+    private DeviceStatusDao mockDeviceStatusDao;
     private FeedbackDao mockFeedbackDao;
 
     @Before
@@ -39,6 +43,7 @@ public class RepositoryModuleTest {
         mockDatabase = mock(ManuscriptaDatabase.class);
         mockSessionDao = mock(SessionDao.class);
         mockResponseDao = mock(ResponseDao.class);
+        mockDeviceStatusDao = mock(DeviceStatusDao.class);
         mockFeedbackDao = mock(FeedbackDao.class);
     }
 
@@ -98,5 +103,23 @@ public class RepositoryModuleTest {
 
         assertNotNull(result);
         assertTrue(result instanceof FeedbackRepositoryImpl);
+    }
+
+    @Test
+    public void testProvideDeviceStatusDao_returnsDao() {
+        when(mockDatabase.deviceStatusDao()).thenReturn(mockDeviceStatusDao);
+
+        DeviceStatusDao result = repositoryModule.provideDeviceStatusDao(mockDatabase);
+
+        assertNotNull(result);
+        verify(mockDatabase).deviceStatusDao();
+    }
+
+    @Test
+    public void testProvideDeviceStatusRepository_returnsRepository() {
+        DeviceStatusRepository result = repositoryModule.provideDeviceStatusRepository(mockDeviceStatusDao);
+
+        assertNotNull(result);
+        assertTrue(result instanceof DeviceStatusRepositoryImpl);
     }
 }
