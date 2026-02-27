@@ -40,6 +40,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (8) Prior to any operation requiring Ollama, Chroma or any large language model, the application shall verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification and Sections 1A to 1E of this document.
 
+(9) As Ollama, Chroma, large language models are treated as runtime dependencies, the application shall not assume on startup that they have already been installed. They must only be installed upon user consent expressed from the frontend.
+
 
 
 ## Section 1A - Ascertaining the availability of Ollama

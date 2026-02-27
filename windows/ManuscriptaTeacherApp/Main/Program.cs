@@ -8,19 +8,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using Main.Data;
+using Main.Models;
 using Main.Services;
 using Main.Services.Network;
 using Main.Services.GenAI;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Start ChromaDB server if not already running
-// See GenAISpec.md §2(3)
-var autoStartChroma = builder.Configuration.GetValue("ChromaDB:AutoStart", true);
-if (autoStartChroma)
-{
-    await StartChromaDbServerAsync(builder.Configuration);
-}
 
 // Configure network settings from appsettings.json
 builder.Services.AddOptions<NetworkSettings>()
@@ -374,101 +367,14 @@ else
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 }
 
+// Per GenAISpec §1(9): Runtime dependencies (Ollama, Chroma, LLMs) shall not be installed on startup.
+// They must only be installed upon user consent expressed from the frontend.
+// Per BackendRuntimeDependencyManagementSpecification §3(1): Frontend assumes dependencies are available.
+// When a feature requiring a dependency is used, the backend will notify the frontend via
+// RuntimeDependencyNotInstalled if the dependency is unavailable (§3(2)(a)), and the frontend
+// will handle this notification per Frontend Workflow Specifications §3A.
+
 app.Run();
-
-
-// Helper method to start ChromaDB server if not already running
-async Task StartChromaDbServerAsync(IConfiguration configuration)
-{
-    var serverUri = configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
-    
-    // Per GenAISpec.md §2(3)(b): ChromaDB shall store its data in %AppData%\ManuscriptaTeacherApp\VectorStore
-    var dataPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ManuscriptaTeacherApp",
-        "VectorStore"
-    );
-    
-    // Ensure data directory exists
-    Directory.CreateDirectory(dataPath);
-    
-    // Check if server is already running
-    try
-    {
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-        var healthCheckUri = serverUri.TrimEnd('/') + "/heartbeat";
-        var response = await httpClient.GetAsync(healthCheckUri);
-        
-        if (response.IsSuccessStatusCode)
-        {
-            Console.WriteLine("ChromaDB server is already running.");
-            return;
-        }
-    }
-    catch
-    {
-        // Server is not running, proceed to start it
-    }
-    
-    try
-    {
-        Console.WriteLine("Starting ChromaDB server...");
-        
-        var chromaProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "chroma",
-                Arguments = $"run --path \"{dataPath}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
-        
-        chromaProcess.Start();
-        
-        // Wait for server to start (up to 30 seconds)
-        var startTime = DateTime.UtcNow;
-        var timeout = TimeSpan.FromSeconds(30);
-        var serverStarted = false;
-        
-        while (DateTime.UtcNow - startTime < timeout)
-        {
-            try
-            {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-                var healthCheckUri = serverUri.TrimEnd('/') + "/heartbeat";
-                var response = await httpClient.GetAsync(healthCheckUri);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    serverStarted = true;
-                    Console.WriteLine("ChromaDB server started successfully.");
-                    break;
-                }
-            }
-            catch
-            {
-                // Server not ready yet, retry
-            }
-            
-            await Task.Delay(500);
-        }
-        
-        if (!serverStarted)
-        {
-            Console.WriteLine("Warning: ChromaDB server may not have started properly. Continuing anyway...");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Failed to start ChromaDB server: {ex.Message}");
-        Console.WriteLine("Ensure ChromaDB is installed and the 'chroma' command is available in your PATH.");
-        throw;
-    }
-}
 
 // Expose Program class for WebApplicationFactory integration testing
 public partial class Program { }
