@@ -145,10 +145,26 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
 {
     var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
     var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    var ollamaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+    var chromaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+    var qwen3Manager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+    var graniteManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+    var nomicManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
+    
     registry.Register(rmapiManager);
+    registry.Register(ollamaManager);
+    registry.Register(chromaManager);
+    registry.Register(qwen3Manager);
+    registry.Register(graniteManager);
+    registry.Register(nomicManager);
     return registry;
 });
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();

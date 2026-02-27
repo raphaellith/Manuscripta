@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Main.Services.RuntimeDependencies;
 
 namespace Main.Services.GenAI;
 
@@ -7,7 +8,7 @@ namespace Main.Services.GenAI;
 /// Provides low-level Ollama API interactions for model verification, chat completion, and embedding generation.
 /// See GenAISpec.md §3(2).
 /// </summary>
-public class OllamaClientService
+public class OllamaClientService : IDependencyService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
