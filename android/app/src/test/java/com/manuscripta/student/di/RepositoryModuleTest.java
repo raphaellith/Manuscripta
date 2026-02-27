@@ -128,6 +128,8 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideMaterialRepository_returnsRepository() {
+        when(mockMaterialDao.getAll()).thenReturn(new java.util.ArrayList<>());
+
         MaterialRepository result = repositoryModule.provideMaterialRepository(
                 mockMaterialDao, mockFileStorageManager, mockApiService,
                 mockTcpSocketManager, mockPairingManager);
