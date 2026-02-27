@@ -9,6 +9,7 @@
 
 # AI coding agent instructions (personal configuration)
 .github/copilot-instructions.md
+.agent/
 
 #########################
 # Android
@@ -35,6 +36,7 @@ release/
 .gradle/
 build/
 */build/
+android/.gradle_home/
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -121,8 +123,18 @@ lint-results*.xml
 **/kspCaches/
 
 #########################
-# Windows / .NET
+# Windows / Electron / Node.js
 #########################
+
+# Node.js dependencies
+node_modules/
+
+# Webpack build output
+.webpack/
+
+# Electron build output
+out/
+dist/
 
 # Build results
 [Dd]ebug/
@@ -204,6 +216,8 @@ _ReSharper*/
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+.pytest_cache/
 
 # JetBrains IDEs
 .idea/
@@ -225,6 +239,12 @@ __pycache__/
 
 # Windows shortcuts
 *.lnk
+
+#########################
+# Node / JavaScript
+#########################
+node_modules/
+.webpack/
 
 #########################
 # macOS

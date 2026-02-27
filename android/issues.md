@@ -618,6 +618,60 @@ Create Hilt module for providing repository instances.
 
 ---
 
+### 2.7 [Android] Implement TCP Acknowledgement Signal Handling
+
+- Labels: `android`, `repository-layer`, `network-layer`
+
+**Description:**
+Implement sending and receiving of explicit TCP acknowledgement signals as defined in `API Contract.md` §3.6.1. These ACKs provide application-level confirmation of message receipt beyond TCP-level acknowledgements.
+
+**ACK Signal Reference (API Contract §3.6.1):**
+
+| Request | ACK | Android Role |
+|---------|-----|--------------|
+| `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | **Receives** — Covered by issue 6.8 (TCP pairing handshake) |
+| `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | **Receives** — Covered by issue 6.5 (Raise Hand feature) |
+| `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | **Sends** — ⚠️ **This issue** |
+
+**Scope:** This issue covers the `DISTRIBUTE_ACK` signal which must be sent by the Android client after successfully receiving materials via HTTP.
+
+**Protocol Reference:**
+
+- **Opcode:** `0x12` (DISTRIBUTE_ACK)
+- **Operand:** Device ID (UTF-8 string)
+- **Trigger:** Successful HTTP 200 response from `GET /distribution/{deviceId}`
+
+**Integration Flow:**
+
+1. `HeartbeatManager` receives `DISTRIBUTE_MATERIAL` (0x05) from server
+2. `HeartbeatManager` invokes `MaterialAvailableCallback.onMaterialsAvailable()`
+3. `MaterialRepository` calls `GET /distribution/{deviceId}` via HTTP
+4. On HTTP 200 OK response, `MaterialRepository` sends `DISTRIBUTE_ACK` (0x12) via `TcpSocketManager`
+5. Server receives ACK and marks distribution as confirmed
+
+**Related Requirements:** NET1, CON2A
+
+**Tasks:**
+- Create `DistributeAckMessage.java` implementing `TcpMessage` (opcode 0x12, Device ID operand)
+- Update `MaterialRepository` to send `DISTRIBUTE_ACK` after successful HTTP fetch
+- Inject `TcpSocketManager` into `MaterialRepository` for sending ACK
+- Handle send failure gracefully (log error, do not block material storage)
+- Write unit tests for message encoding
+- Write integration tests for the full flow
+
+**Acceptance Criteria:**
+- [ ] `DistributeAckMessage` class created with correct opcode (0x12) and encoding
+- [ ] `MaterialRepository` sends `DISTRIBUTE_ACK` after successful `GET /distribution/{deviceId}`
+- [ ] Device ID correctly included in ACK operand
+- [ ] ACK send failure does not block material storage
+- [ ] 95% test coverage
+- [ ] Checkstyle compliant
+- [ ] Javadoc for all public methods
+
+**Dependencies:** Issue 2.1 (MaterialRepository), Issue 6.8 (TCP Socket Layer)
+
+---
+
 ## Sub-tasks: Network Layer
 
 ### 3.1 [Android] Create Material DTOs
@@ -717,7 +771,39 @@ Create DTOs for device status reporting.
 
 ---
 
-### 3.5 [Android] Define API Endpoints in ApiService
+### 3.5 [Android] Create Feedback DTOs
+
+- Labels: `android`, `network-layer`
+
+**Description:**
+Create DTOs for feedback-related API communication. Feedback is returned by the teacher (Windows) app for student responses to questions without auto-graded `CorrectAnswer` (e.g., written answers).
+
+**Important:** Feedback IDs are assigned by the Windows teacher application. The Android client must preserve these IDs exactly as received.
+
+**Related Requirements:** `Validation Rules.md` §2F, `API Contract.md` §2.6, `Session Interaction.md` §7
+
+**Tasks:**
+- Create `FeedbackDto.java` with @SerializedName annotations:
+  - `id` (String/UUID - assigned by Windows)
+  - `responseId` (String/UUID - references ResponseEntity)
+  - `text` (String, optional - textual feedback)
+  - `marks` (Integer, optional - numerical marks)
+- Create `FeedbackListResponseDto.java` wrapping `List<FeedbackDto>`
+- Create mapper methods (DTO → Domain → Entity)
+- Write unit tests
+
+**Acceptance Criteria:**
+- [ ] FeedbackDto with proper JSON annotations
+- [ ] FeedbackListResponseDto created
+- [ ] Mappers preserve Windows-assigned IDs
+- [ ] Optional fields (`text`, `marks`) handled correctly
+- [ ] 100% test coverage
+
+**Dependencies:** Issue 1.10 (FeedbackEntity from #163)
+
+---
+
+### 3.6 [Android] Define API Endpoints in ApiService
 
 - Labels: `android`, `network-layer`
 
@@ -748,7 +834,7 @@ Define all Retrofit API endpoints for HTTP communication with teacher server, in
 
 ---
 
-### 3.6 [Android] Implement Network Interceptors
+### 3.7 [Android] Implement Network Interceptors
 
 - Labels: `android`, `network-layer`
 
@@ -770,7 +856,7 @@ Create interceptors for logging, error handling, and authentication.
 
 ---
 
-### 3.7 [Android] Implement Connection Manager
+### 3.8 [Android] Implement Connection Manager
 
 - Labels: `android`, `network-layer`
 
@@ -792,7 +878,7 @@ Create utility class for monitoring network connectivity and server reachability
 
 ---
 
-### 3.8 [Android] Implement Retry Policy
+### 3.9 [Android] Implement Retry Policy
 
 - Labels: `android`, `network-layer`
 
@@ -814,7 +900,7 @@ Create retry logic for failed network requests with exponential backoff.
 
 ---
 
-### 3.9 [Android] Implement Response Network Sync
+### 3.10 [Android] Implement Response Network Sync
 
 - Labels: `android`, `network-layer`, `repository-layer`
 

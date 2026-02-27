@@ -1,6 +1,8 @@
 package com.manuscripta.student.network.tcp;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
 
@@ -62,7 +64,7 @@ public class TcpMessageListenerAdapterTest {
         };
 
         customAdapter.onMessageReceived(new LockScreenMessage());
-        assert called[0];
+        assertTrue(called[0]);
     }
 
     @Test
@@ -77,7 +79,7 @@ public class TcpMessageListenerAdapterTest {
         };
 
         customAdapter.onConnectionStateChanged(ConnectionState.CONNECTED);
-        assert called[0];
+        assertTrue(called[0]);
     }
 
     @Test
@@ -92,7 +94,7 @@ public class TcpMessageListenerAdapterTest {
         };
 
         customAdapter.onError(new TcpProtocolException("Test"));
-        assert called[0];
+        assertTrue(called[0]);
     }
 
     @Test
@@ -112,7 +114,7 @@ public class TcpMessageListenerAdapterTest {
         customAdapter.onConnectionStateChanged(ConnectionState.CONNECTED);
         customAdapter.onError(new TcpProtocolException("Test"));
 
-        assert callCounts[0] == 1;
+        assertEquals(1, callCounts[0]);
         // Other methods should have been called with default (no-op) implementation
     }
 }

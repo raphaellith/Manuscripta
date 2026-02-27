@@ -37,6 +37,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     testOptions {
@@ -80,6 +81,7 @@ dependencies {
     testImplementation(libs.androidx.arch.core.testing)
     testImplementation(libs.androidx.core)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.android.compiler)
 
     androidTestImplementation(libs.androidx.junit)
@@ -132,6 +134,10 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/DatabaseModule$*.class",
             "**/TcpSocketManager.class",
             "**/TcpSocketManager$*.class",
+            "**/HeartbeatManager.class",
+            "**/HeartbeatManager$*.class",
+            "**/PairingManager.class",
+            "**/PairingManager$*.class",
             "**/ui/main/MainActivity.class",
             "**/ui/main/MainActivity$*.class",
             "**/R$*.class",
@@ -180,6 +186,10 @@ tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             "**/DatabaseModule$*.class",
             "**/TcpSocketManager.class",
             "**/TcpSocketManager$*.class",
+            "**/HeartbeatManager.class",
+            "**/HeartbeatManager$*.class",
+            "**/PairingManager.class",
+            "**/PairingManager$*.class",
             "**/ui/main/MainActivity.class",
             "**/ui/main/MainActivity$*.class",
             "**/R$*.class",

@@ -25,6 +25,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Unit tests for {@link DeviceStatusRepositoryImpl}.
  */
@@ -445,8 +448,8 @@ public class DeviceStatusRepositoryImplTest {
     @Test
     public void testConcurrentUpdates_differentDevices_areThreadSafe() throws InterruptedException {
         int threadCount = 10;
-        java.util.concurrent.CountDownLatch latch =
-                new java.util.concurrent.CountDownLatch(threadCount);
+        CountDownLatch latch =
+                new CountDownLatch(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             final int index = i;
@@ -461,7 +464,7 @@ public class DeviceStatusRepositoryImplTest {
             }).start();
         }
 
-        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
 
         // Verify all 10 inserts were called
         verify(mockDao, times(threadCount)).insert(any(DeviceStatusEntity.class));
@@ -471,8 +474,8 @@ public class DeviceStatusRepositoryImplTest {
     public void testConcurrentUpdates_sameDevice_areThreadSafe() throws InterruptedException {
         // Test concurrent updates to the SAME device ID to verify proper synchronization
         int threadCount = 10;
-        java.util.concurrent.CountDownLatch latch =
-                new java.util.concurrent.CountDownLatch(threadCount);
+        CountDownLatch latch =
+                new CountDownLatch(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             final int index = i;
@@ -489,7 +492,7 @@ public class DeviceStatusRepositoryImplTest {
             }).start();
         }
 
-        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
 
         // Verify all 10 inserts were called (all targeting same device)
         verify(mockDao, times(threadCount)).insert(any(DeviceStatusEntity.class));

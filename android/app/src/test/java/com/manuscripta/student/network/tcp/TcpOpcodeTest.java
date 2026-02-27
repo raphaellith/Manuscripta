@@ -45,6 +45,11 @@ public class TcpOpcodeTest {
     }
 
     @Test
+    public void testReturnFeedback_getValue() {
+        assertEquals((byte) 0x07, TcpOpcode.RETURN_FEEDBACK.getValue());
+    }
+
+    @Test
     public void testStatusUpdate_getValue() {
         assertEquals((byte) 0x10, TcpOpcode.STATUS_UPDATE.getValue());
     }
@@ -57,6 +62,11 @@ public class TcpOpcodeTest {
     @Test
     public void testDistributeAck_getValue() {
         assertEquals((byte) 0x12, TcpOpcode.DISTRIBUTE_ACK.getValue());
+    }
+
+    @Test
+    public void testFeedbackAck_getValue() {
+        assertEquals((byte) 0x13, TcpOpcode.FEEDBACK_ACK.getValue());
     }
 
     @Test
@@ -102,6 +112,11 @@ public class TcpOpcodeTest {
     }
 
     @Test
+    public void testFromValue_returnFeedback() {
+        assertEquals(TcpOpcode.RETURN_FEEDBACK, TcpOpcode.fromValue((byte) 0x07));
+    }
+
+    @Test
     public void testFromValue_statusUpdate() {
         assertEquals(TcpOpcode.STATUS_UPDATE, TcpOpcode.fromValue((byte) 0x10));
     }
@@ -114,6 +129,11 @@ public class TcpOpcodeTest {
     @Test
     public void testFromValue_distributeAck() {
         assertEquals(TcpOpcode.DISTRIBUTE_ACK, TcpOpcode.fromValue((byte) 0x12));
+    }
+
+    @Test
+    public void testFromValue_feedbackAck() {
+        assertEquals(TcpOpcode.FEEDBACK_ACK, TcpOpcode.fromValue((byte) 0x13));
     }
 
     @Test
@@ -130,7 +150,7 @@ public class TcpOpcodeTest {
     public void testFromValue_unknownOpcode_returnsNull() {
         assertNull(TcpOpcode.fromValue((byte) 0x00));
         assertNull(TcpOpcode.fromValue((byte) 0xFF));
-        assertNull(TcpOpcode.fromValue((byte) 0x07));
+        assertNull(TcpOpcode.fromValue((byte) 0x08));
     }
 
     // ==================== isServerToClient Tests ====================
@@ -166,6 +186,11 @@ public class TcpOpcodeTest {
     }
 
     @Test
+    public void testIsServerToClient_returnFeedback() {
+        assertTrue(TcpOpcode.RETURN_FEEDBACK.isServerToClient());
+    }
+
+    @Test
     public void testIsServerToClient_pairingAck() {
         assertTrue(TcpOpcode.PAIRING_ACK.isServerToClient());
     }
@@ -183,6 +208,11 @@ public class TcpOpcodeTest {
     @Test
     public void testIsServerToClient_distributeAck_returnsFalse() {
         assertFalse(TcpOpcode.DISTRIBUTE_ACK.isServerToClient());
+    }
+
+    @Test
+    public void testIsServerToClient_feedbackAck_returnsFalse() {
+        assertFalse(TcpOpcode.FEEDBACK_ACK.isServerToClient());
     }
 
     @Test
@@ -205,6 +235,11 @@ public class TcpOpcodeTest {
     @Test
     public void testIsClientToServer_distributeAck() {
         assertTrue(TcpOpcode.DISTRIBUTE_ACK.isClientToServer());
+    }
+
+    @Test
+    public void testIsClientToServer_feedbackAck() {
+        assertTrue(TcpOpcode.FEEDBACK_ACK.isClientToServer());
     }
 
     @Test
@@ -243,6 +278,11 @@ public class TcpOpcodeTest {
     }
 
     @Test
+    public void testIsClientToServer_returnFeedback_returnsFalse() {
+        assertFalse(TcpOpcode.RETURN_FEEDBACK.isClientToServer());
+    }
+
+    @Test
     public void testIsClientToServer_pairingAck_returnsFalse() {
         assertFalse(TcpOpcode.PAIRING_ACK.isClientToServer());
     }
@@ -264,10 +304,20 @@ public class TcpOpcodeTest {
         assertEquals("PAIRING_REQUEST(0x20)", TcpOpcode.PAIRING_REQUEST.toString());
     }
 
+    @Test
+    public void testToString_returnFeedback() {
+        assertEquals("RETURN_FEEDBACK(0x07)", TcpOpcode.RETURN_FEEDBACK.toString());
+    }
+
+    @Test
+    public void testToString_feedbackAck() {
+        assertEquals("FEEDBACK_ACK(0x13)", TcpOpcode.FEEDBACK_ACK.toString());
+    }
+
     // ==================== Enum completeness ====================
 
     @Test
     public void testAllOpcodesPresent() {
-        assertEquals(11, TcpOpcode.values().length);
+        assertEquals(13, TcpOpcode.values().length);
     }
 }

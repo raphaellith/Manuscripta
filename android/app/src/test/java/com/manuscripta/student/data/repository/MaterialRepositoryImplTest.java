@@ -19,7 +19,17 @@ import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.dto.DistributionBundleDto;
+import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
+
+import java.io.IOException;
+
+import retrofit2.Call;
+import retrofit2.Response;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,6 +59,18 @@ public class MaterialRepositoryImplTest {
     @Mock
     private FileStorageManager mockFileStorageManager;
 
+    @Mock
+    private ApiService mockApiService;
+
+    @Mock
+    private TcpSocketManager mockTcpSocketManager;
+
+    @Mock
+    private PairingManager mockPairingManager;
+
+    @Mock
+    private Call<DistributionBundleDto> mockDistributionCall;
+
     private MaterialRepositoryImpl repository;
 
     private static final String TEST_MATERIAL_ID = "test-material-123";
@@ -58,7 +80,8 @@ public class MaterialRepositoryImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
-        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager);
+        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                mockTcpSocketManager, mockPairingManager);
     }
 
     // ========== Constructor tests ==========
@@ -71,13 +94,36 @@ public class MaterialRepositoryImplTest {
     @Test
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(null, mockFileStorageManager));
+                () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService,
+                        mockTcpSocketManager, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, null));
+                () -> new MaterialRepositoryImpl(mockDao, null, mockApiService,
+                        mockTcpSocketManager, mockPairingManager));
+    }
+
+    @Test
+    public void testConstructor_nullApiService_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null,
+                        mockTcpSocketManager, mockPairingManager));
+    }
+
+    @Test
+    public void testConstructor_nullTcpSocketManager_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                        null, mockPairingManager));
+    }
+
+    @Test
+    public void testConstructor_nullPairingManager_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                        mockTcpSocketManager, null));
     }
 
     // ========== getMaterialById tests ==========
@@ -327,7 +373,11 @@ public class MaterialRepositoryImplTest {
     // ========== syncMaterials tests ==========
 
     @Test
-    public void testSyncMaterials_setsAndClearsSyncingFlag() {
+    public void testSyncMaterials_setsAndClearsSyncingFlag() throws IOException {
+        DistributionBundleDto emptyBundle = new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(emptyBundle));
+
         assertFalse(repository.isSyncing());
 
         repository.syncMaterials(TEST_DEVICE_ID);
@@ -355,13 +405,60 @@ public class MaterialRepositoryImplTest {
     }
 
     @Test
-    public void testSyncMaterials_notifiesCallback() {
+    public void testSyncMaterials_notifiesCallback() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
         final boolean[] callbackCalled = {false};
         repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
 
         repository.syncMaterials(TEST_DEVICE_ID);
 
         assertTrue(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_httpFailure_doesNotNotifyCallback() throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.error(500,
+                okhttp3.ResponseBody.create(null, "")));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_emptyBundle_doesNotNotifyCallback() throws IOException {
+        DistributionBundleDto emptyBundle = new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(emptyBundle));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_ioException_doesNotNotifyCallback() throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenThrow(new IOException("Network error"));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
     }
 
     // ========== isSyncing tests ==========
