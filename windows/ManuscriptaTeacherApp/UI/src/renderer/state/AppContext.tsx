@@ -15,6 +15,8 @@ import type {
     InternalCreateUnitDto,
     InternalCreateLessonDto,
     InternalCreateMaterialDto,
+    GenerationRequest,
+    GenerationResult,
 } from '../models';
 
 /**
@@ -52,6 +54,10 @@ interface AppContextValue extends AppState {
     createMaterial: (dto: InternalCreateMaterialDto) => Promise<MaterialEntity>;
     updateMaterial: (entity: MaterialEntity) => Promise<void>;
     deleteMaterial: (id: string) => Promise<void>;
+
+    // AI Generation - NetworkingAPISpec §1(1)(i)
+    generateReading: (request: GenerationRequest) => Promise<GenerationResult>;
+    generateWorksheet: (request: GenerationRequest) => Promise<GenerationResult>;
 
     // Helpers
     getUnitsForCollection: (collectionId: string) => UnitEntity[];
@@ -305,6 +311,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const getQuestionsForMaterial = (materialId: string) =>
         state.questions.filter(q => q.materialId === materialId);
 
+    // AI Generation methods - Per NetworkingAPISpec §1(1)(i)
+    const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
+        return await signalRService.generateReading(request);
+    };
+
+    const generateWorksheet = async (request: GenerationRequest): Promise<GenerationResult> => {
+        return await signalRService.generateWorksheet(request);
+    };
+
     const value: AppContextValue = {
         ...state,
         createUnitCollection,
@@ -319,6 +334,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         createMaterial,
         updateMaterial,
         deleteMaterial,
+        generateReading,
+        generateWorksheet,
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,

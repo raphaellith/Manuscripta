@@ -12,7 +12,7 @@ import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
 import { markdownToHtml } from '../../utils/markdownConversion';
-import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType } from '../../models';
+import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType, GenerationRequest, GenerationResult } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
 const ChevronRightIcon = ({ isOpen }: { isOpen: boolean }) => (
@@ -71,6 +71,7 @@ type ModalState =
 export const LessonLibraryPage: React.FC = () => {
     const {
         unitCollections,
+        units,
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,
@@ -82,7 +83,10 @@ export const LessonLibraryPage: React.FC = () => {
         createLesson,
         deleteLesson,
         createMaterial,
+        updateMaterial,
         deleteMaterial,
+        generateReading,
+        generateWorksheet,
     } = useAppContext();
 
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
@@ -218,6 +222,53 @@ export const LessonLibraryPage: React.FC = () => {
 
     const handleCreateMaterial = async (lessonId: string, title: string, materialType: MaterialType) => {
         await createMaterial({ lessonId, title, content: '', materialType });
+    };
+
+    // Per FrontendWorkflowSpec §4B: AI generation handler
+    const handleCreateMaterialWithAI = async (
+        lessonId: string,
+        title: string,
+        materialType: MaterialType,
+        generationRequest: GenerationRequest,
+        readingAge: number,
+        actualAge: number
+    ) => {
+        // Per §4B(2): First create material with empty content
+        const createdMaterial = await createMaterial({
+            lessonId,
+            title,
+            content: '',
+            materialType,
+        });
+
+        try {
+            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
+            const generationResult: GenerationResult = materialType === 'READING'
+                ? await generateReading(generationRequest)
+                : await generateWorksheet(generationRequest);
+
+            // Update material with generated content
+            await updateMaterial({
+                ...createdMaterial,
+                content: generationResult.content,
+                readingAge,
+                actualAge,
+            });
+
+            // Per §4B(2)(b): Display content in editor modal
+            // Note: Validation warnings will be displayed by the editor modal if present
+            setModal({ type: 'editMaterial', material: {
+                ...createdMaterial,
+                content: generationResult.content,
+                readingAge,
+                actualAge,
+            }});
+        } catch (error) {
+            console.error('AI generation failed:', error);
+            // Roll back material creation
+            await deleteMaterial(createdMaterial.id);
+            throw error;
+        }
     };
 
     const handleDeleteMaterial = async (materialId: string) => {
@@ -431,14 +482,32 @@ export const LessonLibraryPage: React.FC = () => {
                     onCreate={(title, description) => handleCreateLesson(modal.unit.id, title, description)}
                 />
             )}
-            {modal.type === 'createMaterial' && (
-                <CreateMaterialModal
-                    lessonId={modal.lesson.id}
-                    lessonTitle={modal.lesson.title}
-                    onClose={() => setModal({ type: 'none' })}
-                    onCreate={(title, materialType) => handleCreateMaterial(modal.lesson.id, title, materialType)}
-                />
-            )}
+            {modal.type === 'createMaterial' && (() => {
+                // Find unit collection ID for AI generation context
+                const lesson = modal.lesson;
+                const unit = units.find(u => u.id === lesson.unitId);
+                const unitCollectionId = unit?.unitCollectionId;
+
+                return (
+                    <CreateMaterialModal
+                        lessonId={lesson.id}
+                        lessonTitle={lesson.title}
+                        unitCollectionId={unitCollectionId}
+                        onClose={() => setModal({ type: 'none' })}
+                        onCreate={(title, materialType) => handleCreateMaterial(lesson.id, title, materialType)}
+                        onCreateWithAI={(title, materialType, generationRequest, readingAge, actualAge) =>
+                            handleCreateMaterialWithAI(
+                                lesson.id,
+                                title,
+                                materialType,
+                                generationRequest,
+                                readingAge,
+                                actualAge
+                            )
+                        }
+                    />
+                );
+            })()}
             {modal.type === 'editMaterial' && (
                 <EditorModal
                     material={modal.material}

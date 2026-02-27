@@ -21,6 +21,8 @@ import type {
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
     InternalCreateFeedbackDto,
+    GenerationRequest,
+    GenerationResult,
 } from "../../models";
 
 /**
@@ -357,6 +359,26 @@ class SignalRService {
             bytes[i] = binaryString.charCodeAt(i);
         }
         return bytes;
+    }
+
+    // ==========================================
+    // AI Generation - NetworkingAPISpec §1(1)(i)
+    // ==========================================
+
+    /**
+     * Generates reading material content using AI.
+     * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
+     */
+    public async generateReading(request: GenerationRequest): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateReading", request);
+    }
+
+    /**
+     * Generates worksheet material content using AI.
+     * Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec §3B.
+     */
+    public async generateWorksheet(request: GenerationRequest): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateWorksheet", request);
     }
 
     // ==========================================
