@@ -73,7 +73,7 @@ public class ConnectionManager {
             @Override
             public void onAvailable(@NonNull Network network) {
                 Log.d(TAG, "Network available: " + network);
-                isConnected.postValue(true);
+                isConnected.postValue(checkCurrentConnection());
             }
 
             @Override
@@ -128,12 +128,16 @@ public class ConnectionManager {
      * Checks if a specific server is reachable via HTTP.
      * Performs a HEAD request to the server URL to verify connectivity.
      *
+     * <p><b>IMPORTANT:</b> This method performs a blocking network operation and must be
+     * called from a background thread. Calling from the main thread will cause
+     * NetworkOnMainThreadException and ANR (Application Not Responding) errors.</p>
+     *
      * @param serverUrl The server URL to check (e.g., "https://api.example.com")
      * @return true if server is reachable, false otherwise
      */
     public boolean isServerReachable(@NonNull String serverUrl) {
-        if (serverUrl == null || serverUrl.isEmpty()) {
-            Log.w(TAG, "Server URL is null or empty");
+        if (serverUrl.isEmpty()) {
+            Log.w(TAG, "Server URL is empty");
             return false;
         }
 
@@ -142,16 +146,16 @@ public class ConnectionManager {
             return false;
         }
 
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(serverUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("HEAD");
             connection.setConnectTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setReadTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setInstanceFollowRedirects(false);
 
             int responseCode = connection.getResponseCode();
-            connection.disconnect();
 
             boolean reachable = (responseCode >= 200 && responseCode < 500);
             Log.d(TAG, "Server reachability check: " + serverUrl
@@ -164,6 +168,10 @@ public class ConnectionManager {
         } catch (Exception e) {
             Log.e(TAG, "Error checking server reachability: " + e.getMessage(), e);
             return false;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
