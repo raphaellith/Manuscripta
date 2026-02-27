@@ -94,7 +94,9 @@ public class ConnectionManager {
                 Log.d(TAG, "Network capabilities changed - Internet: " + hasInternet
                         + ", Validated: " + validated);
 
-                isConnected.postValue(hasInternet && validated);
+                // Only update state based on current active network to avoid false positives
+                // from non-active network callbacks
+                isConnected.postValue(checkCurrentConnection());
             }
         };
 
