@@ -123,7 +123,6 @@ public class RepositoryModuleTest {
         FileStorageManager result = repositoryModule.provideFileStorageManager(context);
 
         assertNotNull(result);
-        assertTrue(result instanceof FileStorageManager);
     }
 
     @Test
