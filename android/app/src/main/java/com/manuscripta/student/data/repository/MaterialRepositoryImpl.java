@@ -152,9 +152,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             }
         });
 
-        // Initialize LiveData with existing materials from database.
-        // Safe to call here as all fields are initialized and getAll() is a pure read.
-        refreshMaterialsLiveData();
+        // Initialize LiveData with existing materials from database on a background thread.
+        // This avoids blocking the main thread during Hilt injection at app startup.
+        syncExecutor.execute(this::refreshMaterialsLiveData);
     }
 
     @Override
