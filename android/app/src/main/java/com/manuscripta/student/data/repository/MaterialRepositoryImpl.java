@@ -311,6 +311,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
             // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
+            boolean allAttachmentsSucceeded = true;
             synchronized (lock) {
                 for (MaterialDto dto : materialDtos) {
                     try {
@@ -322,7 +323,10 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                         List<String> attachmentIds =
                                 ContentParser.extractDistinctAttachmentReferences(dto.getContent());
                         for (String attachmentId : attachmentIds) {
-                            downloadAttachment(dto.getId(), attachmentId);
+                            if (!downloadAttachment(dto.getId(), attachmentId)) {
+                                allAttachmentsSucceeded = false;
+                                Log.w(TAG, "Attachment download failed for material: " + dto.getId());
+                            }
                         }
                     } catch (IllegalArgumentException e) {
                         Log.e(TAG, "Invalid material data: " + e.getMessage());
@@ -333,12 +337,17 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                 refreshMaterialsLiveData();
             }
 
-            // 4. Send DISTRIBUTE_ACK to confirm receipt
-            try {
-                tcpSocketManager.send(new DistributeAckMessage(deviceId));
-                Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
-            } catch (TcpProtocolException | IOException e) {
-                Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
+            // 4. Send DISTRIBUTE_ACK only if all materials and attachments succeeded
+            // Per API Contract §3.6.1, ACK confirms successful receipt and processing
+            if (allAttachmentsSucceeded) {
+                try {
+                    tcpSocketManager.send(new DistributeAckMessage(deviceId));
+                    Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
+                } catch (TcpProtocolException | IOException e) {
+                    Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
+                }
+            } else {
+                Log.w(TAG, "Skipping DISTRIBUTE_ACK due to attachment download failures");
             }
 
             Log.i(TAG, "Material sync completed successfully");
@@ -374,8 +383,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      *
      * @param materialId   The ID of the material the attachment belongs to
      * @param attachmentId The ID of the attachment to download
+     * @return true if download and save succeeded, false otherwise
      */
-    private void downloadAttachment(@NonNull String materialId, @NonNull String attachmentId) {
+    private boolean downloadAttachment(@NonNull String materialId, @NonNull String attachmentId) {
         try {
             Response<ResponseBody> attachmentResponse =
                     apiService.getAttachment(attachmentId).execute();
@@ -383,7 +393,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             if (!attachmentResponse.isSuccessful() || attachmentResponse.body() == null) {
                 Log.e(TAG, "Failed to download attachment " + attachmentId
                         + ". HTTP " + attachmentResponse.code());
-                return;
+                return false;
             }
 
             ResponseBody body = attachmentResponse.body();
@@ -396,10 +406,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
             fileStorageManager.saveAttachment(materialId, attachmentId, contentType, bytes);
             Log.d(TAG, "Saved attachment " + attachmentId + " for material " + materialId);
+            return true;
 
         } catch (IOException e) {
             Log.e(TAG, "Network error downloading attachment " + attachmentId + ": "
                     + e.getMessage(), e);
+            return false;
         }
     }
 
