@@ -77,6 +77,8 @@ public class MaterialRepositoryImplTest {
     private Call<DistributionBundleDto> mockDistributionCall;
 
     private MaterialRepositoryImpl repository;
+    /** Subclass with sleep() overridden to a no-op, used for retry tests to avoid real delays. */
+    private MaterialRepositoryImpl noSleepRepository;
 
     private static final String TEST_MATERIAL_ID = "test-material-123";
     private static final String TEST_DEVICE_ID = "test-device-456";
@@ -87,6 +89,11 @@ public class MaterialRepositoryImplTest {
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
         repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
                 mockTcpSocketManager, mockPairingManager);
+        noSleepRepository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager,
+                mockApiService, mockTcpSocketManager, mockPairingManager) {
+            @Override
+            protected void sleep(long millis) { /* no-op: skip real delays in tests */ }
+        };
     }
 
     // ========== Constructor tests ==========
@@ -478,7 +485,7 @@ public class MaterialRepositoryImplTest {
         doThrow(new IOException("Connection lost"))
                 .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
 
-        repository.syncMaterials(TEST_DEVICE_ID);
+        noSleepRepository.syncMaterials(TEST_DEVICE_ID);
 
         verify(mockTcpSocketManager, times(3)).send(any(DistributeAckMessage.class));
     }
@@ -494,7 +501,7 @@ public class MaterialRepositoryImplTest {
                 .doNothing()
                 .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
 
-        repository.syncMaterials(TEST_DEVICE_ID);
+        noSleepRepository.syncMaterials(TEST_DEVICE_ID);
 
         verify(mockTcpSocketManager, times(2)).send(any(DistributeAckMessage.class));
     }
@@ -510,9 +517,9 @@ public class MaterialRepositoryImplTest {
                 .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
 
         final boolean[] callbackCalled = {false};
-        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+        noSleepRepository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
 
-        repository.syncMaterials(TEST_DEVICE_ID);
+        noSleepRepository.syncMaterials(TEST_DEVICE_ID);
 
         // Materials still saved despite ACK failure
         verify(mockDao).insert(any(MaterialEntity.class));

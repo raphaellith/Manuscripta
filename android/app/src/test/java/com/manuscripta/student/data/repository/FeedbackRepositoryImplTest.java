@@ -46,6 +46,8 @@ public class FeedbackRepositoryImplTest {
     private ApiService mockApiService;
     private TcpSocketManager mockTcpSocketManager;
     private FeedbackRepositoryImpl repository;
+    /** Subclass with sleep() overridden to a no-op, used for retry tests to avoid real delays. */
+    private FeedbackRepositoryImpl noSleepRepository;
 
     private static final String TEST_DEVICE_ID = "test-device-id";
     private static final String TEST_FEEDBACK_ID = "feedback-123";
@@ -57,6 +59,10 @@ public class FeedbackRepositoryImplTest {
         mockApiService = mock(ApiService.class);
         mockTcpSocketManager = mock(TcpSocketManager.class);
         repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockTcpSocketManager);
+        noSleepRepository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockTcpSocketManager) {
+            @Override
+            protected void sleep(long millis) { /* no-op: skip real delays in tests */ }
+        };
     }
 
     // ==================== fetchAndStoreFeedback Tests ====================
@@ -229,7 +235,7 @@ public class FeedbackRepositoryImplTest {
                 .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
 
         // When - should not throw even though TCP send fails
-        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
         // Then - feedback still stored, ACK retried 3 times
         verify(mockDao).insertAll(anyList());
@@ -251,7 +257,7 @@ public class FeedbackRepositoryImplTest {
                 .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
 
         // When
-        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
         // Then
         verify(mockTcpSocketManager, times(2)).send(any(FeedbackAckMessage.class));
@@ -271,7 +277,7 @@ public class FeedbackRepositoryImplTest {
                 .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
 
         // When
-        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
         // Then - feedback still persisted despite ACK exhausting all retries
         verify(mockDao).insertAll(anyList());
