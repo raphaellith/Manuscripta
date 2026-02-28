@@ -43,6 +43,12 @@ public final class DistributeAckMessage extends TcpMessage {
      */
     public DistributeAckMessage(@NonNull String deviceId, @NonNull String materialId) {
         super(TcpOpcode.DISTRIBUTE_ACK);
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be null or empty");
+        }
+        if (materialId == null || materialId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Material ID cannot be null or empty");
+        }
         this.deviceId = deviceId;
         this.materialId = materialId;
 

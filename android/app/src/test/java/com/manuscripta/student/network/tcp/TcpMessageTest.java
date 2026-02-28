@@ -2,6 +2,7 @@ package com.manuscripta.student.network.tcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
@@ -510,17 +511,26 @@ public class TcpMessageTest {
 
     @Test
     public void testDistributeAckMessage_emptyDeviceId() {
-        DistributeAckMessage message = new DistributeAckMessage("", "mat-1");
-        assertEquals("", message.getDeviceId());
-        // Operand still has null separator + materialId, so hasOperand is true
-        assertTrue(message.hasOperand());
+        assertThrows(IllegalArgumentException.class,
+                () -> new DistributeAckMessage("", "mat-1"));
+    }
+
+    @Test
+    public void testDistributeAckMessage_emptyMaterialId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DistributeAckMessage("dev-1", ""));
     }
 
     @Test
     public void testFeedbackAckMessage_emptyDeviceId() {
-        FeedbackAckMessage message = new FeedbackAckMessage("", "fb-1");
-        assertEquals("", message.getDeviceId());
-        assertTrue(message.hasOperand());
+        assertThrows(IllegalArgumentException.class,
+                () -> new FeedbackAckMessage("", "fb-1"));
+    }
+
+    @Test
+    public void testFeedbackAckMessage_emptyFeedbackId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new FeedbackAckMessage("dev-1", ""));
     }
 
     @Test

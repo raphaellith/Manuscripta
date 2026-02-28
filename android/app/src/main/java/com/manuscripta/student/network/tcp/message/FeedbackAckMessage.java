@@ -44,6 +44,12 @@ public final class FeedbackAckMessage extends TcpMessage {
      */
     public FeedbackAckMessage(@NonNull String deviceId, @NonNull String feedbackId) {
         super(TcpOpcode.FEEDBACK_ACK);
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Device ID cannot be null or empty");
+        }
+        if (feedbackId == null || feedbackId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Feedback ID cannot be null or empty");
+        }
         this.deviceId = deviceId;
         this.feedbackId = feedbackId;
 

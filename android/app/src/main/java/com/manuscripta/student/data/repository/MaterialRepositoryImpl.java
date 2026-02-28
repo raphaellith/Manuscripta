@@ -320,6 +320,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
             // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
+            List<String> ackedMaterialIds = new ArrayList<>();
             synchronized (lock) {
                 for (MaterialDto dto : materialDtos) {
                     try {
@@ -339,11 +340,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                             }
                         }
 
-                        // 4. Per API Contract §3.6.2, send one ACK per successfully
-                        // received material (device ID + material ID)
+                        // 4. Collect IDs of successfully received materials for ACKing outside lock
                         if (attachmentsOk) {
-                            ackRetrySender.send(
-                                    new DistributeAckMessage(deviceId, dto.getId()), TAG);
+                            ackedMaterialIds.add(dto.getId());
                         } else {
                             Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: "
                                     + dto.getId());
@@ -355,6 +354,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
                 // Refresh LiveData to notify observers
                 refreshMaterialsLiveData();
+            }
+
+            // Per API Contract §3.6.2, send one ACK per successfully received material
+            // (device ID + material ID). Done outside the lock to avoid holding it during I/O.
+            for (String materialId : ackedMaterialIds) {
+                ackRetrySender.send(new DistributeAckMessage(deviceId, materialId), TAG);
             }
 
             Log.i(TAG, "Material sync completed successfully");
