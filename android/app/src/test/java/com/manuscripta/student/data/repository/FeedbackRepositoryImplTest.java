@@ -7,10 +7,11 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,8 +21,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
-import com.manuscripta.student.network.tcp.TcpProtocolException;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
 import org.junit.Before;
@@ -44,10 +44,8 @@ public class FeedbackRepositoryImplTest {
 
     private FeedbackDao mockDao;
     private ApiService mockApiService;
-    private TcpSocketManager mockTcpSocketManager;
+    private AckRetrySender mockAckRetrySender;
     private FeedbackRepositoryImpl repository;
-    /** Subclass with sleep() overridden to a no-op, used for retry tests to avoid real delays. */
-    private FeedbackRepositoryImpl noSleepRepository;
 
     private static final String TEST_DEVICE_ID = "test-device-id";
     private static final String TEST_FEEDBACK_ID = "feedback-123";
@@ -57,12 +55,8 @@ public class FeedbackRepositoryImplTest {
     public void setUp() {
         mockDao = mock(FeedbackDao.class);
         mockApiService = mock(ApiService.class);
-        mockTcpSocketManager = mock(TcpSocketManager.class);
-        repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockTcpSocketManager);
-        noSleepRepository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockTcpSocketManager) {
-            @Override
-            protected void sleep(long millis) { /* no-op: skip real delays in tests */ }
-        };
+        mockAckRetrySender = mock(AckRetrySender.class);
+        repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockAckRetrySender);
     }
 
     // ==================== fetchAndStoreFeedback Tests ====================
@@ -110,7 +104,7 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
@@ -127,7 +121,7 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
@@ -161,7 +155,7 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
@@ -179,7 +173,7 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
@@ -197,7 +191,7 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
@@ -218,11 +212,11 @@ public class FeedbackRepositoryImplTest {
 
         // Then - should still insert (only the valid one)
         verify(mockDao).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_tcpSendFails_retriesAndDoesNotThrow()
+    public void testFetchAndStoreFeedback_delegatesAckToRetrySender()
             throws Exception {
         // Given
         FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
@@ -231,56 +225,13 @@ public class FeedbackRepositoryImplTest {
         Call<FeedbackResponse> mockCall = mock(Call.class);
         when(mockCall.execute()).thenReturn(response);
         when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
-        doThrow(new IOException("Connection failed"))
-                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
-
-        // When - should not throw even though TCP send fails
-        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
-
-        // Then - feedback still stored, ACK retried 3 times
-        verify(mockDao).insertAll(anyList());
-        verify(mockTcpSocketManager, times(3)).send(any(FeedbackAckMessage.class));
-    }
-
-    @Test
-    public void testFetchAndStoreFeedback_ackSucceedsOnSecondAttempt_stopsRetrying()
-            throws Exception {
-        // Given
-        FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
-        FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.singletonList(dto));
-        Response<FeedbackResponse> response = Response.success(feedbackResponse);
-        Call<FeedbackResponse> mockCall = mock(Call.class);
-        when(mockCall.execute()).thenReturn(response);
-        when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
-        doThrow(new TcpProtocolException("Encoding error"))
-                .doNothing()
-                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
 
         // When
-        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
-        verify(mockTcpSocketManager, times(2)).send(any(FeedbackAckMessage.class));
-    }
-
-    @Test
-    public void testFetchAndStoreFeedback_ackFailureAfterRetries_doesNotBlockStorage()
-            throws Exception {
-        // Given
-        FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
-        FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.singletonList(dto));
-        Response<FeedbackResponse> response = Response.success(feedbackResponse);
-        Call<FeedbackResponse> mockCall = mock(Call.class);
-        when(mockCall.execute()).thenReturn(response);
-        when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
-        doThrow(new IOException("Connection lost"))
-                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
-
-        // When
-        noSleepRepository.fetchAndStoreFeedback(TEST_DEVICE_ID);
-
-        // Then - feedback still persisted despite ACK exhausting all retries
+        // Then - ACK is delegated to the retry sender, feedback still stored
         verify(mockDao).insertAll(anyList());
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     // ==================== getFeedbackForResponse Tests ====================

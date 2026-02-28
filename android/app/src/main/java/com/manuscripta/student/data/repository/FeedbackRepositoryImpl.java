@@ -3,7 +3,6 @@ package com.manuscripta.student.data.repository;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.VisibleForTesting;
 
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.model.FeedbackEntity;
@@ -12,8 +11,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
-import com.manuscripta.student.network.tcp.TcpProtocolException;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
 import java.io.IOException;
@@ -39,23 +37,23 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     private final FeedbackDao feedbackDao;
     /** The Retrofit API service for network calls. */
     private final ApiService apiService;
-    /** The TCP socket manager for sending acknowledgements. */
-    private final TcpSocketManager tcpSocketManager;
+    /** Handles retry logic for sending ACK messages over TCP. */
+    private final AckRetrySender ackRetrySender;
 
     /**
      * Creates a new FeedbackRepositoryImpl.
      *
-     * @param feedbackDao      The DAO for feedback persistence
-     * @param apiService       The Retrofit API service
-     * @param tcpSocketManager The TCP socket manager for sending ACK
+     * @param feedbackDao    The DAO for feedback persistence
+     * @param apiService     The Retrofit API service
+     * @param ackRetrySender The retry sender for ACK messages
      */
     @Inject
     public FeedbackRepositoryImpl(@NonNull FeedbackDao feedbackDao,
                                   @NonNull ApiService apiService,
-                                  @NonNull TcpSocketManager tcpSocketManager) {
+                                  @NonNull AckRetrySender ackRetrySender) {
         this.feedbackDao = feedbackDao;
         this.apiService = apiService;
-        this.tcpSocketManager = tcpSocketManager;
+        this.ackRetrySender = ackRetrySender;
     }
 
     @Override
@@ -113,49 +111,10 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     /**
      * Sends a FEEDBACK_ACK message to the server with retry.
      *
-     * <p>Retries up to 3 times with a 500ms delay between attempts to handle
-     * transient socket failures. The server allows a 30-second window for ACK
-     * receipt, so the total maximum sleep time ((maxAttempts - 1) * delayMs) is
-     * well within bounds.</p>
-     *
      * @param deviceId The device ID to include in the acknowledgement
      */
     private void sendAcknowledgement(@NonNull String deviceId) {
-        int maxAttempts = 3;
-        long delayMs = 500;
-        FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
-
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                tcpSocketManager.send(ackMessage);
-                Log.d(TAG, "Sent FEEDBACK_ACK for device: " + deviceId);
-                return;
-            } catch (TcpProtocolException | IOException e) {
-                if (attempt < maxAttempts) {
-                    Log.w(TAG, "FEEDBACK_ACK attempt " + attempt + " failed, retrying: "
-                            + e.getMessage());
-                    sleep(delayMs);
-                } else {
-                    Log.e(TAG, "Failed to send FEEDBACK_ACK after " + maxAttempts
-                            + " attempts: " + e.getMessage(), e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Sleeps for the specified duration.
-     * This method is protected to allow tests to override it without incurring real delays.
-     *
-     * @param millis The duration to sleep in milliseconds
-     */
-    @VisibleForTesting
-    protected void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        ackRetrySender.send(new FeedbackAckMessage(deviceId), TAG);
     }
 
     @Override
