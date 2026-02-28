@@ -183,7 +183,7 @@ public final class TcpMessageDecoder {
         } catch (IllegalArgumentException e) {
             throw new TcpProtocolException(
                     TcpProtocolException.ErrorType.MALFORMED_DATA,
-                    "DISTRIBUTE_ACK message has blank device ID or material ID: " + e.getMessage());
+                    "Invalid DISTRIBUTE_ACK message: " + e.getMessage());
         }
     }
 
@@ -208,7 +208,7 @@ public final class TcpMessageDecoder {
         } catch (IllegalArgumentException e) {
             throw new TcpProtocolException(
                     TcpProtocolException.ErrorType.MALFORMED_DATA,
-                    "FEEDBACK_ACK message has blank device ID or feedback ID: " + e.getMessage());
+                    "Invalid FEEDBACK_ACK message: " + e.getMessage());
         }
     }
 
