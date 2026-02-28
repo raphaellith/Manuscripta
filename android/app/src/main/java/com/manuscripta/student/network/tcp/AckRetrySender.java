@@ -42,6 +42,9 @@ public class AckRetrySender {
      * @param tcpSocketManager The TCP socket manager used to send messages
      */
     public AckRetrySender(@NonNull TcpSocketManager tcpSocketManager) {
+        if (tcpSocketManager == null) {
+            throw new IllegalArgumentException("tcpSocketManager must not be null");
+        }
         this.tcpSocketManager = tcpSocketManager;
     }
 
