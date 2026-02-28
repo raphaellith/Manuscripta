@@ -13,9 +13,11 @@ import java.io.IOException;
  * <p>Both {@code FEEDBACK_ACK} and {@code DISTRIBUTE_ACK} share the same retry
  * policy: up to {@link #MAX_ATTEMPTS} attempts with a fixed
  * {@link #RETRY_DELAY_MS} delay between them. The server allows a 30-second
- * window for ACK receipt, so the total maximum sleep time
- * ({@code (MAX_ATTEMPTS - 1) * RETRY_DELAY_MS} = 1 000 ms) is well within
- * bounds.</p>
+ * window for ACK receipt, so the total maximum sleep time for a single
+ * message ({@code (MAX_ATTEMPTS - 1) * RETRY_DELAY_MS} = 1 000 ms) is well
+ * within bounds. When many ACKs are sent sequentially, their cumulative retry
+ * delays may exceed 30 seconds; callers should schedule ACK sending
+ * appropriately (for example, asynchronously or with a shared deadline).</p>
  *
  * <p>If the current thread is interrupted during a retry delay, the retry loop
  * aborts immediately and the interrupt flag is preserved, consistent with the
