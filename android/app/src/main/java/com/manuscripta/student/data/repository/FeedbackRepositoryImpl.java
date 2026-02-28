@@ -3,6 +3,7 @@ package com.manuscripta.student.data.repository;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.model.FeedbackEntity;
@@ -114,7 +115,8 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
      *
      * <p>Retries up to 3 times with a 500ms delay between attempts to handle
      * transient socket failures. The server allows a 30-second window for ACK
-     * receipt, so the total retry window (~1.5s) is well within bounds.</p>
+     * receipt, so the total maximum sleep time ((maxAttempts - 1) * delayMs) is
+     * well within bounds.</p>
      *
      * @param deviceId The device ID to include in the acknowledgement
      */
@@ -132,18 +134,27 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
                 if (attempt < maxAttempts) {
                     Log.w(TAG, "FEEDBACK_ACK attempt " + attempt + " failed, retrying: "
                             + e.getMessage());
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        Log.e(TAG, "ACK retry interrupted", ie);
-                        return;
-                    }
+                    sleep(delayMs);
                 } else {
                     Log.e(TAG, "Failed to send FEEDBACK_ACK after " + maxAttempts
                             + " attempts: " + e.getMessage(), e);
                 }
             }
+        }
+    }
+
+    /**
+     * Sleeps for the specified duration.
+     * This method is protected to allow tests to override it without incurring real delays.
+     *
+     * @param millis The duration to sleep in milliseconds
+     */
+    @VisibleForTesting
+    protected void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
