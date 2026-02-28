@@ -67,8 +67,7 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
         if (!response.isSuccessful()) {
             if (response.code() == 404) {
-                // No feedback available - this is not an error, send ACK
-                sendAcknowledgement(deviceId);
+                // No feedback available — nothing to acknowledge
                 return;
             }
             throw new IOException("Failed to fetch feedback: HTTP " + response.code());
@@ -76,12 +75,12 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
         FeedbackResponse feedbackResponse = response.body();
         if (feedbackResponse == null || feedbackResponse.getFeedback() == null) {
-            sendAcknowledgement(deviceId);
             return;
         }
 
         // Convert DTOs to entities via domain model for validation
         List<FeedbackEntity> entities = new ArrayList<>();
+        List<String> feedbackIds = new ArrayList<>();
         for (FeedbackDto dto : feedbackResponse.getFeedback()) {
             try {
                 // Validate through domain model
@@ -94,6 +93,7 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
                 // Convert to entity for persistence
                 FeedbackEntity entity = FeedbackMapper.toEntity(domainFeedback);
                 entities.add(entity);
+                feedbackIds.add(dto.getId());
             } catch (IllegalArgumentException e) {
                 // Log and skip invalid feedback entries
                 Log.w(TAG, "Skipping invalid feedback: " + e.getMessage());
@@ -104,17 +104,10 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
             feedbackDao.insertAll(entities);
         }
 
-        // Send acknowledgement via TCP
-        sendAcknowledgement(deviceId);
-    }
-
-    /**
-     * Sends a FEEDBACK_ACK message to the server with retry.
-     *
-     * @param deviceId The device ID to include in the acknowledgement
-     */
-    private void sendAcknowledgement(@NonNull String deviceId) {
-        ackRetrySender.send(new FeedbackAckMessage(deviceId), TAG);
+        // Per API Contract §3.6.2, send one FEEDBACK_ACK per successfully stored entity
+        for (String feedbackId : feedbackIds) {
+            ackRetrySender.send(new FeedbackAckMessage(deviceId, feedbackId), TAG);
+        }
     }
 
     @Override

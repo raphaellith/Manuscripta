@@ -165,39 +165,70 @@ public final class TcpMessageDecoder {
     /**
      * Creates a DistributeAckMessage from the operand.
      *
-     * @param operand The UTF-8 encoded device ID.
+     * <p>Per §3.6.2 the operand is {@code deviceId + 0x00 + materialId}.</p>
+     *
+     * @param operand The null-byte-separated device ID and material ID.
      * @return The DistributeAckMessage.
-     * @throws TcpProtocolException If the operand is empty.
+     * @throws TcpProtocolException If the operand is missing or malformed.
      */
     @NonNull
     private DistributeAckMessage createDistributeAckMessage(@NonNull byte[] operand)
             throws TcpProtocolException {
-        if (operand.length == 0) {
-            throw new TcpProtocolException(
-                    TcpProtocolException.ErrorType.MALFORMED_DATA,
-                    "DISTRIBUTE_ACK message requires device ID");
-        }
-        String deviceId = new String(operand, StandardCharsets.UTF_8);
-        return new DistributeAckMessage(deviceId);
+        int separator = findNullSeparator(operand, "DISTRIBUTE_ACK");
+        String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
+        String materialId = new String(operand, separator + 1,
+                operand.length - separator - 1, StandardCharsets.UTF_8);
+        return new DistributeAckMessage(deviceId, materialId);
     }
 
     /**
      * Creates a FeedbackAckMessage from the operand.
      *
-     * @param operand The UTF-8 encoded device ID.
+     * <p>Per §3.6.2 the operand is {@code deviceId + 0x00 + feedbackId}.</p>
+     *
+     * @param operand The null-byte-separated device ID and feedback ID.
      * @return The FeedbackAckMessage.
-     * @throws TcpProtocolException If the operand is empty.
+     * @throws TcpProtocolException If the operand is missing or malformed.
      */
     @NonNull
     private FeedbackAckMessage createFeedbackAckMessage(@NonNull byte[] operand)
             throws TcpProtocolException {
+        int separator = findNullSeparator(operand, "FEEDBACK_ACK");
+        String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
+        String feedbackId = new String(operand, separator + 1,
+                operand.length - separator - 1, StandardCharsets.UTF_8);
+        return new FeedbackAckMessage(deviceId, feedbackId);
+    }
+
+    /**
+     * Finds the null-byte separator in a per-entity ACK operand.
+     *
+     * @param operand     The operand bytes to search.
+     * @param messageName The message type name for error messages.
+     * @return The index of the null byte separator.
+     * @throws TcpProtocolException If the operand is empty, has no separator,
+     *                              or either field is empty.
+     */
+    private int findNullSeparator(@NonNull byte[] operand, @NonNull String messageName)
+            throws TcpProtocolException {
         if (operand.length == 0) {
             throw new TcpProtocolException(
                     TcpProtocolException.ErrorType.MALFORMED_DATA,
-                    "FEEDBACK_ACK message requires device ID");
+                    messageName + " message requires device ID and entity ID");
         }
-        String deviceId = new String(operand, StandardCharsets.UTF_8);
-        return new FeedbackAckMessage(deviceId);
+        for (int i = 0; i < operand.length; i++) {
+            if (operand[i] == 0x00) {
+                if (i == 0 || i == operand.length - 1) {
+                    throw new TcpProtocolException(
+                            TcpProtocolException.ErrorType.MALFORMED_DATA,
+                            messageName + " message has empty device ID or entity ID");
+                }
+                return i;
+            }
+        }
+        throw new TcpProtocolException(
+                TcpProtocolException.ErrorType.MALFORMED_DATA,
+                messageName + " message missing null separator between IDs");
     }
 
     /**

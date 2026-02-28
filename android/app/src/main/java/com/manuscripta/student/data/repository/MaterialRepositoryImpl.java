@@ -320,7 +320,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
             // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
-            boolean allAttachmentsSucceeded = true;
             synchronized (lock) {
                 for (MaterialDto dto : materialDtos) {
                     try {
@@ -329,13 +328,25 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                         Log.d(TAG, "Saved material: " + entity.getId());
 
                         // 3. Parse content for attachment references and download each one
+                        boolean attachmentsOk = true;
                         List<String> attachmentIds =
                                 ContentParser.extractDistinctAttachmentReferences(dto.getContent());
                         for (String attachmentId : attachmentIds) {
                             if (!downloadAttachment(dto.getId(), attachmentId)) {
-                                allAttachmentsSucceeded = false;
-                                Log.w(TAG, "Attachment download failed for material: " + dto.getId());
+                                attachmentsOk = false;
+                                Log.w(TAG, "Attachment download failed for material: "
+                                        + dto.getId());
                             }
+                        }
+
+                        // 4. Per API Contract §3.6.2, send one ACK per successfully
+                        // received material (device ID + material ID)
+                        if (attachmentsOk) {
+                            ackRetrySender.send(
+                                    new DistributeAckMessage(deviceId, dto.getId()), TAG);
+                        } else {
+                            Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: "
+                                    + dto.getId());
                         }
                     } catch (IllegalArgumentException e) {
                         Log.e(TAG, "Invalid material data: " + e.getMessage());
@@ -344,14 +355,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
                 // Refresh LiveData to notify observers
                 refreshMaterialsLiveData();
-            }
-
-            // 4. Send DISTRIBUTE_ACK only if all materials and attachments succeeded
-            // Per API Contract §3.6.1, ACK confirms successful receipt and processing
-            if (allAttachmentsSucceeded) {
-                sendAcknowledgement(deviceId);
-            } else {
-                Log.w(TAG, "Skipping DISTRIBUTE_ACK due to attachment download failures");
             }
 
             Log.i(TAG, "Material sync completed successfully");
@@ -380,15 +383,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     @Override
     public boolean isSyncing() {
         return syncing.get();
-    }
-
-    /**
-     * Sends a DISTRIBUTE_ACK message to the server with retry.
-     *
-     * @param deviceId The device ID to include in the ACK
-     */
-    private void sendAcknowledgement(@NonNull String deviceId) {
-        ackRetrySender.send(new DistributeAckMessage(deviceId), TAG);
     }
 
     /**

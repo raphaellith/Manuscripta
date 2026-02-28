@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -506,6 +507,20 @@ public class MaterialRepositoryImplTest {
         // Materials still saved and callback fires
         verify(mockDao).insert(any(MaterialEntity.class));
         assertTrue(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_multipleMaterials_acksEachIndividually() throws Exception {
+        MaterialDto dto1 = new MaterialDto("mat-1", "READING", "Title1", null, null, null, 0L);
+        MaterialDto dto2 = new MaterialDto("mat-2", "READING", "Title2", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Arrays.asList(dto1, dto2), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender, times(2)).send(any(DistributeAckMessage.class), anyString());
     }
 
     // ========== isSyncing tests ==========

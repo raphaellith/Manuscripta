@@ -41,7 +41,7 @@ public class AckRetrySenderTest {
 
     @Test
     public void testSend_succeedsOnFirstAttempt() throws Exception {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-1");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-1", "fb-1");
 
         sender.send(message, "TestTag");
 
@@ -50,7 +50,7 @@ public class AckRetrySenderTest {
 
     @Test
     public void testSend_succeedsOnSecondAttempt_stopsRetrying() throws Exception {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-1");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-1", "fb-1");
         doThrow(new IOException("fail"))
                 .doNothing()
                 .when(mockSocketManager).send(message);
@@ -62,7 +62,7 @@ public class AckRetrySenderTest {
 
     @Test
     public void testSend_allAttemptsFail_retriesMaxTimes() throws Exception {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-1");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-1", "fb-1");
         doThrow(new IOException("fail"))
                 .when(mockSocketManager).send(message);
 
@@ -73,7 +73,7 @@ public class AckRetrySenderTest {
 
     @Test
     public void testSend_tcpProtocolException_retries() throws Exception {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-1");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-1", "fb-1");
         doThrow(new TcpProtocolException("encoding error"))
                 .doNothing()
                 .when(mockSocketManager).send(message);
@@ -85,7 +85,7 @@ public class AckRetrySenderTest {
 
     @Test
     public void testSend_interruptDuringSleep_abortsRetries() throws Exception {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-1");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-1", "fb-1");
         doThrow(new IOException("fail"))
                 .when(mockSocketManager).send(message);
 

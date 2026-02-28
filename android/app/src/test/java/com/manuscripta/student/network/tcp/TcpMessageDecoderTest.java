@@ -176,32 +176,26 @@ public class TcpMessageDecoderTest {
     @Test
     public void decode_distributeAckOpcode_returnsDistributeAckMessage()
             throws TcpProtocolException {
-        String deviceId = "device-dist-789";
-        byte[] idBytes = deviceId.getBytes(StandardCharsets.UTF_8);
-        byte[] data = new byte[1 + idBytes.length];
-        data[0] = (byte) 0x12;
-        System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+        byte[] data = buildNullSeparatedAck((byte) 0x12, "device-dist-789", "mat-uuid-1");
 
         TcpMessage result = decoder.decode(data);
 
         assertTrue(result instanceof DistributeAckMessage);
         assertEquals(TcpOpcode.DISTRIBUTE_ACK, result.getOpcode());
-        assertEquals(deviceId, ((DistributeAckMessage) result).getDeviceId());
+        assertEquals("device-dist-789", ((DistributeAckMessage) result).getDeviceId());
+        assertEquals("mat-uuid-1", ((DistributeAckMessage) result).getMaterialId());
     }
 
     @Test
     public void decode_feedbackAckOpcode_returnsFeedbackAckMessage() throws TcpProtocolException {
-        String deviceId = "device-feedback-123";
-        byte[] idBytes = deviceId.getBytes(StandardCharsets.UTF_8);
-        byte[] data = new byte[1 + idBytes.length];
-        data[0] = (byte) 0x13;
-        System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+        byte[] data = buildNullSeparatedAck((byte) 0x13, "device-fb-123", "fb-uuid-5");
 
         TcpMessage result = decoder.decode(data);
 
         assertTrue(result instanceof FeedbackAckMessage);
         assertEquals(TcpOpcode.FEEDBACK_ACK, result.getOpcode());
-        assertEquals(deviceId, ((FeedbackAckMessage) result).getDeviceId());
+        assertEquals("device-fb-123", ((FeedbackAckMessage) result).getDeviceId());
+        assertEquals("fb-uuid-5", ((FeedbackAckMessage) result).getFeedbackId());
     }
 
     // ========== Unicode and special character tests ==========
@@ -350,9 +344,70 @@ public class TcpMessageDecoderTest {
     }
 
     @Test
+    public void decode_distributeAckMissingSeparator_throwsTcpProtocolException() {
+        try {
+            // deviceId only, no null byte
+            byte[] idBytes = "device-123".getBytes(StandardCharsets.UTF_8);
+            byte[] data = new byte[1 + idBytes.length];
+            data[0] = (byte) 0x12;
+            System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_distributeAckEmptyEntityId_throwsTcpProtocolException() {
+        try {
+            // deviceId + 0x00 but no entity ID
+            byte[] idBytes = "device-123".getBytes(StandardCharsets.UTF_8);
+            byte[] data = new byte[1 + idBytes.length + 1];
+            data[0] = (byte) 0x12;
+            System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+            data[1 + idBytes.length] = 0x00;
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_distributeAckEmptyDeviceId_throwsTcpProtocolException() {
+        try {
+            // 0x00 + entityId (empty device ID)
+            byte[] entityBytes = "mat-1".getBytes(StandardCharsets.UTF_8);
+            byte[] data = new byte[1 + 1 + entityBytes.length];
+            data[0] = (byte) 0x12;
+            data[1] = 0x00;
+            System.arraycopy(entityBytes, 0, data, 2, entityBytes.length);
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
     public void decode_feedbackAckWithoutPayload_throwsTcpProtocolException() {
         try {
             decoder.decode(new byte[]{(byte) 0x13});
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_feedbackAckMissingSeparator_throwsTcpProtocolException() {
+        try {
+            byte[] idBytes = "device-123".getBytes(StandardCharsets.UTF_8);
+            byte[] data = new byte[1 + idBytes.length];
+            data[0] = (byte) 0x13;
+            System.arraycopy(idBytes, 0, data, 1, idBytes.length);
+            decoder.decode(data);
             fail("Expected TcpProtocolException");
         } catch (TcpProtocolException e) {
             assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
@@ -390,13 +445,30 @@ public class TcpMessageDecoderTest {
         byte[] handAckBytes = new byte[]{0x06, 'i', 'd'};
         assertTrue(decoder.decode(handAckBytes) instanceof HandAckMessage);
 
-        byte[] distAckBytes = new byte[]{0x12, 'i', 'd'};
+        byte[] distAckBytes = buildNullSeparatedAck((byte) 0x12, "id", "mat-1");
         assertTrue(decoder.decode(distAckBytes) instanceof DistributeAckMessage);
 
-        byte[] feedbackAckBytes = new byte[]{0x13, 'i', 'd'};
+        byte[] feedbackAckBytes = buildNullSeparatedAck((byte) 0x13, "id", "fb-1");
         assertTrue(decoder.decode(feedbackAckBytes) instanceof FeedbackAckMessage);
 
         byte[] pairBytes = new byte[]{0x20, 'i', 'd'};
         assertTrue(decoder.decode(pairBytes) instanceof PairingRequestMessage);
+    }
+
+    // ========== Helper methods ==========
+
+    /**
+     * Builds a byte array for a per-entity ACK message:
+     * [opcode][deviceId bytes][0x00][entityId bytes].
+     */
+    private byte[] buildNullSeparatedAck(byte opcode, String deviceId, String entityId) {
+        byte[] deviceBytes = deviceId.getBytes(StandardCharsets.UTF_8);
+        byte[] entityBytes = entityId.getBytes(StandardCharsets.UTF_8);
+        byte[] data = new byte[1 + deviceBytes.length + 1 + entityBytes.length];
+        data[0] = opcode;
+        System.arraycopy(deviceBytes, 0, data, 1, deviceBytes.length);
+        data[1 + deviceBytes.length] = 0x00;
+        System.arraycopy(entityBytes, 0, data, 1 + deviceBytes.length + 1, entityBytes.length);
+        return data;
     }
 }

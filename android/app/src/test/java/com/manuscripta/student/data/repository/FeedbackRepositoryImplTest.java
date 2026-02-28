@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -108,7 +109,7 @@ public class FeedbackRepositoryImplTest {
     }
 
     @Test
-    public void testFetchAndStoreFeedback_404Response_sendsAckWithoutStoring() throws Exception {
+    public void testFetchAndStoreFeedback_404Response_noAckSent() throws Exception {
         // Given
         Response<FeedbackResponse> response = Response.error(404,
                 ResponseBody.create(MediaType.parse("application/json"), "Not found"));
@@ -119,9 +120,9 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
@@ -142,7 +143,7 @@ public class FeedbackRepositoryImplTest {
     }
 
     @Test
-    public void testFetchAndStoreFeedback_nullResponseBody_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_nullResponseBody_noAckSent()
             throws Exception {
         // Given
         Response<FeedbackResponse> response = Response.success(null);
@@ -153,13 +154,13 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_nullFeedbackList_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_nullFeedbackList_noAckSent()
             throws Exception {
         // Given
         FeedbackResponse feedbackResponse = new FeedbackResponse(null);
@@ -171,13 +172,13 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_emptyFeedbackList_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_emptyFeedbackList_noAckSent()
             throws Exception {
         // Given
         FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.emptyList());
@@ -189,9 +190,9 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
@@ -210,9 +211,9 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then - should still insert (only the valid one)
+        // Then - should still insert (only the valid one) and ACK only the valid one
         verify(mockDao).insertAll(anyList());
-        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
+        verify(mockAckRetrySender, times(1)).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
