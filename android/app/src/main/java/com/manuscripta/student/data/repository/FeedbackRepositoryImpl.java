@@ -51,6 +51,15 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     public FeedbackRepositoryImpl(@NonNull FeedbackDao feedbackDao,
                                   @NonNull ApiService apiService,
                                   @NonNull AckRetrySender ackRetrySender) {
+        if (feedbackDao == null) {
+            throw new IllegalArgumentException("feedbackDao must not be null");
+        }
+        if (apiService == null) {
+            throw new IllegalArgumentException("apiService must not be null");
+        }
+        if (ackRetrySender == null) {
+            throw new IllegalArgumentException("ackRetrySender must not be null");
+        }
         this.feedbackDao = feedbackDao;
         this.apiService = apiService;
         this.ackRetrySender = ackRetrySender;
