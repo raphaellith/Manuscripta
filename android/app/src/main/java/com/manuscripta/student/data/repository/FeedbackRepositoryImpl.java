@@ -11,6 +11,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
@@ -109,16 +110,40 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     }
 
     /**
-     * Sends a FEEDBACK_ACK message to the server.
+     * Sends a FEEDBACK_ACK message to the server with retry.
+     *
+     * <p>Retries up to 3 times with a 500ms delay between attempts to handle
+     * transient socket failures. The server allows a 30-second window for ACK
+     * receipt, so the total retry window (~1.5s) is well within bounds.</p>
      *
      * @param deviceId The device ID to include in the acknowledgement
      */
     private void sendAcknowledgement(@NonNull String deviceId) {
+        int maxAttempts = 3;
+        long delayMs = 500;
         FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
-        try {
-            tcpSocketManager.send(ackMessage);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to send FEEDBACK_ACK: " + e.getMessage());
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                tcpSocketManager.send(ackMessage);
+                Log.d(TAG, "Sent FEEDBACK_ACK for device: " + deviceId);
+                return;
+            } catch (TcpProtocolException | IOException e) {
+                if (attempt < maxAttempts) {
+                    Log.w(TAG, "FEEDBACK_ACK attempt " + attempt + " failed, retrying: "
+                            + e.getMessage());
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        Log.e(TAG, "ACK retry interrupted", ie);
+                        return;
+                    }
+                } else {
+                    Log.e(TAG, "Failed to send FEEDBACK_ACK after " + maxAttempts
+                            + " attempts: " + e.getMessage(), e);
+                }
+            }
         }
     }
 

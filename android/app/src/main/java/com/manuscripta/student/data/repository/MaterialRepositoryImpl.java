@@ -340,12 +340,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             // 4. Send DISTRIBUTE_ACK only if all materials and attachments succeeded
             // Per API Contract §3.6.1, ACK confirms successful receipt and processing
             if (allAttachmentsSucceeded) {
-                try {
-                    tcpSocketManager.send(new DistributeAckMessage(deviceId));
-                    Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
-                } catch (TcpProtocolException | IOException e) {
-                    Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
-                }
+                sendAcknowledgement(deviceId);
             } else {
                 Log.w(TAG, "Skipping DISTRIBUTE_ACK due to attachment download failures");
             }
@@ -376,6 +371,43 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     @Override
     public boolean isSyncing() {
         return syncing.get();
+    }
+
+    /**
+     * Sends a DISTRIBUTE_ACK message to the server with retry.
+     *
+     * <p>Retries up to 3 times with a 500ms delay between attempts to handle
+     * transient socket failures. The server allows a 30-second window for ACK
+     * receipt, so the total retry window (~1.5s) is well within bounds.</p>
+     *
+     * @param deviceId The device ID to include in the ACK
+     */
+    private void sendAcknowledgement(@NonNull String deviceId) {
+        int maxAttempts = 3;
+        long delayMs = 500;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                tcpSocketManager.send(new DistributeAckMessage(deviceId));
+                Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
+                return;
+            } catch (TcpProtocolException | IOException e) {
+                if (attempt < maxAttempts) {
+                    Log.w(TAG, "DISTRIBUTE_ACK attempt " + attempt + " failed, retrying: "
+                            + e.getMessage());
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        Log.e(TAG, "ACK retry interrupted", ie);
+                        return;
+                    }
+                } else {
+                    Log.e(TAG, "Failed to send DISTRIBUTE_ACK after " + maxAttempts
+                            + " attempts: " + e.getMessage(), e);
+                }
+            }
+        }
     }
 
     /**

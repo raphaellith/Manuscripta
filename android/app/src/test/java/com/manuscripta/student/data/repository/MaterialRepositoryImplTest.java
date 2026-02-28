@@ -8,7 +8,9 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,7 +25,9 @@ import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import java.io.IOException;
@@ -459,6 +463,60 @@ public class MaterialRepositoryImplTest {
         repository.syncMaterials(TEST_DEVICE_ID);
 
         assertFalse(callbackCalled[0]);
+    }
+
+    // ========== DISTRIBUTE_ACK retry tests ==========
+
+    @Test
+    public void testSyncMaterials_ackSendFailure_retries3Times() throws Exception {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+        doThrow(new IOException("Connection lost"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager, times(3)).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSyncMaterials_ackSucceedsOnSecondAttempt_stopsRetrying() throws Exception {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+        doThrow(new TcpProtocolException("Encoding error"))
+                .doNothing()
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockTcpSocketManager, times(2)).send(any(DistributeAckMessage.class));
+    }
+
+    @Test
+    public void testSyncMaterials_ackFailureAfterRetries_doesNotBlockSync() throws Exception {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+        doThrow(new IOException("Connection lost"))
+                .when(mockTcpSocketManager).send(any(DistributeAckMessage.class));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // Materials still saved despite ACK failure
+        verify(mockDao).insert(any(MaterialEntity.class));
+        // Callback still fires
+        assertTrue(callbackCalled[0]);
     }
 
     // ========== isSyncing tests ==========

@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +20,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
+import com.manuscripta.student.network.tcp.TcpProtocolException;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
@@ -214,7 +216,7 @@ public class FeedbackRepositoryImplTest {
     }
 
     @Test
-    public void testFetchAndStoreFeedback_tcpSendFails_logsErrorButDoesNotThrow()
+    public void testFetchAndStoreFeedback_tcpSendFails_retriesAndDoesNotThrow()
             throws Exception {
         // Given
         FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
@@ -229,7 +231,49 @@ public class FeedbackRepositoryImplTest {
         // When - should not throw even though TCP send fails
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
+        // Then - feedback still stored, ACK retried 3 times
+        verify(mockDao).insertAll(anyList());
+        verify(mockTcpSocketManager, times(3)).send(any(FeedbackAckMessage.class));
+    }
+
+    @Test
+    public void testFetchAndStoreFeedback_ackSucceedsOnSecondAttempt_stopsRetrying()
+            throws Exception {
+        // Given
+        FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
+        FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.singletonList(dto));
+        Response<FeedbackResponse> response = Response.success(feedbackResponse);
+        Call<FeedbackResponse> mockCall = mock(Call.class);
+        when(mockCall.execute()).thenReturn(response);
+        when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
+        doThrow(new TcpProtocolException("Encoding error"))
+                .doNothing()
+                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+
+        // When
+        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+
         // Then
+        verify(mockTcpSocketManager, times(2)).send(any(FeedbackAckMessage.class));
+    }
+
+    @Test
+    public void testFetchAndStoreFeedback_ackFailureAfterRetries_doesNotBlockStorage()
+            throws Exception {
+        // Given
+        FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
+        FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.singletonList(dto));
+        Response<FeedbackResponse> response = Response.success(feedbackResponse);
+        Call<FeedbackResponse> mockCall = mock(Call.class);
+        when(mockCall.execute()).thenReturn(response);
+        when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
+        doThrow(new IOException("Connection lost"))
+                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+
+        // When
+        repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
+
+        // Then - feedback still persisted despite ACK exhausting all retries
         verify(mockDao).insertAll(anyList());
     }
 
