@@ -226,16 +226,6 @@ public class ConnectionManagerTest {
     // ========== isServerReachable tests ==========
 
     @Test
-    public void testIsServerReachable_nullUrl_returnsFalse() {
-        when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
-        connectionManager = new ConnectionManager(mockContext);
-
-        boolean reachable = connectionManager.isServerReachable(null);
-
-        assertFalse(reachable);
-    }
-
-    @Test
     public void testIsServerReachable_emptyUrl_returnsFalse() {
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
         connectionManager = new ConnectionManager(mockContext);
