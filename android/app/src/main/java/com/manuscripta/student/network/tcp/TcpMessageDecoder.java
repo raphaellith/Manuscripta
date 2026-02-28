@@ -178,7 +178,13 @@ public final class TcpMessageDecoder {
         String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
         String materialId = new String(operand, separator + 1,
                 operand.length - separator - 1, StandardCharsets.UTF_8);
-        return new DistributeAckMessage(deviceId, materialId);
+        try {
+            return new DistributeAckMessage(deviceId, materialId);
+        } catch (IllegalArgumentException e) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "Invalid DISTRIBUTE_ACK message: " + e.getMessage());
+        }
     }
 
     /**
