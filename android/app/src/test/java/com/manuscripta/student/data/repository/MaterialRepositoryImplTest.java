@@ -8,6 +8,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -202,7 +203,7 @@ public class MaterialRepositoryImplTest {
         List<MaterialEntity> entities = Collections.singletonList(
                 createTestEntity(TEST_MATERIAL_ID, MaterialType.READING)
         );
-        when(mockDao.getByType(MaterialType.READING)).thenReturn(entities);
+        doReturn(entities).when(mockDao).getByType(MaterialType.READING);
 
         List<Material> result = repository.getMaterialsByType(MaterialType.READING);
 
