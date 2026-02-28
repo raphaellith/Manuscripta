@@ -58,6 +58,35 @@ public class FeedbackRepositoryImplTest {
         repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockAckRetrySender);
     }
 
+    // ==================== Constructor null-guard Tests ====================
+
+    @Test
+    public void constructor_nullFeedbackDao_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(null, mockApiService, mockAckRetrySender)
+        );
+        assertEquals("FeedbackDao cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void constructor_nullApiService_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(mockDao, null, mockAckRetrySender)
+        );
+        assertEquals("ApiService cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void constructor_nullAckRetrySender_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(mockDao, mockApiService, null)
+        );
+        assertEquals("AckRetrySender cannot be null", exception.getMessage());
+    }
+
     // ==================== fetchAndStoreFeedback Tests ====================
 
     @Test

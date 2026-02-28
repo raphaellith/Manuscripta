@@ -414,6 +414,103 @@ public class TcpMessageDecoderTest {
         }
     }
 
+    @Test
+    public void decode_distributeAckWhitespaceOnlyDeviceId_throwsTcpProtocolException() {
+        // Whitespace-only device ID should surface as MALFORMED_DATA, not escape as
+        // IllegalArgumentException from the DistributeAckMessage constructor (fix #2)
+        try {
+            byte[] data = buildNullSeparatedAck((byte) 0x12, "   ", "mat-1");
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_distributeAckWhitespaceOnlyMaterialId_throwsTcpProtocolException() {
+        try {
+            byte[] data = buildNullSeparatedAck((byte) 0x12, "device-1", "   ");
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_feedbackAckWhitespaceOnlyDeviceId_throwsTcpProtocolException() {
+        // Whitespace-only device ID should surface as MALFORMED_DATA, not escape as
+        // IllegalArgumentException from the FeedbackAckMessage constructor (fix #2)
+        try {
+            byte[] data = buildNullSeparatedAck((byte) 0x13, "   ", "fb-1");
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_feedbackAckWhitespaceOnlyFeedbackId_throwsTcpProtocolException() {
+        try {
+            byte[] data = buildNullSeparatedAck((byte) 0x13, "device-1", "   ");
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_distributeAckMultipleNullBytes_throwsTcpProtocolException() {
+        // Operand "a\0b\0c" has two null bytes — should be rejected (fix #3)
+        try {
+            byte[] deviceBytes = "device-1".getBytes(StandardCharsets.UTF_8);
+            byte[] mid = "mat-1".getBytes(StandardCharsets.UTF_8);
+            byte[] extra = "extra".getBytes(StandardCharsets.UTF_8);
+            // opcode + deviceId + 0x00 + mid + 0x00 + extra
+            byte[] data = new byte[1 + deviceBytes.length + 1 + mid.length + 1 + extra.length];
+            data[0] = (byte) 0x12;
+            int pos = 1;
+            System.arraycopy(deviceBytes, 0, data, pos, deviceBytes.length);
+            pos += deviceBytes.length;
+            data[pos++] = 0x00;
+            System.arraycopy(mid, 0, data, pos, mid.length);
+            pos += mid.length;
+            data[pos++] = 0x00;
+            System.arraycopy(extra, 0, data, pos, extra.length);
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
+    @Test
+    public void decode_feedbackAckMultipleNullBytes_throwsTcpProtocolException() {
+        // Operand "a\0b\0c" has two null bytes — should be rejected (fix #3)
+        try {
+            byte[] deviceBytes = "device-1".getBytes(StandardCharsets.UTF_8);
+            byte[] mid = "fb-1".getBytes(StandardCharsets.UTF_8);
+            byte[] extra = "extra".getBytes(StandardCharsets.UTF_8);
+            byte[] data = new byte[1 + deviceBytes.length + 1 + mid.length + 1 + extra.length];
+            data[0] = (byte) 0x13;
+            int pos = 1;
+            System.arraycopy(deviceBytes, 0, data, pos, deviceBytes.length);
+            pos += deviceBytes.length;
+            data[pos++] = 0x00;
+            System.arraycopy(mid, 0, data, pos, mid.length);
+            pos += mid.length;
+            data[pos++] = 0x00;
+            System.arraycopy(extra, 0, data, pos, extra.length);
+            decoder.decode(data);
+            fail("Expected TcpProtocolException");
+        } catch (TcpProtocolException e) {
+            assertEquals(TcpProtocolException.ErrorType.MALFORMED_DATA, e.getErrorType());
+        }
+    }
+
     // ========== Constructor test ==========
 
     @Test

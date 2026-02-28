@@ -178,7 +178,13 @@ public final class TcpMessageDecoder {
         String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
         String materialId = new String(operand, separator + 1,
                 operand.length - separator - 1, StandardCharsets.UTF_8);
-        return new DistributeAckMessage(deviceId, materialId);
+        try {
+            return new DistributeAckMessage(deviceId, materialId);
+        } catch (IllegalArgumentException e) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "DISTRIBUTE_ACK message has blank device ID or material ID: " + e.getMessage());
+        }
     }
 
     /**
@@ -197,7 +203,13 @@ public final class TcpMessageDecoder {
         String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
         String feedbackId = new String(operand, separator + 1,
                 operand.length - separator - 1, StandardCharsets.UTF_8);
-        return new FeedbackAckMessage(deviceId, feedbackId);
+        try {
+            return new FeedbackAckMessage(deviceId, feedbackId);
+        } catch (IllegalArgumentException e) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "FEEDBACK_ACK message has blank device ID or feedback ID: " + e.getMessage());
+        }
     }
 
     /**
@@ -222,6 +234,14 @@ public final class TcpMessageDecoder {
                     throw new TcpProtocolException(
                             TcpProtocolException.ErrorType.MALFORMED_DATA,
                             messageName + " message has empty device ID or entity ID");
+                }
+                // Reject operands with more than one null byte (extra separators / embedded nulls)
+                for (int j = i + 1; j < operand.length; j++) {
+                    if (operand[j] == 0x00) {
+                        throw new TcpProtocolException(
+                                TcpProtocolException.ErrorType.MALFORMED_DATA,
+                                messageName + " message contains multiple null bytes in operand");
+                    }
                 }
                 return i;
             }
