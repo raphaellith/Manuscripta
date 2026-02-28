@@ -203,7 +203,13 @@ public final class TcpMessageDecoder {
         String deviceId = new String(operand, 0, separator, StandardCharsets.UTF_8);
         String feedbackId = new String(operand, separator + 1,
                 operand.length - separator - 1, StandardCharsets.UTF_8);
-        return new FeedbackAckMessage(deviceId, feedbackId);
+        try {
+            return new FeedbackAckMessage(deviceId, feedbackId);
+        } catch (IllegalArgumentException e) {
+            throw new TcpProtocolException(
+                    TcpProtocolException.ErrorType.MALFORMED_DATA,
+                    "Invalid FEEDBACK_ACK message: " + e.getMessage());
+        }
     }
 
     /**
