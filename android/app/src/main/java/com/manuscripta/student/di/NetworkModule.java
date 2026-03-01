@@ -7,6 +7,7 @@ import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
 import com.manuscripta.student.network.interceptor.RetryInterceptor;
 import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.utils.ConnectionManager;
 
 import javax.inject.Singleton;
 
@@ -38,6 +39,8 @@ public class NetworkModule {
      * ErrorInterceptor always runs for consistent error handling; body logging
      * within it is gated behind debug builds.
      *
+     * @param connectionManager The ConnectionManager used to check network availability
+     *                          before making requests and retries
      * @param pairingManager The PairingManager used to retrieve the paired device ID,
      *                       which is included as the X-Device-ID header on every request.
      *                       Returns null before pairing completes, in which case no header
@@ -46,11 +49,12 @@ public class NetworkModule {
      */
     @Provides
     @Singleton
-    public OkHttpClient provideOkHttpClient(PairingManager pairingManager) {
+    public OkHttpClient provideOkHttpClient(ConnectionManager connectionManager,
+                                             PairingManager pairingManager) {
         AuthInterceptor.DeviceIdProvider deviceIdProvider = pairingManager::getDeviceId;
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .addInterceptor(new RetryInterceptor())
+                .addInterceptor(new RetryInterceptor(connectionManager))
                 .addInterceptor(new AuthInterceptor(deviceIdProvider));
 
         // Only add detailed request/response logging in debug builds
