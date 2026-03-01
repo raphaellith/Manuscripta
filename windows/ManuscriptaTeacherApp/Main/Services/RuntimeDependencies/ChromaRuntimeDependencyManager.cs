@@ -257,6 +257,9 @@ namespace Main.Services.RuntimeDependencies
                     throw new InvalidOperationException("Failed to start ChromaDB server process");
                 }
 
+                // Track startup completion for logging purposes
+                var startupComplete = false;
+
                 // Start async tasks to continuously read stdout/stderr to prevent buffer deadlock
                 var stdoutReader = Task.Run(async () =>
                 {
@@ -267,7 +270,15 @@ namespace Main.Services.RuntimeDependencies
                         {
                             if (!string.IsNullOrWhiteSpace(line))
                             {
-                                _logger.LogDebug("Chroma stdout: {Line}", line);
+                                // Log at Info level during startup to diagnose issues, Debug after
+                                if (!startupComplete)
+                                {
+                                    _logger.LogInformation("Chroma: {Line}", line);
+                                }
+                                else
+                                {
+                                    _logger.LogDebug("Chroma stdout: {Line}", line);
+                                }
                             }
                         }
                     }
@@ -286,7 +297,15 @@ namespace Main.Services.RuntimeDependencies
                         {
                             if (!string.IsNullOrWhiteSpace(line))
                             {
-                                _logger.LogWarning("Chroma stderr: {Line}", line);
+                                // Downgrade OpenTelemetry warning to Info - it's not a problem
+                                if (line.Contains("OpenTelemetry", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    _logger.LogInformation("Chroma: {Line}", line);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Chroma stderr: {Line}", line);
+                                }
                             }
                         }
                     }
@@ -298,11 +317,22 @@ namespace Main.Services.RuntimeDependencies
 
                 // Wait for server to become responsive
                 var startTime = DateTime.UtcNow;
-                var timeout = TimeSpan.FromSeconds(45); // Increased timeout for slower systems
+                var timeout = TimeSpan.FromSeconds(90); // Extended timeout for first-run initialization
                 var serverStarted = false;
+                var lastProgressLog = DateTime.UtcNow;
+
+                _logger.LogInformation("Waiting for ChromaDB server to become responsive (timeout: {Timeout}s)...", timeout.TotalSeconds);
 
                 while (DateTime.UtcNow - startTime < timeout)
                 {
+                    // Log progress every 10 seconds
+                    var elapsed = DateTime.UtcNow - startTime;
+                    if ((DateTime.UtcNow - lastProgressLog).TotalSeconds >= 10)
+                    {
+                        _logger.LogInformation("Still waiting for ChromaDB server... ({Elapsed:F0}s elapsed)", elapsed.TotalSeconds);
+                        lastProgressLog = DateTime.UtcNow;
+                    }
+
                     // Check if process has exited prematurely
                     if (_chromaServerProcess.HasExited)
                     {
@@ -318,17 +348,24 @@ namespace Main.Services.RuntimeDependencies
                         if (response.IsSuccessStatusCode)
                         {
                             serverStarted = true;
+                            startupComplete = true; // Switch logging to Debug level
                             _logger.LogInformation("ChromaDB server started successfully and is responding on http://localhost:8000");
                             break;
                         }
+                        else
+                        {
+                            _logger.LogDebug("Heartbeat returned status code {StatusCode}, waiting...", response.StatusCode);
+                        }
                     }
-                    catch (HttpRequestException)
+                    catch (HttpRequestException ex)
                     {
                         // Server not ready yet - connection refused/timeout is expected
+                        _logger.LogDebug("Connection failed (expected during startup): {Message}", ex.Message);
                     }
                     catch (TaskCanceledException)
                     {
                         // HTTP timeout - server not ready yet
+                        _logger.LogDebug("HTTP request timed out (expected during startup)");
                     }
 
                     await Task.Delay(1000); // Check every second instead of 500ms
@@ -336,16 +373,21 @@ namespace Main.Services.RuntimeDependencies
 
                 if (!serverStarted)
                 {
+                    var elapsed = DateTime.UtcNow - startTime;
                     var processStatus = _chromaServerProcess.HasExited 
                         ? $"Process exited with code {_chromaServerProcess.ExitCode}" 
-                        : "Process still running but not responding";
+                        : "Process still running but not responding to HTTP requests";
                     
-                    _logger.LogError("ChromaDB server failed to start within {Timeout} seconds. Status: {Status}", 
-                        timeout.TotalSeconds, processStatus);
+                    _logger.LogError(
+                        "ChromaDB server failed to start within {Timeout} seconds (waited {Elapsed:F1}s). Status: {Status}. " +
+                        "Review Chroma stdout logs above for startup messages. " +
+                        "The server may need more time on first run to initialize or download dependencies.",
+                        timeout.TotalSeconds, elapsed.TotalSeconds, processStatus);
                     
                     throw new InvalidOperationException(
                         $"ChromaDB server failed to start within {timeout.TotalSeconds} seconds. {processStatus}. " +
-                        "Check logs for stderr output or try manually running: chroma run --path \"" + dataPath + "\"");
+                        "Check startup logs above for Chroma output. You can also try manually running: " +
+                        $"chroma run --path \"{dataPath}\" to diagnose the issue.");
                 }
             }
             catch (Exception ex)
