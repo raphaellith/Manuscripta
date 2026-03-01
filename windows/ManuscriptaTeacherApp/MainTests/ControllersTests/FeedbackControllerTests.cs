@@ -273,7 +273,7 @@ public class FeedbackControllerSerialisationTests : IClassFixture<CustomWebAppli
         }).CreateClient();
 
         // Act
-        var httpResponse = await client.GetAsync($"/api/v1/feedback/{_testDeviceId}");
+        var httpResponse = await client.GetAsync($"/api/v2/feedback/{_testDeviceId}");
         var content = await httpResponse.Content.ReadAsStringAsync();
 
         // Assert - Field names should be PascalCase

@@ -361,8 +361,8 @@ namespace Main.Services.RuntimeDependencies
                         // Try multiple endpoints - Windows networking can be finicky with localhost
                         var endpoints = new[] 
                         { 
-                            "http://localhost:8000/api/v1/heartbeat",
-                            "http://127.0.0.1:8000/api/v1/heartbeat"
+                            "http://localhost:8000/api/v2/heartbeat",
+                            "http://127.0.0.1:8000/api/v2/heartbeat"
                         };
                         
                         HttpResponseMessage? response = null;
@@ -808,7 +808,7 @@ namespace Main.Services.RuntimeDependencies
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-                var response = await httpClient.GetAsync("http://localhost:8000/api/v1/heartbeat");
+                var response = await httpClient.GetAsync("http://localhost:8000/api/v2/heartbeat");
                 return response.IsSuccessStatusCode;
             }
             catch
