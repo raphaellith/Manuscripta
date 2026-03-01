@@ -243,14 +243,17 @@ public class RepositoryModuleTest {
                 mockDeviceStatusRepository);
 
         // Trigger a heartbeat by starting and waiting for the first scheduled send
-        hm.start();
-        verify(mockDeviceStatusRepository, timeout(5000))
-                .getDeviceStatus("device-1");
-        hm.stop();
+        try {
+            hm.start();
+            verify(mockDeviceStatusRepository, timeout(5000))
+                    .getDeviceStatus("device-1");
+        } finally {
+            hm.stop();
+        }
     }
 
     @Test
-    public void testProvideHeartbeatManager_nullDeviceId_skipsCallbacks() {
+    public void testProvideHeartbeatManager_nullDeviceId_skipsCallbacks() throws Exception {
         when(mockPairingManager.getDeviceId()).thenReturn(null);
 
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
@@ -264,10 +267,12 @@ public class RepositoryModuleTest {
         // With null device ID, neither repository should be called
         verify(mockMaterialRepository, org.mockito.Mockito.never())
                 .syncMaterials(anyString());
+        verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                .fetchAndStoreFeedback(anyString());
     }
 
     @Test
-    public void testProvideHeartbeatManager_emptyDeviceId_skipsCallbacks() {
+    public void testProvideHeartbeatManager_emptyDeviceId_skipsCallbacks() throws Exception {
         when(mockPairingManager.getDeviceId()).thenReturn("   ");
 
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
@@ -280,5 +285,7 @@ public class RepositoryModuleTest {
 
         verify(mockMaterialRepository, org.mockito.Mockito.never())
                 .syncMaterials(anyString());
+        verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                .fetchAndStoreFeedback(anyString());
     }
 }

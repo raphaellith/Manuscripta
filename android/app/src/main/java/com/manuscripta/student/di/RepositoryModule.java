@@ -26,6 +26,9 @@ import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import javax.inject.Singleton;
 
 import dagger.Module;
@@ -40,6 +43,8 @@ import dagger.hilt.components.SingletonComponent;
 @Module
 @InstallIn(SingletonComponent.class)
 public class RepositoryModule {
+
+    private static final String TAG = "RepositoryModule";
 
     /**
      * Provides the SessionDao from the database.
@@ -219,6 +224,8 @@ public class RepositoryModule {
 
         HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
 
+        ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
+
         hm.setDeviceStatusProvider(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
@@ -230,20 +237,26 @@ public class RepositoryModule {
         hm.setMaterialCallback(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
-                new Thread(() -> materialRepository.syncMaterials(deviceId)).start();
+                callbackExecutor.execute(() -> {
+                    try {
+                        materialRepository.syncMaterials(deviceId);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Material sync failed", e);
+                    }
+                });
             }
         });
 
         hm.setFeedbackCallback(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
-                new Thread(() -> {
+                callbackExecutor.execute(() -> {
                     try {
                         feedbackRepository.fetchAndStoreFeedback(deviceId);
                     } catch (Exception e) {
-                        Log.e("HeartbeatWiring", "Feedback fetch failed", e);
+                        Log.e(TAG, "Feedback fetch failed", e);
                     }
-                }).start();
+                });
             }
         });
 
