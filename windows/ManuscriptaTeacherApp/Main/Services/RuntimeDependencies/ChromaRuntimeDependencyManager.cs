@@ -80,6 +80,10 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
+                // Clean up any existing chroma.exe files from failed/partial installations
+                // to prevent Move-Item conflicts in the install script
+                CleanupExistingChromaInstallations();
+
                 var psScript = @"iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))";
 
                 var processStartInfo = new ProcessStartInfo
@@ -411,6 +415,74 @@ namespace Main.Services.RuntimeDependencies
             {
                 _logger.LogError(ex, "Failed to uninstall ChromaDB");
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Cleans up any existing chroma.exe installations from known locations.
+        /// This prevents Move-Item conflicts when the PowerShell installer tries to move the binary.
+        /// </summary>
+        private void CleanupExistingChromaInstallations()
+        {
+            var candidateLocations = new List<string>();
+
+            // Check common installation locations
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(userProfile))
+            {
+                candidateLocations.Add(Path.Combine(userProfile, "bin", "chroma.exe"));
+                candidateLocations.Add(Path.Combine(userProfile, ".cargo", "bin", "chroma.exe"));
+            }
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrEmpty(localAppData))
+            {
+                candidateLocations.Add(Path.Combine(localAppData, "Programs", "chroma", "chroma.exe"));
+            }
+
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (!string.IsNullOrEmpty(programFiles))
+            {
+                candidateLocations.Add(Path.Combine(programFiles, "chroma", "chroma.exe"));
+            }
+
+            // Also scan PATH directories
+            var pathDirs = new List<string>();
+            var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+            if (!string.IsNullOrEmpty(userPath))
+            {
+                pathDirs.AddRange(userPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            foreach (var dir in pathDirs)
+            {
+                try
+                {
+                    var chromaPath = Path.Combine(dir, "chroma.exe");
+                    candidateLocations.Add(chromaPath);
+                }
+                catch
+                {
+                    // Ignore malformed paths
+                }
+            }
+
+            // Attempt to delete each candidate
+            foreach (var location in candidateLocations.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    if (File.Exists(location))
+                    {
+                        _logger.LogInformation("Removing existing chroma.exe at {Location}", location);
+                        File.Delete(location);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to remove existing chroma.exe at {Location}", location);
+                    // Don't throw - we'll let the installer try anyway
+                }
             }
         }
 
