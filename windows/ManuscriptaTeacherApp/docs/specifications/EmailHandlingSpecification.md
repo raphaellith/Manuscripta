@@ -25,6 +25,8 @@ At the current stage, users shall provide their own email credentials to the app
 
     [Explanatory Note: DPAPI ties the encryption to the current Windows user account. This avoids the need for a user-managed master password whilst providing protection against direct database inspection.]
 
+(3A) The use of DPAPI may be substituted for another method for the purpose of development and testing on a platform other than Windows, but the exemption under this subsection shall not apply to any production deployment under Windows devices.
+
 (4) When the user submits new or updated email credentials —
 
     (a) the backend shall invoke the connection test method defined in Section 3(1)(b) using the provided credentials;
