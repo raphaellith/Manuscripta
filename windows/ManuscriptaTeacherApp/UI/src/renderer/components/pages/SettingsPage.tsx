@@ -210,13 +210,16 @@ export const SettingsPage: React.FC = () => {
                                         </label>
                                         <select
                                             value={baseConfig.mascotSelection}
-                                            onChange={(e) => updateConfig("mascotSelection", e.target.value)}
+                                            onChange={(e) => updateConfig("mascotSelection", e.target.value as MascotSelection)}
                                             disabled={hasPairedAndroidDevices}
                                             className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            <option value="ROBOT">Robot</option>
-                                            <option value="OWL">Owl</option>
-                                            <option value="DOG">Dog</option>
+                                            <option value="NONE">None</option>
+                                            <option value="MASCOT1">Mascot 1</option>
+                                            <option value="MASCOT2">Mascot 2</option>
+                                            <option value="MASCOT3">Mascot 3</option>
+                                            <option value="MASCOT4">Mascot 4</option>
+                                            <option value="MASCOT5">Mascot 5</option>
                                         </select>
                                     </div>
 
