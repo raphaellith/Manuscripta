@@ -198,7 +198,11 @@ public class RepositoryModuleTest {
                 mockMaterialRepository, mockFeedbackRepository,
                 mockDeviceStatusRepository);
 
-        assertNotNull(result);
+        try {
+            assertNotNull(result);
+        } finally {
+            result.destroy();
+        }
     }
 
     @Test
@@ -256,7 +260,7 @@ public class RepositoryModuleTest {
             verify(mockDeviceStatusRepository, timeout(5000))
                     .getDeviceStatus("device-1");
         } finally {
-            hm.stop();
+            hm.destroy();
         }
     }
 
@@ -269,14 +273,18 @@ public class RepositoryModuleTest {
                 mockMaterialRepository, mockFeedbackRepository,
                 mockDeviceStatusRepository);
 
-        hm.onMessageReceived(new DistributeMaterialMessage());
-        hm.onMessageReceived(new ReturnFeedbackMessage());
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
+            hm.onMessageReceived(new ReturnFeedbackMessage());
 
-        // With null device ID, neither repository should be called
-        verify(mockMaterialRepository, org.mockito.Mockito.never())
-                .syncMaterials(anyString());
-        verify(mockFeedbackRepository, org.mockito.Mockito.never())
-                .fetchAndStoreFeedback(anyString());
+            // With null device ID, neither repository should be called
+            verify(mockMaterialRepository, org.mockito.Mockito.never())
+                    .syncMaterials(anyString());
+            verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                    .fetchAndStoreFeedback(anyString());
+        } finally {
+            hm.destroy();
+        }
     }
 
     @Test
@@ -288,12 +296,16 @@ public class RepositoryModuleTest {
                 mockMaterialRepository, mockFeedbackRepository,
                 mockDeviceStatusRepository);
 
-        hm.onMessageReceived(new DistributeMaterialMessage());
-        hm.onMessageReceived(new ReturnFeedbackMessage());
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
+            hm.onMessageReceived(new ReturnFeedbackMessage());
 
-        verify(mockMaterialRepository, org.mockito.Mockito.never())
-                .syncMaterials(anyString());
-        verify(mockFeedbackRepository, org.mockito.Mockito.never())
-                .fetchAndStoreFeedback(anyString());
+            verify(mockMaterialRepository, org.mockito.Mockito.never())
+                    .syncMaterials(anyString());
+            verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                    .fetchAndStoreFeedback(anyString());
+        } finally {
+            hm.destroy();
+        }
     }
 }
