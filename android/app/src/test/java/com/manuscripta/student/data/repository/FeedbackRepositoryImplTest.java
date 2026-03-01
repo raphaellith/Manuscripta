@@ -7,9 +7,10 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +20,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
 import org.junit.Before;
@@ -42,7 +43,7 @@ public class FeedbackRepositoryImplTest {
 
     private FeedbackDao mockDao;
     private ApiService mockApiService;
-    private TcpSocketManager mockTcpSocketManager;
+    private AckRetrySender mockAckRetrySender;
     private FeedbackRepositoryImpl repository;
 
     private static final String TEST_DEVICE_ID = "test-device-id";
@@ -53,8 +54,37 @@ public class FeedbackRepositoryImplTest {
     public void setUp() {
         mockDao = mock(FeedbackDao.class);
         mockApiService = mock(ApiService.class);
-        mockTcpSocketManager = mock(TcpSocketManager.class);
-        repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockTcpSocketManager);
+        mockAckRetrySender = mock(AckRetrySender.class);
+        repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockAckRetrySender);
+    }
+
+    // ==================== Constructor null-guard Tests ====================
+
+    @Test
+    public void constructor_nullFeedbackDao_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(null, mockApiService, mockAckRetrySender)
+        );
+        assertEquals("FeedbackDao cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void constructor_nullApiService_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(mockDao, null, mockAckRetrySender)
+        );
+        assertEquals("ApiService cannot be null", exception.getMessage());
+    }
+
+    @Test
+    public void constructor_nullAckRetrySender_throwsIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FeedbackRepositoryImpl(mockDao, mockApiService, null)
+        );
+        assertEquals("AckRetrySender cannot be null", exception.getMessage());
     }
 
     // ==================== fetchAndStoreFeedback Tests ====================
@@ -102,11 +132,11 @@ public class FeedbackRepositoryImplTest {
 
         // Then
         verify(mockDao).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_404Response_sendsAckWithoutStoring() throws Exception {
+    public void testFetchAndStoreFeedback_404Response_noAckSent() throws Exception {
         // Given
         Response<FeedbackResponse> response = Response.error(404,
                 ResponseBody.create(MediaType.parse("application/json"), "Not found"));
@@ -117,9 +147,9 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
@@ -140,7 +170,7 @@ public class FeedbackRepositoryImplTest {
     }
 
     @Test
-    public void testFetchAndStoreFeedback_nullResponseBody_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_nullResponseBody_noAckSent()
             throws Exception {
         // Given
         Response<FeedbackResponse> response = Response.success(null);
@@ -151,13 +181,13 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_nullFeedbackList_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_nullFeedbackList_noAckSent()
             throws Exception {
         // Given
         FeedbackResponse feedbackResponse = new FeedbackResponse(null);
@@ -169,13 +199,13 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_emptyFeedbackList_sendsAckWithoutStoring()
+    public void testFetchAndStoreFeedback_emptyFeedbackList_noAckSent()
             throws Exception {
         // Given
         FeedbackResponse feedbackResponse = new FeedbackResponse(Collections.emptyList());
@@ -187,9 +217,9 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then — no entities, no ACKs
         verify(mockDao, never()).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender, never()).send(any(), anyString());
     }
 
     @Test
@@ -208,13 +238,13 @@ public class FeedbackRepositoryImplTest {
         // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then - should still insert (only the valid one)
+        // Then - should still insert (only the valid one) and ACK only the valid one
         verify(mockDao).insertAll(anyList());
-        verify(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
+        verify(mockAckRetrySender, times(1)).send(any(FeedbackAckMessage.class), anyString());
     }
 
     @Test
-    public void testFetchAndStoreFeedback_tcpSendFails_logsErrorButDoesNotThrow()
+    public void testFetchAndStoreFeedback_delegatesAckToRetrySender()
             throws Exception {
         // Given
         FeedbackDto dto = new FeedbackDto(TEST_FEEDBACK_ID, TEST_RESPONSE_ID, "Feedback", 90);
@@ -223,14 +253,13 @@ public class FeedbackRepositoryImplTest {
         Call<FeedbackResponse> mockCall = mock(Call.class);
         when(mockCall.execute()).thenReturn(response);
         when(mockApiService.getFeedback(TEST_DEVICE_ID)).thenReturn(mockCall);
-        doThrow(new IOException("Connection failed"))
-                .when(mockTcpSocketManager).send(any(FeedbackAckMessage.class));
 
-        // When - should not throw even though TCP send fails
+        // When
         repository.fetchAndStoreFeedback(TEST_DEVICE_ID);
 
-        // Then
+        // Then - ACK is delegated to the retry sender, feedback still stored
         verify(mockDao).insertAll(anyList());
+        verify(mockAckRetrySender).send(any(FeedbackAckMessage.class), anyString());
     }
 
     // ==================== getFeedbackForResponse Tests ====================

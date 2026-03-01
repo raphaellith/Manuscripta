@@ -8,7 +8,10 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,8 +25,10 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import java.io.IOException;
@@ -66,6 +71,9 @@ public class MaterialRepositoryImplTest {
     private TcpSocketManager mockTcpSocketManager;
 
     @Mock
+    private AckRetrySender mockAckRetrySender;
+
+    @Mock
     private PairingManager mockPairingManager;
 
     @Mock
@@ -81,7 +89,7 @@ public class MaterialRepositoryImplTest {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
         repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockPairingManager);
+                mockTcpSocketManager, mockAckRetrySender, mockPairingManager);
     }
 
     // ========== Constructor tests ==========
@@ -95,35 +103,42 @@ public class MaterialRepositoryImplTest {
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, null, mockApiService,
-                        mockTcpSocketManager, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullApiService_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null,
-                        mockTcpSocketManager, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullTcpSocketManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        null, mockPairingManager));
+                        null, mockAckRetrySender, mockPairingManager));
+    }
+
+    @Test
+    public void testConstructor_nullAckRetrySender_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
+                        mockTcpSocketManager, null, mockPairingManager));
     }
 
     @Test
     public void testConstructor_nullPairingManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, null));
+                        mockTcpSocketManager, mockAckRetrySender, null));
     }
 
     // ========== getMaterialById tests ==========
@@ -198,7 +213,7 @@ public class MaterialRepositoryImplTest {
         List<MaterialEntity> entities = Collections.singletonList(
                 createTestEntity(TEST_MATERIAL_ID, MaterialType.READING)
         );
-        when(mockDao.getByType(MaterialType.READING)).thenReturn(entities);
+        doReturn(entities).when(mockDao).getByType(MaterialType.READING);
 
         List<Material> result = repository.getMaterialsByType(MaterialType.READING);
 
@@ -459,6 +474,53 @@ public class MaterialRepositoryImplTest {
         repository.syncMaterials(TEST_DEVICE_ID);
 
         assertFalse(callbackCalled[0]);
+    }
+
+    // ========== DISTRIBUTE_ACK delegation tests ==========
+
+    @Test
+    public void testSyncMaterials_delegatesAckToRetrySender() throws Exception {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender).send(any(DistributeAckMessage.class), anyString());
+    }
+
+    @Test
+    public void testSyncMaterials_callbackStillFiresRegardlessOfAck() throws Exception {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // Materials still saved and callback fires
+        verify(mockDao).insert(any(MaterialEntity.class));
+        assertTrue(callbackCalled[0]);
+    }
+
+    @Test
+    public void testSyncMaterials_multipleMaterials_acksEachIndividually() throws Exception {
+        MaterialDto dto1 = new MaterialDto("mat-1", "READING", "Title1", null, null, null, 0L);
+        MaterialDto dto2 = new MaterialDto("mat-2", "READING", "Title2", null, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Arrays.asList(dto1, dto2), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender, times(2)).send(any(DistributeAckMessage.class), anyString());
     }
 
     // ========== isSyncing tests ==========

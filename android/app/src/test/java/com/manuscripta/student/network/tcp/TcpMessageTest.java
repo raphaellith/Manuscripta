@@ -2,6 +2,7 @@ package com.manuscripta.student.network.tcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
@@ -351,34 +352,39 @@ public class TcpMessageTest {
 
     @Test
     public void testDistributeAckMessage_opcode() {
-        DistributeAckMessage message = new DistributeAckMessage("device-123");
+        DistributeAckMessage message = new DistributeAckMessage("device-123", "mat-1");
         assertEquals(TcpOpcode.DISTRIBUTE_ACK, message.getOpcode());
     }
 
     @Test
     public void testDistributeAckMessage_deviceId() {
-        String deviceId = "tablet-abc-456";
-        DistributeAckMessage message = new DistributeAckMessage(deviceId);
-        assertEquals(deviceId, message.getDeviceId());
+        DistributeAckMessage message = new DistributeAckMessage("tablet-abc-456", "mat-1");
+        assertEquals("tablet-abc-456", message.getDeviceId());
     }
 
     @Test
-    public void testDistributeAckMessage_operand_containsUtf8DeviceId() {
-        String deviceId = "device-xyz";
-        DistributeAckMessage message = new DistributeAckMessage(deviceId);
+    public void testDistributeAckMessage_materialId() {
+        DistributeAckMessage message = new DistributeAckMessage("device-123", "mat-uuid-1");
+        assertEquals("mat-uuid-1", message.getMaterialId());
+    }
+
+    @Test
+    public void testDistributeAckMessage_operand_containsNullSeparatedIds() {
+        DistributeAckMessage message = new DistributeAckMessage("device-xyz", "mat-1");
         byte[] operand = message.getOperand();
-        assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
+        String full = new String(operand, java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals("device-xyz\0mat-1", full);
     }
 
     @Test
     public void testDistributeAckMessage_hasOperand_returnsTrue() {
-        DistributeAckMessage message = new DistributeAckMessage("device");
+        DistributeAckMessage message = new DistributeAckMessage("device", "mat");
         assertTrue(message.hasOperand());
     }
 
     @Test
     public void testDistributeAckMessage_operand_isDefensiveCopy() {
-        DistributeAckMessage message = new DistributeAckMessage("device-123");
+        DistributeAckMessage message = new DistributeAckMessage("device-123", "mat-1");
         byte[] operand1 = message.getOperand();
         byte[] operand2 = message.getOperand();
         operand1[0] = 0;
@@ -387,44 +393,50 @@ public class TcpMessageTest {
 
     @Test
     public void testDistributeAckMessage_toString() {
-        DistributeAckMessage message = new DistributeAckMessage("my-device");
+        DistributeAckMessage message = new DistributeAckMessage("my-device", "mat-1");
         String toString = message.toString();
         assertTrue(toString.contains("DistributeAckMessage"));
         assertTrue(toString.contains("my-device"));
+        assertTrue(toString.contains("mat-1"));
     }
 
     // ==================== FeedbackAckMessage Tests ====================
 
     @Test
     public void testFeedbackAckMessage_opcode() {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-123");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-123", "fb-1");
         assertEquals(TcpOpcode.FEEDBACK_ACK, message.getOpcode());
     }
 
     @Test
     public void testFeedbackAckMessage_deviceId() {
-        String deviceId = "tablet-abc-456";
-        FeedbackAckMessage message = new FeedbackAckMessage(deviceId);
-        assertEquals(deviceId, message.getDeviceId());
+        FeedbackAckMessage message = new FeedbackAckMessage("tablet-abc-456", "fb-1");
+        assertEquals("tablet-abc-456", message.getDeviceId());
     }
 
     @Test
-    public void testFeedbackAckMessage_operand_containsUtf8DeviceId() {
-        String deviceId = "device-xyz";
-        FeedbackAckMessage message = new FeedbackAckMessage(deviceId);
+    public void testFeedbackAckMessage_feedbackId() {
+        FeedbackAckMessage message = new FeedbackAckMessage("device-123", "fb-uuid-5");
+        assertEquals("fb-uuid-5", message.getFeedbackId());
+    }
+
+    @Test
+    public void testFeedbackAckMessage_operand_containsNullSeparatedIds() {
+        FeedbackAckMessage message = new FeedbackAckMessage("device-xyz", "fb-1");
         byte[] operand = message.getOperand();
-        assertEquals(deviceId, new String(operand, java.nio.charset.StandardCharsets.UTF_8));
+        String full = new String(operand, java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals("device-xyz\0fb-1", full);
     }
 
     @Test
     public void testFeedbackAckMessage_hasOperand_returnsTrue() {
-        FeedbackAckMessage message = new FeedbackAckMessage("device");
+        FeedbackAckMessage message = new FeedbackAckMessage("device", "fb");
         assertTrue(message.hasOperand());
     }
 
     @Test
     public void testFeedbackAckMessage_operand_isDefensiveCopy() {
-        FeedbackAckMessage message = new FeedbackAckMessage("device-123");
+        FeedbackAckMessage message = new FeedbackAckMessage("device-123", "fb-1");
         byte[] operand1 = message.getOperand();
         byte[] operand2 = message.getOperand();
         operand1[0] = 0;
@@ -433,10 +445,11 @@ public class TcpMessageTest {
 
     @Test
     public void testFeedbackAckMessage_toString() {
-        FeedbackAckMessage message = new FeedbackAckMessage("my-device");
+        FeedbackAckMessage message = new FeedbackAckMessage("my-device", "fb-1");
         String toString = message.toString();
         assertTrue(toString.contains("FeedbackAckMessage"));
         assertTrue(toString.contains("my-device"));
+        assertTrue(toString.contains("fb-1"));
     }
 
     // ==================== PairingRequestMessage Tests ====================
@@ -498,18 +511,26 @@ public class TcpMessageTest {
 
     @Test
     public void testDistributeAckMessage_emptyDeviceId() {
-        DistributeAckMessage message = new DistributeAckMessage("");
-        assertEquals("", message.getDeviceId());
-        assertEquals(0, message.getOperand().length);
-        assertFalse(message.hasOperand());
+        assertThrows(IllegalArgumentException.class,
+                () -> new DistributeAckMessage("", "mat-1"));
+    }
+
+    @Test
+    public void testDistributeAckMessage_emptyMaterialId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DistributeAckMessage("dev-1", ""));
     }
 
     @Test
     public void testFeedbackAckMessage_emptyDeviceId() {
-        FeedbackAckMessage message = new FeedbackAckMessage("");
-        assertEquals("", message.getDeviceId());
-        assertEquals(0, message.getOperand().length);
-        assertFalse(message.hasOperand());
+        assertThrows(IllegalArgumentException.class,
+                () -> new FeedbackAckMessage("", "fb-1"));
+    }
+
+    @Test
+    public void testFeedbackAckMessage_emptyFeedbackId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new FeedbackAckMessage("dev-1", ""));
     }
 
     @Test
