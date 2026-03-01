@@ -44,6 +44,7 @@ import dagger.hilt.components.SingletonComponent;
 @InstallIn(SingletonComponent.class)
 public class RepositoryModule {
 
+    /** Log tag for this module. */
     private static final String TAG = "RepositoryModule";
 
     /**
@@ -225,6 +226,7 @@ public class RepositoryModule {
         HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
 
         ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
+        hm.setCallbackExecutor(callbackExecutor);
 
         hm.setDeviceStatusProvider(() -> {
             String deviceId = pairingManager.getDeviceId();

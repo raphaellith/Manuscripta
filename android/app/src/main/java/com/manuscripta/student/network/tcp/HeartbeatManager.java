@@ -15,6 +15,7 @@ import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -108,6 +109,8 @@ public class HeartbeatManager implements TcpMessageListener {
     /** Callback for when feedback is available. */
     @Nullable
     private FeedbackAvailableCallback feedbackCallback;
+    /** Executor used for dispatching material/feedback callbacks. */
+    private ExecutorService callbackExecutor;
 
     /** The heartbeat configuration. */
     private HeartbeatConfig config;
@@ -154,6 +157,10 @@ public class HeartbeatManager implements TcpMessageListener {
         this.gson = gson;
         // Register as listener to receive DISTRIBUTE_MATERIAL messages
         this.socketManager.addMessageListener(this);
+        // If already connected, start heartbeat immediately
+        if (socketManager.isConnected() && config.isEnabled()) {
+            startInternal();
+        }
     }
 
     /**
@@ -181,6 +188,15 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void setFeedbackCallback(@Nullable FeedbackAvailableCallback callback) {
         this.feedbackCallback = callback;
+    }
+
+    /**
+     * Sets the executor used for dispatching material/feedback callbacks.
+     *
+     * @param executor The executor service for callbacks
+     */
+    public void setCallbackExecutor(@NonNull ExecutorService executor) {
+        this.callbackExecutor = executor;
     }
 
     /**
@@ -395,6 +411,10 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void destroy() {
         stop();
+        if (callbackExecutor != null) {
+            callbackExecutor.shutdown();
+            callbackExecutor = null;
+        }
         socketManager.removeMessageListener(this);
     }
 }

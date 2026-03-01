@@ -88,6 +88,8 @@
         <module name="InterfaceIsType"/>
         <module name="VisibilityModifier">
             <property name="protectedAllowed" value="true"/>
+            <property name="ignoreAnnotationCanonicalNames"
+                value="javax.inject.Inject"/>
         </module>
 
         <!-- Miscellaneous -->
