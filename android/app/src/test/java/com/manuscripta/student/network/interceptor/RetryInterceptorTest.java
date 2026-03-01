@@ -1,5 +1,7 @@
 package com.manuscripta.student.network.interceptor;
 
+import com.manuscripta.student.utils.ConnectionManager;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -34,6 +36,9 @@ public class RetryInterceptorTest {
     @Mock
     private Interceptor.Chain mockChain;
 
+    @Mock
+    private ConnectionManager mockConnectionManager;
+
     private Request testRequest;
 
     /**
@@ -42,13 +47,13 @@ public class RetryInterceptorTest {
     private static class TestableRetryInterceptor extends RetryInterceptor {
         private final List<Long> sleepDurations = new ArrayList<>();
 
-        TestableRetryInterceptor() {
-            super();
+        TestableRetryInterceptor(ConnectionManager connectionManager) {
+            super(connectionManager);
         }
 
-        TestableRetryInterceptor(int maxRetries, long initialBackoffMs,
-                                  long maxBackoffMs, double backoffMultiplier) {
-            super(maxRetries, initialBackoffMs, maxBackoffMs, backoffMultiplier);
+        TestableRetryInterceptor(ConnectionManager connectionManager, int maxRetries,
+                                  long initialBackoffMs, long maxBackoffMs, double backoffMultiplier) {
+            super(connectionManager, maxRetries, initialBackoffMs, maxBackoffMs, backoffMultiplier);
         }
 
         @Override
@@ -77,13 +82,15 @@ public class RetryInterceptorTest {
                 .url("https://api.test.com/endpoint")
                 .build();
         when(mockChain.request()).thenReturn(testRequest);
+        // Default: network is available
+        when(mockConnectionManager.isNetworkAvailable()).thenReturn(true);
     }
 
     // ========== Constructor tests ==========
 
     @Test
     public void testConstructor_default_succeeds() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
 
         assertNotNull(interceptor);
         assertEquals(3, interceptor.getMaxRetries());
@@ -94,7 +101,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testConstructor_customValid_succeeds() {
-        RetryInterceptor interceptor = new RetryInterceptor(5, 2000L, 64000L, 3.0);
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager, 5, 2000L, 64000L, 3.0);
 
         assertNotNull(interceptor);
         assertEquals(5, interceptor.getMaxRetries());
@@ -106,42 +113,42 @@ public class RetryInterceptorTest {
     @Test
     public void testConstructor_negativeMaxRetries_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(-1, 1000L, 32000L, 2.0));
+                () -> new RetryInterceptor(mockConnectionManager, -1, 1000L, 32000L, 2.0));
     }
 
     @Test
     public void testConstructor_zeroInitialBackoff_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 0L, 32000L, 2.0));
+                () -> new RetryInterceptor(mockConnectionManager, 3, 0L, 32000L, 2.0));
     }
 
     @Test
     public void testConstructor_negativeInitialBackoff_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, -1000L, 32000L, 2.0));
+                () -> new RetryInterceptor(mockConnectionManager, 3, -1000L, 32000L, 2.0));
     }
 
     @Test
     public void testConstructor_maxBackoffLessThanInitial_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 2000L, 1000L, 2.0));
+                () -> new RetryInterceptor(mockConnectionManager, 3, 2000L, 1000L, 2.0));
     }
 
     @Test
     public void testConstructor_backoffMultiplierOne_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 1000L, 32000L, 1.0));
+                () -> new RetryInterceptor(mockConnectionManager, 3, 1000L, 32000L, 1.0));
     }
 
     @Test
     public void testConstructor_backoffMultiplierLessThanOne_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RetryInterceptor(3, 1000L, 32000L, 0.5));
+                () -> new RetryInterceptor(mockConnectionManager, 3, 1000L, 32000L, 0.5));
     }
 
     @Test
     public void testConstructor_zeroMaxRetries_succeeds() {
-        RetryInterceptor interceptor = new RetryInterceptor(0, 1000L, 32000L, 2.0);
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager, 0, 1000L, 32000L, 2.0);
 
         assertNotNull(interceptor);
         assertEquals(0, interceptor.getMaxRetries());
@@ -151,7 +158,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_successfulResponse_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response successResponse = createResponse(200, "OK");
         when(mockChain.proceed(any(Request.class))).thenReturn(successResponse);
 
@@ -165,7 +172,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_201Created_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response successResponse = createResponse(201, "Created");
         when(mockChain.proceed(any(Request.class))).thenReturn(successResponse);
 
@@ -181,7 +188,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_500InternalServerError_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
@@ -197,7 +204,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_502BadGateway_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(502, "Bad Gateway"));
 
@@ -211,7 +218,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_503ServiceUnavailable_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(503, "Service Unavailable"));
 
@@ -225,7 +232,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_504GatewayTimeout_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(504, "Gateway Timeout"));
 
@@ -241,7 +248,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_400BadRequest_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response errorResponse = createResponse(400, "Bad Request");
         when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
 
@@ -255,7 +262,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_401Unauthorized_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response errorResponse = createResponse(401, "Unauthorized");
         when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
 
@@ -269,7 +276,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_404NotFound_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response errorResponse = createResponse(404, "Not Found");
         when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
 
@@ -285,7 +292,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_408RequestTimeout_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(408, "Request Timeout"));
 
@@ -299,7 +306,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_429TooManyRequests_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(429, "Too Many Requests"));
 
@@ -315,7 +322,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_ioException_retries() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         when(mockChain.proceed(any(Request.class)))
                 .thenThrow(new IOException("Network error"));
 
@@ -327,7 +334,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_ioExceptionThenSuccess_succeeds() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response successResponse = createResponse(200, "OK");
 
         when(mockChain.proceed(any(Request.class)))
@@ -347,7 +354,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_500ThenSuccess_succeeds() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor();
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response errorResponse = createResponse(500, "Internal Server Error");
         Response successResponse = createResponse(200, "OK");
 
@@ -367,7 +374,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_doublesBackoff() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
 
         long next = interceptor.calculateNextBackoff(1000L);
 
@@ -376,7 +383,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_respectsMaxBackoff() {
-        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 5000L, 2.0);
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager,3, 1000L, 5000L, 2.0);
 
         long next = interceptor.calculateNextBackoff(4000L);
 
@@ -385,7 +392,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testCalculateNextBackoff_customMultiplier() {
-        RetryInterceptor interceptor = new RetryInterceptor(3, 1000L, 100000L, 3.0);
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager,3, 1000L, 100000L, 3.0);
 
         long next = interceptor.calculateNextBackoff(1000L);
 
@@ -394,7 +401,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_exponentialBackoffProgression() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(3, 1000L, 32000L, 2.0);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager,3, 1000L, 32000L, 2.0);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
@@ -412,7 +419,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_customMaxRetries_respectsLimit() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(1, 1000L, 32000L, 2.0);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager,1, 1000L, 32000L, 2.0);
         when(mockChain.proceed(any(Request.class)))
                 .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
 
@@ -427,7 +434,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testIntercept_zeroMaxRetries_noRetry() throws IOException {
-        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(0, 1000L, 32000L, 2.0);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager,0, 1000L, 32000L, 2.0);
         Response errorResponse = createResponse(500, "Internal Server Error");
         when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
 
@@ -443,7 +450,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_500_returnsTrue() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(500, "Internal Server Error");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -453,7 +460,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_503_returnsTrue() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(503, "Service Unavailable");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -463,7 +470,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_408_returnsTrue() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(408, "Request Timeout");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -473,7 +480,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_429_returnsTrue() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(429, "Too Many Requests");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -483,7 +490,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_400_returnsFalse() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(400, "Bad Request");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -493,7 +500,7 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_404_returnsFalse() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(404, "Not Found");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
@@ -503,12 +510,72 @@ public class RetryInterceptorTest {
 
     @Test
     public void testShouldRetry_200_returnsFalse() {
-        RetryInterceptor interceptor = new RetryInterceptor();
+        RetryInterceptor interceptor = new RetryInterceptor(mockConnectionManager);
         Response response = createResponse(200, "OK");
 
         boolean shouldRetry = interceptor.shouldRetry(response);
 
         assertFalse(shouldRetry);
+    }
+
+    // ========== Network availability tests ==========
+
+    @Test
+    public void testConstructor_nullConnectionManager_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new RetryInterceptor(null));
+    }
+
+    @Test
+    public void testIntercept_noNetworkAtStart_throwsImmediately() throws IOException {
+        when(mockConnectionManager.isNetworkAvailable()).thenReturn(false);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
+        Response successResponse = createResponse(200, "OK");
+        when(mockChain.proceed(any(Request.class))).thenReturn(successResponse);
+
+        IOException exception = assertThrows(IOException.class,
+                () -> interceptor.intercept(mockChain));
+
+        assertEquals("No network connectivity", exception.getMessage());
+        verify(mockChain, times(0)).proceed(any(Request.class));
+        assertEquals(0, interceptor.getSleepCallCount());
+    }
+
+    @Test
+    public void testIntercept_networkLostDuringRetry_throwsException() throws IOException {
+        // Network available for first attempt, then lost
+        when(mockConnectionManager.isNetworkAvailable())
+                .thenReturn(true)   // Initial check
+                .thenReturn(false); // Before first retry
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
+
+        IOException exception = assertThrows(IOException.class,
+                () -> interceptor.intercept(mockChain));
+
+        assertEquals("Network lost during retry attempts", exception.getMessage());
+        // Should attempt once, fail with 500, then check network before retry
+        verify(mockChain, times(1)).proceed(testRequest);
+        assertEquals(0, interceptor.getSleepCallCount());
+    }
+
+    @Test
+    public void testIntercept_networkAvailableThroughoutRetries_completesAllRetries() throws IOException {
+        // Network available throughout
+        when(mockConnectionManager.isNetworkAvailable()).thenReturn(true);
+        TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
+        when(mockChain.proceed(any(Request.class)))
+                .thenAnswer(inv -> createResponse(500, "Internal Server Error"));
+
+        Response response = interceptor.intercept(mockChain);
+
+        assertNotNull(response);
+        assertEquals(500, response.code());
+        // Should verify network: once at start + 3 times before retries = 4 total
+        verify(mockConnectionManager, times(4)).isNetworkAvailable();
+        verify(mockChain, times(4)).proceed(testRequest);
+        assertEquals(3, interceptor.getSleepCallCount());
     }
 
     // ========== Helper methods ==========

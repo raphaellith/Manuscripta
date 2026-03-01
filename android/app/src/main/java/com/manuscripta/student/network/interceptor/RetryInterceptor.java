@@ -5,6 +5,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
+import com.manuscripta.student.utils.ConnectionManager;
+
 import java.io.IOException;
 
 import okhttp3.Interceptor;
@@ -53,25 +55,35 @@ public class RetryInterceptor implements Interceptor {
     /** Backoff multiplier for exponential growth. */
     private final double backoffMultiplier;
 
+    /** Connection manager for checking network availability. */
+    private final ConnectionManager connectionManager;
+
     /**
      * Creates a RetryInterceptor with default retry policy.
+     *
+     * @param connectionManager The connection manager for network availability checks
      */
-    public RetryInterceptor() {
-        this(DEFAULT_MAX_RETRIES, DEFAULT_INITIAL_BACKOFF_MS,
+    public RetryInterceptor(@NonNull ConnectionManager connectionManager) {
+        this(connectionManager, DEFAULT_MAX_RETRIES, DEFAULT_INITIAL_BACKOFF_MS,
                 DEFAULT_MAX_BACKOFF_MS, DEFAULT_BACKOFF_MULTIPLIER);
     }
 
     /**
      * Creates a RetryInterceptor with custom retry policy.
      *
+     * @param connectionManager  The connection manager for network availability checks
      * @param maxRetries         Maximum number of retry attempts
      * @param initialBackoffMs   Initial backoff delay in milliseconds
      * @param maxBackoffMs       Maximum backoff delay in milliseconds
      * @param backoffMultiplier  Backoff multiplier for exponential growth
      * @throws IllegalArgumentException if parameters are invalid
      */
-    public RetryInterceptor(int maxRetries, long initialBackoffMs,
+    public RetryInterceptor(@NonNull ConnectionManager connectionManager,
+                             int maxRetries, long initialBackoffMs,
                              long maxBackoffMs, double backoffMultiplier) {
+        if (connectionManager == null) {
+            throw new IllegalArgumentException("connectionManager cannot be null");
+        }
         if (maxRetries < 0) {
             throw new IllegalArgumentException("maxRetries must be non-negative");
         }
@@ -86,6 +98,7 @@ public class RetryInterceptor implements Interceptor {
             throw new IllegalArgumentException("backoffMultiplier must be > 1.0");
         }
 
+        this.connectionManager = connectionManager;
         this.maxRetries = maxRetries;
         this.initialBackoffMs = initialBackoffMs;
         this.maxBackoffMs = maxBackoffMs;
@@ -103,6 +116,12 @@ public class RetryInterceptor implements Interceptor {
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
         Request request = chain.request();
+
+        // Fail fast if no network connectivity
+        if (!connectionManager.isNetworkAvailable()) {
+            throw new IOException("No network connectivity");
+        }
+
         Response response = null;
         IOException lastException = null;
         long backoffMs = initialBackoffMs;
@@ -136,6 +155,10 @@ public class RetryInterceptor implements Interceptor {
 
             // Don't sleep after the last attempt
             if (attempt < maxRetries) {
+                // Check network before retrying
+                if (!connectionManager.isNetworkAvailable()) {
+                    throw new IOException("Network lost during retry attempts");
+                }
                 sleep(backoffMs);
                 backoffMs = calculateNextBackoff(backoffMs);
             }
