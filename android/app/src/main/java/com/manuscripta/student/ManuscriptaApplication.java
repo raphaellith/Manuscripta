@@ -13,8 +13,9 @@ import javax.inject.Inject;
 @HiltAndroidApp
 public class ManuscriptaApplication extends Application {
 
+    /** The connection manager for monitoring network connectivity. */
     @Inject
-    ConnectionManager connectionManager;
+    private ConnectionManager connectionManager;
 
     @Override
     public void onCreate() {
