@@ -309,12 +309,12 @@ public class ResponseRepositoryImpl implements ResponseRepository {
                     return false;
                 }
             } catch (IOException e) {
-                // Network errors should return false to trigger retry
+                // Return false so the response remains unsynced and can be retried in a later sync run
                 Log.e(TAG, "Network error syncing response: " + entity.getId()
                         + " - " + e.getMessage());
                 return false;
             } catch (Exception e) {
-                // Unexpected errors should also return false
+                // Return false so the response stays in the local queue and is retried by a future sync run
                 Log.e(TAG, "Unexpected error syncing response: " + entity.getId()
                         + " - " + e.getMessage(), e);
                 return false;
