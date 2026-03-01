@@ -156,6 +156,7 @@ public class ConnectionManager {
             connection.setConnectTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setReadTimeout(SERVER_CHECK_TIMEOUT_MS);
             connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
 
             int responseCode = connection.getResponseCode();
 
