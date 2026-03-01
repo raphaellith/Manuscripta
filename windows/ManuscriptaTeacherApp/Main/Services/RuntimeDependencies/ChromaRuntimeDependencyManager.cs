@@ -259,6 +259,8 @@ namespace Main.Services.RuntimeDependencies
 
                 // Track startup completion for logging purposes
                 var startupComplete = false;
+                var chromaSaidReady = false;
+                var chromaReadyTime = DateTime.MinValue;
 
                 // Start async tasks to continuously read stdout/stderr to prevent buffer deadlock
                 var stdoutReader = Task.Run(async () =>
@@ -270,8 +272,15 @@ namespace Main.Services.RuntimeDependencies
                         {
                             if (!string.IsNullOrWhiteSpace(line))
                             {
+                                // Detect when Chroma says it's ready
+                                if (line.Contains("Connect to Chroma at:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    chromaSaidReady = true;
+                                    chromaReadyTime = DateTime.UtcNow;
+                                    _logger.LogInformation("Chroma: {Line} [Server claims ready, waiting for API to respond...]", line);
+                                }
                                 // Log at Info level during startup to diagnose issues, Debug after
-                                if (!startupComplete)
+                                else if (!startupComplete)
                                 {
                                     _logger.LogInformation("Chroma: {Line}", line);
                                 }
@@ -320,16 +329,20 @@ namespace Main.Services.RuntimeDependencies
                 var timeout = TimeSpan.FromSeconds(90); // Extended timeout for first-run initialization
                 var serverStarted = false;
                 var lastProgressLog = DateTime.UtcNow;
+                var attemptCount = 0;
 
                 _logger.LogInformation("Waiting for ChromaDB server to become responsive (timeout: {Timeout}s)...", timeout.TotalSeconds);
 
                 while (DateTime.UtcNow - startTime < timeout)
                 {
+                    attemptCount++;
+                    
                     // Log progress every 10 seconds
                     var elapsed = DateTime.UtcNow - startTime;
                     if ((DateTime.UtcNow - lastProgressLog).TotalSeconds >= 10)
                     {
-                        _logger.LogInformation("Still waiting for ChromaDB server... ({Elapsed:F0}s elapsed)", elapsed.TotalSeconds);
+                        _logger.LogInformation("Still waiting for ChromaDB server... ({Elapsed:F0}s elapsed, {Attempts} attempts)", 
+                            elapsed.TotalSeconds, attemptCount);
                         lastProgressLog = DateTime.UtcNow;
                     }
 
@@ -343,32 +356,104 @@ namespace Main.Services.RuntimeDependencies
 
                     try
                     {
-                        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-                        var response = await httpClient.GetAsync("http://localhost:8000/api/v1/heartbeat");
-                        if (response.IsSuccessStatusCode)
+                        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+                        
+                        // Try multiple endpoints - Windows networking can be finicky with localhost
+                        var endpoints = new[] 
+                        { 
+                            "http://localhost:8000/api/v1/heartbeat",
+                            "http://127.0.0.1:8000/api/v1/heartbeat"
+                        };
+                        
+                        HttpResponseMessage? response = null;
+                        Exception? lastException = null;
+                        
+                        foreach (var endpoint in endpoints)
                         {
-                            serverStarted = true;
-                            startupComplete = true; // Switch logging to Debug level
-                            _logger.LogInformation("ChromaDB server started successfully and is responding on http://localhost:8000");
-                            break;
+                            try
+                            {
+                                response = await httpClient.GetAsync(endpoint);
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    serverStarted = true;
+                                    startupComplete = true; // Switch logging to Debug level
+                                    _logger.LogInformation("ChromaDB server started successfully and is responding on {Endpoint}", endpoint);
+                                    break;
+                                }
+                                else if (attemptCount <= 5)
+                                {
+                                    _logger.LogInformation("Heartbeat at {Endpoint} returned status code {StatusCode}", endpoint, response.StatusCode);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                lastException = ex;
+                                // Continue to try next endpoint
+                            }
                         }
-                        else
+                        
+                        if (serverStarted)
                         {
-                            _logger.LogDebug("Heartbeat returned status code {StatusCode}, waiting...", response.StatusCode);
+                            break; // Exit the while loop
+                        }
+                        
+                        // If all endpoints failed but we got a non-success response, log it
+                        if (response != null && !response.IsSuccessStatusCode)
+                        {
+                            if (attemptCount <= 5)
+                            {
+                                _logger.LogInformation("All endpoints returned non-success status codes");
+                            }
+                            else
+                            {
+                                _logger.LogDebug("All endpoints returned non-success status codes");
+                            }
+                        }
+                        
+                        // If all endpoints threw exceptions, throw the last one to be caught below
+                        if (lastException != null && response == null)
+                        {
+                            throw lastException;
                         }
                     }
                     catch (HttpRequestException ex)
                     {
-                        // Server not ready yet - connection refused/timeout is expected
-                        _logger.LogDebug("Connection failed (expected during startup): {Message}", ex.Message);
+                        // Log at Info for first few attempts to diagnose connectivity issues
+                        if (attemptCount <= 5)
+                        {
+                            _logger.LogInformation("HTTP connection failed (attempt {Attempt}): {Type} - {Message}", 
+                                attemptCount, ex.GetType().Name, ex.Message);
+                            if (ex.InnerException != null)
+                            {
+                                _logger.LogInformation("  Inner exception: {Type} - {Message}", 
+                                    ex.InnerException.GetType().Name, ex.InnerException.Message);
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Connection failed: {Message}", ex.Message);
+                        }
                     }
-                    catch (TaskCanceledException)
+                    catch (TaskCanceledException ex)
                     {
-                        // HTTP timeout - server not ready yet
-                        _logger.LogDebug("HTTP request timed out (expected during startup)");
+                        // Log at Info for first few attempts
+                        if (attemptCount <= 5)
+                        {
+                            _logger.LogInformation("HTTP request timed out (attempt {Attempt}): {Message}", attemptCount, ex.Message);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("HTTP request timed out");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Unexpected errors should always be logged
+                        _logger.LogWarning(ex, "Unexpected error during health check (attempt {Attempt}): {Type} - {Message}", 
+                            attemptCount, ex.GetType().Name, ex.Message);
                     }
 
-                    await Task.Delay(1000); // Check every second instead of 500ms
+                    await Task.Delay(1000); // Check every second
                 }
 
                 if (!serverStarted)
@@ -378,15 +463,19 @@ namespace Main.Services.RuntimeDependencies
                         ? $"Process exited with code {_chromaServerProcess.ExitCode}" 
                         : "Process still running but not responding to HTTP requests";
                     
+                    var chromaReadyNote = chromaSaidReady 
+                        ? $" Chroma reported 'Connect to Chroma at: http://localhost:8000' {(DateTime.UtcNow - chromaReadyTime).TotalSeconds:F1}s ago, but API heartbeat still failing." 
+                        : " Chroma never reported being ready.";
+                    
                     _logger.LogError(
-                        "ChromaDB server failed to start within {Timeout} seconds (waited {Elapsed:F1}s). Status: {Status}. " +
-                        "Review Chroma stdout logs above for startup messages. " +
-                        "The server may need more time on first run to initialize or download dependencies.",
-                        timeout.TotalSeconds, elapsed.TotalSeconds, processStatus);
+                        "ChromaDB server failed to start within {Timeout} seconds (waited {Elapsed:F1}s). Status: {Status}.{ChromaNote} " +
+                        "Review Chroma stdout logs above for startup messages. This may indicate a Windows firewall/networking issue preventing localhost connections.",
+                        timeout.TotalSeconds, elapsed.TotalSeconds, processStatus, chromaReadyNote);
                     
                     throw new InvalidOperationException(
-                        $"ChromaDB server failed to start within {timeout.TotalSeconds} seconds. {processStatus}. " +
-                        "Check startup logs above for Chroma output. You can also try manually running: " +
+                        $"ChromaDB server failed to start within {timeout.TotalSeconds} seconds. {processStatus}.{chromaReadyNote} " +
+                        "Check startup logs above for Chroma output. If Chroma reported being ready but API is unreachable, " +
+                        "check Windows Firewall settings for localhost blocking. You can also try manually running: " +
                         $"chroma run --path \"{dataPath}\" to diagnose the issue.");
                 }
             }
