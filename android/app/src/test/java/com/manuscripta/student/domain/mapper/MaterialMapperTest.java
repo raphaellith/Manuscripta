@@ -33,9 +33,9 @@ public class MaterialMapperTest {
         // Given
         MaterialEntity entity = new MaterialEntity(
                 "test-id-123",
-                MaterialType.QUIZ,
-                "Test Quiz Title",
-                "Test quiz content with questions",
+                MaterialType.WORKSHEET,
+                "Test Worksheet Title",
+                "Test worksheet content with questions",
                 "{\"author\":\"Teacher\",\"subject\":\"Math\"}",
                 "[\"algebra\",\"geometry\"]",
                 1234567890L
@@ -141,7 +141,7 @@ public class MaterialMapperTest {
         // Given
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "QUIZ",
+                "WORKSHEET",
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -155,7 +155,7 @@ public class MaterialMapperTest {
         // Then
         assertNotNull(domain);
         assertEquals(TEST_ID, domain.getId());
-        assertEquals(MaterialType.QUIZ, domain.getType());
+        assertEquals(MaterialType.WORKSHEET, domain.getType());
         assertEquals(TEST_TITLE, domain.getTitle());
         assertEquals(TEST_CONTENT, domain.getContent());
         assertEquals(TEST_METADATA, domain.getMetadata());
@@ -215,7 +215,7 @@ public class MaterialMapperTest {
         // Given
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "QUIZ",
+                "WORKSHEET",
                 TEST_TITLE,
                 null,
                 null,
@@ -237,7 +237,7 @@ public class MaterialMapperTest {
         // Given
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "quiz",
+                "worksheet",
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -249,10 +249,10 @@ public class MaterialMapperTest {
         Material domain = MaterialMapper.fromDto(dto);
 
         // Then
-        assertEquals(MaterialType.QUIZ, domain.getType());
+        assertEquals(MaterialType.WORKSHEET, domain.getType());
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testFromDtoWithInvalidType() {
         // Given
         MaterialDto dto = new MaterialDto(
@@ -265,14 +265,11 @@ public class MaterialMapperTest {
                 TEST_TIMESTAMP
         );
 
-        // When
-        Material domain = MaterialMapper.fromDto(dto);
-
-        // Then - defaults to READING
-        assertEquals(MaterialType.READING, domain.getType());
+        // When - should throw for unrecognised type
+        MaterialMapper.fromDto(dto);
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testFromDtoWithNullType() {
         // Given
         MaterialDto dto = new MaterialDto(
@@ -285,18 +282,15 @@ public class MaterialMapperTest {
                 TEST_TIMESTAMP
         );
 
-        // When
-        Material domain = MaterialMapper.fromDto(dto);
-
-        // Then - defaults to READING
-        assertEquals(MaterialType.READING, domain.getType());
+        // When - should throw for null type
+        MaterialMapper.fromDto(dto);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testFromDtoWithNullId() {
         MaterialDto dto = new MaterialDto(
                 null,
-                "QUIZ",
+                "WORKSHEET",
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -311,7 +305,7 @@ public class MaterialMapperTest {
     public void testFromDtoWithEmptyId() {
         MaterialDto dto = new MaterialDto(
                 "",
-                "QUIZ",
+                "WORKSHEET",
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -326,7 +320,7 @@ public class MaterialMapperTest {
     public void testFromDtoWithNullTitle() {
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "QUIZ",
+                "WORKSHEET",
                 null,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -341,7 +335,7 @@ public class MaterialMapperTest {
     public void testFromDtoWithEmptyTitle() {
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "QUIZ",
+                "WORKSHEET",
                 "   ",
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -357,7 +351,7 @@ public class MaterialMapperTest {
         // Given
         Material domain = new Material(
                 TEST_ID,
-                MaterialType.QUIZ,
+                MaterialType.WORKSHEET,
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
@@ -371,7 +365,7 @@ public class MaterialMapperTest {
         // Then
         assertNotNull(dto);
         assertEquals(TEST_ID, dto.getId());
-        assertEquals("QUIZ", dto.getType());
+        assertEquals("WORKSHEET", dto.getType());
         assertEquals(TEST_TITLE, dto.getTitle());
         assertEquals(TEST_CONTENT, dto.getContent());
         assertEquals(TEST_METADATA, dto.getMetadata());
@@ -501,7 +495,7 @@ public class MaterialMapperTest {
         // Given
         MaterialDto dto = new MaterialDto(
                 TEST_ID,
-                "QUIZ",
+                "WORKSHEET",
                 TEST_TITLE,
                 TEST_CONTENT,
                 TEST_METADATA,
