@@ -46,7 +46,7 @@ public class EfExternalDeviceRepositoryTests
             var retrieved = await repo.GetByIdAsync(deviceId);
 
             Assert.NotNull(retrieved);
-            Assert.Equal(deviceId, retrieved!.Id);
+            Assert.Equal(deviceId, retrieved!.DeviceId);
             Assert.Equal("My Device", retrieved.Name);
             Assert.Equal(ExternalDeviceType.REMARKABLE, retrieved.Type);
         }

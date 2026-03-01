@@ -132,7 +132,7 @@ export type ExternalDeviceType = 'REMARKABLE' | 'KINDLE';
  * Unified external device entity representing paired e-ink reader.
  */
 export interface ExternalDeviceEntity {
-    id: string;
+    deviceId: string;
     name: string;
     type: ExternalDeviceType;
     configurationData?: string;

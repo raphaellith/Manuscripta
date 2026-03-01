@@ -34,9 +34,9 @@ public class EfExternalDeviceRepository : IExternalDeviceRepository
 
     public async Task UpdateAsync(ExternalDeviceEntity entity)
     {
-        var existing = await _context.ExternalDevices.FindAsync(entity.Id);
+        var existing = await _context.ExternalDevices.FindAsync(entity.DeviceId);
         if (existing == null)
-            throw new InvalidOperationException($"External device {entity.Id} not found");
+            throw new InvalidOperationException($"External device {entity.DeviceId} not found");
 
         existing.Name = entity.Name;
         existing.ConfigurationData = entity.ConfigurationData;

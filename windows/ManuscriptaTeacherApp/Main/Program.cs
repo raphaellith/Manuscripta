@@ -234,23 +234,23 @@ if (!app.Environment.IsEnvironment("Testing"))
             
             // Only consider REMARKABLE type devices for rmapi config cleanup (PersistenceAndCascadingRules §3(2))
             var remarkableDevices = allDevices.Where(d => d.Type == Main.Models.Entities.ExternalDeviceType.REMARKABLE).ToList();
-            var validDeviceIds = new HashSet<string>(remarkableDevices.Select(d => d.Id.ToString().ToLowerInvariant()));
+            var validDeviceIds = new HashSet<string>(remarkableDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
 
             var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
                 .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
 
             foreach (var device in remarkableDevices)
             {
-                if (!existingConfigFiles.Contains(device.Id.ToString().ToLowerInvariant()))
+                if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
                 {
                     try
                     {
-                        await externalRepo.DeleteAsync(device.Id);
-                        Console.WriteLine($"Deleted orphan ExternalDeviceEntity: {device.Id}");
+                        await externalRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ExternalDeviceEntity: {device.DeviceId}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Failed to delete orphan entity {device.Id}: {ex.Message}");
+                        Console.WriteLine($"Failed to delete orphan entity {device.DeviceId}: {ex.Message}");
                     }
                 }
             }

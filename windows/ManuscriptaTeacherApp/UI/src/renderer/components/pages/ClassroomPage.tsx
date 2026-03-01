@@ -216,7 +216,7 @@ export const ClassroomPage: React.FC = () => {
 
         // Subscribe to external device auth invalid events
         const unsubExternalAuth = signalRService.onExternalDeviceAuthInvalid((deviceId) => {
-            const device = externalDevicesRef.current.find(d => d.id === deviceId);
+            const device = externalDevicesRef.current.find(d => d.deviceId === deviceId);
             const activeDeploy = externalDeployRef.current;
             if (activeDeploy && activeDeploy.ids.has(deviceId)) {
                 activeDeploy.hadAuthError = true;
@@ -291,7 +291,7 @@ export const ClassroomPage: React.FC = () => {
     const totalSelectedCount = selectedDeviceIds.length + selectedExternalDeviceIds.length;
     const selectAll = () => {
         setSelectedDeviceIds(devices.map(d => d.deviceId));
-        setSelectedExternalDeviceIds(externalDevices.map(d => d.id));
+        setSelectedExternalDeviceIds(externalDevices.map(d => d.deviceId));
     };
     const deselectAll = () => {
         setSelectedDeviceIds([]);
@@ -327,7 +327,7 @@ export const ClassroomPage: React.FC = () => {
 
         const hasExternalTargets = selectedExternalDeviceIds.length > 0;
         const selectedRemarkable = externalDevices.filter(d =>
-            selectedExternalDeviceIds.includes(d.id) && d.type === 'REMARKABLE'
+            selectedExternalDeviceIds.includes(d.deviceId) && d.type === 'REMARKABLE'
         );
 
         if (selectedRemarkable.length > 0) {
@@ -335,7 +335,7 @@ export const ClassroomPage: React.FC = () => {
             if (!rmapiAvailable) {
                 // filter out remarkable targets
                 externalIdsToDeploy = selectedExternalDeviceIds.filter(id =>
-                    !selectedRemarkable.some(r => r.id === id)
+                    !selectedRemarkable.some(r => r.deviceId === id)
                 );
             }
         }
@@ -421,12 +421,12 @@ export const ClassroomPage: React.FC = () => {
         // External device rename
         else if (selectedExternalDeviceIds.length === 1 && selectedDeviceIds.length === 0) {
             const deviceId = selectedExternalDeviceIds[0];
-            const device = externalDevices.find(d => d.id === deviceId);
+            const device = externalDevices.find(d => d.deviceId === deviceId);
             if (!device) return;
 
             try {
                 await signalRService.updateExternalDevice({ ...device, name: newName });
-                setExternalDevices(prev => prev.map(d => d.id === deviceId ? { ...d, name: newName } : d));
+                setExternalDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, name: newName } : d));
                 addAlert('success', undefined, `Device renamed to ${newName}`);
             } catch (error) {
                 console.error('Rename failed:', error);
@@ -463,7 +463,7 @@ export const ClassroomPage: React.FC = () => {
     const singleSelectedDeviceName = singleDeviceSelected
         ? (selectedDeviceIds.length === 1
             ? devices.find(d => d.deviceId === selectedDeviceIds[0])?.name
-            : externalDevices.find(d => d.id === selectedExternalDeviceIds[0])?.name)
+            : externalDevices.find(d => d.deviceId === selectedExternalDeviceIds[0])?.name)
         ?? ''
         : '';
 
@@ -812,20 +812,20 @@ export const ClassroomPage: React.FC = () => {
 
                     {/* External devices */}
                     {externalDevices.map((device) => {
-                        const isSelected = selectedExternalDeviceIds.includes(device.id);
-                        const isDeploying = deployingDevices.has(device.id);
+                        const isSelected = selectedExternalDeviceIds.includes(device.deviceId);
+                        const isDeploying = deployingDevices.has(device.deviceId);
 
                         return (
                             <div
-                                key={`ext-${device.id}`}
+                                key={`ext-${device.deviceId}`}
                                 role="gridcell"
                                 aria-selected={isSelected}
                                 tabIndex={0}
-                                onClick={() => toggleExternalSelection(device.id)}
+                                onClick={() => toggleExternalSelection(device.deviceId)}
                                 onKeyDown={(e) => {
                                     if (e.key === ' ' || e.key === 'Enter') {
                                         e.preventDefault();
-                                        toggleExternalSelection(device.id);
+                                        toggleExternalSelection(device.deviceId);
                                     }
                                 }}
                                 className={`relative rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border

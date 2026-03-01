@@ -91,7 +91,7 @@ public class ExternalDeviceDeploymentService : IExternalDeviceDeploymentService
     {
         try
         {
-            var configPath = _rmapiService.GetConfigPath(device.Id);
+            var configPath = _rmapiService.GetConfigPath(device.DeviceId);
 
             // Ensure /Manuscripta folder exists
             await _rmapiService.EnsureFolderExistsAsync(DefaultRemoteFolder, configPath);
@@ -109,9 +109,9 @@ public class ExternalDeviceDeploymentService : IExternalDeviceDeploymentService
                 // Upload via rmapi put
                 await _rmapiService.UploadFileAsync(tempFilePath, DefaultRemoteFolder, configPath);
 
-                _logger.LogInformation("Deployed material to reMarkable device {DeviceId} as {FileName}", device.Id, fileName);
+                _logger.LogInformation("Deployed material to reMarkable device {DeviceId} as {FileName}", device.DeviceId, fileName);
 
-                return new ExternalDeviceDeploymentResult { DeviceId = device.Id, Success = true };
+                return new ExternalDeviceDeploymentResult { DeviceId = device.DeviceId, Success = true };
             }
             finally
             {
@@ -121,13 +121,13 @@ public class ExternalDeviceDeploymentService : IExternalDeviceDeploymentService
         }
         catch (RmapiAuthException ex)
         {
-            _logger.LogWarning(ex, "Auth failure deploying to reMarkable device {DeviceId}", device.Id);
-            return new ExternalDeviceDeploymentResult { DeviceId = device.Id, Success = false, AuthFailed = true, ErrorMessage = ex.Message };
+            _logger.LogWarning(ex, "Auth failure deploying to reMarkable device {DeviceId}", device.DeviceId);
+            return new ExternalDeviceDeploymentResult { DeviceId = device.DeviceId, Success = false, AuthFailed = true, ErrorMessage = ex.Message };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to deploy to reMarkable {DeviceId}", device.Id);
-            return new ExternalDeviceDeploymentResult { DeviceId = device.Id, Success = false, ErrorMessage = ex.Message };
+            _logger.LogError(ex, "Failed to deploy to reMarkable {DeviceId}", device.DeviceId);
+            return new ExternalDeviceDeploymentResult { DeviceId = device.DeviceId, Success = false, ErrorMessage = ex.Message };
         }
     }
 
@@ -161,18 +161,18 @@ public class ExternalDeviceDeploymentService : IExternalDeviceDeploymentService
                 pdfBytes,
                 pdfName);
 
-            _logger.LogInformation("Deployed material to Kindle {DeviceId} ({Email})", device.Id, kindleEmail);
+            _logger.LogInformation("Deployed material to Kindle {DeviceId} ({Email})", device.DeviceId, kindleEmail);
 
-            return new ExternalDeviceDeploymentResult { DeviceId = device.Id, Success = true };
+            return new ExternalDeviceDeploymentResult { DeviceId = device.DeviceId, Success = true };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to deploy to Kindle {DeviceId}", device.Id);
+            _logger.LogError(ex, "Failed to deploy to Kindle {DeviceId}", device.DeviceId);
             // Email errors don't count as "AuthFailed" for the *device* (it's for the backend email config), 
             // so we just return it as a general error. The frontend shouldn't prompt for device re-auth.
             // If the SMTP credentials failed, it throws an error which the TeacherPortalHub will catch and
             // dispatch an `EmailCredentialsNotConfigured` handler.
-            return new ExternalDeviceDeploymentResult { DeviceId = device.Id, Success = false, ErrorMessage = ex.Message };
+            return new ExternalDeviceDeploymentResult { DeviceId = device.DeviceId, Success = false, ErrorMessage = ex.Message };
         }
     }
 

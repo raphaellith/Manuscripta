@@ -20,7 +20,7 @@ public enum ExternalDeviceType
 public class ExternalDeviceEntity
 {
     [Key]
-    public Guid Id { get; set; }
+    public Guid DeviceId { get; set; }
 
     /// <summary>
     /// The user-friendly name of the device.
@@ -41,7 +41,7 @@ public class ExternalDeviceEntity
 
     public ExternalDeviceEntity(Guid id, string name, ExternalDeviceType type)
     {
-        Id = id;
+        DeviceId = id;
         Name = name;
         Type = type;
     }

@@ -169,7 +169,7 @@ public class MainDbContext : DbContext
         // Per PersistenceAndCascadingRules.md §1(1)(i)
         modelBuilder.Entity<ExternalDeviceEntity>(entity =>
         {
-            entity.HasKey(e => e.Id);
+            entity.HasKey(e => e.DeviceId);
             entity.Property(e => e.Type).HasConversion<string>();
         });
 
