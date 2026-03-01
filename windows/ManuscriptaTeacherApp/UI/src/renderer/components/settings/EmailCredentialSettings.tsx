@@ -1,6 +1,6 @@
 /**
  * Component for configuring SMTP Email Credentials.
- * Per EmailHandlingSpecification §4.
+ * Per EmailHandlingSpecification §2 / §2A.
  */
 
 import React, { useState, useEffect } from 'react';
