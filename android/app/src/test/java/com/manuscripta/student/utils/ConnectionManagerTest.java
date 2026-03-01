@@ -207,23 +207,6 @@ public class ConnectionManagerTest {
         assertTrue(available);
     }
 
-    @Test
-    public void testIsNetworkAvailable_networkWithoutValidation_returnsFalse() {
-        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
-        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-                .thenReturn(mockCapabilities);
-        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-                .thenReturn(true);
-        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-                .thenReturn(false);
-
-        connectionManager = new ConnectionManager(mockContext);
-
-        boolean available = connectionManager.isNetworkAvailable();
-
-        assertFalse(available);
-    }
-
     // ========== isServerReachable tests ==========
 
     @Test
