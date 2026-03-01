@@ -18,6 +18,8 @@ import java.net.URL;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import dagger.hilt.android.qualifiers.ApplicationContext;
+
 /**
  * Utility class for monitoring network connectivity and server reachability.
  * Provides real-time updates on network state changes via LiveData.
@@ -54,7 +56,7 @@ public class ConnectionManager {
      * @throws IllegalArgumentException if context is null
      */
     @Inject
-    public ConnectionManager(@NonNull Context context) {
+    public ConnectionManager(@ApplicationContext @NonNull Context context) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }
