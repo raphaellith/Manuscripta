@@ -397,8 +397,8 @@ public class HeartbeatManager implements TcpMessageListener {
      * Cleans up resources. Should be called when the manager is no longer needed.
      */
     public void destroy() {
+        socketManager.removeMessageListener(this);
         stop();
         callbackExecutor.shutdown();
-        socketManager.removeMessageListener(this);
     }
 }
