@@ -271,7 +271,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      *
      * <p>Per API Contract §2.4, expects HTTP 201 Created on success.</p>
      */
-    @VisibleForTesting
     static class NetworkSyncEngine implements SyncEngine {
 
         /** Tag for logging. */
