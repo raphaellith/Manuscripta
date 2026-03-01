@@ -138,7 +138,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/HeartbeatManager$*.class",
             "**/PairingManager.class",
             "**/PairingManager$*.class",
-            // TODO: Remove ConnectionManager exclusion once overall project coverage reaches 95%
             "**/ConnectionManager.class",
             "**/ConnectionManager$*.class",
             "**/MulticastLockManager.class",
@@ -195,7 +194,6 @@ tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             "**/HeartbeatManager$*.class",
             "**/PairingManager.class",
             "**/PairingManager$*.class",
-            // TODO: Remove ConnectionManager exclusion once overall project coverage reaches 95%
             "**/ConnectionManager.class",
             "**/ConnectionManager$*.class",
             "**/MulticastLockManager.class",
