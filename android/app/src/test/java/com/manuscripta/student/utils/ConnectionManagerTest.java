@@ -362,6 +362,28 @@ public class ConnectionManagerTest {
     }
 
     @Test
+    public void testGetConnectionState_observerReceivesInitialValue() {
+        when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
+        when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+                .thenReturn(mockCapabilities);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                .thenReturn(true);
+        when(mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                .thenReturn(true);
+
+        connectionManager = new ConnectionManager(mockContext);
+
+        LiveData<Boolean> state = connectionManager.getConnectionState();
+        Observer<Boolean> observer = mock(Observer.class);
+
+        state.observeForever(observer);
+
+        // Verify observer receives the initial value
+        verify(observer).onChanged(true);
+        state.removeObserver(observer);
+    }
+
+    @Test
     public void testShutdown_multipleCallsDoNotThrow() {
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(null);
         connectionManager = new ConnectionManager(mockContext);
