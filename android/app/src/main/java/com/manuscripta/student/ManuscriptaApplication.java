@@ -13,9 +13,14 @@ import javax.inject.Inject;
 @HiltAndroidApp
 public class ManuscriptaApplication extends Application {
 
-    /** The connection manager for monitoring network connectivity. */
+    /**
+     * The connection manager for monitoring network connectivity.
+     * Package-private for Hilt field injection (Dagger does not support private field injection).
+     */
     @Inject
-    private ConnectionManager connectionManager;
+    // CHECKSTYLE:OFF VisibilityModifier - Required for Hilt/Dagger field injection
+    ConnectionManager connectionManager;
+    // CHECKSTYLE:ON
 
     @Override
     public void onCreate() {
