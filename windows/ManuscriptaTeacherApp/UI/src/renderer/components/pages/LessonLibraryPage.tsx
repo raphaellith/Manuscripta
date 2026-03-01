@@ -261,7 +261,7 @@ export const LessonLibraryPage: React.FC = () => {
         const dependenciesAvailable = await ensureAiDependenciesAvailable();
         if (!dependenciesAvailable) {
             // Modal will be shown, user can install dependencies and retry
-            return;
+            throw new Error('AI dependencies not available');
         }
 
         // Per §4B(2): First create material with empty content

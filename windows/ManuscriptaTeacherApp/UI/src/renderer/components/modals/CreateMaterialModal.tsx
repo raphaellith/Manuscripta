@@ -124,7 +124,7 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
             // 3. Display result in editor modal
             // 4. Persist reading age and actual age metadata
             await onCreateWithAI(title.trim(), aiMaterialType, request, readingAge, actualAge);
-            onClose();
+            // Note: Parent manages modal transition to editor, so don't call onClose() here
         } catch (err) {
             setError('Failed to generate material with AI');
         } finally {
