@@ -358,31 +358,44 @@ namespace Main.Services.RuntimeDependencies
                     {
                         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
                         
-                        // Try multiple endpoints - Windows networking can be finicky with localhost
+                        // Try multiple endpoints - the CLI version may have different endpoint availability
                         var endpoints = new[] 
                         { 
-                            "http://localhost:8000/api/v1/heartbeat",
-                            "http://127.0.0.1:8000/api/v1/heartbeat"
+                            ("http://localhost:8000/api/v1/", "base API path"),
+                            ("http://localhost:8000/", "root"),
+                            ("http://127.0.0.1:8000/api/v1/", "base API path (IP)"),
+                            ("http://localhost:8000/api/v1/heartbeat", "heartbeat endpoint")
                         };
                         
                         HttpResponseMessage? response = null;
                         Exception? lastException = null;
+                        string? successfulEndpoint = null;
                         
-                        foreach (var endpoint in endpoints)
+                        foreach (var (endpoint, description) in endpoints)
                         {
                             try
                             {
                                 response = await httpClient.GetAsync(endpoint);
-                                if (response.IsSuccessStatusCode)
+                                
+                                // Accept 200-299 (success), 404 (Not Found), and 410 (Gone) as signs the server is responding
+                                // 410 Gone means the endpoint existed but is deprecated - server is definitely alive
+                                // 404 means routing works but endpoint doesn't exist - server is alive
+                                if (response.IsSuccessStatusCode || 
+                                    response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                                    response.StatusCode == System.Net.HttpStatusCode.Gone)
                                 {
                                     serverStarted = true;
-                                    startupComplete = true; // Switch logging to Debug level
-                                    _logger.LogInformation("ChromaDB server started successfully and is responding on {Endpoint}", endpoint);
+                                    startupComplete = true;
+                                    _logger.LogInformation(
+                                        "ChromaDB server is responding on {Endpoint} ({Description}) with status {StatusCode}. Server is ready.",
+                                        endpoint, description, response.StatusCode);
+                                    successfulEndpoint = endpoint;
                                     break;
                                 }
                                 else if (attemptCount <= 5)
                                 {
-                                    _logger.LogInformation("Heartbeat at {Endpoint} returned status code {StatusCode}", endpoint, response.StatusCode);
+                                    _logger.LogInformation("{Description} at {Endpoint} returned status code {StatusCode}", 
+                                        description, endpoint, response.StatusCode);
                                 }
                             }
                             catch (Exception ex)
@@ -397,17 +410,11 @@ namespace Main.Services.RuntimeDependencies
                             break; // Exit the while loop
                         }
                         
-                        // If all endpoints failed but we got a non-success response, log it
-                        if (response != null && !response.IsSuccessStatusCode)
+                        // If all endpoints failed but we got a response, log it
+                        if (response != null && attemptCount <= 5)
                         {
-                            if (attemptCount <= 5)
-                            {
-                                _logger.LogInformation("All endpoints returned non-success status codes");
-                            }
-                            else
-                            {
-                                _logger.LogDebug("All endpoints returned non-success status codes");
-                            }
+                            _logger.LogInformation("Server responding but no endpoint confirmed readiness. Last status: {StatusCode}", 
+                                response.StatusCode);
                         }
                         
                         // If all endpoints threw exceptions, throw the last one to be caught below
