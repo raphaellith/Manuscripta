@@ -326,7 +326,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      * Default implementation of SyncEngine.
      * Throws UnsupportedOperationException until network sync is implemented.
      *
-     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/TBD">Issue: Implement Response Network Sync</a>
+     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/202">Issue #202: Implement Response Network Sync</a>
      * @deprecated Replaced by NetworkSyncEngine. Kept for testing purposes.
      */
     @Deprecated

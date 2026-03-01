@@ -1,7 +1,9 @@
 package com.manuscripta.student.data.repository;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -209,7 +211,12 @@ public class NetworkSyncEngineTest {
         // Assert
         ResponseDto capturedDto = dtoCaptor.getValue();
         assertNotNull(capturedDto);
-        // The DTO should have been created from the entity
+        assertEquals(TEST_ID, capturedDto.getId());
+        assertEquals(TEST_QUESTION_ID, capturedDto.getQuestionId());
+        assertEquals(TEST_DEVICE_ID, capturedDto.getStudentId());
+        assertEquals("2021-12-20T11:33:20Z", capturedDto.getTimestamp());
+        assertEquals("Test answer", capturedDto.getAnswer());
+        assertNull(capturedDto.getMaterialId());
     }
 
     // ========== Helper methods ==========
