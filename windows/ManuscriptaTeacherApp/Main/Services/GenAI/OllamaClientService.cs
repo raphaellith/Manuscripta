@@ -226,8 +226,9 @@ public class OllamaClientService : IDependencyService
     {
         try
         {
-            // Attempt a minimal test generation to detect resource constraints
-            var testPrompt = "Test";
+            // Attempt a test generation with a more realistic prompt to detect resource constraints
+            // Use a longer prompt that better simulates actual generation workloads
+            var testPrompt = @"Generate educational content based on the following: This is a test prompt to verify sufficient system resources are available. Please provide a brief response to confirm the model can process requests of this size and complexity. The response should demonstrate the model's ability to handle typical content generation tasks.";
             var response = await _httpClient.PostAsJsonAsync("/api/chat", new
             {
                 model = modelName,
