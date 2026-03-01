@@ -15,11 +15,11 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpMessage;
 import com.manuscripta.student.network.tcp.TcpMessageListenerAdapter;
 import com.manuscripta.student.network.tcp.TcpOpcode;
-import com.manuscripta.student.network.tcp.TcpProtocolException;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.ContentParser;
@@ -70,13 +70,16 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** The TCP socket manager for receiving DISTRIBUTE_MATERIAL signals. */
     private final TcpSocketManager tcpSocketManager;
 
+    /** Handles retry logic for sending ACK messages over TCP. */
+    private final AckRetrySender ackRetrySender;
+
     /** The pairing manager for retrieving the current device ID. */
     private final PairingManager pairingManager;
 
     /** Executor for running sync operations on a background thread. */
     private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
-    /** Lock object for thread-safe operations. */
+    /** Lock object guarding database writes and LiveData updates. */
     private final Object lock = new Object();
 
     /** LiveData for observable material list. */
@@ -104,6 +107,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * @param fileStorageManager The file storage manager for attachments
      * @param apiService         The API service for network operations
      * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
+     * @param ackRetrySender     The retry sender for ACK messages
      * @param pairingManager     The pairing manager for retrieving the current device ID
      * @throws IllegalArgumentException if any dependency is null
      */
@@ -112,6 +116,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                                   @NonNull FileStorageManager fileStorageManager,
                                   @NonNull ApiService apiService,
                                   @NonNull TcpSocketManager tcpSocketManager,
+                                  @NonNull AckRetrySender ackRetrySender,
                                   @NonNull PairingManager pairingManager) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
@@ -125,6 +130,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         if (tcpSocketManager == null) {
             throw new IllegalArgumentException("TcpSocketManager cannot be null");
         }
+        if (ackRetrySender == null) {
+            throw new IllegalArgumentException("AckRetrySender cannot be null");
+        }
         if (pairingManager == null) {
             throw new IllegalArgumentException("PairingManager cannot be null");
         }
@@ -132,6 +140,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
+        this.ackRetrySender = ackRetrySender;
         this.pairingManager = pairingManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
@@ -311,43 +320,43 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
             // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
-            boolean allAttachmentsSucceeded = true;
-            synchronized (lock) {
-                for (MaterialDto dto : materialDtos) {
-                    try {
+            for (MaterialDto dto : materialDtos) {
+                try {
+                    // 3. Parse content for attachment references and download each one.
+                    // Done before acquiring the lock to avoid holding it during network I/O.
+                    boolean attachmentsOk = true;
+                    List<String> attachmentIds =
+                            ContentParser.extractDistinctAttachmentReferences(dto.getContent());
+                    for (String attachmentId : attachmentIds) {
+                        if (!downloadAttachment(dto.getId(), attachmentId)) {
+                            attachmentsOk = false;
+                            Log.w(TAG, "Attachment download failed for material: "
+                                    + dto.getId());
+                        }
+                    }
+
+                    // Lock only for the DB write — no I/O inside the critical section.
+                    synchronized (lock) {
                         MaterialEntity entity = MaterialMapper.dtoToEntity(dto);
                         materialDao.insert(entity);
                         Log.d(TAG, "Saved material: " + entity.getId());
-
-                        // 3. Parse content for attachment references and download each one
-                        List<String> attachmentIds =
-                                ContentParser.extractDistinctAttachmentReferences(dto.getContent());
-                        for (String attachmentId : attachmentIds) {
-                            if (!downloadAttachment(dto.getId(), attachmentId)) {
-                                allAttachmentsSucceeded = false;
-                                Log.w(TAG, "Attachment download failed for material: " + dto.getId());
-                            }
-                        }
-                    } catch (IllegalArgumentException e) {
-                        Log.e(TAG, "Invalid material data: " + e.getMessage());
                     }
-                }
 
-                // Refresh LiveData to notify observers
-                refreshMaterialsLiveData();
+                    // Per API Contract §3.6.2, send one ACK per successfully received material
+                    // (device ID + material ID) immediately after download and save succeed.
+                    if (attachmentsOk) {
+                        ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
+                    } else {
+                        Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: " + dto.getId());
+                    }
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, "Invalid material data: " + e.getMessage());
+                }
             }
 
-            // 4. Send DISTRIBUTE_ACK only if all materials and attachments succeeded
-            // Per API Contract §3.6.1, ACK confirms successful receipt and processing
-            if (allAttachmentsSucceeded) {
-                try {
-                    tcpSocketManager.send(new DistributeAckMessage(deviceId));
-                    Log.d(TAG, "Sent DISTRIBUTE_ACK for device: " + deviceId);
-                } catch (TcpProtocolException | IOException e) {
-                    Log.e(TAG, "Failed to send DISTRIBUTE_ACK: " + e.getMessage(), e);
-                }
-            } else {
-                Log.w(TAG, "Skipping DISTRIBUTE_ACK due to attachment download failures");
+            // Refresh LiveData once after all materials are saved to notify observers.
+            synchronized (lock) {
+                refreshMaterialsLiveData();
             }
 
             Log.i(TAG, "Material sync completed successfully");

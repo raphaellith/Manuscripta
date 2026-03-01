@@ -25,6 +25,7 @@ import com.manuscripta.student.data.repository.ResponseRepositoryImpl;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
@@ -53,6 +54,7 @@ public class RepositoryModuleTest {
     private FileStorageManager mockFileStorageManager;
     private ApiService mockApiService;
     private TcpSocketManager mockTcpSocketManager;
+    private AckRetrySender mockAckRetrySender;
     private PairingManager mockPairingManager;
 
     @Before
@@ -67,6 +69,7 @@ public class RepositoryModuleTest {
         mockFileStorageManager = mock(FileStorageManager.class);
         mockApiService = mock(ApiService.class);
         mockTcpSocketManager = mock(TcpSocketManager.class);
+        mockAckRetrySender = mock(AckRetrySender.class);
         mockPairingManager = mock(PairingManager.class);
     }
 
@@ -126,12 +129,19 @@ public class RepositoryModuleTest {
     }
 
     @Test
+    public void testProvideAckRetrySender_returnsSender() {
+        AckRetrySender result = repositoryModule.provideAckRetrySender(mockTcpSocketManager);
+
+        assertNotNull(result);
+    }
+
+    @Test
     public void testProvideMaterialRepository_returnsRepository() {
         when(mockMaterialDao.getAll()).thenReturn(new java.util.ArrayList<>());
 
         MaterialRepository result = repositoryModule.provideMaterialRepository(
                 mockMaterialDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockPairingManager);
+                mockTcpSocketManager, mockAckRetrySender, mockPairingManager);
 
         assertNotNull(result);
         assertTrue(result instanceof MaterialRepositoryImpl);
@@ -150,7 +160,7 @@ public class RepositoryModuleTest {
     @Test
     public void testProvideFeedbackRepository_returnsRepository() {
         FeedbackRepository result = repositoryModule.provideFeedbackRepository(
-                mockFeedbackDao, mockApiService, mockTcpSocketManager);
+                mockFeedbackDao, mockApiService, mockAckRetrySender);
 
         assertNotNull(result);
         assertTrue(result instanceof FeedbackRepositoryImpl);
