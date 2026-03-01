@@ -116,6 +116,12 @@ public class RetryInterceptor implements Interceptor {
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
         Request request = chain.request();
+
+        // Fail fast if no network connectivity
+        if (!connectionManager.isNetworkAvailable()) {
+            throw new IOException("No network connectivity");
+        }
+
         Response response = null;
         IOException lastException = null;
         long backoffMs = initialBackoffMs;
