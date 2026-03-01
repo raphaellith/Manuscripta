@@ -262,6 +262,11 @@ public class RepositoryModule {
             }
         });
 
+        // Start heartbeat if already connected (avoids missing the CONNECTED event)
+        if (tcpSocketManager.isConnected()) {
+            hm.start();
+        }
+
         return hm;
     }
 }

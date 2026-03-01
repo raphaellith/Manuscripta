@@ -211,9 +211,13 @@ public class RepositoryModuleTest {
                 mockMaterialRepository, mockFeedbackRepository,
                 mockDeviceStatusRepository);
 
-        hm.onMessageReceived(new DistributeMaterialMessage());
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
 
-        verify(mockMaterialRepository, timeout(2000)).syncMaterials("device-1");
+            verify(mockMaterialRepository, timeout(2000)).syncMaterials("device-1");
+        } finally {
+            hm.destroy();
+        }
     }
 
     @Test
@@ -226,10 +230,14 @@ public class RepositoryModuleTest {
                 mockMaterialRepository, mockFeedbackRepository,
                 mockDeviceStatusRepository);
 
-        hm.onMessageReceived(new ReturnFeedbackMessage());
+        try {
+            hm.onMessageReceived(new ReturnFeedbackMessage());
 
-        verify(mockFeedbackRepository, timeout(2000))
-                .fetchAndStoreFeedback("device-1");
+            verify(mockFeedbackRepository, timeout(2000))
+                    .fetchAndStoreFeedback("device-1");
+        } finally {
+            hm.destroy();
+        }
     }
 
     @Test

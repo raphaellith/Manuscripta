@@ -157,10 +157,6 @@ public class HeartbeatManager implements TcpMessageListener {
         this.gson = gson;
         // Register as listener to receive DISTRIBUTE_MATERIAL messages
         this.socketManager.addMessageListener(this);
-        // If already connected, start heartbeat immediately
-        if (socketManager.isConnected() && config.isEnabled()) {
-            startInternal();
-        }
     }
 
     /**
