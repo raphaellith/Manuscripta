@@ -45,14 +45,15 @@ export const ExternalDevicePairingModal: React.FC<ExternalDevicePairingModalProp
     };
 
     const handleAuthSubmit = async () => {
-        if (!configurationData.trim()) {
-            setError(deviceType === 'REMARKABLE' ? 'One-time code is required' : 'Kindle email address is required');
+        const trimmedData = configurationData.trim();
+        if (!trimmedData) {
+            setError(deviceType === 'REMARKABLE' ? 'One-time code is required' : 'Kindle email prefix is required');
             return;
         }
 
         // Basic validation for Kindle email
-        if (deviceType === 'KINDLE' && !configurationData.includes('@')) {
-            setError('Please enter a valid Kindle email address');
+        if (deviceType === 'KINDLE' && trimmedData.includes('@')) {
+            setError('Please enter only the prefix (before @kindle.com)');
             return;
         }
 
@@ -60,7 +61,10 @@ export const ExternalDevicePairingModal: React.FC<ExternalDevicePairingModalProp
         setStep('pairing');
 
         try {
-            await pairDevice(deviceName.trim(), deviceType, configurationData.trim());
+            const finalConfigData = deviceType === 'KINDLE'
+                ? `${trimmedData}@kindle.com`
+                : trimmedData;
+            await pairDevice(deviceName.trim(), deviceType, finalConfigData);
             onPaired();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Pairing failed. Please try again.';
@@ -196,16 +200,32 @@ export const ExternalDevicePairingModal: React.FC<ExternalDevicePairingModalProp
 
                         <div>
                             <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
-                                {deviceType === 'REMARKABLE' ? 'One-Time Code' : 'Kindle Email Address'} <span className="text-red-500">*</span>
+                                {deviceType === 'REMARKABLE' ? 'One-Time Code' : 'Kindle Email Prefix'} <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type={deviceType === 'KINDLE' ? 'email' : 'text'}
-                                value={configurationData}
-                                onChange={(e) => { setConfigurationData(e.target.value); setError(null); }}
-                                className={`w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none ${deviceType === 'REMARKABLE' ? 'font-mono text-center text-lg tracking-widest uppercase' : ''}`}
-                                placeholder={deviceType === 'REMARKABLE' ? "e.g., abcdefgh" : "e.g., mykindle@kindle.com"}
-                                autoFocus
-                            />
+                            {deviceType === 'KINDLE' ? (
+                                <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden focus-within:border-brand-orange focus-within:ring-1 focus-within:ring-brand-orange transition-all duration-200">
+                                    <input
+                                        type="text"
+                                        value={configurationData}
+                                        onChange={(e) => { setConfigurationData(e.target.value); setError(null); }}
+                                        className="w-full p-3 bg-white text-text-body font-sans border-0 focus:outline-none focus:ring-0 flex-grow"
+                                        placeholder="e.g., mykindlescribe"
+                                        autoFocus
+                                    />
+                                    <div className="bg-gray-50 px-4 py-3 border-l border-gray-200 text-gray-500 font-sans whitespace-nowrap select-none h-full flex items-center">
+                                        @kindle.com
+                                    </div>
+                                </div>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={configurationData}
+                                    onChange={(e) => { setConfigurationData(e.target.value); setError(null); }}
+                                    className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none font-mono text-center text-lg tracking-widest uppercase"
+                                    placeholder="e.g., abcdefgh"
+                                    autoFocus
+                                />
+                            )}
                             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
                         </div>
 
