@@ -2,6 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using Main.Models;
 using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
@@ -17,6 +20,7 @@ namespace Main.Services.RuntimeDependencies
     {
         private readonly ILogger<ChromaRuntimeDependencyManager> _logger;
         private Process? _chromaServerProcess;
+        private string? _installedChromaPath;
         private static ChromaClientService? _chromaClientServiceInstance;
         private readonly object _serviceLock = new object();
 
@@ -94,15 +98,84 @@ namespace Main.Services.RuntimeDependencies
                     throw new InvalidOperationException("Failed to start PowerShell for ChromaDB installation");
                 }
 
+                // Capture stdout/stderr so we can parse installer output for the installed path
+                var stdOutTask = process.StandardOutput.ReadToEndAsync();
+                var stdErrTask = process.StandardError.ReadToEndAsync();
                 await Task.Run(() => process.WaitForExit());
+                var stdOut = await stdOutTask;
+                var stdErr = await stdErrTask;
+
+                _logger.LogInformation("Chroma installer output: {Output}", stdOut);
+                if (!string.IsNullOrWhiteSpace(stdErr)) _logger.LogWarning("Chroma installer stderr: {Err}", stdErr);
 
                 if (process.ExitCode != 0)
                 {
-                    var errorOutput = process.StandardError.ReadToEnd();
-                    throw new InvalidOperationException($"ChromaDB installation failed with exit code {process.ExitCode}: {errorOutput}");
+                    throw new InvalidOperationException($"ChromaDB installation failed with exit code {process.ExitCode}: {stdErr}");
                 }
 
                 _logger.LogInformation("ChromaDB installed successfully");
+
+                // Per GenAISpec.md §1B(3)(b): ensure the location of the installed executable
+                // is added to the user's PATH environment variable.
+                try
+                {
+                    // Attempt to parse installer stdout for an installed path containing 'chroma'
+                    if (!string.IsNullOrWhiteSpace(stdOut))
+                    {
+                        try
+                        {
+                            // Simple heuristic: find any absolute path that contains "\\chroma" or ends with "chroma"
+                            var lines = stdOut.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var line in lines.Reverse())
+                            {
+                                var trimmed = line.Trim();
+                                if (trimmed.IndexOf("chroma", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    // try to extract a path-like substring
+                                    var start = trimmed.LastIndexOf(':');
+                                    if (start > 0 && start + 1 < trimmed.Length)
+                                    {
+                                        var candidate = trimmed.Substring(start - 1).Trim();
+                                        // remove extraneous text
+                                        candidate = candidate.Trim('"', '\'', '.', ',');
+                                        // if candidate is a directory, append chroma.exe
+                                        if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "chroma.exe")))
+                                        {
+                                            _installedChromaPath = Path.Combine(candidate, "chroma.exe");
+                                            break;
+                                        }
+                                        if (File.Exists(candidate))
+                                        {
+                                            _installedChromaPath = candidate;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "Failed to heuristically parse chroma install path from installer output");
+                        }
+                    }
+
+                    // If we found an installed path, ensure it's in the user PATH
+                    if (!string.IsNullOrWhiteSpace(_installedChromaPath) && File.Exists(_installedChromaPath))
+                    {
+                        var exeDir = Path.GetDirectoryName(_installedChromaPath)!;
+                        var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
+                        if (!userPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).Contains(exeDir, StringComparer.OrdinalIgnoreCase))
+                        {
+                            var newPath = string.IsNullOrEmpty(userPath) ? exeDir : userPath + Path.PathSeparator + exeDir;
+                            Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.User);
+                            _logger.LogInformation("Added Chroma executable directory to user PATH: {Dir}", exeDir);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to update user PATH with Chroma executable location. Installation itself succeeded.");
+                }
             }
             catch (Exception ex)
             {
@@ -143,9 +216,95 @@ namespace Main.Services.RuntimeDependencies
 
                 progress?.Report(new RuntimeDependencyProgress { Phase = "Starting ChromaDB server" });
 
+                // Locate chroma executable by scanning user/machine/process PATH and common locations
+                string chromaExecutable = "chroma";
+                try
+                {
+                    var candidateDirs = new List<string>();
+
+                    string? userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+                    if (!string.IsNullOrWhiteSpace(userPath)) candidateDirs.AddRange(userPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
+
+                    string? machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
+                    if (!string.IsNullOrWhiteSpace(machinePath)) candidateDirs.AddRange(machinePath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
+
+                    string? processPath = Environment.GetEnvironmentVariable("PATH");
+                    if (!string.IsNullOrWhiteSpace(processPath)) candidateDirs.AddRange(processPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
+
+                    candidateDirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) ?? string.Empty, ".cargo", "bin"));
+                    candidateDirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) ?? string.Empty, "Programs", "chroma"));
+                    candidateDirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) ?? string.Empty, "chroma"));
+
+                    foreach (var dir in candidateDirs.Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(StringComparer.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            var exePath = Path.Combine(dir!, "chroma.exe");
+                            if (File.Exists(exePath))
+                            {
+                                chromaExecutable = exePath;
+                                _logger.LogInformation("Found chroma executable at {Path}", exePath);
+                                break;
+                            }
+                        }
+                        catch
+                        {
+                            // ignore invalid candidate dirs
+                        }
+                    }
+
+                    // If installer reported an installed path, prefer that before scanning
+                    if (!string.IsNullOrWhiteSpace(_installedChromaPath) && File.Exists(_installedChromaPath))
+                    {
+                        chromaExecutable = _installedChromaPath;
+                        _logger.LogInformation("Using installer-reported chroma path: {Path}", chromaExecutable);
+                    }
+
+                    // Fallback to previously-scanned candidate dirs, then 'where chroma' if not found
+                    if (chromaExecutable == "chroma")
+                    {
+                        try
+                        {
+                            var whereInfo = new ProcessStartInfo
+                            {
+                                FileName = "where",
+                                Arguments = "chroma",
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                CreateNoWindow = true
+                            };
+
+                            using var whereProc = Process.Start(whereInfo);
+                            if (whereProc != null)
+                            {
+                                var whereOut = await whereProc.StandardOutput.ReadToEndAsync();
+                                whereProc.WaitForExit(2000);
+                                if (!string.IsNullOrWhiteSpace(whereOut))
+                                {
+                                    var first = whereOut.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
+                                    if (!string.IsNullOrWhiteSpace(first))
+                                    {
+                                        chromaExecutable = first.Trim();
+                                        _logger.LogInformation("Resolved chroma path via 'where': {Path}", chromaExecutable);
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "'where chroma' failed while resolving executable path");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Failed to scan PATH locations for chroma executable");
+                }
+
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = "chroma",
+                    FileName = chromaExecutable,
                     Arguments = $"run --path \"{dataPath}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -153,10 +312,14 @@ namespace Main.Services.RuntimeDependencies
                     CreateNoWindow = true
                 };
 
-                _chromaServerProcess = Process.Start(processStartInfo);
-                if (_chromaServerProcess == null)
+                try
                 {
-                    throw new InvalidOperationException("Failed to start ChromaDB server process");
+                    _chromaServerProcess = Process.Start(processStartInfo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Could not start ChromaDB server using executable '{Exe}'. Ensure installation succeeded and the executable is accessible.", chromaExecutable);
+                    throw;
                 }
 
                 // Wait for server to become responsive
