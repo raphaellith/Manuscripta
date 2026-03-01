@@ -136,6 +136,8 @@ public class ConnectionManager {
      * @return true if server is reachable, false otherwise
      */
     public boolean isServerReachable(@NonNull String serverUrl) {
+        serverUrl = serverUrl.trim();
+
         if (serverUrl.isEmpty()) {
             Log.w(TAG, "Server URL is empty");
             return false;
