@@ -27,7 +27,7 @@ public class ChromaRuntimeDependencyManagerTests
 
 		try
 		{
-			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath);
+			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath, chromaApiHealthy: true);
 
 			var result = await manager.CheckDependencyAvailabilityAsync();
 
@@ -47,11 +47,32 @@ public class ChromaRuntimeDependencyManagerTests
 	{
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var missingPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "chroma.exe");
-		var manager = new TestableChromaRuntimeDependencyManager(logger.Object, missingPath);
+		var manager = new TestableChromaRuntimeDependencyManager(logger.Object, missingPath, chromaApiHealthy: true);
 
 		var result = await manager.CheckDependencyAvailabilityAsync();
 
 		Assert.False(result);
+	}
+
+	[Fact]
+	public async Task CheckDependencyAvailabilityAsync_ReturnsFalse_WhenChromaApiUnhealthy()
+	{
+		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
+		var (executablePath, tempDirectory) = CreateFakeChromaExecutable();
+
+		try
+		{
+			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath, chromaApiHealthy: false);
+			var result = await manager.CheckDependencyAvailabilityAsync();
+			Assert.False(result);
+		}
+		finally
+		{
+			if (Directory.Exists(tempDirectory))
+			{
+				Directory.Delete(tempDirectory, true);
+			}
+		}
 	}
 
 	private static (string executablePath, string tempDirectory) CreateFakeChromaExecutable()
@@ -98,18 +119,26 @@ public class ChromaRuntimeDependencyManagerTests
 	private sealed class TestableChromaRuntimeDependencyManager : ChromaRuntimeDependencyManager
 	{
 		private readonly string _resolvedExecutablePath;
+		private readonly bool _chromaApiHealthy;
 
 		public TestableChromaRuntimeDependencyManager(
 			ILogger<ChromaRuntimeDependencyManager> logger,
-			string resolvedExecutablePath)
+			string resolvedExecutablePath,
+			bool chromaApiHealthy)
 			: base(logger)
 		{
 			_resolvedExecutablePath = resolvedExecutablePath;
+			_chromaApiHealthy = chromaApiHealthy;
 		}
 
 		protected override Task<string> ResolveChromaExecutablePathAsync()
 		{
 			return Task.FromResult(_resolvedExecutablePath);
+		}
+
+		protected override Task<bool> CheckChromaApiHealthAsync()
+		{
+			return Task.FromResult(_chromaApiHealthy);
 		}
 	}
 }

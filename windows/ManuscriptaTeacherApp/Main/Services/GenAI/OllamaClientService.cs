@@ -23,7 +23,7 @@ public class OllamaClientService : IDependencyService
     /// Verifies that Ollama's daemon is running.
     /// See GenAISpec.md §1(4)(b).
     /// </summary>
-    public async Task<bool> IsOllamaRunningAsync()
+    public virtual async Task<bool> IsOllamaRunningAsync()
     {
         try
         {
@@ -40,7 +40,7 @@ public class OllamaClientService : IDependencyService
     /// Verifies that a model is locally available.
     /// See GenAISpec.md §1(4)(a).
     /// </summary>
-    public async Task<bool> IsModelAvailableAsync(string modelName)
+    public virtual async Task<bool> IsModelAvailableAsync(string modelName)
     {
         try
         {
@@ -72,7 +72,7 @@ public class OllamaClientService : IDependencyService
     /// Pulls a model from Ollama if it's not available locally.
     /// See GenAISpec.md §1(4)(a).
     /// </summary>
-    public async Task PullModelAsync(string modelName)
+    public virtual async Task PullModelAsync(string modelName)
     {
         var request = new { name = modelName };
         var response = await _httpClient.PostAsJsonAsync("/api/pull", request);
@@ -85,7 +85,7 @@ public class OllamaClientService : IDependencyService
     /// Generates embeddings for the given text.
     /// See GenAISpec.md §2(2).
     /// </summary>
-    public async Task<float[]> GenerateEmbeddingAsync(string text, string model = "nomic-embed-text")
+    public virtual async Task<float[]> GenerateEmbeddingAsync(string text, string model = "nomic-embed-text")
     {
         var request = new
         {
@@ -124,7 +124,7 @@ public class OllamaClientService : IDependencyService
     /// Generates a chat completion using the specified model.
     /// See GenAISpec.md §3(2).
     /// </summary>
-    public async Task<string> GenerateChatCompletionAsync(string model, string prompt, string? systemPrompt = null)
+    public virtual async Task<string> GenerateChatCompletionAsync(string model, string prompt, string? systemPrompt = null)
     {
         var messages = new List<object>();
         
@@ -143,7 +143,18 @@ public class OllamaClientService : IDependencyService
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/chat", request);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            var errorSnippet = string.IsNullOrWhiteSpace(errorBody)
+                ? "No error payload returned by Ollama."
+                : errorBody.Length <= 512
+                    ? errorBody
+                    : errorBody[..512] + "...";
+
+            throw new HttpRequestException(
+                $"Ollama chat request failed with {(int)response.StatusCode} ({response.StatusCode}). {errorSnippet}");
+        }
 
         var content = await response.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
@@ -161,7 +172,7 @@ public class OllamaClientService : IDependencyService
     /// Starts Ollama daemon if it's not running.
     /// See GenAISpec.md §1(4)(b).
     /// </summary>
-    public async Task StartOllamaDaemonAsync()
+    public virtual async Task StartOllamaDaemonAsync()
     {
         var processStartInfo = new System.Diagnostics.ProcessStartInfo
         {
@@ -192,7 +203,7 @@ public class OllamaClientService : IDependencyService
     /// Ensures Ollama is running and the specified model is available.
     /// See GenAISpec.md §1(4).
     /// </summary>
-    public async Task EnsureModelReadyAsync(string modelName)
+    public virtual async Task EnsureModelReadyAsync(string modelName)
     {
         if (!await IsOllamaRunningAsync())
         {
@@ -211,7 +222,7 @@ public class OllamaClientService : IDependencyService
     /// Checks if the system has sufficient resources to generate with a given model.
     /// See GenAISpec.md §1(6) - detection of insufficient resources.
     /// </summary>
-    public async Task<bool> CanGenerateWithModelAsync(string modelName)
+    public virtual async Task<bool> CanGenerateWithModelAsync(string modelName)
     {
         try
         {

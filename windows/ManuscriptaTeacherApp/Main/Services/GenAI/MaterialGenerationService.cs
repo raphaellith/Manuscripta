@@ -1,4 +1,3 @@
-using ChromaDB.Client;
 using Main.Models.Dtos;
 
 namespace Main.Services.GenAI;
@@ -97,7 +96,21 @@ public class MaterialGenerationService : IMaterialGenerationService
         );
 
         // §3B(3)(d): Invoke model
-        var generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+        string generatedContent;
+        try
+        {
+            generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+        }
+        catch (HttpRequestException ex) when (
+            modelToUse == PrimaryModel &&
+            (ex.StatusCode == null || (int)ex.StatusCode >= 500))
+        {
+            // §1(6)(a): fall back when primary model is unavailable at runtime.
+            modelToUse = FallbackModel;
+            useFallback = true;
+            await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+            generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+        }
 
         // §3B(3)(e): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(generatedContent, modelToUse, useFallback);

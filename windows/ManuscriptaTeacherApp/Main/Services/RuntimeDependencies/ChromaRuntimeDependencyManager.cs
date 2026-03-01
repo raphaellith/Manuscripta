@@ -63,7 +63,15 @@ namespace Main.Services.RuntimeDependencies
                     return process.ExitCode;
                 });
 
-                return exitCode == 0;
+                if (exitCode != 0)
+                {
+                    return false;
+                }
+
+                // Dependency is considered available only when executable exists and API is reachable.
+                // This avoids false positives where chroma is installed but a non-Chroma service
+                // is bound to localhost:8000.
+                return await CheckChromaApiHealthAsync();
             }
             catch
             {
@@ -551,6 +559,20 @@ namespace Main.Services.RuntimeDependencies
             }
 
             return null;
+        }
+
+        protected virtual async Task<bool> CheckChromaApiHealthAsync()
+        {
+            try
+            {
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+                var response = await httpClient.GetAsync("http://localhost:8000/api/v1/heartbeat");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
