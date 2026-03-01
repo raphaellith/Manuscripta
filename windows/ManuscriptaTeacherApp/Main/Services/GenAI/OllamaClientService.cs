@@ -196,12 +196,14 @@ public class OllamaClientService : IDependencyService
     {
         if (!await IsOllamaRunningAsync())
         {
-            await StartOllamaDaemonAsync();
+            throw new InvalidOperationException(
+                "Ollama is not running. Please ensure Ollama is installed and started.");
         }
 
         if (!await IsModelAvailableAsync(modelName))
         {
-            await PullModelAsync(modelName);
+            throw new InvalidOperationException(
+                $"Model '{modelName}' is not available. Please install it using the Settings menu before generating content.");
         }
     }
 

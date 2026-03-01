@@ -11,7 +11,9 @@ import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
+import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { markdownToHtml } from '../../utils/markdownConversion';
+import signalRService from '../../services/signalr/SignalRService';
 import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType, GenerationRequest, GenerationResult } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
@@ -94,6 +96,7 @@ export const LessonLibraryPage: React.FC = () => {
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -224,6 +227,27 @@ export const LessonLibraryPage: React.FC = () => {
         await createMaterial({ lessonId, title, content: '', materialType });
     };
 
+    // Per FrontendWorkflowSpecifications §1(3): Check AI dependencies before any AI operation
+    const ensureAiDependenciesAvailable = async (): Promise<boolean> => {
+        try {
+            const ollamaAvailable = await signalRService.checkRuntimeDependencyAvailability("ollama");
+            const chromaAvailable = await signalRService.checkRuntimeDependencyAvailability("chroma");
+            
+            const missing: string[] = [];
+            if (!ollamaAvailable) missing.push("ollama");
+            if (!chromaAvailable) missing.push("chroma");
+            
+            if (missing.length > 0) {
+                setMissingDependencyIds(missing);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Failed to check AI dependency availability:', error);
+            return false;
+        }
+    };
+
     // Per FrontendWorkflowSpec §4B: AI generation handler
     const handleCreateMaterialWithAI = async (
         lessonId: string,
@@ -233,6 +257,13 @@ export const LessonLibraryPage: React.FC = () => {
         readingAge: number,
         actualAge: number
     ) => {
+        // Per FrontendWorkflowSpecifications §1(3): Verify AI dependencies before generation
+        const dependenciesAvailable = await ensureAiDependenciesAvailable();
+        if (!dependenciesAvailable) {
+            // Modal will be shown, user can install dependencies and retry
+            return;
+        }
+
         // Per §4B(2): First create material with empty content
         const createdMaterial = await createMaterial({
             lessonId,
@@ -512,6 +543,18 @@ export const LessonLibraryPage: React.FC = () => {
                 <EditorModal
                     material={modal.material}
                     onClose={() => setModal({ type: 'none' })}
+                />
+            )}
+
+            {/* AI Dependency Installation Modal - Per FrontendWorkflowSpecifications §1(3) */}
+            {missingDependencyIds.length > 0 && (
+                <RuntimeDependencyInstallModal
+                    dependencyIds={missingDependencyIds}
+                    onClose={() => setMissingDependencyIds([])}
+                    onInstallComplete={() => {
+                        setMissingDependencyIds([]);
+                        // User can retry AI generation after installation
+                    }}
                 />
             )}
         </div>

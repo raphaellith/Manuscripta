@@ -25,6 +25,9 @@ For a list of all server method and client handlers to be implemented for commun
     (b) be responsible for providing server message handlers, which handle messages received from the backend hub.
 
 
+(3) Prior to any operation requiring Ollama, Chroma or any large language model, the frontend shall query the backend to verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification. If not, the frontend shall request user consent before instructing the backend to install the dependency.
+
+
 
 ### Section 2ZA — Backend Process Lifecycle Management
 

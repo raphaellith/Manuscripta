@@ -7,7 +7,7 @@ namespace Main.Services.GenAI;
 
 /// <summary>
 /// Extracts question drafts from generated content and creates QuestionEntity objects.
-/// See GenAISpec.md §3B(4).
+/// See GenAISpec.md §3B(4a).
 /// </summary>
 public class QuestionExtractionService
 {
@@ -22,7 +22,7 @@ public class QuestionExtractionService
 
     /// <summary>
     /// Extracts and creates questions from generated worksheet content.
-    /// See GenAISpec.md §3B(4).
+    /// See GenAISpec.md §3B(4a).
     /// </summary>
     /// <param name="content">The generated worksheet content containing question-draft markers</param>
     /// <param name="materialId">The ID of the material being created</param>
@@ -33,7 +33,7 @@ public class QuestionExtractionService
         var warnings = new List<ValidationWarning>();
         var modifiedContent = content;
 
-        // §3B(4)(a): Find all question-draft markers
+        // §3B(4a)(a): Find all question-draft markers
         var regex = new Regex(QuestionDraftPattern, RegexOptions.Multiline);
         var matches = regex.Matches(content);
 
@@ -45,10 +45,10 @@ public class QuestionExtractionService
 
             try
             {
-                // §3B(4)(a): Parse the question draft
+                // §3B(4a)(a): Parse the question draft
                 var (questionType, questionData) = ParseQuestionDraft(type, properties);
 
-                // §3B(4)(b): Create the question entity
+                // §3B(4a)(b): Create the question entity
                 var questionId = Guid.NewGuid();
                 var questionEntity = CreateQuestionEntity(questionId, materialId, questionType, questionData);
 
@@ -57,20 +57,20 @@ public class QuestionExtractionService
 
                 createdQuestionIds.Add(questionId);
 
-                // §3B(4)(c): Replace the marker with a valid question marker
+                // §3B(4a)(c): Replace the marker with a valid question marker
                 var replacementMarker = $@"!!! question id=""{questionId}""";
                 modifiedContent = modifiedContent.Replace(fullMarker, replacementMarker);
             }
             catch (Exception ex)
             {
-                // §3B(4)(d): Handle parsing failures
+                // §3B(4a)(d): Handle parsing failures
                 warnings.Add(new ValidationWarning
                 {
                     ErrorType = "QUESTION_DRAFT_PARSE_ERROR",
                     Description = $"Failed to parse question-draft marker: {ex.Message}"
                 });
 
-                // §3B(4)(d)(i): Remove the malformed marker
+                // §3B(4a)(d)(i): Remove the malformed marker
                 modifiedContent = modifiedContent.Replace(fullMarker, string.Empty);
             }
         }
@@ -85,7 +85,7 @@ public class QuestionExtractionService
 
     /// <summary>
     /// Parses a question-draft block to extract type and properties.
-    /// See GenAISpec.md §3B(4)(a).
+    /// See GenAISpec.md §3B(4a)(a).
     /// </summary>
     private (QuestionType, QuestionData) ParseQuestionDraft(string typeString, string properties)
     {
@@ -200,7 +200,7 @@ public class QuestionExtractionService
 
     /// <summary>
     /// Creates an appropriate QuestionEntity based on the parsed data.
-    /// See GenAISpec.md §3B(4)(b).
+    /// See GenAISpec.md §3B(4a)(b).
     /// </summary>
     private QuestionEntity CreateQuestionEntity(Guid questionId, Guid materialId, QuestionType type, QuestionData data)
     {
@@ -214,7 +214,7 @@ public class QuestionExtractionService
 
     /// <summary>
     /// Creates a MultipleChoiceQuestionEntity from parsed data.
-    /// Per AdditionalValidationRules §2E(2)(a): MULTIPLE_CHOICE questions must not have MarkScheme.
+    /// See GenAISpec.md §3B(4a)(b) and per AdditionalValidationRules §2E(2)(a): MULTIPLE_CHOICE questions must not have MarkScheme.
     /// </summary>
     private QuestionEntity CreateMultipleChoiceQuestion(Guid questionId, Guid materialId, QuestionData data)
     {
@@ -236,7 +236,7 @@ public class QuestionExtractionService
 
     /// <summary>
     /// Creates a WrittenAnswerQuestionEntity from parsed data.
-    /// Per AdditionalValidationRules §2E(2)(b): Cannot have both MarkScheme and CorrectAnswer.
+    /// See GenAISpec.md §3B(4a)(b) and per AdditionalValidationRules §2E(2)(b): Cannot have both MarkScheme and CorrectAnswer.
     /// </summary>
     private QuestionEntity CreateWrittenAnswerQuestion(Guid questionId, Guid materialId, QuestionData data)
     {
@@ -278,7 +278,7 @@ public class QuestionExtractionResult
 {
     /// <summary>
     /// The generated content with question-draft markers replaced by question markers.
-    /// See GenAISpec.md §3B(4)(c).
+    /// See GenAISpec.md §3B(4a)(c).
     /// </summary>
     public required string ModifiedContent { get; set; }
 
@@ -290,7 +290,7 @@ public class QuestionExtractionResult
 
     /// <summary>
     /// Any validation warnings from parsing failures.
-    /// See GenAISpec.md §3B(4)(d).
+    /// See GenAISpec.md §3B(4a)(d).
     /// </summary>
     public required List<ValidationWarning> Warnings { get; set; }
 }

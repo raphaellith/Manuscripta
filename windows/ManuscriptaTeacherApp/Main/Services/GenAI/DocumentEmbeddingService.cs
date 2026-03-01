@@ -194,7 +194,9 @@ public class DocumentEmbeddingService : IEmbeddingService
                 include: ChromaQueryInclude.Documents
             );
 
-            return results.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
+            // Materialize the results to avoid deferred execution issues
+            var resultList = results.ToList();
+            return resultList.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
         }
         catch
         {

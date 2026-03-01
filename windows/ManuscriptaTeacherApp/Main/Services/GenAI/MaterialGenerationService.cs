@@ -102,6 +102,7 @@ public class MaterialGenerationService : IMaterialGenerationService
         // §3B(3)(e): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(generatedContent, modelToUse, useFallback);
 
+        // §3B(3)(g): Return result. For worksheets, question-draft markers are processed when the material is created.
         return result;
     }
 

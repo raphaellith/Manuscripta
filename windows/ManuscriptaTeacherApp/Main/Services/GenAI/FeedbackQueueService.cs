@@ -87,6 +87,51 @@ public class FeedbackQueueService
     }
 
     /// <summary>
+    /// Moves a queued response to the front of the generation queue.
+    /// See GenAISpec.md §3D(8A).
+    /// </summary>
+    /// <returns>true if the response was prioritized, false if it was not in the queue or is currently generating</returns>
+    public bool PrioritizeResponse(Guid responseId)
+    {
+        // Check if the response is in the queue (but not if it's currently being generated)
+        var itemsToKeep = new List<Guid>();
+        bool found = false;
+        
+        while (_generationQueue.TryDequeue(out var id))
+        {
+            if (id == responseId)
+            {
+                found = true;
+            }
+            else
+            {
+                itemsToKeep.Add(id);
+            }
+        }
+        
+        if (!found)
+        {
+            // Re-enqueue the items that were dequeued
+            foreach (var item in itemsToKeep)
+            {
+                _generationQueue.Enqueue(item);
+            }
+            return false;
+        }
+        
+        // Enqueue the prioritized response first
+        _generationQueue.Enqueue(responseId);
+        
+        // Then re-enqueue the remaining items
+        foreach (var item in itemsToKeep)
+        {
+            _generationQueue.Enqueue(item);
+        }
+        
+        return true;
+    }
+
+    /// <summary>
     /// Checks if feedback should be dispatched to the student device.
     /// See GenAISpec.md §3DA(1).
     /// </summary>

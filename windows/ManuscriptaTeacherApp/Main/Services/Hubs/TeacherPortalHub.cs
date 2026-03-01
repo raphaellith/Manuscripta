@@ -61,6 +61,7 @@ public class TeacherPortalHub : Hub
     private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
+    private readonly OllamaClientService _ollamaClient;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -95,7 +96,8 @@ public class TeacherPortalHub : Hub
         IContentModificationService contentModificationService,
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
-        IEmbeddingService documentEmbeddingService)
+        IEmbeddingService documentEmbeddingService,
+        OllamaClientService ollamaClient)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -133,6 +135,7 @@ public class TeacherPortalHub : Hub
         _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -1143,6 +1146,48 @@ public class TeacherPortalHub : Hub
     }
 
     /// <summary>
+    /// Removes a response from the AI feedback generation queue.
+    /// Per NetworkingAPISpec §1(1)(i)(ix) and GenAISpec.md §3D(6)(a).
+    /// </summary>
+    public Task RemoveFromAiGenerationQueue(Guid responseId)
+    {
+        try
+        {
+            _feedbackQueueService.RemoveFromQueue(responseId);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to remove response from AI generation queue: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Moves a queued response to the front of the generation queue.
+    /// Per NetworkingAPISpec §1(1)(i)(viii) and GenAISpec.md §3D(8A).
+    /// </summary>
+    public Task PrioritiseFeedbackGeneration(Guid responseId)
+    {
+        try
+        {
+            var prioritized = _feedbackQueueService.PrioritizeResponse(responseId);
+            if (!prioritized)
+            {
+                throw new HubException($"Response {responseId} is not currently queued or is being generated");
+            }
+            return Task.CompletedTask;
+        }
+        catch (HubException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to prioritise feedback generation: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// Retries embedding for a failed source document.
     /// Per NetworkingAPISpec §1(1)(i)(vii) and GenAISpec.md §3A(7).
     /// </summary>
@@ -1156,6 +1201,82 @@ public class TeacherPortalHub : Hub
         {
             throw new HubException($"Failed to retry embedding: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Generates feedback for a student response.
+    /// Per NetworkingAPISpec §1(1)(i)(iii) and GenAISpec.md §3D(9).
+    /// Note: This is for direct/manual feedback generation. Automatic feedback generation is handled via QueueForAiGeneration.
+    /// </summary>
+    public async Task<string> GenerateFeedback(Guid questionId, Guid responseId)
+    {
+        try
+        {
+            var response = await _responseRepository.GetByIdAsync(responseId);
+            if (response == null)
+            {
+                throw new HubException($"Response {responseId} not found");
+            }
+
+            var question = await _questionRepository.GetByIdAsync(questionId);
+            if (question == null)
+            {
+                throw new HubException($"Question {questionId} not found");
+            }
+
+            if (response.QuestionId != questionId)
+            {
+                throw new HubException($"Response {responseId} does not belong to question {questionId}");
+            }
+
+            // Generate feedback via the feedback generation service
+            // Note: This returns the entire feedback entity, but spec asks for just the text
+            var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(
+                "granite4",
+                ConstructFeedbackPrompt(question, response)
+            );
+
+            return feedbackText;
+        }
+        catch (HubException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to generate feedback: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Constructs the feedback generation prompt.
+    /// See GenAISpec.md §3D(9)(b).
+    /// </summary>
+    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
+    {
+        var maxScoreSection = question.MaxScore.HasValue
+            ? $"Maximum Score:\n{question.MaxScore.Value}"
+            : "";
+
+        return $@"
+TASK:
+Generate constructive feedback for a student's response to the question given below.
+Include a score justification explaining how well the response meets the mark scheme.
+Include specific strengths in the response.
+Include improvement suggestions for areas that could be enhanced.
+Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
+
+QUESTION:
+{question.QuestionText}
+
+STUDENT'S RESPONSE:
+{response.ResponseText}
+
+MARK SCHEME:
+{question.MarkScheme}
+
+{maxScoreSection}
+";
     }
 
     #endregion

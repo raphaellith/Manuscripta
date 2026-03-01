@@ -26,6 +26,26 @@ const DEPENDENCY_METADATA: Record<string, {
                 <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe</span>
             </>
         )
+    },
+    'ollama': {
+        name: 'Ollama',
+        description: 'Ollama is required for AI-powered material generation and feedback. It provides local large language models.',
+        manualUrl: 'https://ollama.ai/download',
+        manualPathInfo: (
+            <>
+                Download Ollama from the official website and install it to your system.
+            </>
+        )
+    },
+    'chroma': {
+        name: 'ChromaDB',
+        description: 'ChromaDB is required for semantic search and retrieval-augmented generation in AI features.',
+        manualUrl: 'https://docs.trychroma.com/docs/overview/getting-started',
+        manualPathInfo: (
+            <>
+                Follow the ChromaDB installation guide to install it on your system.
+            </>
+        )
     }
 };
 

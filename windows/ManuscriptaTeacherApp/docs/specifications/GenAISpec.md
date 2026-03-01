@@ -22,11 +22,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) [Deleted.]
 
-(4) Before invoking any model, the backend shall —
-
-    (a) verify that the required model is locally available via Ollama, and run `ollama pull <model>` if it is missing.
-
-    (b) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
+(4) [Deleted.]
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
@@ -63,6 +59,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
     (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama\` directory and return `true` on success.
 
     (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
+
+
+(4) Before invoking any model, the backend shall —
+
+    (a) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
 
 
 ## Section 1B - Ascertaining the availability of Chroma
@@ -197,7 +198,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 |---------|---------------|
 | §3A | `DocumentEmbeddingService` |
 | §3B | `MaterialGenerationService` |
-| §3B(4) | `QuestionExtractionService` |
+| §3B(4a) | `QuestionExtractionService` |
 | §3C | `ContentModificationService` |
 | §3D | `FeedbackGenerationService` |
 | §3DA | `FeedbackQueueService` |
@@ -295,13 +296,15 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
 
-    (d1) for worksheets, extract and process question drafts as specified in subsection (4).
-
     (e) validate the generated content and apply refinement as specified in §3F.
 
-    (f) return the `GenerationResult` containing the content, any validation warnings, and created question IDs.
+    (f) [Deleted.]
 
-(4) Upon receiving generated worksheet content containing `question-draft` markers, the backend shall —
+    (g) return the `GenerationResult` containing the content and any validation warnings. For worksheets, the returned content shall contain `question-draft` markers, to be processed when the material is persisted (per §3B(4)).
+
+(4) [Deleted.]
+
+(4a) Upon receiving a request to create a material with generated worksheet content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
 
     (a) parse each `question-draft` marker to extract:
 
