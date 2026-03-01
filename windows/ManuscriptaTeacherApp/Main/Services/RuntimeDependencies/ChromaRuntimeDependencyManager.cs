@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
@@ -349,6 +350,40 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         private void CleanupExistingChromaInstallations()
         {
+            // First, kill any running Chroma processes that might lock the executable
+            try
+            {
+                var chromaProcesses = Process.GetProcessesByName("chroma")
+                    .Concat(Process.GetProcessesByName("chroma.exe"))
+                    .Concat(Process.GetProcessesByName("chroma-windows"))
+                    .ToList();
+
+                foreach (var proc in chromaProcesses)
+                {
+                    try
+                    {
+                        _logger.LogInformation("Terminating running Chroma process (PID: {Pid})", proc.Id);
+                        proc.Kill();
+                        proc.WaitForExit(5000); // Wait up to 5 seconds for graceful termination
+                        proc.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to terminate Chroma process (PID: {Pid})", proc.Id);
+                    }
+                }
+
+                // Give the OS a moment to release file handles
+                if (chromaProcesses.Any())
+                {
+                    Thread.Sleep(500);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate/kill Chroma processes");
+            }
+
             var candidateLocations = new List<string>();
 
             // Check common installation locations
@@ -400,7 +435,19 @@ namespace Main.Services.RuntimeDependencies
                     if (File.Exists(location))
                     {
                         _logger.LogInformation("Removing existing chroma.exe at {Location}", location);
+                        
+                        // Clear read-only and other restrictive attributes before deletion
+                        try
+                        {
+                            File.SetAttributes(location, FileAttributes.Normal);
+                        }
+                        catch (Exception attrEx)
+                        {
+                            _logger.LogDebug(attrEx, "Failed to clear attributes on {Location}", location);
+                        }
+
                         File.Delete(location);
+                        _logger.LogInformation("Successfully removed existing chroma.exe at {Location}", location);
                     }
                 }
                 catch (Exception ex)
