@@ -2,6 +2,7 @@ package com.manuscripta.student.utils;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -358,7 +359,7 @@ public class ConnectionManagerTest {
 
         // Should return the same instance
         assertNotNull(state1);
-        assertNotNull(state2);
+        assertSame(state1, state2);
     }
 
     @Test
