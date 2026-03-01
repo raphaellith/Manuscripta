@@ -76,7 +76,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Chroma by calling `chroma --version`.
 
-    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling `iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))`.
+    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling `iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))`. If 'C:\Users\Student\bin' is not yet included in the PATH environment variable, it shall be added through `$env:PATH = 'C:\Users\Student\bin;' + $env:PATH`.
 
     (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Chroma has not published any checksums or other methods for verifying downloads.
 

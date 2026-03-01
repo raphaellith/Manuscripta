@@ -4,6 +4,7 @@ using Main.Data;
 using Main.Models.Entities;
 using Main.Models.Enums;
 using Main.Services.Hubs;
+using Main.Services.RuntimeDependencies;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ public class DocumentEmbeddingService : IEmbeddingService
     private readonly OllamaClientService _ollamaClient;
     private readonly ChromaClient _chromaClient;
     private readonly ChromaConfigurationOptions _chromaOptions;
+    private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
     private readonly HttpClient _httpClient;
     private readonly IHubContext<TeacherPortalHub> _hubContext;
     private readonly MainDbContext _dbContext;
@@ -34,7 +36,8 @@ public class DocumentEmbeddingService : IEmbeddingService
         HttpClient httpClient,
         IHubContext<TeacherPortalHub> hubContext,
         MainDbContext dbContext,
-        ILogger<DocumentEmbeddingService> logger)
+        ILogger<DocumentEmbeddingService> logger,
+        IRuntimeDependencyRegistry runtimeDependencyRegistry)
     {
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
@@ -43,6 +46,7 @@ public class DocumentEmbeddingService : IEmbeddingService
         _hubContext = hubContext;
         _dbContext = dbContext;
         _logger = logger;
+        _runtimeDependencyRegistry = runtimeDependencyRegistry;
     }
 
     /// <summary>
@@ -273,6 +277,18 @@ public class DocumentEmbeddingService : IEmbeddingService
     /// </summary>
     private async Task<ChromaCollection> GetOrCreateCollectionAsync()
     {
+        // avoid hitting the HTTP endpoint when the dependency is not available
+        var manager = _runtimeDependencyRegistry.GetManager("chroma");
+        if (manager != null)
+        {
+            var available = await manager.CheckDependencyAvailabilityAsync();
+            if (!available)
+            {
+                _logger.LogWarning("ChromaDB not available; skipping collection access");
+                // upstream callers generally catch exceptions and return empty results
+                throw new InvalidOperationException("ChromaDB dependency is not available");
+            }
+        }
         return await _chromaClient.GetOrCreateCollection("source_documents");
     }
 
