@@ -252,36 +252,100 @@ namespace Main.Services.RuntimeDependencies
                     throw;
                 }
 
+                if (_chromaServerProcess == null)
+                {
+                    throw new InvalidOperationException("Failed to start ChromaDB server process");
+                }
+
+                // Start async tasks to continuously read stdout/stderr to prevent buffer deadlock
+                var stdoutReader = Task.Run(async () =>
+                {
+                    try
+                    {
+                        string? line;
+                        while ((line = await _chromaServerProcess.StandardOutput.ReadLineAsync()) != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(line))
+                            {
+                                _logger.LogDebug("Chroma stdout: {Line}", line);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Error reading Chroma stdout");
+                    }
+                });
+
+                var stderrReader = Task.Run(async () =>
+                {
+                    try
+                    {
+                        string? line;
+                        while ((line = await _chromaServerProcess.StandardError.ReadLineAsync()) != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(line))
+                            {
+                                _logger.LogWarning("Chroma stderr: {Line}", line);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Error reading Chroma stderr");
+                    }
+                });
+
                 // Wait for server to become responsive
                 var startTime = DateTime.UtcNow;
-                var timeout = TimeSpan.FromSeconds(30);
+                var timeout = TimeSpan.FromSeconds(45); // Increased timeout for slower systems
                 var serverStarted = false;
 
                 while (DateTime.UtcNow - startTime < timeout)
                 {
+                    // Check if process has exited prematurely
+                    if (_chromaServerProcess.HasExited)
+                    {
+                        var exitCode = _chromaServerProcess.ExitCode;
+                        _logger.LogError("ChromaDB process exited prematurely with exit code {ExitCode}", exitCode);
+                        throw new InvalidOperationException($"ChromaDB server process exited with code {exitCode} before becoming ready");
+                    }
+
                     try
                     {
-                        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+                        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
                         var response = await httpClient.GetAsync("http://localhost:8000/api/v1/heartbeat");
                         if (response.IsSuccessStatusCode)
                         {
                             serverStarted = true;
-                            _logger.LogInformation("ChromaDB server started successfully");
+                            _logger.LogInformation("ChromaDB server started successfully and is responding on http://localhost:8000");
                             break;
                         }
                     }
-                    catch
+                    catch (HttpRequestException)
                     {
-                        // Server not ready yet
+                        // Server not ready yet - connection refused/timeout is expected
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // HTTP timeout - server not ready yet
                     }
 
-                    await Task.Delay(500);
+                    await Task.Delay(1000); // Check every second instead of 500ms
                 }
 
                 if (!serverStarted)
                 {
-                    _logger.LogWarning("ChromaDB server may not have started properly within timeout");
-                    throw new InvalidOperationException("ChromaDB server failed to start within timeout period");
+                    var processStatus = _chromaServerProcess.HasExited 
+                        ? $"Process exited with code {_chromaServerProcess.ExitCode}" 
+                        : "Process still running but not responding";
+                    
+                    _logger.LogError("ChromaDB server failed to start within {Timeout} seconds. Status: {Status}", 
+                        timeout.TotalSeconds, processStatus);
+                    
+                    throw new InvalidOperationException(
+                        $"ChromaDB server failed to start within {timeout.TotalSeconds} seconds. {processStatus}. " +
+                        "Check logs for stderr output or try manually running: chroma run --path \"" + dataPath + "\"");
                 }
             }
             catch (Exception ex)
