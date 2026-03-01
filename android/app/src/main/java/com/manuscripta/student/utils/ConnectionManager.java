@@ -109,6 +109,11 @@ public class ConnectionManager {
      * Gets LiveData for network connectivity state.
      * Observers will be notified of connectivity changes.
      *
+     * <p><b>Intended for UI/ViewModel layer:</b> Use this method when you need to observe
+     * and react to network state changes in the UI (e.g., displaying connection status
+     * to users, enabling/disabling UI elements based on connectivity). For one-time
+     * network checks in business logic, use {@link #isNetworkAvailable()} instead.</p>
+     *
      * @return LiveData with current connection state (true = connected, false = disconnected)
      */
     @NonNull
