@@ -244,8 +244,10 @@ public class UdpDiscoveryManagerTest {
 
         // When
         manager.startDiscovery();
-        awaitCondition(() -> manager.getDiscoveredServer() != null, 
+        awaitCondition(() -> manager.getDiscoveredServer() != null,
                 2000, "Server should be discovered");
+        awaitCondition(() -> manager.getDiscoveryState().getValue() == DiscoveryState.FOUND,
+                2000, "State should transition to FOUND");
 
         // Then - should have the first packet (discovery stops after finding a server)
         DiscoveryMessage message = manager.getDiscoveredServer();

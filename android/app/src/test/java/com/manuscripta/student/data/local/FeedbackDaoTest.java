@@ -55,8 +55,8 @@ public class FeedbackDaoTest {
         // Insert parent material, question, and response for foreign key constraints
         MaterialEntity material = new MaterialEntity(
                 "mat-1",
-                MaterialType.QUIZ,
-                "Test Quiz",
+                MaterialType.WORKSHEET,
+                "Test Worksheet",
                 "Content",
                 "{}",
                 "[]",

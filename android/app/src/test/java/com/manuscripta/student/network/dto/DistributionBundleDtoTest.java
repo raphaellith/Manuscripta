@@ -299,7 +299,7 @@ public class DistributionBundleDtoTest {
     @Test
     public void testMaterialsPreservesOrder() {
         MaterialDto mat1 = new MaterialDto("id-1", "READING", "First", "C1", null, null, 1L);
-        MaterialDto mat2 = new MaterialDto("id-2", "QUIZ", "Second", "C2", null, null, 2L);
+        MaterialDto mat2 = new MaterialDto("id-2", "WORKSHEET", "Second", "C2", null, null, 2L);
         MaterialDto mat3 = new MaterialDto("id-3", "WORKSHEET", "Third", "C3", null, null, 3L);
 
         List<MaterialDto> orderedList = Arrays.asList(mat1, mat2, mat3);

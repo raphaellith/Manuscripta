@@ -12,12 +12,6 @@ public enum MaterialType {
     READING,
 
     /**
-     * Assessment with questions.
-     * Tests student understanding.
-     */
-    QUIZ,
-
-    /**
      * Practice exercises.
      * Activities for students to complete.
      */
@@ -37,7 +31,6 @@ public enum MaterialType {
     public String getDisplayName() {
         return switch (this) {
             case READING   -> "Reading";
-            case QUIZ      -> "Quiz";
             case WORKSHEET -> "Worksheet";
             case POLL      -> "Poll";
         };
