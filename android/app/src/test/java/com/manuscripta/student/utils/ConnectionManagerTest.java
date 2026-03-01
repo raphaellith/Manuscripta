@@ -265,7 +265,7 @@ public class ConnectionManagerTest {
     }
 
     @Test
-    public void testIsServerReachable_nullProtocolException_returnsFalse() {
+    public void testIsServerReachable_malformedUrl_returnsFalse() {
         // Mock network as available
         when(mockConnectivityManager.getActiveNetwork()).thenReturn(mockNetwork);
         when(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
@@ -277,8 +277,7 @@ public class ConnectionManagerTest {
 
         connectionManager = new ConnectionManager(mockContext);
 
-        // Pass a URL that will throw RuntimeException (general Exception catch)
-        // This tests the generic Exception handler
+        // Pass a malformed URL that throws MalformedURLException (caught as IOException)
         boolean reachable = connectionManager.isServerReachable("://invalid");
 
         assertFalse(reachable);
