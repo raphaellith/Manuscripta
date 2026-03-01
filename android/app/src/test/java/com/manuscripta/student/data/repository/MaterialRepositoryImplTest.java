@@ -26,7 +26,6 @@ import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.network.tcp.AckRetrySender;
-import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.FileStorageManager;
@@ -74,9 +73,6 @@ public class MaterialRepositoryImplTest {
     private AckRetrySender mockAckRetrySender;
 
     @Mock
-    private PairingManager mockPairingManager;
-
-    @Mock
     private Call<DistributionBundleDto> mockDistributionCall;
 
     private MaterialRepositoryImpl repository;
@@ -89,7 +85,7 @@ public class MaterialRepositoryImplTest {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
         repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockAckRetrySender, mockPairingManager);
+                mockTcpSocketManager, mockAckRetrySender);
     }
 
     // ========== Constructor tests ==========
@@ -103,42 +99,35 @@ public class MaterialRepositoryImplTest {
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, null, mockApiService,
-                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender));
     }
 
     @Test
     public void testConstructor_nullApiService_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null,
-                        mockTcpSocketManager, mockAckRetrySender, mockPairingManager));
+                        mockTcpSocketManager, mockAckRetrySender));
     }
 
     @Test
     public void testConstructor_nullTcpSocketManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        null, mockAckRetrySender, mockPairingManager));
+                        null, mockAckRetrySender));
     }
 
     @Test
     public void testConstructor_nullAckRetrySender_throwsException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, null, mockPairingManager));
-    }
-
-    @Test
-    public void testConstructor_nullPairingManager_throwsException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, mockAckRetrySender, null));
+                        mockTcpSocketManager, null));
     }
 
     // ========== getMaterialById tests ==========

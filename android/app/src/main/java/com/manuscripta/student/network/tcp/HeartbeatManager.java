@@ -22,9 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 /**
  * Manages the TCP heartbeat mechanism for maintaining connection and triggering fetches.
  *
@@ -49,7 +46,6 @@ import javax.inject.Singleton;
  * @see HeartbeatConfig
  * @see TcpSocketManager
  */
-@Singleton
 public class HeartbeatManager implements TcpMessageListener {
 
     /** Tag for logging. */
@@ -127,7 +123,6 @@ public class HeartbeatManager implements TcpMessageListener {
      *
      * @param socketManager The TCP socket manager for sending messages.
      */
-    @Inject
     public HeartbeatManager(@NonNull TcpSocketManager socketManager) {
         this(socketManager, new HeartbeatConfig(), new Gson());
     }

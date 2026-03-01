@@ -194,8 +194,8 @@ public class HeartbeatConfigTest {
     // ========== Constants tests ==========
 
     @Test
-    public void defaultIntervalMs_isFiveSeconds() {
-        assertEquals(5000L, HeartbeatConfig.DEFAULT_INTERVAL_MS);
+    public void defaultIntervalMs_isThreeSeconds() {
+        assertEquals(3000L, HeartbeatConfig.DEFAULT_INTERVAL_MS);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.manuscripta.student.di;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
@@ -20,6 +21,7 @@ import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.tcp.AckRetrySender;
+import com.manuscripta.student.network.tcp.HeartbeatManager;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
@@ -131,7 +133,6 @@ public class RepositoryModule {
      * @param apiService         The ApiService instance
      * @param tcpSocketManager   The TcpSocketManager instance
      * @param ackRetrySender     The AckRetrySender instance
-     * @param pairingManager     The PairingManager instance
      * @return MaterialRepository instance
      */
     @Provides
@@ -140,10 +141,9 @@ public class RepositoryModule {
                                                         FileStorageManager fileStorageManager,
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager,
-                                                        AckRetrySender ackRetrySender,
-                                                        PairingManager pairingManager) {
+                                                        AckRetrySender ackRetrySender) {
         return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
-                tcpSocketManager, ackRetrySender, pairingManager);
+                tcpSocketManager, ackRetrySender);
     }
 
     /**
@@ -196,5 +196,57 @@ public class RepositoryModule {
     @Singleton
     public DeviceStatusRepository provideDeviceStatusRepository(DeviceStatusDao deviceStatusDao) {
         return new DeviceStatusRepositoryImpl(deviceStatusDao);
+    }
+
+    /**
+     * Provides the HeartbeatManager wired with material, feedback, and status callbacks.
+     *
+     * @param tcpSocketManager       The TcpSocketManager instance
+     * @param pairingManager         The PairingManager instance
+     * @param materialRepository     The MaterialRepository instance
+     * @param feedbackRepository     The FeedbackRepository instance
+     * @param deviceStatusRepository The DeviceStatusRepository instance
+     * @return HeartbeatManager instance
+     */
+    @Provides
+    @Singleton
+    public HeartbeatManager provideHeartbeatManager(
+            TcpSocketManager tcpSocketManager,
+            PairingManager pairingManager,
+            MaterialRepository materialRepository,
+            FeedbackRepository feedbackRepository,
+            DeviceStatusRepository deviceStatusRepository) {
+
+        HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
+
+        hm.setDeviceStatusProvider(() -> {
+            String deviceId = pairingManager.getDeviceId();
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                return deviceStatusRepository.getDeviceStatus(deviceId);
+            }
+            return null;
+        });
+
+        hm.setMaterialCallback(() -> {
+            String deviceId = pairingManager.getDeviceId();
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                new Thread(() -> materialRepository.syncMaterials(deviceId)).start();
+            }
+        });
+
+        hm.setFeedbackCallback(() -> {
+            String deviceId = pairingManager.getDeviceId();
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                new Thread(() -> {
+                    try {
+                        feedbackRepository.fetchAndStoreFeedback(deviceId);
+                    } catch (Exception e) {
+                        Log.e("HeartbeatWiring", "Feedback fetch failed", e);
+                    }
+                }).start();
+            }
+        });
+
+        return hm;
     }
 }
