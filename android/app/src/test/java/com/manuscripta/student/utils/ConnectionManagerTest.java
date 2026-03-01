@@ -20,6 +20,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,6 +59,13 @@ public class ConnectionManagerTest {
         MockitoAnnotations.openMocks(this);
         when(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE))
                 .thenReturn(mockConnectivityManager);
+    }
+
+    @After
+    public void tearDown() {
+        if (connectionManager != null) {
+            connectionManager.shutdown();
+        }
     }
 
     // ========== Constructor tests ==========
