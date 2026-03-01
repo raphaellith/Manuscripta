@@ -700,7 +700,8 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
-            _mockEmbeddingService.Object));
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object));
     }
 
     [Fact]
