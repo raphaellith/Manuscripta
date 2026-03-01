@@ -11,6 +11,7 @@ import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
 import com.manuscripta.student.network.interceptor.RetryInterceptor;
 import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.utils.ConnectionManager;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -27,6 +28,9 @@ import retrofit2.Retrofit;
 public class NetworkModuleTest {
 
     @Mock
+    private ConnectionManager mockConnectionManager;
+
+    @Mock
     private PairingManager mockPairingManager;
 
     private NetworkModule networkModule;
@@ -39,13 +43,13 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
         assertNotNull(client);
     }
 
     @Test
     public void testProvideOkHttpClient_hasInterceptors() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         // Release builds have 3 interceptors (Retry, Auth, Error);
         // debug builds have 4 (Retry, Auth, Logging, Error)
@@ -55,7 +59,7 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient_hasRetryInterceptor() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         boolean hasRetryInterceptor = false;
         for (Interceptor interceptor : client.interceptors()) {
@@ -70,7 +74,7 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient_hasAuthInterceptor() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         boolean hasAuthInterceptor = false;
         for (Interceptor interceptor : client.interceptors()) {
@@ -85,7 +89,7 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient_hasLoggingInterceptor() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         boolean hasLoggingInterceptor = false;
         for (Interceptor interceptor : client.interceptors()) {
@@ -104,7 +108,7 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient_hasErrorInterceptor() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         boolean hasErrorInterceptor = false;
         for (Interceptor interceptor : client.interceptors()) {
@@ -119,14 +123,14 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideRetrofit() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
         Retrofit retrofit = networkModule.provideRetrofit(client);
         assertNotNull(retrofit);
     }
 
     @Test
     public void testProvideApiService() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
         Retrofit retrofit = networkModule.provideRetrofit(client);
         ApiService apiService = networkModule.provideApiService(retrofit);
         assertNotNull(apiService);
@@ -134,7 +138,7 @@ public class NetworkModuleTest {
 
     @Test
     public void testProvideOkHttpClient_interceptorOrder() {
-        OkHttpClient client = networkModule.provideOkHttpClient(mockPairingManager);
+        OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
         // Order: Retry → Auth → [Logging (debug only)] → Error
         // Release: Retry, Auth, Error (size 3); Debug: Retry, Auth, Logging, Error (size 4)
