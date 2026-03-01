@@ -637,12 +637,11 @@ public class ResponseRepositoryImplTest {
     // ==================== DefaultSyncEngine Tests ====================
 
     @Test
-    public void testDefaultSyncEngine_syncResponse_returnsFailure() throws InterruptedException {
-        // Use a SyncEngine that returns false (equivalent to DefaultSyncEngine behaviour
-        // for a failing sync)
-        ResponseRepositoryImpl.SyncEngine failingEngine = e -> false;
+    public void testDefaultSyncEngine_syncResponse_exceptionTreatedAsFailure() throws InterruptedException {
+        // DefaultSyncEngine throws UnsupportedOperationException; verify the sync loop
+        // catches it, treats the entity as a failure, and still completes normally.
         ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(
-                mockDao, failingEngine);
+                mockDao, new ResponseRepositoryImpl.DefaultSyncEngine());
         ResponseEntity entity = createTestEntity();
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
 

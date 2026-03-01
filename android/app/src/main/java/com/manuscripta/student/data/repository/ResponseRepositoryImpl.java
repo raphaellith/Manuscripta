@@ -195,7 +195,13 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         int failureCount = 0;
 
         for (ResponseEntity entity : unsyncedResponses) {
-            boolean synced = syncEngine.syncResponse(entity);
+            boolean synced;
+            try {
+                synced = syncEngine.syncResponse(entity);
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected exception syncing response: " + entity.getId(), e);
+                synced = false;
+            }
 
             if (synced) {
                 responseDao.markSynced(entity.getId());
