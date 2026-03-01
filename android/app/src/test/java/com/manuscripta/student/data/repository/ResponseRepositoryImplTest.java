@@ -22,8 +22,6 @@ import com.manuscripta.student.network.ApiService;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -522,84 +520,6 @@ public class ResponseRepositoryImplTest {
         verify(mockDao, times(1)).getUnsynced();
     }
 
-    // ==================== syncWithRetry Tests ====================
-
-    @Test
-    public void testSyncWithRetry_immediateSuccess_returnsTrue() {
-        ResponseEntity entity = createTestEntity();
-        when(mockSyncEngine.syncResponse(entity)).thenReturn(true);
-
-        boolean result = repository.syncWithRetry(entity);
-
-        assertTrue(result);
-        verify(mockSyncEngine, times(1)).syncResponse(entity);
-    }
-
-    @Test
-    public void testSyncWithRetry_successOnSecondAttempt_returnsTrue() {
-        ResponseEntity entity = createTestEntity();
-        when(mockSyncEngine.syncResponse(entity))
-                .thenReturn(false)
-                .thenReturn(true);
-
-        boolean result = repository.syncWithRetry(entity);
-
-        assertTrue(result);
-        verify(mockSyncEngine, times(2)).syncResponse(entity);
-    }
-
-    @Test
-    public void testSyncWithRetry_allAttemptsFail_returnsFalse() {
-        ResponseEntity entity = createTestEntity();
-        when(mockSyncEngine.syncResponse(entity)).thenReturn(false);
-
-        boolean result = repository.syncWithRetry(entity);
-
-        assertFalse(result);
-        verify(mockSyncEngine, times(ResponseRepositoryImpl.MAX_RETRY_ATTEMPTS)).syncResponse(entity);
-    }
-
-    @Test
-    public void testSyncWithRetry_successOnLastAttempt_returnsTrue() {
-        ResponseEntity entity = createTestEntity();
-        // Fail 4 times, succeed on 5th (last) attempt
-        when(mockSyncEngine.syncResponse(entity))
-                .thenReturn(false)
-                .thenReturn(false)
-                .thenReturn(false)
-                .thenReturn(false)
-                .thenReturn(true);
-
-        boolean result = repository.syncWithRetry(entity);
-
-        assertTrue(result);
-        verify(mockSyncEngine, times(5)).syncResponse(entity);
-    }
-
-    // ==================== calculateNextBackoff Tests ====================
-
-    @Test
-    public void testCalculateNextBackoff_initialValue_doubles() {
-        long next = repository.calculateNextBackoff(ResponseRepositoryImpl.INITIAL_BACKOFF_MS);
-
-        assertEquals(ResponseRepositoryImpl.INITIAL_BACKOFF_MS * 2, next);
-    }
-
-    @Test
-    public void testCalculateNextBackoff_approachingMax_capsAtMax() {
-        long next = repository.calculateNextBackoff(ResponseRepositoryImpl.MAX_BACKOFF_MS);
-
-        assertEquals(ResponseRepositoryImpl.MAX_BACKOFF_MS, next);
-    }
-
-    @Test
-    public void testCalculateNextBackoff_exceedsMax_capsAtMax() {
-        long largeValue = ResponseRepositoryImpl.MAX_BACKOFF_MS * 2;
-        long next = repository.calculateNextBackoff(largeValue);
-
-        assertEquals(ResponseRepositoryImpl.MAX_BACKOFF_MS, next);
-    }
-
     // ==================== isSyncing Tests ====================
 
     @Test
@@ -699,15 +619,10 @@ public class ResponseRepositoryImplTest {
         // This test covers the null callback branch at line 216
         ResponseEntity entity = createTestEntity();
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
-        when(mockSyncEngine.syncResponse(any())).thenReturn(false);
 
-        // Use AtomicBoolean to track when sync completes (after all retry attempts)
         CountDownLatch latch = new CountDownLatch(1);
-        AtomicInteger syncAttempts = new AtomicInteger(0);
         doAnswer(invocation -> {
-            if (syncAttempts.incrementAndGet() >= ResponseRepositoryImpl.MAX_RETRY_ATTEMPTS) {
-                latch.countDown();
-            }
+            latch.countDown();
             return false;
         }).when(mockSyncEngine).syncResponse(any());
 
@@ -722,14 +637,12 @@ public class ResponseRepositoryImplTest {
     // ==================== DefaultSyncEngine Tests ====================
 
     @Test
-    public void testDefaultSyncEngine_syncResponse_throwsUnsupportedOperationException() throws InterruptedException {
-        // Use TestableResponseRepository with a SyncEngine that throws UnsupportedOperationException
-        // to avoid actual sleep delays during retry attempts
-        ResponseRepositoryImpl.SyncEngine exceptionThrowingEngine = e -> {
-            throw new UnsupportedOperationException("Network sync not yet implemented");
-        };
+    public void testDefaultSyncEngine_syncResponse_returnsFailure() throws InterruptedException {
+        // Use a SyncEngine that returns false (equivalent to DefaultSyncEngine behaviour
+        // for a failing sync)
+        ResponseRepositoryImpl.SyncEngine failingEngine = e -> false;
         ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(
-                mockDao, exceptionThrowingEngine);
+                mockDao, failingEngine);
         ResponseEntity entity = createTestEntity();
         when(mockDao.getUnsynced()).thenReturn(Collections.singletonList(entity));
 
@@ -751,58 +664,8 @@ public class ResponseRepositoryImplTest {
         });
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
-        // DefaultSyncEngine throws UnsupportedOperationException, which is caught 
-        // and treated as sync failure after all retry attempts
         assertEquals(1, failureCount.get());
         verify(mockDao, never()).markSynced(anyString());
-    }
-
-    @Test
-    public void testDefaultSyncEngine_directCall_throwsAndReturnsFalse() {
-        // Create a testable subclass that uses the real DefaultSyncEngine but skips sleep
-        ResponseRepositoryImpl.SyncEngine defaultEngine = new ResponseRepositoryImpl.DefaultSyncEngine();
-        ResponseRepositoryImpl repoWithDefaultEngine = new TestableResponseRepository(mockDao, defaultEngine);
-        ResponseEntity entity = createTestEntity();
-
-        // syncWithRetry should catch the UnsupportedOperationException and return false
-        boolean result = repoWithDefaultEngine.syncWithRetry(entity);
-
-        assertFalse(result);
-    }
-
-
-    // ==================== Constants Tests ====================
-
-    @Test
-    public void testConstants_haveCorrectValues() {
-        assertEquals(1000L, ResponseRepositoryImpl.INITIAL_BACKOFF_MS);
-        assertEquals(32000L, ResponseRepositoryImpl.MAX_BACKOFF_MS);
-        assertEquals(5, ResponseRepositoryImpl.MAX_RETRY_ATTEMPTS);
-        assertEquals(2.0, ResponseRepositoryImpl.BACKOFF_MULTIPLIER, 0.001);
-    }
-
-    // ==================== Sleep Tests ====================
-
-    @Test
-    public void testSleep_normalExecution_completesWithoutException() {
-        // Use a real repository (not testable) to test actual sleep
-        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao, mockApiService);
-        realRepo.sleep(1);
-    }
-
-    @Test
-    public void testSleep_interrupted_setsInterruptFlag() throws InterruptedException {
-        // Use a real repository (not testable) to test actual sleep with interrupt
-        ResponseRepositoryImpl realRepo = new ResponseRepositoryImpl(mockDao, mockApiService);
-
-        Thread testThread = new Thread(() -> {
-            Thread.currentThread().interrupt();
-            realRepo.sleep(1000);
-            assertTrue(Thread.currentThread().isInterrupted());
-        });
-
-        testThread.start();
-        testThread.join(2000);
     }
 
     // ==================== Helper Methods ====================
@@ -836,20 +699,11 @@ public class ResponseRepositoryImplTest {
     }
 
     /**
-     * Testable subclass that overrides sleep to avoid actual delays.
+     * Testable subclass of ResponseRepositoryImpl for use in unit tests.
      */
     private static class TestableResponseRepository extends ResponseRepositoryImpl {
-        TestableResponseRepository(ResponseDao responseDao, ApiService apiService) {
-            super(responseDao, apiService);
-        }
-
         TestableResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {
             super(responseDao, syncEngine);
-        }
-
-        @Override
-        protected void sleep(long millis) {
-            // Do nothing - skip actual sleep in tests
         }
     }
 

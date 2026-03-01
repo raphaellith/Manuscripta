@@ -30,7 +30,6 @@ import javax.inject.Singleton;
  * <ul>
  *   <li>Local persistence via Room DAO</li>
  *   <li>Sync queue for offline responses</li>
- *   <li>Exponential backoff retry logic for failed syncs</li>
  *   <li>Thread-safe operations</li>
  * </ul>
  */
@@ -39,22 +38,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
 
     /** Tag for logging. */
     private static final String TAG = "ResponseRepositoryImpl";
-
-    /** Initial delay for exponential backoff in milliseconds. */
-    @VisibleForTesting
-    static final long INITIAL_BACKOFF_MS = 1000L;
-
-    /** Maximum delay for exponential backoff in milliseconds. */
-    @VisibleForTesting
-    static final long MAX_BACKOFF_MS = 32000L;
-
-    /** Maximum number of retry attempts. */
-    @VisibleForTesting
-    static final int MAX_RETRY_ATTEMPTS = 5;
-
-    /** Backoff multiplier for exponential growth. */
-    @VisibleForTesting
-    static final double BACKOFF_MULTIPLIER = 2.0;
 
     /** The DAO for response persistence. */
     private final ResponseDao responseDao;
@@ -194,7 +177,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     }
 
     /**
-     * Performs the actual sync operation with retry logic.
+     * Performs the actual sync operation.
      *
      * @param callback Optional callback for sync progress
      */
@@ -212,7 +195,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         int failureCount = 0;
 
         for (ResponseEntity entity : unsyncedResponses) {
-            boolean synced = syncWithRetry(entity);
+            boolean synced = syncEngine.syncResponse(entity);
 
             if (synced) {
                 responseDao.markSynced(entity.getId());
@@ -223,72 +206,13 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             } else {
                 failureCount++;
                 if (callback != null) {
-                    callback.onSyncFailure(entity.getId(), "Sync failed after max retries");
+                    callback.onSyncFailure(entity.getId(), "Sync failed");
                 }
             }
         }
 
         if (callback != null) {
             callback.onSyncComplete(successCount, failureCount);
-        }
-    }
-
-    /**
-     * Attempts to sync a single response with exponential backoff retry.
-     *
-     * @param entity The response entity to sync
-     * @return true if sync succeeded, false otherwise
-     */
-    @VisibleForTesting
-    boolean syncWithRetry(@NonNull ResponseEntity entity) {
-        long backoffMs = INITIAL_BACKOFF_MS;
-
-        for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                if (syncEngine.syncResponse(entity)) {
-                    return true;
-                }
-            } catch (Exception e) {
-                // Log the exception to aid debugging - differentiates between expected
-                // network failures and unexpected bugs in sync code
-                android.util.Log.w(TAG, "Sync attempt " + (attempt + 1) + " failed for response "
-                        + entity.getId() + ": " + e.getMessage());
-            }
-
-            // Don't sleep after the last failed attempt
-            if (attempt < MAX_RETRY_ATTEMPTS - 1) {
-                sleep(backoffMs);
-                backoffMs = calculateNextBackoff(backoffMs);
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Calculates the next backoff delay using exponential backoff.
-     *
-     * @param currentBackoff The current backoff delay
-     * @return The next backoff delay, capped at MAX_BACKOFF_MS
-     */
-    @VisibleForTesting
-    long calculateNextBackoff(long currentBackoff) {
-        long nextBackoff = (long) (currentBackoff * BACKOFF_MULTIPLIER);
-        return Math.min(nextBackoff, MAX_BACKOFF_MS);
-    }
-
-    /**
-     * Sleep for the specified duration.
-     * This method is protected to allow testing without actual delays.
-     *
-     * @param millis The duration to sleep in milliseconds
-     */
-    @VisibleForTesting
-    protected void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 
