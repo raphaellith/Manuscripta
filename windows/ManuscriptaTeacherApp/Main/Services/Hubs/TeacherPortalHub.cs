@@ -859,11 +859,13 @@ public class TeacherPortalHub : Hub
         {
             if (string.IsNullOrWhiteSpace(configurationData))
                 throw new HubException("Kindle email address is required.");
+            if (!configurationData.EndsWith("@kindle.com", StringComparison.OrdinalIgnoreCase))
+                throw new HubException("Kindle email address must end with '@kindle.com'.");
         }
 
         var entity = new ExternalDeviceEntity(deviceId, name, type)
         {
-            ConfigurationData = configurationData
+            ConfigurationData = type == ExternalDeviceType.REMARKABLE ? string.Empty : configurationData
         };
 
         await _externalDeviceRepository.AddAsync(entity);
