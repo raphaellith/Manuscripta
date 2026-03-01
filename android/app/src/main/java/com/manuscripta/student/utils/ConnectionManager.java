@@ -67,6 +67,7 @@ public class ConnectionManager {
         }
 
         this.isConnected = new MutableLiveData<>(checkCurrentConnection());
+        Log.d(TAG, "Initial connection state: " + checkCurrentConnection());
 
         // Create network callback for monitoring changes
         this.networkCallback = new ConnectivityManager.NetworkCallback() {
