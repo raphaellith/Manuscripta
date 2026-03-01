@@ -127,11 +127,6 @@ public class RetryInterceptor implements Interceptor {
         long backoffMs = initialBackoffMs;
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
-            // Check network before each retry attempt (skip on first attempt as already checked)
-            if (attempt > 0 && !connectionManager.isNetworkAvailable()) {
-                throw new IOException("Network lost during retry attempts");
-            }
-
             try {
                 // Close previous response if exists
                 if (response != null) {
@@ -160,6 +155,10 @@ public class RetryInterceptor implements Interceptor {
 
             // Don't sleep after the last attempt
             if (attempt < maxRetries) {
+                // Check network before retrying
+                if (!connectionManager.isNetworkAvailable()) {
+                    throw new IOException("Network lost during retry attempts");
+                }
                 sleep(backoffMs);
                 backoffMs = calculateNextBackoff(backoffMs);
             }

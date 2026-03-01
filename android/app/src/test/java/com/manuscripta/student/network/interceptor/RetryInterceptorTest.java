@@ -527,7 +527,7 @@ public class RetryInterceptorTest {
     }
 
     @Test
-    public void testIntercept_noNetworkAtStart_throwsImmediately() {
+    public void testIntercept_noNetworkAtStart_throwsImmediately() throws IOException {
         when(mockConnectionManager.isNetworkAvailable()).thenReturn(false);
         TestableRetryInterceptor interceptor = new TestableRetryInterceptor(mockConnectionManager);
         Response successResponse = createResponse(200, "OK");
