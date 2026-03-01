@@ -57,7 +57,16 @@ public class ContentModificationService : IContentModificationService
         var prompt = GenAIPromptBuilder.BuildModificationPrompt(selectedContent, instruction, relevantChunks);
 
         // §3C(2)(c): Invoke model
-        var modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(ModificationModel, prompt);
+        string modifiedContent;
+        try
+        {
+            modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(ModificationModel, prompt);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Insufficient system memory to process this request. Please close other applications and try again.", ex);
+        }
 
         // §3C(2)(d): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(modifiedContent, ModificationModel, useFallback: true);

@@ -242,6 +242,17 @@ public class OllamaClientService : IDependencyService
                 return false;
             }
 
+            // Check for 500 errors with memory-related messages
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                if (errorBody.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+                    errorBody.Contains("insufficient", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
             return response.IsSuccessStatusCode;
         }
         catch

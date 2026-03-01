@@ -103,9 +103,11 @@ public class MaterialGenerationService : IMaterialGenerationService
         }
         catch (HttpRequestException ex) when (
             modelToUse == PrimaryModel &&
-            (ex.StatusCode == null || (int)ex.StatusCode >= 500))
+            (ex.StatusCode == null || 
+             (int)ex.StatusCode >= 500 ||
+             ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase)))
         {
-            // §1(6)(a): fall back when primary model is unavailable at runtime.
+            // §1(6)(a): fall back when primary model is unavailable or has insufficient resources at runtime.
             modelToUse = FallbackModel;
             useFallback = true;
             await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
