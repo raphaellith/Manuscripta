@@ -26,9 +26,6 @@ import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.utils.FileStorageManager;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import javax.inject.Singleton;
 
 import dagger.Module;
@@ -225,9 +222,6 @@ public class RepositoryModule {
 
         HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
 
-        ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
-        hm.setCallbackExecutor(callbackExecutor);
-
         hm.setDeviceStatusProvider(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
@@ -239,26 +233,22 @@ public class RepositoryModule {
         hm.setMaterialCallback(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
-                callbackExecutor.execute(() -> {
-                    try {
-                        materialRepository.syncMaterials(deviceId);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Material sync failed", e);
-                    }
-                });
+                try {
+                    materialRepository.syncMaterials(deviceId);
+                } catch (Exception e) {
+                    Log.e(TAG, "Material sync failed", e);
+                }
             }
         });
 
         hm.setFeedbackCallback(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
-                callbackExecutor.execute(() -> {
-                    try {
-                        feedbackRepository.fetchAndStoreFeedback(deviceId);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Feedback fetch failed", e);
-                    }
-                });
+                try {
+                    feedbackRepository.fetchAndStoreFeedback(deviceId);
+                } catch (Exception e) {
+                    Log.e(TAG, "Feedback fetch failed", e);
+                }
             }
         });
 

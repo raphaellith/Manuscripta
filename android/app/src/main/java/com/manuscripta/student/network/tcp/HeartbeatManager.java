@@ -109,8 +109,8 @@ public class HeartbeatManager implements TcpMessageListener {
     /** Callback for when feedback is available. */
     @Nullable
     private FeedbackAvailableCallback feedbackCallback;
-    /** Executor used for dispatching material/feedback callbacks. */
-    private ExecutorService callbackExecutor;
+    /** Executor owned by this manager for dispatching material/feedback callbacks. */
+    private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
 
     /** The heartbeat configuration. */
     private HeartbeatConfig config;
@@ -184,15 +184,6 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void setFeedbackCallback(@Nullable FeedbackAvailableCallback callback) {
         this.feedbackCallback = callback;
-    }
-
-    /**
-     * Sets the executor used for dispatching material/feedback callbacks.
-     *
-     * @param executor The executor service for callbacks
-     */
-    public void setCallbackExecutor(@NonNull ExecutorService executor) {
-        this.callbackExecutor = executor;
     }
 
     /**
@@ -279,13 +270,13 @@ public class HeartbeatManager implements TcpMessageListener {
             Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
             MaterialAvailableCallback callback = this.materialCallback;
             if (callback != null) {
-                callback.onMaterialsAvailable();
+                callbackExecutor.execute(callback::onMaterialsAvailable);
             }
         } else if (message instanceof ReturnFeedbackMessage) {
             Log.d(TAG, "Received RETURN_FEEDBACK signal");
             FeedbackAvailableCallback callback = this.feedbackCallback;
             if (callback != null) {
-                callback.onFeedbackAvailable();
+                callbackExecutor.execute(callback::onFeedbackAvailable);
             }
         }
     }
@@ -407,10 +398,7 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void destroy() {
         stop();
-        if (callbackExecutor != null) {
-            callbackExecutor.shutdown();
-            callbackExecutor = null;
-        }
+        callbackExecutor.shutdown();
         socketManager.removeMessageListener(this);
     }
 }
