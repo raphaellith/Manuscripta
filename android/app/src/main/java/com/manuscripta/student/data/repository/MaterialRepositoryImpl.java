@@ -79,7 +79,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** Executor for running sync operations on a background thread. */
     private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
-    /** Lock object for thread-safe operations. */
+    /** Lock object guarding database writes and LiveData updates. */
     private final Object lock = new Object();
 
     /** LiveData for observable material list. */
@@ -320,46 +320,43 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             Log.i(TAG, "Received " + materialDtos.size() + " materials");
 
             // 2. Convert MaterialDtos to MaterialEntities, download attachments, and save
-            List<String> ackedMaterialIds = new ArrayList<>();
-            synchronized (lock) {
-                for (MaterialDto dto : materialDtos) {
-                    try {
+            for (MaterialDto dto : materialDtos) {
+                try {
+                    // 3. Parse content for attachment references and download each one.
+                    // Done before acquiring the lock to avoid holding it during network I/O.
+                    boolean attachmentsOk = true;
+                    List<String> attachmentIds =
+                            ContentParser.extractDistinctAttachmentReferences(dto.getContent());
+                    for (String attachmentId : attachmentIds) {
+                        if (!downloadAttachment(dto.getId(), attachmentId)) {
+                            attachmentsOk = false;
+                            Log.w(TAG, "Attachment download failed for material: "
+                                    + dto.getId());
+                        }
+                    }
+
+                    // Lock only for the DB write — no I/O inside the critical section.
+                    synchronized (lock) {
                         MaterialEntity entity = MaterialMapper.dtoToEntity(dto);
                         materialDao.insert(entity);
                         Log.d(TAG, "Saved material: " + entity.getId());
-
-                        // 3. Parse content for attachment references and download each one
-                        boolean attachmentsOk = true;
-                        List<String> attachmentIds =
-                                ContentParser.extractDistinctAttachmentReferences(dto.getContent());
-                        for (String attachmentId : attachmentIds) {
-                            if (!downloadAttachment(dto.getId(), attachmentId)) {
-                                attachmentsOk = false;
-                                Log.w(TAG, "Attachment download failed for material: "
-                                        + dto.getId());
-                            }
-                        }
-
-                        // 4. Collect IDs of successfully received materials for ACKing outside lock
-                        if (attachmentsOk) {
-                            ackedMaterialIds.add(dto.getId());
-                        } else {
-                            Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: "
-                                    + dto.getId());
-                        }
-                    } catch (IllegalArgumentException e) {
-                        Log.e(TAG, "Invalid material data: " + e.getMessage());
                     }
-                }
 
-                // Refresh LiveData to notify observers
-                refreshMaterialsLiveData();
+                    // Per API Contract §3.6.2, send one ACK per successfully received material
+                    // (device ID + material ID) immediately after download and save succeed.
+                    if (attachmentsOk) {
+                        ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
+                    } else {
+                        Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: " + dto.getId());
+                    }
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, "Invalid material data: " + e.getMessage());
+                }
             }
 
-            // Per API Contract §3.6.2, send one ACK per successfully received material
-            // (device ID + material ID). Done outside the lock to avoid holding it during I/O.
-            for (String materialId : ackedMaterialIds) {
-                ackRetrySender.send(new DistributeAckMessage(deviceId, materialId), TAG);
+            // Refresh LiveData once after all materials are saved to notify observers.
+            synchronized (lock) {
+                refreshMaterialsLiveData();
             }
 
             Log.i(TAG, "Material sync completed successfully");
