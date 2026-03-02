@@ -48,8 +48,10 @@ public class TeacherPortalHub : Hub
 
     // reMarkable dependencies - NetworkingAPISpec §1(1)(n)
     private readonly IRmapiService _rmapiService;
-    private readonly IReMarkableDeviceRepository _remarkableDeviceRepository;
-    private readonly IReMarkableDeploymentService _remarkableDeploymentService;
+    private readonly IExternalDeviceRepository _externalDeviceRepository;
+    private readonly IEmailCredentialRepository _emailCredentialRepository;
+    private readonly IExternalDeviceDeploymentService _externalDeviceDeploymentService;
+    private readonly IEmailService _emailService;
     private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
 
     // Configuration dependencies - NetworkingAPISpec §1(1)(o)
@@ -80,8 +82,10 @@ public class TeacherPortalHub : Hub
         ILogger<TeacherPortalHub> logger,
         IMaterialPdfService materialPdfService,
         IRmapiService rmapiService,
-        IReMarkableDeviceRepository remarkableDeviceRepository,
-        IReMarkableDeploymentService remarkableDeploymentService,
+        IExternalDeviceRepository externalDeviceRepository,
+        IEmailCredentialRepository emailCredentialRepository,
+        IExternalDeviceDeploymentService externalDeviceDeploymentService,
+        IEmailService emailService,
         IRuntimeDependencyRegistry runtimeDependencyRegistry,
         IConfigurationService configurationService)
     {
@@ -109,8 +113,10 @@ public class TeacherPortalHub : Hub
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _materialPdfService = materialPdfService ?? throw new ArgumentNullException(nameof(materialPdfService));
         _rmapiService = rmapiService ?? throw new ArgumentNullException(nameof(rmapiService));
-        _remarkableDeviceRepository = remarkableDeviceRepository ?? throw new ArgumentNullException(nameof(remarkableDeviceRepository));
-        _remarkableDeploymentService = remarkableDeploymentService ?? throw new ArgumentNullException(nameof(remarkableDeploymentService));
+        _externalDeviceRepository = externalDeviceRepository ?? throw new ArgumentNullException(nameof(externalDeviceRepository));
+        _emailCredentialRepository = emailCredentialRepository ?? throw new ArgumentNullException(nameof(emailCredentialRepository));
+        _externalDeviceDeploymentService = externalDeviceDeploymentService ?? throw new ArgumentNullException(nameof(externalDeviceDeploymentService));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
     }
@@ -821,80 +827,181 @@ public class TeacherPortalHub : Hub
 
     #endregion
 
-    #region reMarkable Methods - NetworkingAPISpec §1(1)(n)
+    #region External Device Methods - NetworkingAPISpec §1(1)(n)
 
     /// <summary>
-    /// Pairs a reMarkable device using a one-time code.
-    /// Per NetworkingAPISpec §1(1)(n)(i) and RemarkableIntegrationSpecification §3(2).
+    /// Pairs an external device (reMarkable/Kindle).
     /// </summary>
-    public async Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)
+    public async Task<Guid> PairExternalDevice(string name, ExternalDeviceType type, string configurationData)
     {
-        // Per §3(2)(a): validate name
         if (string.IsNullOrWhiteSpace(name))
             throw new HubException("Device name cannot be empty.");
-        if (string.IsNullOrWhiteSpace(oneTimeCode))
-            throw new HubException("One-time code cannot be empty.");
 
-        // Per §2(1): check rmapi availability first
-        if (!await _rmapiService.CheckAvailabilityAsync())
+        var deviceId = Guid.NewGuid();
+
+        if (type == ExternalDeviceType.REMARKABLE)
         {
-            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
-            throw new HubException("rmapi is not available. Please install it first.");
+            if (string.IsNullOrWhiteSpace(configurationData))
+                throw new HubException("One-time code cannot be empty for reMarkable devices.");
+
+            if (!await _rmapiService.CheckAvailabilityAsync())
+            {
+                await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
+                throw new HubException("DEPENDENCY_MISSING");
+            }
+
+            var configPath = _rmapiService.GetConfigPath(deviceId);
+            var authSuccess = await _rmapiService.AuthenticateAsync(configurationData, configPath);
+            if (!authSuccess)
+                throw new HubException("reMarkable authentication failed. Please check the one-time code and try again.");
+        }
+        else if (type == ExternalDeviceType.KINDLE)
+        {
+            if (string.IsNullOrWhiteSpace(configurationData))
+                throw new HubException("Kindle email address is required.");
+            if (!configurationData.EndsWith("@kindle.com", StringComparison.OrdinalIgnoreCase))
+                throw new HubException("Kindle email address must end with '@kindle.com'.");
         }
 
-        // Generate UUID for the device
-        var deviceId = Guid.NewGuid();
-        var configPath = _rmapiService.GetConfigPath(deviceId);
+        var entity = new ExternalDeviceEntity(deviceId, name, type)
+        {
+            ConfigurationData = type == ExternalDeviceType.REMARKABLE ? string.Empty : configurationData
+        };
 
-        // Per §3(2)(b-c): authenticate with one-time code
-        var authSuccess = await _rmapiService.AuthenticateAsync(oneTimeCode, configPath);
-        if (!authSuccess)
-            throw new HubException("reMarkable authentication failed. Please check the one-time code and try again.");
-
-        // Per §3(2)(d): persist entity
-        var entity = new ReMarkableDeviceEntity(deviceId, name);
-        await _remarkableDeviceRepository.AddAsync(entity);
-
-        _logger.LogInformation("Paired reMarkable device {DeviceId} with name '{Name}'", deviceId, name);
+        await _externalDeviceRepository.AddAsync(entity);
+        _logger.LogInformation("Paired {Type} device {DeviceId} with name '{Name}'", type, deviceId, name);
+        
         return deviceId;
     }
 
     /// <summary>
-    /// Unpairs a reMarkable device.
-    /// Per NetworkingAPISpec §1(1)(n)(ii) and RemarkableIntegrationSpecification §3(4).
+    /// Unpairs an external device.
     /// </summary>
-    public async Task UnpairReMarkableDevice(Guid deviceId)
+    public async Task UnpairExternalDevice(Guid deviceId)
     {
-        // Per §3(4)(a): delete entity
-        await _remarkableDeviceRepository.DeleteAsync(deviceId);
-
-        // Per §3(4)(b): delete config file
-        var configPath = _rmapiService.GetConfigPath(deviceId);
-        if (File.Exists(configPath))
+        var device = await _externalDeviceRepository.GetByIdAsync(deviceId);
+        if (device != null)
         {
-            File.Delete(configPath);
-            _logger.LogInformation("Deleted rmapi config file for device {DeviceId}", deviceId);
+            await _externalDeviceRepository.DeleteAsync(deviceId);
+
+            if (device.Type == ExternalDeviceType.REMARKABLE)
+            {
+                var configPath = _rmapiService.GetConfigPath(deviceId);
+                if (File.Exists(configPath))
+                {
+                    File.Delete(configPath);
+                    _logger.LogInformation("Deleted rmapi config file for device {DeviceId}", deviceId);
+                }
+            }
         }
     }
 
     /// <summary>
-    /// Retrieves all paired reMarkable devices.
-    /// Per NetworkingAPISpec §1(1)(n)(iii).
+    /// Retrieves all paired external devices.
     /// </summary>
-    public async Task<List<ReMarkableDeviceEntity>> GetAllReMarkableDevices()
+    public async Task<List<ExternalDeviceEntity>> GetAllExternalDevices()
     {
-        var devices = await _remarkableDeviceRepository.GetAllAsync();
+        var devices = await _externalDeviceRepository.GetAllAsync();
         return devices.ToList();
     }
 
     /// <summary>
-    /// Updates a reMarkable device entity.
-    /// Per NetworkingAPISpec §1(1)(n)(iv).
+    /// Updates an external device.
     /// </summary>
-    public async Task UpdateReMarkableDevice(ReMarkableDeviceEntity entity)
+    public async Task UpdateExternalDevice(ExternalDeviceEntity entity)
     {
-        await _remarkableDeviceRepository.UpdateAsync(entity);
+        await _externalDeviceRepository.UpdateAsync(entity);
     }
+
+    /// <summary>
+    /// Deploys materials to external devices.
+    /// </summary>
+    public async Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)
+    {
+        var results = await _externalDeviceDeploymentService.DeployAsync(materialId, deviceIds);
+        
+        foreach (var result in results)
+        {
+            if (!result.Success)
+            {
+                if (result.AuthFailed)
+                {
+                    // For reMarkable auth failure, trigger the re-auth workflow. 
+                    await Clients.Caller.SendAsync("ExternalDeviceAuthInvalid", result.DeviceId);
+                    throw new HubException("ExternalDeviceAuthInvalid");
+                }
+                else
+                {
+                    _logger.LogWarning("Deployment to external device {DeviceId} failed: {Error}", result.DeviceId, result.ErrorMessage);
+                    if (result.ErrorMessage != null && 
+                        (result.ErrorMessage.Contains("SMTP") || result.ErrorMessage.Contains("Email credentials")))
+                    {
+                        await Clients.Caller.SendAsync("EmailCredentialsNotConfigured");
+                        throw new HubException("EmailCredentialsNotConfigured");
+                    }
+                    else
+                    {
+                        throw new HubException(result.ErrorMessage ?? $"Failed to deploy material to external device {result.DeviceId}.");
+                    }
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Email Configuration Methods - NetworkingAPISpec §1(1)(o)
+
+    public async Task SaveEmailCredentials(EmailCredentialEntity credentials)
+    {
+        if (string.IsNullOrWhiteSpace(credentials.Password))
+        {
+            throw new HubException("Password must be explicitly provided or match the placeholder exactly.");
+        }
+
+        if (credentials.Password == "********")
+        {
+            var existing = await _emailCredentialRepository.GetCredentialsAsync();
+            if (existing != null)
+            {
+                credentials.Password = existing.Password;
+            }
+            else
+            {
+                throw new HubException("Password must be provided for new email credentials.");
+            }
+        }
+
+        // 1. Test connection first
+        await _emailService.TestConnectionAsync(credentials);
+
+        // 2. If it succeeds, save them
+        await _emailCredentialRepository.SaveCredentialsAsync(credentials);
+    }
+
+    public async Task<EmailCredentialEntity?> GetEmailCredentials()
+    {
+        var entity = await _emailCredentialRepository.GetCredentialsAsync();
+        if (entity != null)
+        {
+            // Redact password per spec
+            entity.Password = "********";
+        }
+        return entity;
+    }
+
+    public async Task DeleteEmailCredentials()
+    {
+        await _emailCredentialRepository.DeleteCredentialsAsync();
+    }
+
+    public async Task<bool> CheckEmailCredentialAvailability()
+    {
+        var credentials = await _emailCredentialRepository.GetCredentialsAsync();
+        return credentials != null && !string.IsNullOrWhiteSpace(credentials.EmailAddress);
+    }
+
+    #endregion
 
     #region Runtime Dependency Management - NetworkingAPISpec §1(1)(nz)
 
@@ -932,37 +1039,8 @@ public class TeacherPortalHub : Hub
     
     #endregion
 
-    /// <summary>
-    /// Deploys a material to the specified reMarkable devices.
-    /// Per NetworkingAPISpec §1(1)(n)(vii) and RemarkableIntegrationSpecification §4.
-    /// </summary>
-    public async Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)
-    {
-        // Per §4(1): check rmapi availability
-        if (!await _rmapiService.CheckAvailabilityAsync())
-        {
-            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", new List<string> { "rmapi" });
-            throw new HubException("rmapi is not available. Please install it first.");
-        }
 
-        var results = await _remarkableDeploymentService.DeployAsync(materialId, deviceIds);
 
-        // Per §4(5): invoke ReMarkableAuthInvalid client handler for auth failures
-        foreach (var result in results.Where(r => r.AuthFailed))
-        {
-            await Clients.Caller.SendAsync("ReMarkableAuthInvalid", result.DeviceId);
-        }
-
-        // Per §4(6): report other failures
-        var failures = results.Where(r => !r.Success && !r.AuthFailed).ToList();
-        if (failures.Any())
-        {
-            var messages = string.Join("; ", failures.Select(f => $"Device {f.DeviceId}: {f.ErrorMessage}"));
-            throw new HubException($"Deployment failed for some devices: {messages}");
-        }
-    }
-
-    #endregion
 
     #region Configuration Methods - NetworkingAPISpec §1(1)(o)
 

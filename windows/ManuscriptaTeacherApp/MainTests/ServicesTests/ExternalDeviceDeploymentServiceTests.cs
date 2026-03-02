@@ -10,34 +10,49 @@ using Main.Models.Entities.Materials;
 using Main.Services;
 using Main.Services.Repositories;
 using Microsoft.Extensions.Logging;
+using MimeKit;
 
 namespace MainTests.ServicesTests;
 
 /// <summary>
-/// Tests for ReMarkableDeploymentService.
-/// Verifies deployment orchestration per RemarkableIntegrationSpecification §4.
+/// Tests for ExternalDeviceDeploymentService.
+/// Verifies deployment orchestration for both Kindle and ReMarkable.
 /// </summary>
-public class ReMarkableDeploymentServiceTests
+public class ExternalDeviceDeploymentServiceTests
 {
     private readonly Mock<IMaterialPdfService> _mockPdfService;
     private readonly Mock<IRmapiService> _mockRmapiService;
-    private readonly Mock<IReMarkableDeviceRepository> _mockDeviceRepository;
+    private readonly Mock<IEmailService> _mockEmailService;
+    private readonly Mock<IExternalDeviceRepository> _mockDeviceRepository;
     private readonly Mock<IMaterialRepository> _mockMaterialRepository;
-    private readonly Mock<ILogger<ReMarkableDeploymentService>> _mockLogger;
-    private readonly ReMarkableDeploymentService _service;
+    private readonly Mock<IEmailCredentialRepository> _mockEmailCredRepo;
+    private readonly Mock<ILogger<ExternalDeviceDeploymentService>> _mockLogger;
+    private readonly ExternalDeviceDeploymentService _service;
 
-    public ReMarkableDeploymentServiceTests()
+    public ExternalDeviceDeploymentServiceTests()
     {
         _mockPdfService = new Mock<IMaterialPdfService>();
         _mockRmapiService = new Mock<IRmapiService>();
-        _mockDeviceRepository = new Mock<IReMarkableDeviceRepository>();
+        _mockEmailService = new Mock<IEmailService>();
+        _mockDeviceRepository = new Mock<IExternalDeviceRepository>();
         _mockMaterialRepository = new Mock<IMaterialRepository>();
-        _mockLogger = new Mock<ILogger<ReMarkableDeploymentService>>();
+        _mockEmailCredRepo = new Mock<IEmailCredentialRepository>();
+        _mockLogger = new Mock<ILogger<ExternalDeviceDeploymentService>>();
 
-        _service = new ReMarkableDeploymentService(
+        _mockEmailCredRepo.Setup(r => r.GetCredentialsAsync()).ReturnsAsync(new EmailCredentialEntity(
+            Guid.NewGuid(),
+            "test@example.com",
+            "smtp.example.com",
+            587,
+            "password"
+        ));
+
+        _service = new ExternalDeviceDeploymentService(
             _mockPdfService.Object,
             _mockRmapiService.Object,
+            _mockEmailService.Object,
             _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
             _mockMaterialRepository.Object,
             _mockLogger.Object);
     }
@@ -47,10 +62,12 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void Constructor_NullPdfService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReMarkableDeploymentService(
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
             null!,
             _mockRmapiService.Object,
+            _mockEmailService.Object,
             _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
             _mockMaterialRepository.Object,
             _mockLogger.Object));
     }
@@ -58,10 +75,25 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void Constructor_NullRmapiService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReMarkableDeploymentService(
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
             _mockPdfService.Object,
             null!,
+            _mockEmailService.Object,
             _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullEmailService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            null!,
+            _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
             _mockMaterialRepository.Object,
             _mockLogger.Object));
     }
@@ -69,9 +101,24 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void Constructor_NullDeviceRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReMarkableDeploymentService(
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
             _mockPdfService.Object,
             _mockRmapiService.Object,
+            _mockEmailService.Object,
+            null!,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullEmailCredRepo_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            _mockEmailService.Object,
+            _mockDeviceRepository.Object,
             null!,
             _mockMaterialRepository.Object,
             _mockLogger.Object));
@@ -80,10 +127,12 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void Constructor_NullMaterialRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReMarkableDeploymentService(
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
             _mockPdfService.Object,
             _mockRmapiService.Object,
+            _mockEmailService.Object,
             _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
             null!,
             _mockLogger.Object));
     }
@@ -91,10 +140,12 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReMarkableDeploymentService(
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
             _mockPdfService.Object,
             _mockRmapiService.Object,
+            _mockEmailService.Object,
             _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
             _mockMaterialRepository.Object,
             null!));
     }
@@ -115,7 +166,7 @@ public class ReMarkableDeploymentServiceTests
     }
 
     [Fact]
-    public async Task DeployAsync_DelegatesPdfGeneration()
+    public async Task DeployAsync_DelegatesPdfGeneration_Remarkable()
     {
         var materialId = Guid.NewGuid();
         var deviceId = Guid.NewGuid();
@@ -126,7 +177,7 @@ public class ReMarkableDeploymentServiceTests
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
             .ReturnsAsync(pdfBytes);
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
-            .ReturnsAsync(new ReMarkableDeviceEntity(deviceId, "Test Device"));
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Test Device", ExternalDeviceType.REMARKABLE));
         _mockRmapiService.Setup(s => s.GetConfigPath(deviceId)).Returns("/tmp/test.conf");
         _mockRmapiService.Setup(s => s.ListFolderAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new List<string>());
@@ -135,6 +186,34 @@ public class ReMarkableDeploymentServiceTests
 
         // Verify PDF generation was called exactly once
         _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId), Times.Once);
+        // Verify RMAPI was called
+        _mockRmapiService.Verify(s => s.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        // Verify Email was not called
+        _mockEmailService.Verify(s => s.SendEmailWithAttachmentAsync(It.IsAny<EmailCredentialEntity>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeployAsync_DelegatesPdfGeneration_Kindle()
+    {
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // %PDF
+
+        _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test Material", "Content"));
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+            .ReturnsAsync(pdfBytes);
+        _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });
+        
+        await _service.DeployAsync(materialId, new List<Guid> { deviceId });
+
+        // Verify PDF generation was called exactly once
+        _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId), Times.Once);
+        // Verify RMAPI was not called
+        _mockRmapiService.Verify(s => s.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        // Verify Email was called
+        _mockEmailService.Verify(s => s.SendEmailWithAttachmentAsync(It.IsAny<EmailCredentialEntity>(), "test@kindle.com", "Send to Kindle: Test Material", "Please find the attached material from Manuscripta.", pdfBytes, "Test Material.pdf"), Times.Once);
     }
 
     [Fact]
@@ -148,7 +227,7 @@ public class ReMarkableDeploymentServiceTests
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
-            .ReturnsAsync((ReMarkableDeviceEntity?)null);
+            .ReturnsAsync((ExternalDeviceEntity?)null);
 
         var results = await _service.DeployAsync(materialId, new List<Guid> { deviceId });
 
@@ -168,7 +247,7 @@ public class ReMarkableDeploymentServiceTests
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
-            .ReturnsAsync(new ReMarkableDeviceEntity(deviceId, "Device"));
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Device", ExternalDeviceType.REMARKABLE));
         _mockRmapiService.Setup(s => s.GetConfigPath(deviceId)).Returns("/tmp/test.conf");
         _mockRmapiService.Setup(s => s.EnsureFolderExistsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new RmapiAuthException("Token expired"));
@@ -181,65 +260,25 @@ public class ReMarkableDeploymentServiceTests
     }
 
     [Fact]
-    public async Task DeployAsync_MultipleDevices_ReturnsResultForEach()
+    public async Task DeployAsync_MissingEmailCredentials_ReturnsFailureResult()
     {
         var materialId = Guid.NewGuid();
-        var device1 = Guid.NewGuid();
-        var device2 = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test", "Content"));
         _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
-            .ReturnsAsync(new byte[] { 0x25, 0x50, 0x44, 0x46 });
-        // Device 1 exists, Device 2 doesn't
-        _mockDeviceRepository.Setup(r => r.GetByIdAsync(device1))
-            .ReturnsAsync(new ReMarkableDeviceEntity(device1, "Device 1"));
-        _mockDeviceRepository.Setup(r => r.GetByIdAsync(device2))
-            .ReturnsAsync((ReMarkableDeviceEntity?)null);
-        _mockRmapiService.Setup(s => s.GetConfigPath(device1)).Returns("/tmp/d1.conf");
-        _mockRmapiService.Setup(s => s.ListFolderAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(new List<string>());
+            .ReturnsAsync(new byte[] { 0x25 });
+        _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
+            .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });
+        
+        _mockEmailCredRepo.Setup(r => r.GetCredentialsAsync()).ReturnsAsync((EmailCredentialEntity?)null);
 
-        var results = await _service.DeployAsync(materialId, new List<Guid> { device1, device2 });
+        var results = await _service.DeployAsync(materialId, new List<Guid> { deviceId });
 
-        Assert.Equal(2, results.Count);
-        // One should succeed (device1 exists), one should fail (device2 not found)
-        Assert.Contains(results, r => r.DeviceId == device2 && !r.Success);
-    }
-
-    #endregion
-
-    #region GetUniqueFileName Tests
-
-    [Fact]
-    public void GetUniqueFileName_NoConflict_ReturnsBaseWithPdf()
-    {
-        var result = ReMarkableDeploymentService.GetUniqueFileName("My Material", new List<string>());
-        Assert.Equal("My Material.pdf", result);
-    }
-
-    [Fact]
-    public void GetUniqueFileName_ConflictWithExistingName_ReturnsSuffixed()
-    {
-        var existing = new List<string> { "My Material" };
-        var result = ReMarkableDeploymentService.GetUniqueFileName("My Material", existing);
-        Assert.Equal("My Material (1).pdf", result);
-    }
-
-    [Fact]
-    public void GetUniqueFileName_ConflictWithExistingPdf_ReturnsSuffixed()
-    {
-        var existing = new List<string> { "My Material.pdf" };
-        var result = ReMarkableDeploymentService.GetUniqueFileName("My Material", existing);
-        Assert.Equal("My Material (1).pdf", result);
-    }
-
-    [Fact]
-    public void GetUniqueFileName_MultipleDuplicates_IncrementsCorrectly()
-    {
-        var existing = new List<string> { "My Material", "My Material (1)", "My Material (2)" };
-        var result = ReMarkableDeploymentService.GetUniqueFileName("My Material", existing);
-        Assert.Equal("My Material (3).pdf", result);
+        Assert.Single(results);
+        Assert.False(results[0].Success);
+        Assert.Contains("Email credentials have not been configured", results[0].ErrorMessage!);
     }
 
     #endregion
@@ -249,37 +288,35 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void SanitiseFileName_ValidTitle_ReturnsSameTitle()
     {
-        Assert.Equal("My Material", ReMarkableDeploymentService.SanitiseFileName("My Material"));
+        Assert.Equal("My Material", ExternalDeviceDeploymentService.SanitiseFileName("My Material"));
     }
 
     [Fact]
     public void SanitiseFileName_EmptyTitle_ReturnsDefault()
     {
-        Assert.Equal("Untitled Material", ReMarkableDeploymentService.SanitiseFileName(""));
+        Assert.Equal("Untitled Material", ExternalDeviceDeploymentService.SanitiseFileName(""));
     }
 
     [Fact]
     public void SanitiseFileName_WhitespaceTitle_ReturnsDefault()
     {
-        Assert.Equal("Untitled Material", ReMarkableDeploymentService.SanitiseFileName("   "));
+        Assert.Equal("Untitled Material", ExternalDeviceDeploymentService.SanitiseFileName("   "));
     }
 
     [Fact]
     public void SanitiseFileName_NullTitle_ReturnsDefault()
     {
-        Assert.Equal("Untitled Material", ReMarkableDeploymentService.SanitiseFileName(null!));
+        Assert.Equal("Untitled Material", ExternalDeviceDeploymentService.SanitiseFileName(null!));
     }
 
     [Fact]
     public void SanitiseFileName_InvalidChars_ReplacedWithUnderscore()
     {
-        // Use chars that are invalid on ALL platforms (null char is universally invalid)
         var invalidChars = Path.GetInvalidFileNameChars();
         if (invalidChars.Length > 0)
         {
             var testTitle = $"Test{invalidChars[0]}Material";
-            var result = ReMarkableDeploymentService.SanitiseFileName(testTitle);
-            // Result should not contain any invalid filename characters
+            var result = ExternalDeviceDeploymentService.SanitiseFileName(testTitle);
             Assert.DoesNotContain(result, c => invalidChars.Contains(c));
         }
     }
@@ -287,14 +324,14 @@ public class ReMarkableDeploymentServiceTests
     [Fact]
     public void SanitiseFileName_TrailingDots_Removed()
     {
-        var result = ReMarkableDeploymentService.SanitiseFileName("Title...");
+        var result = ExternalDeviceDeploymentService.SanitiseFileName("Title...");
         Assert.False(result.EndsWith('.'));
     }
 
     [Fact]
     public void SanitiseFileName_MultipleSpaces_Collapsed()
     {
-        var result = ReMarkableDeploymentService.SanitiseFileName("Title    With    Spaces");
+        var result = ExternalDeviceDeploymentService.SanitiseFileName("Title    With    Spaces");
         Assert.DoesNotContain("  ", result);
     }
 

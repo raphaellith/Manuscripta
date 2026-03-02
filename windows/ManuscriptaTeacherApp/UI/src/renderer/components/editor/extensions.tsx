@@ -9,6 +9,7 @@ import React from 'react';
 import katex from 'katex';
 import CodeBlockExt from '@tiptap/extension-code-block';
 import 'katex/dist/katex.min.css';
+import { Plugin, PluginKey } from 'prosemirror-state';
 
 // ============ Attachment Image Extension ============
 // Custom image extension with delete button and keyboard deletion prevention per §4(4)(c)
@@ -260,8 +261,6 @@ export const LatexFormattingGuard = Extension.create({
     name: 'latexFormattingGuard',
 
     addProseMirrorPlugins() {
-        const { Plugin, PluginKey } = require('prosemirror-state');
-
         return [
             new Plugin({
                 key: new PluginKey('latexFormattingGuard'),

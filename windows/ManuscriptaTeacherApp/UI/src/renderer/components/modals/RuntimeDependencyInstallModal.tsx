@@ -10,24 +10,7 @@ interface RuntimeDependencyInstallModalProps {
 
 type InstallState = 'prompt' | 'installing' | 'failed';
 
-const DEPENDENCY_METADATA: Record<string, {
-    name: string;
-    description: string;
-    manualUrl: string;
-    manualPathInfo: React.ReactNode;
-}> = {
-    'rmapi': {
-        name: 'rmapi',
-        description: 'The rmapi tool is required to communicate with reMarkable devices.',
-        manualUrl: 'https://github.com/ddvk/rmapi/releases',
-        manualPathInfo: (
-            <>
-                Download <span className="font-mono">rmapi</span> from GitHub and place it at{' '}
-                <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe</span>
-            </>
-        )
-    }
-};
+import { DEPENDENCY_METADATA } from '../../constants/dependencies';
 
 /**
  * Modal component for handling the installation of runtime dependencies.
@@ -65,9 +48,9 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                 setState('failed');
                 setErrorMessage('Installation failed to start.');
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             setState('failed');
-            setErrorMessage(e.message || 'An error occurred during installation.');
+            setErrorMessage((e as Error).message || 'An error occurred during installation.');
         }
     };
 

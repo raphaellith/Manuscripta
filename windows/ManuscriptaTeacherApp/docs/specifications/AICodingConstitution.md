@@ -137,3 +137,5 @@ Local specifications, located in `windows/ManuscriptaTeachingApp/docs/specificat
 - `FrontendWorkflowSpecifications.md`, the specification that describes the frontend workflow, including how server methods and client handlers are expected to interact.
 - `GenAiSpec.md`, the specifications for classes enabling the `Main` component to access generative AI (GenAI) functionalities provided by IBM Granite and Ollama.
 - `BuildAndDeploymentSpec.md`, defines the build and deployment of the application.
+- `ExternalDeviceIntegrationSpecification.md`, defines the generalization of asynchronous device deployments (reMarkable, Kindle).
+- `EmailHandlingSpecification.md`, defines the handling, storage, and usage of SMTP credentials for teacher-initiated dispatch.

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import type { ConfigurationEntity, FeedbackStyle, MascotSelection } from '../../models';
+import { ModalOverlay } from './ModalOverlay';
 
 interface DeviceConfigurationModalProps {
     deviceId: string;
@@ -13,10 +14,10 @@ interface DeviceConfigurationModalProps {
     onClose: () => void;
 }
 
-export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> = ({ 
-    deviceId, 
-    deviceName, 
-    onClose 
+export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> = ({
+    deviceId,
+    deviceName,
+    onClose
 }) => {
     const [config, setConfig] = useState<ConfigurationEntity | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +67,7 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
     };
 
     return (
-        <div className="fixed inset-0 bg-text-heading/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <ModalOverlay priority="low">
             <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-2xl space-y-6 animate-fade-in-up border border-gray-100 max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-serif text-text-heading">
                     Device Configuration: {deviceName}
@@ -120,8 +121,8 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 <option value="NEUTRAL">Neutral</option>
                             </select>
                             <p className="text-sm text-gray-500 mt-1">
-                                {config.feedbackStyle === 'IMMEDIATE' 
-                                    ? 'Correct/Incorrect feedback is shown immediately' 
+                                {config.feedbackStyle === 'IMMEDIATE'
+                                    ? 'Correct/Incorrect feedback is shown immediately'
                                     : 'Only "Response Submitted" confirmation is shown'}
                             </p>
                         </div>
@@ -229,6 +230,6 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
         }
         .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
       `}</style>
-        </div>
+        </ModalOverlay>
     );
 };
