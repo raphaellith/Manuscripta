@@ -123,16 +123,30 @@ export interface FeedbackEntity {
 }
 
 // ==========================================
-// reMarkable Entities - RemarkableIntegrationSpecification §3
+// External Device Entities
 // ==========================================
 
+export type ExternalDeviceType = 'REMARKABLE' | 'KINDLE';
+
 /**
- * reMarkable device entity per AdditionalValidationRules §3D.
- * Contains device ID and user-friendly name.
+ * Unified external device entity representing paired e-ink reader.
  */
-export interface ReMarkableDeviceEntity {
+export interface ExternalDeviceEntity {
     deviceId: string;
     name: string;
+    type: ExternalDeviceType;
+    configurationData?: string;
+}
+
+/**
+ * Email credentials for dispatching materials via SMTP.
+ */
+export interface EmailCredentialEntity {
+    id: string;
+    emailAddress: string;
+    smtpHost: string;
+    smtpPort: number;
+    password?: string; // May be returned as '********' by backend
 }
 
 // ==========================================

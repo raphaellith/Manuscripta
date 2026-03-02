@@ -76,9 +76,9 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) The splash screen shall be dismissed once the backend is confirmed ready, as specified in subsection (5)(c).
 
-    (d) The frontend shall, in no circumstances, use a wording which appears to the user that there is a frontend-backend separation[, such as "connecting"]. 
+(4A) The frontend shall, in no circumstances, use a wording which appears to the user that there is a frontend-backend separation[, such as "connecting"]. 
 
-    [Explanatory note: The frontend-backend separation is not a user-facing concept. The user should be informed as if there is no such separation.] 
+[Explanatory note: The frontend-backend separation is not a user-facing concept. The user should be informed as if there is no such separation.] 
 
 (5) **Backend Readiness Confirmation**
 
@@ -251,12 +251,23 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) provide a button to re-check the availability of the dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(i).
 
-(4) The frontend shall provide an option in the Settings interface to —
+(4) [DELETED. See Section 7(1).]
 
-    (a) re-check the availability of each runtime dependency by calling the method in paragraph (3)(c); and
+## Section 3B - Email Credential Configuration
 
-    (b) reinstall each runtime dependency by calling the method in subparagraph (2)(b)(i).
+(1) The backend may notify the frontend of missing email credentials during an email-dependent operation by invoking the `EmailCredentialsNotConfigured` handler specified in the Networking API Specification Section 2.
 
+(2) When such notification is received, the frontend shall —
+
+    (a) display a modal indicating to the user that email credentials are required for the requested operation;
+
+    (b) provide a button to navigate to the Settings interface to configure the credentials; and
+
+    (c) provide an option to cancel the dependent operation.
+
+(3) [DELETED. See Section 7(2).]
+
+(4) [DELETED. See Section 7(3).]
 
 ## Section 4 - Functionalities for the "Library" tab
 
@@ -736,86 +747,62 @@ For a list of all server method and client handlers to be implemented for commun
 [DELETED. See Section 3A for generalised runtime dependency management.]
 
 
-## Section 5F — reMarkable Device Pairing
+## Section 5F — External Device Pairing
 
-(1) **Initiating reMarkable Pairing**
+(1) The frontend shall provide a button or other control to initiate external device pairing (reMarkable or Kindle), distinct from Android device pairing.
 
-    The frontend shall provide a button or other control to initiate reMarkable device pairing, distinct from Android device pairing.
+(2) When the user initiates external device pairing —
 
-(2) **Pairing Workflow**
+    (a) the frontend shall prompt the user to select the device type (`REMARKABLE` or `KINDLE`).
 
-    When the user initiates reMarkable pairing —
+    (b) the frontend shall prompt the user to enter a user-friendly device name.
 
-    (a) the frontend shall prompt the user to enter a user-friendly device name;
+    (c) if the selected type is `REMARKABLE`, the frontend shall open `https://my.remarkable.com/device/desktop/connect` and prompt for the one-time code.
 
-    (b) the frontend shall open the user's default browser to `https://my.remarkable.com/device/desktop/connect`;
+    (d) if the selected type is `KINDLE`, the frontend shall prompt for the "Send to Kindle" email address by providing a text input field for the local part and pre-filling/displaying `@kindle.com` as a fixed suffix. It shall also display a reminder to whitelist the sending address.
 
-    (c) the frontend shall display a fallback link for users to visit manually if the browser does not open;
+    (e) the frontend shall call `Task<Guid> PairExternalDevice()`, passing the collected data as the `configurationData` parameter.
 
-    (d) the frontend shall prompt the user to enter the one-time code obtained from the URL in (b);
+    (f) the frontend shall indicate to the user that pairing is in progress.
 
-    (e) the frontend shall call `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`, as defined in §1(1)(n)(i) of the Networking API Specification;
-
-    (f) the frontend shall indicate to the user that pairing is in progress;
-
-    (g) upon success, the frontend shall refresh the device grid in accordance with §5A(3A);
+    (g) upon success, the frontend shall refresh the device grid in accordance with Subsection 5A(3A).
 
     (h) upon failure, the frontend shall display an error message and allow the user to retry or cancel.
 
-(3) **Re-authentication**
+(3) When the backend invokes the `ExternalDeviceAuthInvalid` client handler —
 
-    When the backend invokes the `ReMarkableAuthInvalid` client handler —
+    (a) the frontend shall display a notification indicating that the specified device requires re-authentication.
 
-    (a) the frontend shall display a notification indicating that the specified reMarkable device requires re-authentication;
+    (b) the frontend shall provide an option to initiate re-authentication, following the workflow in Subsection (2).
 
-    (b) the frontend shall provide an option to initiate re-authentication, following the workflow in paragraphs (2)(b)-(h).
+(4) The frontend shall provide a means for the user to unpair an external device by calling `Task UnpairExternalDevice(Guid deviceId)`.
 
-(4) **Unpairing**
+(5) External devices shall be visually distinguished in the device grid. Classroom control and response collection UI elements shall be disabled when an external device is selected.
 
-    The frontend shall provide a means for the user to unpair a reMarkable device by calling `Task UnpairReMarkableDevice(Guid deviceId)`, as defined in §1(1)(n)(ii) of the Networking API Specification.
 
-(5) **Display**
+## Section 5G — Material Deployment to External Devices
 
-    reMarkable devices shall be displayed in the device grid alongside Android devices, with a distinct visual indicator per reMarkable Integration Specification §1(3).
+(1) The frontend shall provide a means to deploy materials to external devices using the same material selection workflow as Android devices in Subsection 5C(3).
 
-(6) **Avoidance of Illegal Actions**
+(2) When the user deploys a material to one or more external devices —
 
-    The frontend shall clearly indicate to the user that the classroom control and response collection functionalities are not available for reMarkable devices, by disabling the corresponding UI elements when a reMarkable device is selected, and stating the reason of the unavailability.
+    (a) the frontend shall perform capability checks for the selected device types:
+        (i) If any `KINDLE` devices are selected, it shall call `CheckEmailCredentialAvailability()`. If false, display the configuration modal in accordance with Subsection 3B(2).
+        (ii) If any `REMARKABLE` devices are selected, the application shall verify the availability of `rmapi`. If the backend invokes the `RuntimeDependencyNotInstalled` handler, the frontend shall display the installation modal and halt deployment in accordance with Section 3A.
 
-## Section 5G — Material Deployment to reMarkable Devices
+    (b) the frontend shall call `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`.
 
-(1) **Initiating Deployment**
+    (c) the frontend shall indicate that deployment is in progress.
 
-    The frontend shall provide a means to deploy materials to reMarkable devices using the same material selection workflow as Android devices per §5C(3).
+    (d) upon completion, the frontend shall display a success message indicating dispatch.
 
-(2) **Deployment Workflow**
+(3) When the user selects a mix of Android and External devices —
 
-    When the user deploys a material to one or more reMarkable devices —
+    (a) the frontend shall call `DeployMaterial` for Android devices;
 
-    (a) the frontend shall call `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`, as defined in §1(1)(n)(vii) of the Networking API Specification;
+    (b) the frontend shall call `DeployMaterialToExternalDevices` for External devices;
 
-    (b) the frontend shall indicate that deployment is in progress;
-
-    (c) upon completion, the frontend shall display a success message indicating that the material has been uploaded to the reMarkable cloud;
-
-    (d) the frontend shall inform the user that the device will receive the material on its next sync.
-
-(3) **Error Handling**
-
-    (a) If the backend invokes the `ReMarkableAuthInvalid` client handler during deployment, the frontend shall follow the re-authentication workflow in §5F(3);
-
-    (b) If the deployment fails for other reasons, the frontend shall display an error message with a retry option.
-
-(4) **Mixed Device Selection**
-
-    When the user selects a mix of Android and reMarkable devices for deployment —
-
-    (a) the frontend shall call `DeployMaterial` for Android devices per §5C(3);
-
-    (b) the frontend shall call `DeployMaterialToReMarkable` for reMarkable devices per this section;
-
-    (c) the frontend shall clearly indicate the status of deployment to each device type separately.
-
+    (c) the frontend shall clearly indicate the status of deployment to each device class separately.
 
 ## Section 5H - Configuration modal
 
@@ -971,10 +958,36 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 7 - Functionalities for the "Settings" tab
 
-(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
+(1) **Device Base Configuration**
 
-(2) The frontend shall -
+    (a) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
 
-    (a) when there are no paired Android devices, provide means to modify any value in the base configuration; and
+    (b) The frontend shall -
 
-    (b) when there are paired Android devices, prevent the user from modifying the base configuration.
+        (i) when there are no paired Android devices, provide means to modify any value in the base configuration; and
+
+        (ii) when there are paired Android devices, prevent the user from modifying the base configuration.
+
+(2) **Runtime Dependency Management**
+
+    The frontend shall provide an option in the Settings interface to —
+
+    (a) re-check the availability of each runtime dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` per Section 3A(3)(c); and
+
+    (b) reinstall each runtime dependency by calling `Task<bool> InstallRuntimeDependency(string dependencyId)` per Section 3A(2)(b)(i).
+
+(3) **Email Credential Configuration**
+
+    The frontend shall provide an interface in the Settings view to configure email credentials. This interface shall —
+
+    (a) collect the `EmailAddress`, `SmtpHost`, `SmtpPort`, and `Password` (or app-specific password) from the user;
+
+    (b) provide a "Save" button which calls `Task SaveEmailCredentials(EmailCredentialEntity credentials)` per the Networking API Specification Section 1;
+
+    (c) display a loading indicator while the backend tests the connection;
+
+    (d) upon success, display a success message; and
+
+    (e) upon failure, display the error message preventing the save operation.
+
+(4) The Settings interface shall also provide a means to view the currently configured `EmailAddress` (retrieved via `GetEmailCredentials()`) and a button to delete the configuration via `DeleteEmailCredentials()`.

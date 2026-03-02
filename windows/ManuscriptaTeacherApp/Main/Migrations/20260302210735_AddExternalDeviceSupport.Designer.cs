@@ -3,6 +3,7 @@ using System;
 using Main.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Manuscripta.Main.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    partial class MainDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260302210735_AddExternalDeviceSupport")]
+    partial class AddExternalDeviceSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -232,9 +235,6 @@ namespace Manuscripta.Main.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("EmbeddingStatus")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Transcript")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -267,6 +267,10 @@ namespace Manuscripta.Main.Migrations
             modelBuilder.Entity("Main.Models.Entities.UnitEntity", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.PrimitiveCollection<string>("SourceDocuments")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

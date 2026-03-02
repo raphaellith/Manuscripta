@@ -11,7 +11,9 @@ import type {
     DeviceStatusEntity,
     ResponseEntity,
     FeedbackEntity,
-    ReMarkableDeviceEntity,
+    ExternalDeviceEntity,
+    ExternalDeviceType,
+    EmailCredentialEntity,
     ConfigurationEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
@@ -151,7 +153,10 @@ class SignalRService {
         if (!this.connection) {
             await this.initialize();
         }
-        return this.connection!;
+        if (!this.connection) {
+            throw new Error("Failed to initialize SignalR connection.");
+        }
+        return this.connection;
     }
 
     /**
@@ -666,39 +671,76 @@ class SignalRService {
     }
 
     // ==========================================
-    // reMarkable Methods - NetworkingAPISpec §1(1)(n)
+    // External Device Methods - NetworkingAPISpec §1(1)(n)
     // ==========================================
 
     /**
-     * Pairs a reMarkable device using a one-time code.
-     * Per NetworkingAPISpec §1(1)(n)(i).
+     * Pairs an external device (reMarkable/Kindle).
      */
-    public async pairReMarkableDevice(name: string, oneTimeCode: string): Promise<string> {
-        return await this.getConnection().invoke<string>("PairReMarkableDevice", name, oneTimeCode);
+    public async pairExternalDevice(name: string, type: ExternalDeviceType, configurationData: string): Promise<string> {
+        return await this.getConnection().invoke<string>("PairExternalDevice", name, type, configurationData);
     }
 
     /**
-     * Unpairs a reMarkable device.
-     * Per NetworkingAPISpec §1(1)(n)(ii).
+     * Unpairs an external device.
      */
-    public async unpairReMarkableDevice(deviceId: string): Promise<void> {
-        await this.getConnection().invoke("UnpairReMarkableDevice", deviceId);
+    public async unpairExternalDevice(deviceId: string): Promise<void> {
+        await this.getConnection().invoke("UnpairExternalDevice", deviceId);
     }
 
     /**
-     * Retrieves all paired reMarkable devices.
-     * Per NetworkingAPISpec §1(1)(n)(iii).
+     * Retrieves all paired external devices.
      */
-    public async getAllReMarkableDevices(): Promise<ReMarkableDeviceEntity[]> {
-        return await this.getConnection().invoke<ReMarkableDeviceEntity[]>("GetAllReMarkableDevices");
+    public async getAllExternalDevices(): Promise<ExternalDeviceEntity[]> {
+        return await this.getConnection().invoke<ExternalDeviceEntity[]>("GetAllExternalDevices");
     }
 
     /**
-     * Updates a reMarkable device entity.
-     * Per NetworkingAPISpec §1(1)(n)(iv).
+     * Updates an external device entity.
      */
-    public async updateReMarkableDevice(entity: ReMarkableDeviceEntity): Promise<void> {
-        await this.getConnection().invoke("UpdateReMarkableDevice", entity);
+    public async updateExternalDevice(entity: ExternalDeviceEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateExternalDevice", entity);
+    }
+
+    /**
+     * Deploys a material to external devices.
+     */
+    public async deployMaterialToExternalDevices(materialId: string, deviceIds: string[]): Promise<void> {
+        await this.getConnection().invoke("DeployMaterialToExternalDevices", materialId, deviceIds);
+    }
+
+    /**
+     * Subscribe to external device auth invalid events.
+     */
+    public onExternalDeviceAuthInvalid(callback: (deviceId: string) => void): () => void {
+        return this.subscribe("ExternalDeviceAuthInvalid", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // Email Configuration Methods - NetworkingAPISpec §1(1)(o)
+    // ==========================================
+
+    public async saveEmailCredentials(credentials: EmailCredentialEntity): Promise<void> {
+        await this.getConnection().invoke("SaveEmailCredentials", credentials);
+    }
+
+    public async getEmailCredentials(): Promise<EmailCredentialEntity | null> {
+        return await this.getConnection().invoke<EmailCredentialEntity | null>("GetEmailCredentials");
+    }
+
+    public async deleteEmailCredentials(): Promise<void> {
+        await this.getConnection().invoke("DeleteEmailCredentials");
+    }
+
+    public async checkEmailCredentialAvailability(): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CheckEmailCredentialAvailability");
+    }
+
+    /**
+     * Subscribe to email credentials not configured events.
+     */
+    public onEmailCredentialsNotConfigured(callback: () => void): () => void {
+        return this.subscribe("EmailCredentialsNotConfigured", callback as (...args: unknown[]) => void);
     }
 
     // ==========================================
@@ -773,21 +815,6 @@ class SignalRService {
         return this.subscribe("RuntimeDependencyInstallProgress", callback as (...args: unknown[]) => void);
     }
 
-    /**
-     * Deploys a material to reMarkable devices.
-     * Per NetworkingAPISpec §1(1)(n)(vii).
-     */
-    public async deployMaterialToReMarkable(materialId: string, deviceIds: string[]): Promise<void> {
-        await this.getConnection().invoke("DeployMaterialToReMarkable", materialId, deviceIds);
-    }
-
-    /**
-     * Subscribe to reMarkable auth invalid events.
-     * Per NetworkingAPISpec §2(1)(f).
-     */
-    public onReMarkableAuthInvalid(callback: (deviceId: string) => void): () => void {
-        return this.subscribe("ReMarkableAuthInvalid", callback as (...args: unknown[]) => void);
-    }
 }
 
 const signalRService = new SignalRService();
