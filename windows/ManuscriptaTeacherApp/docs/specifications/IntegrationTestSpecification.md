@@ -23,10 +23,16 @@ This specification defines how the application should be set up for an integrati
 
 ## Section 2 — Integration Test Startup Mode
 
-(1) The application shall support an integration-test startup mode, activated by the ASP.NET Core environment name `Integration`, such that the application is started with:
+(1) The application shall support an integration-test startup mode, activated by the ASP.NET Core environment name `Integration`. A launch profile named `Integration` is provided in `Properties/launchSettings.json`. The application may be started with either:
 
     ```
-    dotnet run --environment Integration
+    dotnet run --launch-profile Integration
+    ```
+
+    or, bypassing launch profiles:
+
+    ```
+    ASPNETCORE_ENVIRONMENT=Integration dotnet run --no-launch-profile
     ```
 
 (2) When started in integration-test mode, the application shall automatically begin the following network services without requiring user interaction —

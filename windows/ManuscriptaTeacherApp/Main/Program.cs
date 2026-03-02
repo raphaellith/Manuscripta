@@ -110,13 +110,6 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
 
-// Per IntegrationTestSpecification §2(2): auto-start network services in Integration mode
-if (builder.Environment.IsEnvironment("Integration"))
-{
-    builder.Services.AddHostedService<UdpBroadcastHostedService>();
-    builder.Services.AddHostedService<TcpPairingHostedService>();
-}
-
 builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
@@ -180,6 +173,12 @@ if (app.Environment.IsEnvironment("Testing"))
 else if (app.Environment.IsEnvironment("Integration"))
 {
     // Per IntegrationTestSpecification §3: ephemeral in-memory SQLite database.
+    // A sentinel connection must remain open to keep the shared in-memory DB alive
+    // across DbContext scopes (same pattern as NonTestingWebApplicationFactory).
+    var sentinelConnection = new Microsoft.Data.Sqlite.SqliteConnection(
+        app.Configuration.GetConnectionString("MainDbContext"));
+    sentinelConnection.Open();
+
     // Per §3(4): use EnsureCreated() instead of Migrate() for ephemeral databases.
     using (var scope = app.Services.CreateScope())
     {
@@ -319,6 +318,13 @@ else if (app.Environment.IsEnvironment("Integration"))
 
     // Per IntegrationTestSpecification §2(6): readiness log
     app.Logger.LogInformation("Integration test services ready");
+
+    // Per IntegrationTestSpecification §2(2): auto-start UDP broadcasting and TCP listener.
+    // Mirrors TeacherPortalHub.PairDevices() which calls these services directly.
+    var udpService = app.Services.GetRequiredService<IUdpBroadcastService>();
+    var tcpService = app.Services.GetRequiredService<ITcpPairingService>();
+    await udpService.StartBroadcastingAsync(CancellationToken.None);
+    await tcpService.StartListeningAsync(CancellationToken.None);
 }
 else
 {
