@@ -53,23 +53,30 @@ public class MaterialGenerationService : IMaterialGenerationService
         string modelToUse = PrimaryModel;
         bool useFallback = false;
 
+        // §1(6): Check for insufficient resources per GenAISpec §1(6)
         try
         {
             await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
-            
-            // §1(6): Check for insufficient resources per GenAISpec §1(4)
             var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
             if (!canUsePrimary)
             {
                 throw new InvalidOperationException("Insufficient resources for primary model");
             }
         }
-        catch
+        catch (Exception)
         {
             // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
             modelToUse = FallbackModel;
             useFallback = true;
-            await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+            try
+            {
+                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+            }
+            catch
+            {
+                throw new InvalidOperationException(
+                    "Both primary and fallback models are unavailable. Please check your Ollama installation and available system memory.");
+            }
         }
 
         // §3B(3)(a): Embed the description
@@ -102,7 +109,7 @@ public class MaterialGenerationService : IMaterialGenerationService
             generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
         }
         catch (HttpRequestException ex) when (
-            modelToUse == PrimaryModel &&
+            !useFallback &&
             (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
