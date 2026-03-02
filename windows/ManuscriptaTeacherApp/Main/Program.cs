@@ -77,13 +77,15 @@ builder.Services.AddSingleton<Main.Services.Latex.ILatexRenderer, Main.Services.
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
-// Register reMarkable services - NetworkingAPISpec §1(1)(n)
-builder.Services.AddScoped<Main.Services.Repositories.IReMarkableDeviceRepository, Main.Services.Repositories.EfReMarkableDeviceRepository>();
+// Register external device and email services - NetworkingAPISpec §1(1)(n) and §1(1)(o)
+builder.Services.AddScoped<Main.Services.Repositories.IExternalDeviceRepository, Main.Services.Repositories.EfExternalDeviceRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IEmailCredentialRepository, Main.Services.Repositories.EfEmailCredentialRepository>();
 builder.Services.AddSingleton<IRmapiService>(sp =>
     new RmapiService(
         sp.GetRequiredService<ILogger<RmapiService>>(),
         new HttpClient()));
-builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
 
 // Register Runtime Dependency Management
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
@@ -171,7 +173,42 @@ if (!app.Environment.IsEnvironment("Testing"))
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        context.Database.Migrate();
+        
+        // Only run migrations if we are NOT running from EF Core tools (to prevent DB lock issues during design time)
+        bool isEfCoreTool = AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "ef");
+        if (!isEfCoreTool)
+        {
+            // Pre-migration schema fixup: handle databases where AddReMarkableDevices was applied
+            // before the SourceDocuments column was added to UnitEntity. Since the migration ID is
+            // already in __EFMigrationsHistory, EF skips it and the column is never created.
+            try
+            {
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+
+                using var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText =
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Units' " +
+                    "AND sql NOT LIKE '%SourceDocuments%'";
+                var needsFixup = Convert.ToInt64(await checkCmd.ExecuteScalarAsync()) > 0;
+
+                if (needsFixup)
+                {
+                    using var alterCmd = conn.CreateCommand();
+                    alterCmd.CommandText = "ALTER TABLE \"Units\" ADD COLUMN \"SourceDocuments\" TEXT NOT NULL DEFAULT '[]'";
+                    await alterCmd.ExecuteNonQueryAsync();
+                    Console.WriteLine("[MIGRATION FIXUP] Added missing SourceDocuments column to Units table.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore on fresh databases where the Units table doesn't exist yet
+                Console.WriteLine($"[MIGRATION FIXUP] Skipped (expected on fresh DB): {ex.Message}");
+            }
+
+            context.Database.Migrate();
+        }
+        
         // DbInitializer.Initialize(context);
 
         // Orphan file removal per PersistenceAndCascadingRules §3
@@ -220,21 +257,24 @@ if (!app.Environment.IsEnvironment("Testing"))
 
         if (Directory.Exists(rmapiConfigDir))
         {
-            var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
-            var allDevices = await remarkableRepo.GetAllAsync();
-            var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+            var externalRepo = services.GetRequiredService<Main.Services.Repositories.IExternalDeviceRepository>();
+            var allDevices = await externalRepo.GetAllAsync();
+            
+            // Only consider REMARKABLE type devices for rmapi config cleanup (PersistenceAndCascadingRules §3(2))
+            var remarkableDevices = allDevices.Where(d => d.Type == Main.Models.Entities.ExternalDeviceType.REMARKABLE).ToList();
+            var validDeviceIds = new HashSet<string>(remarkableDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
 
             var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
                 .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
 
-            foreach (var device in allDevices)
+            foreach (var device in remarkableDevices)
             {
                 if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
                 {
                     try
                     {
-                        await remarkableRepo.DeleteAsync(device.DeviceId);
-                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                        await externalRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ExternalDeviceEntity: {device.DeviceId}");
                     }
                     catch (Exception ex)
                     {
