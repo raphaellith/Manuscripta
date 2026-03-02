@@ -23,6 +23,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -100,6 +101,12 @@ public class TcpCommandIntegrationTest {
                 TcpOpcode.HAND_ACK, TIMEOUT_SECONDS);
         assertNotNull("Expected HAND_ACK within timeout", ack);
         assertEquals(TcpOpcode.HAND_ACK, ack.getOpcode());
+        assertTrue("HAND_ACK should include operand",
+                ack.hasOperand());
+        String operand = new String(
+                ack.getOperand(), StandardCharsets.UTF_8);
+        assertEquals("HAND_ACK operand should be device ID",
+                config.getTestDeviceId(), operand);
     }
 
     /**
