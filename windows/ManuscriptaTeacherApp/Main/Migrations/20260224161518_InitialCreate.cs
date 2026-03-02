@@ -251,12 +251,14 @@ namespace Manuscripta.Main.Migrations
             migrationBuilder.DropTable(
                 name: "Configurations");
 
-
             migrationBuilder.DropTable(
                 name: "EmailCredentials");
 
             migrationBuilder.DropTable(
                 name: "ExternalDevices");
+
+            migrationBuilder.DropTable(
+                name: "Attachments");
 
             migrationBuilder.DropTable(
                 name: "Questions");
@@ -275,7 +277,6 @@ namespace Manuscripta.Main.Migrations
 
             migrationBuilder.DropTable(
                 name: "UnitCollections");
-
         }
     }
 }
