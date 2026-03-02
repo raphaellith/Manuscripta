@@ -88,6 +88,17 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
+// Exclude integration tests by default; run with -Pintegration
+tasks.withType<Test> {
+    if (!project.hasProperty("integration")) {
+        useJUnit {
+            excludeCategories(
+                "com.manuscripta.student.integration.IntegrationTest"
+            )
+        }
+    }
+}
+
 // Checkstyle configuration
 checkstyle {
     toolVersion = "10.12.0"
