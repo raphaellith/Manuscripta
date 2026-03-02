@@ -4,7 +4,7 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
@@ -97,7 +97,7 @@ export const LessonLibraryPage: React.FC = () => {
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
     const [searchQuery, setSearchQuery] = useState('');
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
-    const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(false);
+    const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(true);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -228,45 +228,18 @@ export const LessonLibraryPage: React.FC = () => {
         await createMaterial({ lessonId, title, content: '', materialType });
     };
 
-    // Per FrontendWorkflowSpecifications §1(3): Check AI dependencies before any AI operation
-    const ensureAiDependenciesAvailable = async (): Promise<boolean> => {
-        try {
-            const ollamaAvailable = await signalRService.checkRuntimeDependencyAvailability("ollama");
-            const chromaAvailable = await signalRService.checkRuntimeDependencyAvailability("chroma");
-            
-            const missing: string[] = [];
-            if (!ollamaAvailable) missing.push("ollama");
-            if (!chromaAvailable) missing.push("chroma");
-            
-            if (missing.length > 0) {
-                setMissingDependencyIds(missing);
+    React.useEffect(() => {
+        const aiDependencyIds = new Set(["ollama", "chroma", "qwen3:8b", "granite4", "nomic-embed-text"]);
+        const unsubscribe = signalRService.onRuntimeDependencyNotInstalled((dependencyIds) => {
+            const aiMissingDependencies = dependencyIds.filter(id => aiDependencyIds.has(id));
+            if (aiMissingDependencies.length > 0) {
+                setMissingDependencyIds(aiMissingDependencies);
                 setAiDependenciesAvailable(false);
-                return false;
             }
+        });
 
-            setAiDependenciesAvailable(true);
-            return true;
-        } catch (error) {
-            console.error('Failed to check AI dependency availability:', error);
-            setAiDependenciesAvailable(false);
-            return false;
-        }
-    };
-
-    // whenever the modal appears or missing dependencies change, verify whether AI
-    // is usable so that child components can disable UI immediately.
-    React.useEffect(() => {
-        if (modal.type === 'createMaterial') {
-            ensureAiDependenciesAvailable();
-        }
-    }, [modal.type]);
-
-    React.useEffect(() => {
-        if (missingDependencyIds.length === 0) {
-            // dependency install may have just completed
-            ensureAiDependenciesAvailable();
-        }
-    }, [missingDependencyIds]);
+        return () => unsubscribe();
+    }, []);
 
     // Per FrontendWorkflowSpec §4B: AI generation handler
     // NOTE: we also proactively update aiDependenciesAvailable when the modal
@@ -280,13 +253,6 @@ export const LessonLibraryPage: React.FC = () => {
         readingAge: number,
         actualAge: number
     ) => {
-        // Per FrontendWorkflowSpecifications §1(3): Verify AI dependencies before generation
-        const dependenciesAvailable = await ensureAiDependenciesAvailable();
-        if (!dependenciesAvailable) {
-            // Modal will be shown, user can install dependencies and retry
-            throw new Error('AI dependencies not available');
-        }
-
         // Per §4B(2): First create material with empty content
         const createdMaterial = await createMaterial({
             lessonId,
@@ -308,6 +274,8 @@ export const LessonLibraryPage: React.FC = () => {
                 readingAge,
                 actualAge,
             });
+
+            setAiDependenciesAvailable(true);
 
             // Per §4B(2)(b): Display content in editor modal
             // Note: Validation warnings will be displayed by the editor modal if present
@@ -577,6 +545,7 @@ export const LessonLibraryPage: React.FC = () => {
                     onClose={() => setMissingDependencyIds([])}
                     onInstallComplete={() => {
                         setMissingDependencyIds([]);
+                        setAiDependenciesAvailable(true);
                         // User can retry AI generation after installation
                     }}
                 />

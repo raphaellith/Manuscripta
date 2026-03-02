@@ -1794,6 +1794,152 @@ public class TeacherPortalHubTests
 
     #endregion
 
+    #region GenAI Dependency Notification Tests
+
+    [Fact]
+    public async Task GenerateReading_MissingOllamaException_NotifiesRuntimeDependencyNotInstalled()
+    {
+        var throwingMaterialService = new ThrowingMaterialGenerationService(new InvalidOperationException("Ollama is not running"));
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockReMarkableDeviceRepository.Object,
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            throwingMaterialService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object);
+
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        var request = new GenerationRequest
+        {
+            Description = "test",
+            ReadingAge = 10,
+            ActualAge = 10,
+            DurationInMinutes = 30,
+            UnitCollectionId = Guid.NewGuid()
+        };
+
+        await Assert.ThrowsAsync<HubException>(() => hub.GenerateReading(request));
+
+        mockClientProxy.Verify(
+            p => p.SendCoreAsync(
+                "RuntimeDependencyNotInstalled",
+                It.Is<object[]>(args =>
+                    args.Length == 1 &&
+                    args[0] != null &&
+                    args[0].GetType() == typeof(List<string>) &&
+                    ((List<string>)args[0]).Contains("ollama")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GenerateReading_NonDependencyException_DoesNotNotifyRuntimeDependencyNotInstalled()
+    {
+        var throwingMaterialService = new ThrowingMaterialGenerationService(new InvalidOperationException("Unexpected server error"));
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockReMarkableDeviceRepository.Object,
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            throwingMaterialService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object);
+
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        var request = new GenerationRequest
+        {
+            Description = "test",
+            ReadingAge = 10,
+            ActualAge = 10,
+            DurationInMinutes = 30,
+            UnitCollectionId = Guid.NewGuid()
+        };
+
+        await Assert.ThrowsAsync<HubException>(() => hub.GenerateReading(request));
+
+        mockClientProxy.Verify(
+            p => p.SendCoreAsync(
+                "RuntimeDependencyNotInstalled",
+                It.IsAny<object[]>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    #endregion
+
     #region Generic Runtime Dependency Tests
 
     [Fact]
@@ -2393,6 +2539,31 @@ public class TeacherPortalHubTests
         public Task<bool> CanGenerateWithPrimaryModelAsync()
         {
             // default stub always claims model is available
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class ThrowingMaterialGenerationService : IMaterialGenerationService
+    {
+        private readonly Exception _exception;
+
+        public ThrowingMaterialGenerationService(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public Task<GenerationResult> GenerateReading(GenerationRequest request)
+        {
+            throw _exception;
+        }
+
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+        {
+            throw _exception;
+        }
+
+        public Task<bool> CanGenerateWithPrimaryModelAsync()
+        {
             return Task.FromResult(true);
         }
     }

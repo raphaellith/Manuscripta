@@ -7,10 +7,9 @@
  * 2b. If AI: collect generation parameters and invoke AI generation
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ModalOverlay } from './ModalOverlay';
-import signalRService from '../../services/signalr/SignalRService';
-import type { MaterialType, GenerationRequest, GenerationResult, UnitCollectionEntity } from '../../models';
+import type { MaterialType, GenerationRequest } from '../../models';
 
 interface CreateMaterialModalProps {
     lessonId: string;
@@ -26,10 +25,9 @@ interface CreateMaterialModalProps {
         actualAge: number
     ) => Promise<void>;
 
-    // Indicates whether the necessary AI runtime dependencies (Ollama + Chroma)
-    // are installed and healthy.  When false the AI option is disabled and the
-    // user is informed.  If not provided the component will query the backend
-    // itself on mount.
+    // Indicates whether the necessary AI runtime dependencies are available.
+    // Per BackendRuntimeDependencyManagementSpecification §3(1), frontend
+    // assumes dependencies are available until backend reports otherwise.
     aiDependenciesAvailable?: boolean;
 }
 
@@ -50,40 +48,11 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     onCreateWithAI,
     aiDependenciesAvailable: aiDepsProp
 }) => {
-    // Track local availability state so that we can disable the AI option while
-    // the backend is still installing/starting Chroma or Ollama.  The parent may
-    // pass a value, otherwise we'll query on mount.
-    const [aiAvailable, setAiAvailable] = useState<boolean>(aiDepsProp ?? false);
-    const [checkedAi, setCheckedAi] = useState<boolean>(false);
-
-    useEffect(() => {
-        if (aiDepsProp !== undefined) {
-            setAiAvailable(aiDepsProp);
-            setCheckedAi(true);
-            return;
-        }
-
-        const check = async () => {
-            try {
-                const ollama = await signalRService.checkRuntimeDependencyAvailability("ollama");
-                const chroma = await signalRService.checkRuntimeDependencyAvailability("chroma");
-                setAiAvailable(ollama && chroma);
-            } catch (err) {
-                console.error("Failed to check AI dependencies:", err);
-                setAiAvailable(false);
-            } finally {
-                setCheckedAi(true);
-            }
-        };
-
-        check();
-    }, [aiDepsProp]);
+    const aiAvailable = aiDepsProp ?? true;
 
     // Step 1: Title and method selection
     const [step, setStep] = useState<Step>('SELECT_METHOD');
     const [title, setTitle] = useState('');
-    const [creationMethod, setCreationMethod] = useState<CreationMethod | null>(null);
-    
     // Step 2a: Manual creation
     const [materialType, setMaterialType] = useState<MaterialType>('READING');
     
@@ -103,7 +72,6 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
             return;
         }
 
-        setCreationMethod(method);
         if (method === 'MANUAL') {
             setStep('MANUAL_TYPE');
         } else {
@@ -219,10 +187,9 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                                 Not available: No unit collection context
                             </div>
                         )}
-                        {/* show dependency warning only after we have checked availability */}
-                        {checkedAi && !aiAvailable && (
+                        {!aiAvailable && (
                             <div className="text-xs text-red-500 mt-1">
-                                AI generation unavailable: ensure Ollama and ChromaDB are installed/started and system resources have stabilized
+                                AI generation unavailable: install the missing runtime dependency and retry.
                             </div>
                         )}
                         <div className="text-xs text-gray-500 italic mt-2">

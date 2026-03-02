@@ -1084,6 +1084,35 @@ public class TeacherPortalHub : Hub
 
     #region GenAI Operations - NetworkingAPISpec §1(1)(i)
 
+    private async Task NotifyMissingAiDependenciesIfApplicable(Exception ex)
+    {
+        if (Clients == null)
+            return;
+
+        var message = (ex.Message ?? string.Empty).ToLowerInvariant();
+        var missingDependencyIds = new List<string>();
+
+        if (message.Contains("ollama"))
+            missingDependencyIds.Add("ollama");
+
+        if (message.Contains("chroma"))
+            missingDependencyIds.Add("chroma");
+
+        if (message.Contains("qwen3"))
+            missingDependencyIds.Add("qwen3:8b");
+
+        if (message.Contains("granite"))
+            missingDependencyIds.Add("granite4");
+
+        if (message.Contains("nomic-embed-text") || message.Contains("nomic embed"))
+            missingDependencyIds.Add("nomic-embed-text");
+
+        if (missingDependencyIds.Count == 0)
+            return;
+
+        await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missingDependencyIds);
+    }
+
     /// <summary>
     /// Generates reading content using AI.
     /// Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec.md §3B(1)(a).
@@ -1096,6 +1125,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate reading: {ex.Message}", ex);
         }
     }
@@ -1112,6 +1142,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate worksheet: {ex.Message}", ex);
         }
     }
@@ -1128,6 +1159,7 @@ public class TeacherPortalHub : Hub
         }
         catch (Exception ex)
         {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to modify content: {ex.Message}", ex);
         }
     }
