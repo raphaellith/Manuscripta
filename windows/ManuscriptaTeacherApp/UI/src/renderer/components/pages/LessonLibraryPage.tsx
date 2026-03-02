@@ -4,7 +4,7 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
@@ -97,6 +97,7 @@ export const LessonLibraryPage: React.FC = () => {
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
     const [searchQuery, setSearchQuery] = useState('');
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
+    const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(false);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -239,16 +240,38 @@ export const LessonLibraryPage: React.FC = () => {
             
             if (missing.length > 0) {
                 setMissingDependencyIds(missing);
+                setAiDependenciesAvailable(false);
                 return false;
             }
+
+            setAiDependenciesAvailable(true);
             return true;
         } catch (error) {
             console.error('Failed to check AI dependency availability:', error);
+            setAiDependenciesAvailable(false);
             return false;
         }
     };
 
+    // whenever the modal appears or missing dependencies change, verify whether AI
+    // is usable so that child components can disable UI immediately.
+    React.useEffect(() => {
+        if (modal.type === 'createMaterial') {
+            ensureAiDependenciesAvailable();
+        }
+    }, [modal.type]);
+
+    React.useEffect(() => {
+        if (missingDependencyIds.length === 0) {
+            // dependency install may have just completed
+            ensureAiDependenciesAvailable();
+        }
+    }, [missingDependencyIds]);
+
     // Per FrontendWorkflowSpec §4B: AI generation handler
+    // NOTE: we also proactively update aiDependenciesAvailable when the modal
+    // opens or when dependencies are installed so that child components can
+    // disable UI appropriately.
     const handleCreateMaterialWithAI = async (
         lessonId: string,
         title: string,
@@ -526,6 +549,7 @@ export const LessonLibraryPage: React.FC = () => {
                         unitCollectionId={unitCollectionId}
                         onClose={() => setModal({ type: 'none' })}
                         onCreate={(title, materialType) => handleCreateMaterial(lesson.id, title, materialType)}
+                        aiDependenciesAvailable={aiDependenciesAvailable}
                         onCreateWithAI={(title, materialType, generationRequest, readingAge, actualAge) =>
                             handleCreateMaterialWithAI(
                                 lesson.id,

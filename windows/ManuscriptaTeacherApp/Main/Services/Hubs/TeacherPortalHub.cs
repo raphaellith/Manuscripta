@@ -893,7 +893,27 @@ public class TeacherPortalHub : Hub
         if (manager == null)
             throw new HubException($"Dependency {dependencyId} not found");
 
-        return await manager.CheckDependencyAvailabilityAsync();
+        var available = await manager.CheckDependencyAvailabilityAsync();
+        if (!available)
+            return false;
+
+        // Special case: even when the Ollama daemon is running, we must also
+        // verify that the primary model can actually generate without running
+        // out of memory.  This prevents the UI from enabling AI immediately
+        // after a heavy memory event such as starting ChromaDB.
+        if (dependencyId == "ollama")
+        {
+            try
+            {
+                return await _materialGenerationService.CanGenerateWithPrimaryModelAsync();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

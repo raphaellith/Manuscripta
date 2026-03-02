@@ -1815,6 +1815,118 @@ public class TeacherPortalHubTests
     }
 
     [Fact]
+    public async Task CheckRuntimeDependencyAvailability_Ollama_UsesModelCheck()
+    {
+        // Arrange
+        var dependencyId = "ollama";
+        var mockManager = new Mock<RuntimeDependencyManagerBase>();
+        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
+
+        var mockMaterial = new Mock<IMaterialGenerationService>();
+        mockMaterial.Setup(s => s.CanGenerateWithPrimaryModelAsync()).ReturnsAsync(false);
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockReMarkableDeviceRepository.Object,
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            mockMaterial.Object,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object);
+
+        // Act
+        var result = await hub.CheckRuntimeDependencyAvailability(dependencyId);
+
+        // Assert
+        Assert.False(result);
+        mockMaterial.Verify(s => s.CanGenerateWithPrimaryModelAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CheckRuntimeDependencyAvailability_Ollama_ReturnsTrueWhenModelOk()
+    {
+        // Arrange
+        var dependencyId = "ollama";
+        var mockManager = new Mock<RuntimeDependencyManagerBase>();
+        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
+
+        var mockMaterial = new Mock<IMaterialGenerationService>();
+        mockMaterial.Setup(s => s.CanGenerateWithPrimaryModelAsync()).ReturnsAsync(true);
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockReMarkableDeviceRepository.Object,
+            _mockReMarkableDeploymentService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            mockMaterial.Object,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object);
+
+        // Act
+        var result = await hub.CheckRuntimeDependencyAvailability(dependencyId);
+
+        // Assert
+        Assert.True(result);
+        mockMaterial.Verify(s => s.CanGenerateWithPrimaryModelAsync(), Times.Once);
+    }
+
+    [Fact]
     public async Task InstallRuntimeDependency_CallsRegistryAndManager()
     {
         // Arrange
@@ -2276,6 +2388,12 @@ public class TeacherPortalHubTests
         public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+
+        public Task<bool> CanGenerateWithPrimaryModelAsync()
+        {
+            // default stub always claims model is available
+            return Task.FromResult(true);
         }
     }
 

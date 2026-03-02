@@ -97,6 +97,44 @@ public class MaterialGenerationServiceTests
         Assert.DoesNotContain("granite4", ollama.ChatModels);
     }
 
+    [Fact]
+    public async Task CanGenerateWithPrimaryModelAsync_ReturnsFalseWhenClientReportsFalse()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService { CanGenerateResult = false };
+        var embeddingService = new Mock<IEmbeddingService>();
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<string>());
+
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+
+        var result = await service.CanGenerateWithPrimaryModelAsync();
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CanGenerateWithPrimaryModelAsync_ReturnsFalseOnException()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService { ThrowOnCanGenerate = true };
+        var embeddingService = new Mock<IEmbeddingService>();
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<string>());
+
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+
+        var result = await service.CanGenerateWithPrimaryModelAsync();
+        Assert.False(result);
+    }
+
     private sealed class FakeOllamaClientService : OllamaClientService
     {
         public bool ThrowOnPrimaryChat { get; set; }
@@ -109,9 +147,16 @@ public class MaterialGenerationServiceTests
             return Task.CompletedTask;
         }
 
+        public bool CanGenerateResult { get; set; } = true;
+        public bool ThrowOnCanGenerate { get; set; }
+
         public override Task<bool> CanGenerateWithModelAsync(string modelName)
         {
-            return Task.FromResult(true);
+            if (ThrowOnCanGenerate)
+            {
+                throw new InvalidOperationException("resource check failed");
+            }
+            return Task.FromResult(CanGenerateResult);
         }
 
         public override Task<float[]> GenerateEmbeddingAsync(string text, string model = "nomic-embed-text")

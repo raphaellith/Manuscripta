@@ -157,4 +157,25 @@ public class MaterialGenerationService : IMaterialGenerationService
         return result;
     }
 
+    /// <summary>
+    /// Lightweight probe used by the frontend availability check.  Attempts a
+    /// quick generation test with the primary model to detect low‑memory
+    /// situations that would cause a real request to fail.  Mirrors the logic in
+    /// OllamaClientService.CanGenerateWithModelAsync but scoped to the primary
+    /// model name.
+    /// </summary>
+    public async Task<bool> CanGenerateWithPrimaryModelAsync()
+    {
+        try
+        {
+            // Ensure the model is at least pulled (will throw if daemon not running)
+            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
+            return await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 }

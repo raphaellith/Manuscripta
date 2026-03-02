@@ -7,8 +7,9 @@
  * 2b. If AI: collect generation parameters and invoke AI generation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModalOverlay } from './ModalOverlay';
+import signalRService from '../../services/signalr/SignalRService';
 import type { MaterialType, GenerationRequest, GenerationResult, UnitCollectionEntity } from '../../models';
 
 interface CreateMaterialModalProps {
@@ -24,6 +25,12 @@ interface CreateMaterialModalProps {
         readingAge: number,
         actualAge: number
     ) => Promise<void>;
+
+    // Indicates whether the necessary AI runtime dependencies (Ollama + Chroma)
+    // are installed and healthy.  When false the AI option is disabled and the
+    // user is informed.  If not provided the component will query the backend
+    // itself on mount.
+    aiDependenciesAvailable?: boolean;
 }
 
 type CreationMethod = 'AI' | 'MANUAL';
@@ -40,8 +47,38 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     unitCollectionId,
     onClose,
     onCreate,
-    onCreateWithAI
+    onCreateWithAI,
+    aiDependenciesAvailable: aiDepsProp
 }) => {
+    // Track local availability state so that we can disable the AI option while
+    // the backend is still installing/starting Chroma or Ollama.  The parent may
+    // pass a value, otherwise we'll query on mount.
+    const [aiAvailable, setAiAvailable] = useState<boolean>(aiDepsProp ?? false);
+    const [checkedAi, setCheckedAi] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (aiDepsProp !== undefined) {
+            setAiAvailable(aiDepsProp);
+            setCheckedAi(true);
+            return;
+        }
+
+        const check = async () => {
+            try {
+                const ollama = await signalRService.checkRuntimeDependencyAvailability("ollama");
+                const chroma = await signalRService.checkRuntimeDependencyAvailability("chroma");
+                setAiAvailable(ollama && chroma);
+            } catch (err) {
+                console.error("Failed to check AI dependencies:", err);
+                setAiAvailable(false);
+            } finally {
+                setCheckedAi(true);
+            }
+        };
+
+        check();
+    }, [aiDepsProp]);
+
     // Step 1: Title and method selection
     const [step, setStep] = useState<Step>('SELECT_METHOD');
     const [title, setTitle] = useState('');
@@ -61,6 +98,11 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     const [error, setError] = useState<string | null>(null);
 
     const handleMethodSelect = (method: CreationMethod) => {
+        if (method === 'AI' && !aiAvailable) {
+            setError('AI generation is not available right now. Please install required dependencies.');
+            return;
+        }
+
         setCreationMethod(method);
         if (method === 'MANUAL') {
             setStep('MANUAL_TYPE');
@@ -101,6 +143,10 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
         }
         if (!onCreateWithAI) {
             setError('AI generation is not supported in this context');
+            return;
+        }
+        if (!aiAvailable) {
+            setError('AI runtime dependencies are not available');
             return;
         }
 
@@ -159,7 +205,7 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={() => handleMethodSelect('AI')}
-                        disabled={!title.trim() || !unitCollectionId}
+                        disabled={!title.trim() || !unitCollectionId || !aiAvailable}
                         className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-brand-orange hover:bg-orange-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <div className="font-sans font-semibold text-text-heading">
@@ -171,6 +217,12 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                         {!unitCollectionId && (
                             <div className="text-xs text-red-500 mt-1">
                                 Not available: No unit collection context
+                            </div>
+                        )}
+                        {/* show dependency warning only after we have checked availability */}
+                        {checkedAi && !aiAvailable && (
+                            <div className="text-xs text-red-500 mt-1">
+                                AI generation unavailable: ensure Ollama and ChromaDB are installed/started and system resources have stabilized
                             </div>
                         )}
                         <div className="text-xs text-gray-500 italic mt-2">
