@@ -1,8 +1,10 @@
 # Integration Test Contract
 
-This document defines the shared assumptions that must hold for network integration tests to pass on both the Android client and Windows server. Every section represents a bilateral agreement: if either side deviates from these rules, cross-platform integration tests will fail.
+This document defines the shared assumptions that must hold for network integration tests to pass across the client and server. Every section represents a bilateral agreement: if either side deviates from these rules, cross-platform integration tests will fail.
 
-**Version:** 1.0
+The **client** (currently the Android tablet application) runs the integration test suite and performs all assertions. The **server** (currently the Windows teacher application) is the system under test — it must be running and reachable before the client tests begin. This asymmetry is intentional: the server acts as a live counterpart, and the client drives all test scenarios.
+
+**Version:** 1.1
 **Status:** Draft
 **Depends on:** API Contract v1.1, Validation Rules, Pairing Process Specification, Session Interaction Specification
 
@@ -10,11 +12,13 @@ This document defines the shared assumptions that must hold for network integrat
 
 ## Section 1 — Scope and Purpose
 
-(1) This contract covers **network-level integration tests only** — tests that exercise the real HTTP, TCP, and UDP stacks of one application against a running instance of the other.
+(1) This contract covers **network-level integration tests only** — tests that exercise the real HTTP, TCP, and UDP stacks of the client against a running instance of the server.
 
-(2) These tests complement, but do not replace, each team's unit tests. Unit tests mock the opposite side; integration tests require a live counterpart.
+(2) These tests complement, but do not replace, each platform's unit tests. Unit tests mock the opposite side; integration tests require a live counterpart.
 
-(3) Both teams must maintain their integration tests against this contract. If a change to either application would violate a clause here, the contract must be amended first by agreement.
+(3) Both teams must maintain their implementations against this contract. If a change to either application would violate a clause here, the contract must be amended first by agreement.
+
+(4) All test assertions are performed **client-side**. The server's role is to respond correctly to client requests and to initiate protocol flows (e.g., UDP broadcasts, TCP commands) as specified. The server does not run its own integration test assertions against the client.
 
 ---
 
@@ -24,34 +28,31 @@ This document defines the shared assumptions that must hold for network integrat
 
 Both applications must agree on the following default port assignments, consistent with `API Contract.md` §1.1:
 
-| Protocol | Default Port | Environment Variable (Android) | Configuration Key (Windows) |
-|----------|-------------|-------------------------------|---------------------------|
-| HTTP (REST) | 5911 | `MANUSCRIPTA_HTTP_PORT` | `NetworkSettings:HttpPort` |
-| TCP (Binary) | 5912 | `MANUSCRIPTA_TCP_PORT` | `NetworkSettings:TcpPort` |
-| UDP (Discovery) | 5913 | `MANUSCRIPTA_UDP_PORT` | `NetworkSettings:UdpBroadcastPort` |
+| Protocol | Default Port |
+|----------|-------------|
+| HTTP (REST) | 5911 |
+| TCP (Binary) | 5912 |
+| UDP (Discovery) | 5913 |
 
-(1) The Android tests read port configuration from the environment variables listed above, falling back to the default values.
+(1) Both sides must support port overrides via their platform's configuration mechanism (e.g., environment variables, configuration files). Default ports apply when no override is set.
 
-(2) The Windows server reads port configuration from `appsettings.json` under the `NetworkSettings` section. Both sides must be configured to use the same ports in the test environment.
+(2) Both sides must be configured to use the **same ports** in the test environment.
 
-(3) The HTTP base URL assumed by Android tests is `http://{host}:{httpPort}/`, where host defaults to `localhost`.
+(3) The HTTP base URL assumed by client tests is `http://{host}:{httpPort}/`, where host defaults to `localhost`.
 
 ### 2.2. Server Host
 
-| Side | Default | Override |
-|------|---------|----------|
-| Android tests | `localhost` | `MANUSCRIPTA_SERVER_HOST` env var |
-| Windows server | Binds to all interfaces | `applicationUrl` in `launchSettings.json` |
+(1) The client defaults to `localhost`, overridable via configuration. The server binds to all interfaces by default.
 
-(1) When running tests locally on the same machine, `localhost` is sufficient.
+(2) When running tests locally on the same machine, `localhost` is sufficient.
 
-(2) When running across the network (e.g., CI with separate containers), both sides must be configured with the correct reachable hostname or IP address.
+(3) When running across the network (e.g., CI with separate containers), both sides must be configured with the correct reachable hostname or IP address.
 
 ### 2.3. HTTP Route Prefix
 
 (1) All HTTP endpoints are served under the `/api/v1/` prefix, per `API Contract.md` §2.
 
-(2) The Windows server enforces that controller endpoints respond **only on the HTTP port** (5911 by default), per host-filtering middleware. Requests to controller routes on other bound ports (e.g., 5910) will receive 404.
+(2) The server enforces that controller endpoints respond **only on the HTTP port** (5911 by default). Requests to controller routes on other bound ports will receive `404`.
 
 (3) The health endpoint `GET /` is available on **any bound port**.
 
@@ -70,9 +71,9 @@ Both sides must accept the following fixed test device for integration testing:
 
 (1) This device ID deliberately uses a non-standard UUID prefix (`inttest-`) to distinguish test traffic from production traffic.
 
-(2) The Windows server must accept this ID in all endpoints that take a device ID, treating it as a valid paired device after registration via `POST /pair`.
+(2) The server must accept this ID in all endpoints that take a device ID, treating it as a valid paired device after registration via `POST /pair`.
 
-(3) The Android tests use this ID consistently across all test classes. No other device IDs are used unless explicitly documented.
+(3) The client tests use this ID consistently across all test classes. No other device IDs are used unless explicitly documented.
 
 ### 3.2. Device Registration
 
@@ -84,12 +85,12 @@ Body: { "DeviceId": "inttest-00000000-0000-0000-0000-000000000001", "Name": "Int
 Expected: 201 Created
 ```
 
-(2) The Windows server must support re-registration of the test device between test runs. This means either:
+(2) The server must support re-registration of the test device between test runs. This means either:
 
   (a) Returning `201 Created` on each registration (idempotent), or
-  (b) Returning `409 Conflict` for duplicates, which the Android tests accept as a valid "already paired" state.
+  (b) Returning `409 Conflict` for duplicates, which the client tests accept as a valid "already paired" state.
 
-(3) Both sides must support cleanup between test executions. The Windows server should provide a mechanism (database reset, test fixture teardown, or ephemeral in-memory database) to ensure a clean state.
+(3) Both sides must support cleanup between test executions. The server should provide a mechanism (database reset, test fixture teardown, or ephemeral in-memory database) to ensure a clean state.
 
 ---
 
@@ -113,7 +114,7 @@ This section defines the exact request/response shapes and status codes that bot
 | Duplicate device ID | `409 Conflict` | — |
 | Missing or empty fields | `400 Bad Request` | — |
 
-**Android assumption:** Tests assert `201` for first registration, and `4xx` (any 400-level) for duplicates and invalid payloads.
+**Client assertion:** Tests assert `201` for first registration, and `4xx` (any 400-level) for duplicates and invalid payloads.
 
 ### 4.2. GET /distribution/{deviceId} — Material Distribution Bundle
 
@@ -150,7 +151,7 @@ This section defines the exact request/response shapes and status codes that bot
 | Materials staged for device | `200 OK` |
 | No materials staged / unknown device | `404 Not Found` |
 
-**Android assumption:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint.
+**Client assertion:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint.
 
 ### 4.3. GET /feedback/{deviceId} — Feedback Retrieval
 
@@ -174,7 +175,7 @@ This section defines the exact request/response shapes and status codes that bot
 | READY feedback available | `200 OK` |
 | No feedback available / unknown device | `404 Not Found` |
 
-**Android assumption:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null.
+**Client assertion:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null.
 
 ### 4.4. GET /config/{deviceId} — Configuration
 
@@ -194,11 +195,11 @@ This section defines the exact request/response shapes and status codes that bot
 |----------|----------------|
 | Valid paired device | `200 OK` |
 | Unknown device | `404 Not Found` |
-| Non-Android device | `403 Forbidden` |
+| Non-client device | `403 Forbidden` |
 
-**Android assumption:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values.
+**Client assertion:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values.
 
-**Windows note:** Per `ConfigController`, this endpoint also marks the device as having received configuration (implicit REFRESH_CONFIG acknowledgement, per `Session Interaction.md` §6(3)).
+**Server note:** This endpoint also marks the device as having received configuration (implicit REFRESH_CONFIG acknowledgement, per `Session Interaction.md` §6(3)).
 
 ### 4.5. GET /attachments/{id} — Attachment Download
 
@@ -207,9 +208,9 @@ This section defines the exact request/response shapes and status codes that bot
 | Attachment exists | `200 OK` | Raw binary + `Content-Type` header |
 | Unknown ID | `404 Not Found` | — |
 
-**Android assumption:** Tests use a well-known test attachment ID of `test-attachment-001`. If this attachment is not pre-staged, the test gracefully accepts `404` and skips further assertions.
+**Client assertion:** Tests use a well-known test attachment ID of `test-attachment-001`. If this attachment is not pre-staged, the test gracefully accepts `404` and skips further assertions.
 
-**Windows obligation:** To exercise the full attachment contract, the server should pre-stage a file with ID `test-attachment-001` in its attachment storage directory (`%APPDATA%/ManuscriptaTeacherApp/Attachments/`).
+**Server obligation:** To exercise the full attachment contract, the server must pre-stage a file with ID `test-attachment-001` in its attachment storage directory (see §12.2).
 
 ### 4.6. POST /responses — Single Response Submission
 
@@ -230,7 +231,7 @@ This section defines the exact request/response shapes and status codes that bot
 | Valid payload | `201 Created` |
 | Missing required fields | `400 Bad Request` |
 
-**Android assumption:** Tests use well-known IDs `test-question-001` and `test-material-001`. These need not correspond to real entities in the database — the server must accept the response for persistence even if the referenced question does not exist, **or** the server should have these entities pre-staged.
+**Client assertion:** Tests use well-known IDs `test-question-001` and `test-material-001`. These need not correspond to real entities in the database — the server must accept the response for persistence even if the referenced question does not exist, **or** the server should have these entities pre-staged (see §12.2).
 
 ### 4.7. POST /responses/batch — Batch Response Submission
 
@@ -248,7 +249,7 @@ This section defines the exact request/response shapes and status codes that bot
 | All valid | `201 Created` |
 | Any malformed | `400 Bad Request` |
 
-**Android assumption:** Batch semantics are all-or-nothing. If any response in the batch is invalid, the entire batch is rejected.
+**Client assertion:** Batch semantics are all-or-nothing. If any response in the batch is invalid, the entire batch is rejected.
 
 ---
 
@@ -287,18 +288,18 @@ Both sides must implement and correctly handle the following opcodes:
 The integration tests verify the following sequence:
 
 ```
-1. Android opens TCP connection to {host}:{tcpPort}
-2. Android sends: [0x20][Device ID as UTF-8 bytes]
-3. Windows responds: [0x21]
+1. Client opens TCP connection to {host}:{tcpPort}
+2. Client sends: [0x20][Device ID as UTF-8 bytes]
+3. Server responds: [0x21]
 4. Connection remains open for subsequent messages
 ```
 
 **Timing:**
-- Android tests use a **3-second pairing timeout** and **1 retry** (faster than production defaults).
-- The Windows server must send `PAIRING_ACK` promptly — within the 3-second window.
+- Client tests use a **3-second pairing timeout** and **1 retry** (faster than production defaults).
+- The server must send `PAIRING_ACK` promptly — within the 3-second window.
 
-**State transitions (Android side):**
-- `NOT_PAIRED` → `PAIRING_IN_PROGRESS` (on `startPairing()`)
+**State transitions (client-side):**
+- `NOT_PAIRED` → `PAIRING_IN_PROGRESS` (on initiating pairing)
 - `PAIRING_IN_PROGRESS` → `PAIRED` (on receipt of `PAIRING_ACK`)
 
 ### 5.4. STATUS_UPDATE (Heartbeat) Message
@@ -318,18 +319,18 @@ The operand of opcode `0x10` is a UTF-8-encoded JSON payload (opcode byte exclud
 
 **Agreements:**
 - JSON field names use **PascalCase**, per `Validation Rules.md` §1(6).
-- The Windows server parses with **case-insensitive property matching** and string-to-enum conversion.
-- The Android client sends heartbeats at the configured interval (production: 3 seconds per `Session Interaction.md` §1(1)(c); tests: 1 second).
-- The Windows server updates its heartbeat tracking on each STATUS_UPDATE and fires a disconnect event after **10 seconds** of silence, per `Session Interaction.md` §2(3).
+- The server must parse with **case-insensitive property matching** and string-to-enum conversion.
+- The client sends heartbeats at the configured interval (production: 3 seconds per `Session Interaction.md` §1(1)(c); tests: 1 second).
+- The server updates its heartbeat tracking on each STATUS_UPDATE and fires a disconnect event after **10 seconds** of silence, per `Session Interaction.md` §2(3).
 
 ### 5.5. HAND_RAISED / HAND_ACK
 
 ```
-Android sends:  [0x11][Device ID as UTF-8]
-Windows sends:  [0x06][Device ID as UTF-8]
+Client sends:  [0x11][Device ID as UTF-8]
+Server sends:  [0x06][Device ID as UTF-8]
 ```
 
-**Android assumption:** After sending HAND_RAISED, the test expects HAND_ACK within **5 seconds** and verifies the response opcode is `0x06`.
+**Client assertion:** After sending HAND_RAISED, the test expects HAND_ACK within **5 seconds** and verifies the response opcode is `0x06`.
 
 ### 5.6. DISTRIBUTE_ACK Format
 
@@ -341,7 +342,7 @@ Bytes 1..N:   Device ID (UTF-8, null-terminated with 0x00)
 Bytes N+1..M: Material ID (UTF-8)
 ```
 
-**Critical detail:** The null byte (`0x00`) separates the two string fields. The Windows server uses `ExtractNullTerminatedStrings()` to parse this. Both sides must agree on this encoding.
+**Critical detail:** The null byte (`0x00`) separates the two string fields. Both sides must agree on this encoding — the server must parse using the null-byte delimiter.
 
 ### 5.7. FEEDBACK_ACK Format
 
@@ -355,16 +356,16 @@ Bytes N+1..M: Feedback ID (UTF-8)
 
 ### 5.8. Server-Initiated Commands
 
-The Android tests observe (but do not require) the following commands during a connected session:
+The client tests observe (but do not require) the following commands during a connected session:
 
 | Command | Opcode | Operand | Expected ACK Pattern |
 |---------|--------|---------|---------------------|
 | LOCK_SCREEN | `0x01` | None | Next STATUS_UPDATE reports `LOCKED` (within 6s) |
 | UNLOCK_SCREEN | `0x02` | None | Next STATUS_UPDATE reports `ON_TASK` or `IDLE` (within 6s) |
-| REFRESH_CONFIG | `0x03` | None | Android calls `GET /config/{deviceId}` (within 5s) |
+| REFRESH_CONFIG | `0x03` | None | Client calls `GET /config/{deviceId}` (within 5s) |
 | UNPAIR | `0x04` | None | TCP connection terminates |
 
-**Android test behaviour:** The command tests are **observational** — they pass whether or not any command is received. To exercise the full command flow, the Windows server would need to send these commands during the test window (e.g., via the Simulation API, per §8).
+**Client test behaviour:** The command tests are **observational** — they pass whether or not any command is received. To exercise the full command flow, the server must send these commands during the test window (e.g., via the Simulation API, per §12.4).
 
 ---
 
@@ -383,19 +384,19 @@ Per `API Contract.md` §3.3, the UDP discovery packet is exactly **9 bytes**:
 
 ### 6.2. Broadcast Behaviour
 
-(1) The Windows server broadcasts on port **5913** (default) to the broadcast address **255.255.255.255**.
+(1) The server broadcasts on port **5913** (default) to the broadcast address **255.255.255.255**.
 
-(2) Broadcast interval is **3 seconds** (configurable via `NetworkSettings:BroadcastIntervalMs`).
+(2) Broadcast interval is **3 seconds** (configurable via the server's network settings).
 
-(3) The Android tests assert the interval between consecutive packets is between **1.5 and 6 seconds** (generous tolerance for system jitter).
+(3) The client tests assert the interval between consecutive packets is between **1.5 and 6 seconds** (generous tolerance for system jitter).
 
-### 6.3. Android Test Mechanics
+### 6.3. Client Test Mechanics
 
-(1) The Android UDP test opens a raw `DatagramSocket` bound to the configured UDP port.
+(1) The client test opens a raw UDP socket bound to the configured UDP port.
 
 (2) Socket receive timeout is **20 seconds** — the test fails if no packet arrives within this window.
 
-(3) After parsing with `DiscoveryMessageParser.parse()`, the test verifies:
+(3) After parsing the 9-byte payload, the test verifies:
   - Opcode is `0x00`
   - HTTP and TCP port values match the test configuration
   - IP address array is non-null (4 bytes)
@@ -412,19 +413,19 @@ The E2E pairing test exercises the complete discovery-to-registration pipeline:
 1. Receive UDP discovery packet              → Parse server IP + ports
 2. Open TCP connection, send PAIRING_REQUEST → Receive PAIRING_ACK (0x21)
 3. POST /pair with device ID and name        → 201 Created
-4. Assert PairingState == PAIRED
+4. Assert pairing state == PAIRED
 ```
 
 **Timeouts:**
 - UDP receive: 20 seconds
-- TCP pairing: 5 seconds (test-level latch)
+- TCP pairing: 5 seconds
 
 ### 7.2. Material Distribution Flow
 
 The E2E distribution test exercises the TCP-triggered HTTP fetch pattern:
 
 ```
-1. Pair device (TCP + HTTP, via helper)
+1. Pair device (TCP + HTTP)
 2. Start heartbeat (STATUS_UPDATE every 1s)
 3. Wait for DISTRIBUTE_MATERIAL (0x05)        → 15-second timeout
 4. If received:
@@ -433,11 +434,11 @@ The E2E distribution test exercises the TCP-triggered HTTP fetch pattern:
 5. Drain messages briefly, assert no UNPAIR received
 ```
 
-**Critical:** The distribution test is **conditional** — if no DISTRIBUTE_MATERIAL signal arrives within 15 seconds, the test passes vacuously. To fully exercise this flow, materials must be staged on the Windows server and the DISTRIBUTE_MATERIAL signal sent during the test window.
+**Critical:** The distribution test is **conditional** — if no DISTRIBUTE_MATERIAL signal arrives within 15 seconds, the test passes vacuously. To fully exercise this flow, materials must be staged on the server and the DISTRIBUTE_MATERIAL signal sent during the test window (see §12.2 and §12.4).
 
-### 7.3. Feedback Return Flow (Implied)
+### 7.3. Feedback Return Flow
 
-Though not currently implemented as a standalone E2E test, the feedback flow follows the same pattern:
+The feedback flow follows the same pattern as material distribution:
 
 ```
 1. Pair device
@@ -452,38 +453,38 @@ Though not currently implemented as a standalone E2E test, the feedback flow fol
 
 ## Section 8 — Test Data and Fixture Requirements
 
-### 8.1. Pre-Staged Data (Windows Server Obligations)
+### 8.1. Pre-Staged Data (Server Obligations)
 
-For integration tests to exercise their full paths, the Windows server should pre-stage the following data. If this data is absent, the corresponding tests pass with reduced coverage (graceful fallback).
+For integration tests to exercise their full paths, the server must pre-stage the following data when running in integration-test mode (see §12). If this data is absent, the corresponding tests pass with reduced coverage (graceful fallback).
 
-| Data | Identifier | Purpose | Test File |
-|------|-----------|---------|-----------|
-| Attachment file | `test-attachment-001` | Attachment download test | `AttachmentEndpointIntegrationTest` |
-| Question entity | `test-question-001` | Response submission test | `ResponseSubmissionIntegrationTest` |
-| Material entity | `test-material-001` | Response submission test (material reference) | `ResponseSubmissionIntegrationTest` |
-| Material bundle | (any, for test device) | Distribution bundle test | `DistributionEndpointIntegrationTest` |
-| Feedback entities | (any, for test device) | Feedback retrieval test | `FeedbackEndpointIntegrationTest` |
-| Configuration | (defaults for test device) | Config retrieval test | `ConfigEndpointIntegrationTest` |
+| Data | Identifier | Purpose |
+|------|-----------|---------|
+| Attachment file | `test-attachment-001` | Attachment download test |
+| Question entity | `test-question-001` | Response submission test |
+| Material entity | `test-material-001` | Response submission test (material reference) |
+| Material bundle | (any, for test device) | Distribution bundle test |
+| Feedback entities | (any, for test device) | Feedback retrieval test |
+| Configuration | (defaults for test device) | Config retrieval test |
 
 ### 8.2. Staging Approaches
 
-The Windows team may satisfy these requirements through any of:
+The server team may satisfy these requirements through any of:
 
-(a) **Database seeding** — Insert test entities via EF Core migrations or startup seeding when running in a test/integration environment.
+(a) **Database seeding** — Insert test entities via database migrations or startup seeding when running in integration-test mode.
 
-(b) **Simulation API** — The Windows server exposes `POST /api/simulation/add-device` and related endpoints under the `/api/simulation` prefix. These could be extended to support material and feedback staging.
+(b) **Simulation API** — The server exposes endpoints under the `/api/simulation` prefix. These should be extended to support material, feedback, and attachment staging (see §12.4).
 
-(c) **Test fixture files** — For attachments, place a file named `test-attachment-001.{ext}` in the attachments directory (`%APPDATA%/ManuscriptaTeacherApp/Attachments/`).
+(c) **Test fixture files** — For attachments, place a file named `test-attachment-001.{ext}` in the server's attachment storage directory.
 
-(d) **Dedicated integration test environment** — Use `ASPNETCORE_ENVIRONMENT=Integration` (or similar) with an `appsettings.Integration.json` that seeds the database.
+(d) **Dedicated integration test environment** — Use a platform-appropriate mechanism (e.g., environment variable, launch profile) with configuration that seeds the database on startup.
 
 ### 8.3. State Isolation Between Tests
 
-(1) Each integration test class registers the test device in its `@Before` setup. The Windows server must handle repeated registrations gracefully (§3.2).
+(1) Each test registers the test device during setup. The server must handle repeated registrations gracefully (§3.2).
 
-(2) TCP tests pair at the start and close the connection in `@After`. The Windows server should clean up connection state when the TCP socket closes.
+(2) TCP tests pair at the start and close the connection during teardown. The server must clean up connection state when the TCP socket closes.
 
-(3) The Windows server's heartbeat monitor (10-second timeout) should not interfere with test execution, as Android tests send heartbeats at 1-second intervals during active TCP sessions.
+(3) The server's heartbeat monitor (10-second timeout) should not interfere with test execution, as client tests send heartbeats at 1-second intervals during active TCP sessions.
 
 ---
 
@@ -491,12 +492,12 @@ The Windows team may satisfy these requirements through any of:
 
 ### 9.1. Timeouts Summary
 
-| Operation | Android Test Timeout | Windows Server Timeout | Source |
-|-----------|---------------------|----------------------|--------|
-| TCP pairing handshake | 3 seconds | — | `NetworkIntegrationHarness` |
+| Operation | Client Test Timeout | Server Timeout | Source |
+|-----------|---------------------|----------------|--------|
+| TCP pairing handshake | 3 seconds | — | Client test harness |
 | Heartbeat interval | 1 second (test) / 3 seconds (production) | — | `Session Interaction.md` §1(1)(c) |
 | Heartbeat disconnect | — | 10 seconds | `Session Interaction.md` §2(3) |
-| DISTRIBUTE_MATERIAL signal wait | 15 seconds | — | `MaterialDistributionFlowIntegrationTest` |
+| DISTRIBUTE_MATERIAL signal wait | 15 seconds | — | Material distribution flow test |
 | DISTRIBUTE_ACK wait | — | 30 seconds | `Session Interaction.md` §3(6) |
 | FEEDBACK_ACK wait | — | 30 seconds | `Session Interaction.md` §7(5) |
 | LOCK/UNLOCK confirmation | — | 6 seconds | `Session Interaction.md` §6(2)(c) |
@@ -508,7 +509,7 @@ The Windows team may satisfy these requirements through any of:
 
 ### 9.2. Tolerance
 
-(1) Android tests use generous tolerances for timing-dependent assertions (e.g., UDP broadcast cadence accepted between 1.5 and 6 seconds).
+(1) Client tests use generous tolerances for timing-dependent assertions (e.g., UDP broadcast cadence accepted between 1.5 and 6 seconds).
 
 (2) Tests that depend on server-initiated actions (commands, distribution signals) use conditional logic — they pass whether or not the action occurs within the timeout window.
 
@@ -525,8 +526,7 @@ Per `Validation Rules.md` §1(6), all JSON field names in DTOs use **PascalCase*
 ✗ "deviceId", "materialType", "questionText", "batteryLevel"
 ```
 
-**Android implementation:** Uses Gson `@SerializedName("PascalCaseName")` annotations.
-**Windows implementation:** Uses System.Text.Json with `PropertyNameCaseInsensitive = true` for parsing, and PascalCase property names for serialisation.
+Both sides must serialise using PascalCase field names on the wire. The server must parse with **case-insensitive property matching** to tolerate minor discrepancies.
 
 ### 10.2. Timestamp Formats
 
@@ -556,7 +556,7 @@ Enums are serialised as **SCREAMING_SNAKE_CASE strings**:
 
 (1) All entity IDs are **UUID strings** (36 characters, hyphenated: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
 
-(2) Device IDs are generated by the Android client. Material, question, and feedback IDs are generated by the Windows server. Per `Validation Rules.md` §3.
+(2) Device IDs are generated by the client. Material, question, and feedback IDs are generated by the server. Per `Validation Rules.md` §3.
 
 (3) The test device ID (`inttest-00000000-0000-0000-0000-000000000001`) is a special case with a non-standard prefix.
 
@@ -570,7 +570,7 @@ Enums are serialised as **SCREAMING_SNAKE_CASE strings**:
 
 ## Section 11 — Build and Execution
 
-### 11.1. Running Android Integration Tests
+### 11.1. Running Client Integration Tests (Android)
 
 ```bash
 cd android
@@ -585,18 +585,20 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 
 Integration tests are annotated with `@Category(IntegrationTest.class)` and excluded from the default test task via Gradle configuration.
 
-### 11.2. Running Windows Server for Integration Tests
+### 11.2. Running Server for Integration Tests (Windows)
+
+The server must be started in **integration-test mode** (see §12.1) so that all network services are active before client tests begin:
 
 ```bash
 cd windows/ManuscriptaTeacherApp/Main
-dotnet run --environment Development
+dotnet run --environment Integration
 ```
 
-The server must be running and accessible at the configured host and ports before Android integration tests are started.
+See §12 for the full list of server-side requirements in integration-test mode.
 
 ### 11.3. CI Pipeline Considerations
 
-(1) Integration tests require a running Windows server instance. CI pipelines must start the server as a background process before executing Android integration tests.
+(1) Integration tests require a running server instance. CI pipelines must start the server as a background process before executing client integration tests.
 
 (2) The test device must be fresh (no prior pairing state) or the server must handle re-pairing gracefully.
 
@@ -604,17 +606,99 @@ The server must be running and accessible at the configured host and ports befor
 
 ---
 
+## Section 12 — Server-Side Requirements for Integration Testing
+
+This section defines the concrete requirements that the server must satisfy to support the integration test suite. These are framed as actionable obligations for the server team.
+
+### 12.1. Integration Test Startup Mode
+
+The server **must** support a startup mode that **automatically starts** all network services required for integration testing. In production, UDP broadcasting and TCP listening may be triggered on demand (e.g., via UI interaction). In integration-test mode, they must start immediately on launch.
+
+**Requirements:**
+
+(1) On startup in integration-test mode, the server must automatically begin:
+  - **UDP discovery broadcasting** on the configured port (default 5913), at the configured interval (default 3 seconds).
+  - **TCP pairing listener** on the configured port (default 5912), accepting incoming connections.
+  - **HTTP REST API** on the configured port (default 5911), serving all endpoints defined in §4.
+
+(2) All three services must be fully operational **before** any client test begins. The server should block or signal readiness (see §12.6) until all services are listening.
+
+(3) The mechanism for activating integration-test mode is the server team's choice. Suggested approaches:
+  - A dedicated environment or launch profile (e.g., `Integration`)
+  - A command-line flag (e.g., `--integration-test`)
+  - An environment variable (e.g., `MANUSCRIPTA_INTEGRATION=true`)
+
+(4) The server must use the same port defaults and protocol implementations as production. Integration-test mode must not alter wire-level behaviour — only service lifecycle (auto-start) and data seeding (§12.2) should differ.
+
+### 12.2. Test Data Seeding
+
+In integration-test mode, the server **must** seed the following entities on startup, so that client tests can exercise their full paths without manual data preparation:
+
+| Entity | Identifier | Requirements |
+|--------|-----------|--------------|
+| Test device configuration | (for `inttest-...001`) | Default configuration values: `TextSize` within 5–50, `FeedbackStyle` of `IMMEDIATE` or `NEUTRAL`, and reasonable defaults for all other fields per §4.4 |
+| Attachment file | `test-attachment-001` | Any binary file (e.g., a small PNG or PDF) accessible via `GET /attachments/test-attachment-001` |
+| Question entity | `test-question-001` | Linked to `test-material-001`, type `WRITTEN_ANSWER` or `MULTIPLE_CHOICE` |
+| Material entity | `test-material-001` | Assigned to the well-known test device (§3.1), type `READING` or `WORKSHEET` |
+| Material bundle | (for test device) | At least one material assigned to the test device so `GET /distribution/{deviceId}` returns `200` |
+| Feedback entities | (for test device) | At least one feedback entity with status `READY` linked to a response from the test device, so `GET /feedback/{deviceId}` returns `200` |
+
+(1) Seeding should use the server's standard data access layer (e.g., database migrations, startup initialisers, or repository calls).
+
+(2) The seeded data must be consistent — foreign key relationships between materials, questions, and feedback must be valid.
+
+(3) If the server cannot seed all entities (e.g., feedback requires a prior response submission), the client tests will fall back gracefully by accepting `404` responses. However, **full seeding is strongly recommended** to maximise test coverage.
+
+### 12.3. Database Isolation
+
+(1) The server **must** use an **ephemeral database** in integration-test mode (e.g., in-memory SQLite or a per-run temporary file).
+
+(2) Each test run must start with a clean state — no leftover devices, materials, sessions, or pairing records from previous runs.
+
+(3) The seeded test data (§12.2) is the only data present at the start of each run.
+
+### 12.4. Simulation API Extensions (Recommended)
+
+The server currently exposes a Simulation API under `/api/simulation/` with endpoints for adding simulated devices and updating status. To enable deterministic end-to-end testing, the following extensions are **recommended**:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/simulation/stage-material` | POST | Stage a material bundle for a given device ID, triggering the `DISTRIBUTE_MATERIAL` TCP signal |
+| `/api/simulation/stage-feedback` | POST | Stage feedback entities for a given device and response ID, triggering the `RETURN_FEEDBACK` TCP signal |
+| `/api/simulation/send-command` | POST | Trigger a specific TCP command (`LOCK_SCREEN`, `UNLOCK_SCREEN`, `REFRESH_CONFIG`, `UNPAIR`) for a given device ID |
+| `/api/simulation/stage-attachment` | POST | Upload a test attachment with a specified ID |
+
+(1) These endpoints enable the client tests to **deterministically trigger** server-initiated flows during the test window, rather than relying on pre-staging and hoping the server sends signals at the right time.
+
+(2) Without these extensions, E2E tests for distribution, feedback, and server commands remain **observational** (passing vacuously if no signal arrives). With them, the tests become **deterministic**.
+
+(3) The Simulation API must only be available in non-production environments (integration-test mode and development).
+
+### 12.5. Graceful Re-Registration and Connection Cleanup
+
+(1) The server **must** handle repeated `POST /pair` calls for the same device ID without crashing or entering an inconsistent state (per §3.2).
+
+(2) When a TCP connection closes (either cleanly or due to network failure), the server **must** clean up the connection state for that device — removing it from the active connections registry and stopping any heartbeat monitoring for that device.
+
+(3) The server's heartbeat monitor (10-second disconnect timeout) must not interfere with test execution. Client tests send heartbeats at 1-second intervals during active sessions.
+
+### 12.6. Server Readiness Signal
+
+(1) The server **should** expose a health check endpoint that returns `200 OK` when **all** services (HTTP, TCP listener, UDP broadcaster) are operational.
+
+(2) The existing `GET /` endpoint is sufficient if it is only reachable once all services have started. If `GET /` becomes available before TCP/UDP services are ready, a dedicated readiness endpoint (e.g., `GET /health`) is recommended.
+
+(3) Client tests should poll the readiness endpoint before starting test execution, with a configurable timeout (recommended: 30 seconds).
+
+---
+
 ## Appendix A — Known Gaps and Future Work
 
-(1) **Material staging automation** — No automated mechanism currently exists to stage materials for the test device. The Simulation API (`/api/simulation`) could be extended with endpoints for creating test materials and questions.
+(1) **Simulation API implementation** — The Simulation API extensions described in §12.4 are recommended but not yet implemented. Until they are available, E2E tests for distribution, feedback, and server commands remain observational.
 
-(2) **Feedback staging automation** — Similar to materials, feedback entities must be manually or programmatically created for the test device's submitted responses.
+(2) **Bidirectional test coverage** — Currently only the client side runs integration tests against the server. A server-side test harness that exercises the server against a simulated client would provide additional coverage, but is not required by this contract.
 
-(3) **Server command triggering** — The TCP command tests (LOCK, UNLOCK, REFRESH_CONFIG, UNPAIR) are observational. A test control API or Simulation API extension would allow the Android tests to trigger these commands on demand.
-
-(4) **Bidirectional test harness** — Currently only the Android side has a test harness. A corresponding Windows-side harness that exercises the server against a simulated Android client would provide symmetric test coverage.
-
-(5) **Attachment staging** — The `test-attachment-001` file must be manually placed. An API endpoint for uploading test attachments would improve automation.
+(3) **Multi-device test scenarios** — The current contract defines a single well-known test device. Future iterations may add additional test devices to verify multi-device scenarios (e.g., broadcast to multiple clients, device-specific distribution).
 
 ---
 
