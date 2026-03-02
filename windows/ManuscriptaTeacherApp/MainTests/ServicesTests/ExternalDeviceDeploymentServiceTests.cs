@@ -72,7 +72,83 @@ public class ExternalDeviceDeploymentServiceTests
             _mockLogger.Object));
     }
 
-    // (Omitted other null argument checks for brevity but they should be there)
+    [Fact]
+    public void Constructor_NullRmapiService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            null!,
+            _mockEmailService.Object,
+            _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullEmailService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            null!,
+            _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullDeviceRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            _mockEmailService.Object,
+            null!,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullEmailCredRepo_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            _mockEmailService.Object,
+            _mockDeviceRepository.Object,
+            null!,
+            _mockMaterialRepository.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullMaterialRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            _mockEmailService.Object,
+            _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
+            null!,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExternalDeviceDeploymentService(
+            _mockPdfService.Object,
+            _mockRmapiService.Object,
+            _mockEmailService.Object,
+            _mockDeviceRepository.Object,
+            _mockEmailCredRepo.Object,
+            _mockMaterialRepository.Object,
+            null!));
+    }
 
     #endregion
 
