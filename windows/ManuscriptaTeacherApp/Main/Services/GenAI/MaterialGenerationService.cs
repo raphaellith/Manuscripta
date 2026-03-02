@@ -68,6 +68,13 @@ public class MaterialGenerationService : IMaterialGenerationService
             // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
             modelToUse = FallbackModel;
             useFallback = true;
+            
+            // CRITICAL: Unload the primary model from memory before attempting fallback
+            // The pre-check may have loaded the primary model into memory, which prevents
+            // the smaller fallback model from fitting in available memory
+            await _ollamaClient.UnloadModelAsync(PrimaryModel);
+            await Task.Delay(1000); // Wait longer for memory to be reclaimed
+            
             try
             {
                 await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
