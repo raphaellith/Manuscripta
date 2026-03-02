@@ -6,16 +6,17 @@ import androidx.annotation.NonNull;
  * Configuration POJO that reads connection parameters from environment
  * variables with sensible defaults.
  *
- * <p>Environment variables:
+ * <p>
+ * Environment variables:
  * <ul>
- *   <li>{@code MANUSCRIPTA_SERVER_HOST} — server IP/hostname
- *       (default {@code "localhost"})</li>
- *   <li>{@code MANUSCRIPTA_HTTP_PORT} — HTTP port
- *       (default {@code 5911})</li>
- *   <li>{@code MANUSCRIPTA_TCP_PORT} — TCP port
- *       (default {@code 5912})</li>
- *   <li>{@code MANUSCRIPTA_UDP_PORT} — UDP port
- *       (default {@code 5913})</li>
+ * <li>{@code MANUSCRIPTA_SERVER_HOST} — server IP/hostname
+ * (default {@code "localhost"})</li>
+ * <li>{@code MANUSCRIPTA_HTTP_PORT} — HTTP port
+ * (default {@code 5911})</li>
+ * <li>{@code MANUSCRIPTA_TCP_PORT} — TCP port
+ * (default {@code 5912})</li>
+ * <li>{@code MANUSCRIPTA_UDP_PORT} — UDP port
+ * (default {@code 5913})</li>
  * </ul>
  */
 public final class IntegrationTestConfig {
@@ -33,8 +34,7 @@ public final class IntegrationTestConfig {
     private static final int DEFAULT_UDP_PORT = 5913;
 
     /** Fixed device ID for reproducible tests. */
-    private static final String DEFAULT_DEVICE_ID =
-            "inttest-00000000-0000-0000-0000-000000000001";
+    private static final String DEFAULT_DEVICE_ID = "00000000-0000-0000-0000-000000000001";
 
     /** Fixed device name for reproducible tests. */
     private static final String DEFAULT_DEVICE_NAME = "Integration Test Tablet";
@@ -49,19 +49,19 @@ public final class IntegrationTestConfig {
     /**
      * Creates a config with explicitly supplied values.
      *
-     * @param serverHost    server hostname or IP
-     * @param httpPort      HTTP port
-     * @param tcpPort       TCP port
-     * @param udpPort       UDP port
-     * @param testDeviceId  device ID used in test requests
+     * @param serverHost     server hostname or IP
+     * @param httpPort       HTTP port
+     * @param tcpPort        TCP port
+     * @param udpPort        UDP port
+     * @param testDeviceId   device ID used in test requests
      * @param testDeviceName device name used in test requests
      */
     public IntegrationTestConfig(@NonNull String serverHost,
-                                 int httpPort,
-                                 int tcpPort,
-                                 int udpPort,
-                                 @NonNull String testDeviceId,
-                                 @NonNull String testDeviceName) {
+            int httpPort,
+            int tcpPort,
+            int udpPort,
+            @NonNull String testDeviceId,
+            @NonNull String testDeviceName) {
         this.serverHost = serverHost;
         this.httpPort = httpPort;
         this.tcpPort = tcpPort;
