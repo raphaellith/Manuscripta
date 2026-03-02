@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+using Main.Testing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,11 +104,19 @@ builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
 builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
-// NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
+// NOTE: UDP broadcasting and TCP pairing are NOT auto-started in production/development.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
+
+// Per IntegrationTestSpecification §2(2): auto-start network services in Integration mode
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    builder.Services.AddHostedService<UdpBroadcastHostedService>();
+    builder.Services.AddHostedService<TcpPairingHostedService>();
+}
+
 builder.Services.AddHostedService<HubEventBridge>();
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
@@ -163,8 +172,26 @@ if (app.Environment.IsDevelopment())
 // Apply CORS policy
 app.UseCors("AllowElectron");
 
-// Skip database initialization and orphan cleanup in Testing environment (for integration tests)
-if (!app.Environment.IsEnvironment("Testing"))
+// Skip database initialization and orphan cleanup in Testing environment (for unit/integration tests)
+if (app.Environment.IsEnvironment("Testing"))
+{
+    // Unit test environment: TestWebApplicationFactory handles DB setup
+}
+else if (app.Environment.IsEnvironment("Integration"))
+{
+    // Per IntegrationTestSpecification §3: ephemeral in-memory SQLite database.
+    // Per §3(4): use EnsureCreated() instead of Migrate() for ephemeral databases.
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
+        context.Database.EnsureCreated();
+    }
+
+    // Per IntegrationTestSpecification §4(4): seed test data after schema creation,
+    // before network services begin accepting connections.
+    await IntegrationTestDataSeeder.SeedAsync(app.Services);
+}
+else
 {
     using (var scope = app.Services.CreateScope())
     {
@@ -281,6 +308,17 @@ if (app.Environment.IsEnvironment("Testing"))
     app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
     app.MapControllers();
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+}
+else if (app.Environment.IsEnvironment("Integration"))
+{
+    // Integration environment: same port routing as production per IntegrationTestSpecification §2(5).
+    var httpApiHostInteg = $"*:{networkSettings.HttpPort}";
+    app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+    app.MapControllers().RequireHost(httpApiHostInteg);
+    app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+
+    // Per IntegrationTestSpecification §2(6): readiness log
+    app.Logger.LogInformation("Integration test services ready");
 }
 else
 {
