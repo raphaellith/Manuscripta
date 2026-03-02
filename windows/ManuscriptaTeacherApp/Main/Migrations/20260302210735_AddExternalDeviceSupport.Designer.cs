@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Manuscripta.Main.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    [Migration("20260224161518_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260302210735_AddExternalDeviceSupport")]
+    partial class AddExternalDeviceSupport
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -101,7 +101,7 @@ namespace Manuscripta.Main.Migrations
 
             modelBuilder.Entity("Main.Models.Entities.ExternalDeviceEntity", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("DeviceId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -116,7 +116,7 @@ namespace Manuscripta.Main.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.HasKey("DeviceId");
 
                     b.ToTable("ExternalDevices");
                 });

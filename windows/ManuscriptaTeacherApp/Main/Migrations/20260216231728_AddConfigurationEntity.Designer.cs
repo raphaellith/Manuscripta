@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Manuscripta.Main.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    [Migration("20260301232408_ValidateNoPendingChanges")]
-    partial class ValidateNoPendingChanges
+    [Migration("20260216231728_AddConfigurationEntity")]
+    partial class AddConfigurationEntity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -71,54 +71,6 @@ namespace Manuscripta.Main.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Configurations");
-                });
-
-            modelBuilder.Entity("Main.Models.Entities.EmailCredentialEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EmailAddress")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SmtpHost")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SmtpPort")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EmailCredentials");
-                });
-
-            modelBuilder.Entity("Main.Models.Entities.ExternalDeviceEntity", b =>
-                {
-                    b.Property<Guid>("DeviceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ConfigurationData")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("DeviceId");
-
-                    b.ToTable("ExternalDevices");
                 });
 
             modelBuilder.Entity("Main.Models.Entities.LessonEntity", b =>
