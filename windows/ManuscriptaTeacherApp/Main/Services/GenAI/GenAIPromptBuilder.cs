@@ -80,6 +80,8 @@ Tailor the material's length so that students can complete the material in appro
 Format the material using the Markdown syntax described below.
 Use British English always.
 Avoid American English.
+Include only material content in your response.
+Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.
 
 
 MARKDOWN SYNTAX:

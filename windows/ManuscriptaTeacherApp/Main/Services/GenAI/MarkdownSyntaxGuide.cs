@@ -26,8 +26,6 @@ public static class MarkdownSyntaxGuide
 
 **Custom markers:**
 - Centred text: `!!! center` followed by indented content
-- PDF embed: `!!! pdf id""uuid""` (do not generate; attachments pre-exist)
-- Question embed: `!!! question id=""uuid""` (do not generate; use question-draft)
 ";
 
         if (includeQuestionSyntax)
