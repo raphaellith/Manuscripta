@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
-using Main.Testing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -188,7 +187,21 @@ else if (app.Environment.IsEnvironment("Integration"))
 
     // Per IntegrationTestSpecification §4(4): seed test data after schema creation,
     // before network services begin accepting connections.
-    await IntegrationTestDataSeeder.SeedAsync(app.Services);
+    // Uses reflection to avoid compile-time dependency on Testing namespace,
+    // which is excluded from Release builds (see .csproj <Compile Remove="Testing\**" />).
+    var seederType = Type.GetType("Main.Testing.IntegrationTestDataSeeder, Manuscripta.Main");
+    if (seederType != null)
+    {
+        var seedMethod = seederType.GetMethod("SeedAsync", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (seedMethod != null)
+        {
+            await (Task)seedMethod.Invoke(null, new object[] { app.Services })!;
+        }
+    }
+    else
+    {
+        app.Logger.LogWarning("IntegrationTestDataSeeder not found — Testing code excluded from this build configuration");
+    }
 }
 else
 {
