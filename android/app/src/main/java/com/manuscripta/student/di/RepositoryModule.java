@@ -81,12 +81,14 @@ public class RepositoryModule {
      * Provides the ResponseRepository implementation.
      *
      * @param responseDao The ResponseDao instance
+     * @param apiService  The ApiService instance for network sync
      * @return ResponseRepository instance
      */
     @Provides
     @Singleton
-    public ResponseRepository provideResponseRepository(ResponseDao responseDao) {
-        return new ResponseRepositoryImpl(responseDao);
+    public ResponseRepository provideResponseRepository(ResponseDao responseDao,
+                                                         ApiService apiService) {
+        return new ResponseRepositoryImpl(responseDao, apiService);
     }
 
     /**
