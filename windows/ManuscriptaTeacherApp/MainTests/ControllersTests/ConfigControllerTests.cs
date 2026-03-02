@@ -60,7 +60,7 @@ public class ConfigControllerTests
 
     #endregion
 
-    #region GET /api/v2/config/{deviceId} Tests
+    #region GET /api/v1/config/{deviceId} Tests
 
     [Fact]
     public async Task GetConfig_ValidAndroidDevice_ReturnsCompiledConfig()

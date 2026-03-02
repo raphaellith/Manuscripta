@@ -1801,6 +1801,11 @@ public class TeacherPortalHubTests
     {
         var throwingMaterialService = new ThrowingMaterialGenerationService(new InvalidOperationException("Ollama is not running"));
 
+        // Set up mock runtime dependency registry to return stub managers that report everything as available
+        var mockRegistry = new Mock<IRuntimeDependencyRegistry>();
+        var stubManager = new StubRuntimeDependencyManager();
+        mockRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(stubManager);
+
         var hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
             _mockUnitService.Object,
@@ -1828,7 +1833,7 @@ public class TeacherPortalHubTests
             _mockRmapiService.Object,
             _mockReMarkableDeviceRepository.Object,
             _mockReMarkableDeploymentService.Object,
-            _mockRuntimeDependencyRegistry.Object,
+            mockRegistry.Object,
             _mockConfigurationService.Object,
             throwingMaterialService,
             _contentModificationService,
@@ -1873,6 +1878,11 @@ public class TeacherPortalHubTests
     public async Task GenerateReading_NonDependencyException_DoesNotNotifyRuntimeDependencyNotInstalled()
     {
         var throwingMaterialService = new ThrowingMaterialGenerationService(new InvalidOperationException("Unexpected server error"));
+
+        // Set up mock runtime dependency registry to return stub managers that report everything as available
+        var mockRegistry = new Mock<IRuntimeDependencyRegistry>();
+        var stubManager = new StubRuntimeDependencyManager();
+        mockRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(stubManager);
 
         var hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -2670,6 +2680,41 @@ public class TeacherPortalHubTests
         public Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
         {
             return Task.FromResult(EmbeddingStatus.PENDING);
+        }
+    }
+
+    private sealed class StubRuntimeDependencyManager : RuntimeDependencyManagerBase
+    {
+        public override string DependencyId => "stub";
+
+        public override Task<bool> CheckDependencyAvailabilityAsync()
+        {
+            return Task.FromResult(true);
+        }
+
+        protected override Task DownloadDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected override Task VerifyDownloadAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected override Task PerformInstallDependencyAsync(IProgress<Main.Models.RuntimeDependencyProgress> progress)
+        {
+            return Task.CompletedTask;
+        }
+
+        public override Task<bool> UninstallDependencyAsync()
+        {
+            return Task.FromResult(true);
+        }
+
+        protected override Task<IDependencyService?> ProvideDependencyServiceAsync()
+        {
+            return Task.FromResult<IDependencyService?>(null);
         }
     }
 

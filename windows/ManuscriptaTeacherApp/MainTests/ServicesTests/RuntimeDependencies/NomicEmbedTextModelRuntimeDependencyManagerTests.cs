@@ -53,17 +53,26 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
 
         protected override Process StartPullProcess(string args)
         {
-            // construct a command that prints some lines slowly
-            // note that cmd /c for loops require double %% at runtime
+            // construct a command that prints some lines
             var psi = new ProcessStartInfo
             {
-                FileName = "cmd",
-                Arguments = "/c \"for /L %i in (1,1,5) do @echo line %i & ping -n 1 localhost >nul\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+
+            if (OperatingSystem.IsWindows())
+            {
+                psi.FileName = "cmd";
+                psi.Arguments = "/c \"for /L %i in (1,1,5) do @echo line %i & ping -n 1 localhost >nul\"";
+            }
+            else
+            {
+                psi.FileName = "/bin/sh";
+                psi.Arguments = "-c \"for i in 1 2 3 4 5; do echo line $i; done\"";
+            }
+
             return Process.Start(psi) ?? throw new InvalidOperationException("failed to start test process");
         }
     }

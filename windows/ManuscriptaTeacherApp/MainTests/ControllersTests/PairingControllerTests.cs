@@ -31,7 +31,7 @@ public class PairingControllerTests
         _controller = new PairingController(_deviceRegistry, _mockControllerLogger.Object);
     }
 
-    #region POST /api/v2/pair Tests
+    #region POST /api/v1/pair Tests
 
     [Fact]
     public async Task Pair_ValidDeviceId_Returns201StatusCode()

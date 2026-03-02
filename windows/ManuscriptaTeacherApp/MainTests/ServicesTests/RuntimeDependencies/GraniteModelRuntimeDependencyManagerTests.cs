@@ -18,24 +18,35 @@ public class GraniteModelRuntimeDependencyManagerTests
     /// </summary>
     private class TestableGraniteModelRuntimeDependencyManager : GraniteModelRuntimeDependencyManager
     {
-        private readonly Process? _dummyProcess;
-
         public TestableGraniteModelRuntimeDependencyManager(
             ILogger<GraniteModelRuntimeDependencyManager> logger,
-            HttpClient httpClient,
-            Process? dummyProcess = null)
+            HttpClient httpClient)
             : base(logger, httpClient)
         {
-            _dummyProcess = dummyProcess;
         }
 
         protected override Process StartPullProcess(string args)
         {
-            if (_dummyProcess != null)
+            var startInfo = new ProcessStartInfo
             {
-                return _dummyProcess;
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            if (OperatingSystem.IsWindows())
+            {
+                startInfo.FileName = "cmd";
+                startInfo.Arguments = "/c \"echo progress1 & echo progress2 & exit /b 0\"";
             }
-            return base.StartPullProcess(args);
+            else
+            {
+                startInfo.FileName = "/bin/sh";
+                startInfo.Arguments = "-c \"echo progress1; echo progress2\"";
+            }
+
+            return Process.Start(startInfo) ?? throw new InvalidOperationException("failed to start test process");
         }
 
         public async Task PublicDownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
@@ -62,24 +73,10 @@ public class GraniteModelRuntimeDependencyManagerTests
     [Fact]
     public async Task DownloadDependencyAsync_ReadsProcessOutputAndCompletes()
     {
-        // Arrange: Create a dummy process that echoes output and exits cleanly
-        var dummyProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "cmd",
-                Arguments = "/c \"echo progress1 & echo progress2 & exit /b 0\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
-        dummyProcess.Start();
-
+        // Arrange
         var mockLogger = new Mock<ILogger<GraniteModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new TestableGraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient, dummyProcess);
+        var manager = new TestableGraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient);
         var progress = new Progress<RuntimeDependencyProgress>();
 
         // Act

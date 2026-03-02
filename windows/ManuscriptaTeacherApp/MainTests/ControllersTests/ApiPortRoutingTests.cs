@@ -33,7 +33,7 @@ public class ApiPortRoutingTests : IClassFixture<NonTestingWebApplicationFactory
             await deviceRegistry.RegisterDeviceAsync(deviceId, "Test Device");
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/config/{deviceId}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/config/{deviceId}");
         request.Headers.Host = "localhost:5911";
 
         var response = await client.SendAsync(request);
@@ -45,7 +45,7 @@ public class ApiPortRoutingTests : IClassFixture<NonTestingWebApplicationFactory
     public async Task Controllers_ReturnNotFound_OnSignalRPort_InNonTesting()
     {
         using var client = _factory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/config/{Guid.NewGuid()}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/config/{Guid.NewGuid()}");
         request.Headers.Host = "localhost:5910";
 
         var response = await client.SendAsync(request);

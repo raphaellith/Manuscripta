@@ -116,6 +116,7 @@ public class MaterialGenerationService : IMaterialGenerationService
             generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
         }
         catch (HttpRequestException ex) when (
+            ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
             (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))

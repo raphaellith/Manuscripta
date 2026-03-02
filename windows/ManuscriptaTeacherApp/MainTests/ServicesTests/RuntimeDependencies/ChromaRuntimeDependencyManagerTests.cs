@@ -22,6 +22,12 @@ public class ChromaRuntimeDependencyManagerTests
 	[Fact]
 	public async Task CheckDependencyAvailabilityAsync_ReturnsTrue_WhenResolvedExecutableSupportsVersion()
 	{
+		// Skip on non-Windows platforms as chroma installation is Windows-specific
+		if (!OperatingSystem.IsWindows())
+		{
+			return;
+		}
+
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var (executablePath, tempDirectory) = CreateFakeChromaExecutable();
 

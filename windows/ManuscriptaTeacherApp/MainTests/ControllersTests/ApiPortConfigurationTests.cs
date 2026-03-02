@@ -128,7 +128,7 @@ public class ApiPortConfigurationTests : IClassFixture<TestWebApplicationFactory
         }
 
         // Act
-        var response = await client.GetAsync($"/api/v2/config/{deviceId}");
+        var response = await client.GetAsync($"/api/v1/config/{deviceId}");
 
         // Assert
         response.EnsureSuccessStatusCode();
@@ -136,7 +136,7 @@ public class ApiPortConfigurationTests : IClassFixture<TestWebApplicationFactory
 
     /// <summary>
     /// Verifies the pairing endpoint is accessible.
-    /// Per API Contract.md §2.4: POST /api/v2/pair
+    /// Per API Contract.md §2.4: POST /api/v1/pair
     /// </summary>
     [Fact]
     public async Task PairingEndpoint_IsAccessible()
@@ -145,7 +145,7 @@ public class ApiPortConfigurationTests : IClassFixture<TestWebApplicationFactory
         using var client = _factory.CreateClient();
 
         // Act
-        var response = await client.PostAsync("/api/v2/pair",
+        var response = await client.PostAsync("/api/v1/pair",
             new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
 
         // Assert - May return 400 due to invalid body, but endpoint should be accessible
