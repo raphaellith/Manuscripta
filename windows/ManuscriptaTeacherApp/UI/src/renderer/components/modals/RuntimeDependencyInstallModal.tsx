@@ -128,32 +128,20 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
         if (!dependencyId) return;
 
         const unsubscribe = signalRService.onRuntimeDependencyInstallProgress(
-            (id, currentPhase, percentage, errorMsg) => {
-                if (id !== dependencyId) return;
-
-                if (currentPhase === 'Completed') {
-                    if (currentIndex < dependencyIds.length - 1) {
-                        const nextId = dependencyIds[currentIndex + 1];
-                        setCurrentIndex(prev => prev + 1);
-                        handleAutoInstallForId(nextId);
-                    } else {
-                        onInstallComplete();
-                    }
-                } else if (currentPhase === 'Failed') {
-                    setState('failed');
-                    setErrorMessage(errorMsg || 'Installation failed.');
-                } else {
-                    setState('installing');
-                    setPhase(currentPhase);
-                    setProgressPercentage(percentage);
-                }
+            (dependencyId, phase, progressPercentage, errorMessage) => {
+                // Throttle updates to avoid overwhelming the UI
+                requestAnimationFrame(() => {
+                    setPhase(phase);
+                    setProgressPercentage(progressPercentage);
+                    setErrorMessage(errorMessage);
+                });
             }
         );
 
         return () => {
             unsubscribe();
         };
-    }, [dependencyId, currentIndex, dependencyIds, onInstallComplete]);
+    }, []);
 
     const handleAutoInstall = () => {
         setCurrentIndex(0);

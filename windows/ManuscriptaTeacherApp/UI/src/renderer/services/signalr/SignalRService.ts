@@ -788,6 +788,17 @@ class SignalRService {
     public onReMarkableAuthInvalid(callback: (deviceId: string) => void): () => void {
         return this.subscribe("ReMarkableAuthInvalid", callback as (...args: unknown[]) => void);
     }
+
+    /**
+     * Fetches all devices and maps to PairedDeviceEntity.
+     */
+    public async getAllDevices(): Promise<PairedDeviceEntity[]> {
+        const deviceStatuses = await this.getConnection().invoke<DeviceStatusEntity[]>("GetAllDevices");
+        return deviceStatuses.map(status => ({
+            deviceId: status.deviceId,
+            name: "Unknown Device", // No name in DeviceStatusEntity, fallback
+        }));
+    }
 }
 
 const signalRService = new SignalRService();
