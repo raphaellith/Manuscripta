@@ -25,6 +25,9 @@
     </module>
 
     <module name="TreeWalker">
+        <!-- Allow suppression comments like CHECKSTYLE:OFF and CHECKSTYLE:ON -->
+        <module name="SuppressionCommentFilter"/>
+
         <!-- Naming Conventions -->
         <module name="ConstantName"/>
         <module name="LocalFinalVariableName"/>
@@ -88,6 +91,8 @@
         <module name="InterfaceIsType"/>
         <module name="VisibilityModifier">
             <property name="protectedAllowed" value="true"/>
+            <property name="ignoreAnnotationCanonicalNames"
+                value="javax.inject.Inject"/>
         </module>
 
         <!-- Miscellaneous -->

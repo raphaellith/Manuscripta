@@ -257,13 +257,13 @@ public class HeartbeatManagerTest {
     // ========== DISTRIBUTE_MATERIAL handling tests ==========
 
     @Test
-    public void onMessageReceived_callsMaterialCallback() {
-        AtomicBoolean callbackCalled = new AtomicBoolean(false);
-        heartbeatManager.setMaterialCallback(() -> callbackCalled.set(true));
+    public void onMessageReceived_callsMaterialCallback() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        heartbeatManager.setMaterialCallback(latch::countDown);
 
         heartbeatManager.onMessageReceived(new DistributeMaterialMessage());
 
-        assertTrue(callbackCalled.get());
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
@@ -287,25 +287,25 @@ public class HeartbeatManagerTest {
     // ========== RETURN_FEEDBACK handling tests ==========
 
     @Test
-    public void onMessageReceived_returnFeedback_callsFeedbackCallback() {
-        AtomicBoolean callbackCalled = new AtomicBoolean(false);
-        heartbeatManager.setFeedbackCallback(() -> callbackCalled.set(true));
+    public void onMessageReceived_returnFeedback_callsFeedbackCallback() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        heartbeatManager.setFeedbackCallback(latch::countDown);
 
         heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
 
-        assertTrue(callbackCalled.get());
+        assertTrue(latch.await(2, java.util.concurrent.TimeUnit.SECONDS));
     }
 
     @Test
-    public void onMessageReceived_returnFeedback_doesNotCallMaterialCallback() {
+    public void onMessageReceived_returnFeedback_doesNotCallMaterialCallback() throws Exception {
         AtomicBoolean materialCalled = new AtomicBoolean(false);
-        AtomicBoolean feedbackCalled = new AtomicBoolean(false);
+        CountDownLatch feedbackLatch = new CountDownLatch(1);
         heartbeatManager.setMaterialCallback(() -> materialCalled.set(true));
-        heartbeatManager.setFeedbackCallback(() -> feedbackCalled.set(true));
+        heartbeatManager.setFeedbackCallback(feedbackLatch::countDown);
 
         heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
 
-        assertTrue(feedbackCalled.get());
+        assertTrue(feedbackLatch.await(2, java.util.concurrent.TimeUnit.SECONDS));
         assertFalse(materialCalled.get());
     }
 

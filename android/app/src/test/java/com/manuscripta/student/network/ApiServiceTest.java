@@ -273,7 +273,7 @@ public class ApiServiceTest {
 
     @Test
     public void testGetConfigSuccess() throws IOException, InterruptedException {
-        ConfigResponseDto config = new ConfigResponseDto(true, "medium");
+        ConfigResponseDto config = new ConfigResponseDto(24, "IMMEDIATE", true, true, true, "MASCOT1");
         String jsonResponse = gson.toJson(config);
 
         mockWebServer.enqueue(new MockResponse()
@@ -286,8 +286,10 @@ public class ApiServiceTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals(Boolean.TRUE, response.body().getKioskMode());
-        assertEquals("medium", response.body().getTextSize());
+        assertEquals(Integer.valueOf(24), response.body().getTextSize());
+        assertEquals("IMMEDIATE", response.body().getFeedbackStyle());
+        assertEquals(Boolean.TRUE, response.body().getTtsEnabled());
+        assertEquals("MASCOT1", response.body().getMascotSelection());
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("GET", request.getMethod());
@@ -295,8 +297,8 @@ public class ApiServiceTest {
     }
 
     @Test
-    public void testGetConfigKioskModeDisabled() throws IOException {
-        ConfigResponseDto config = new ConfigResponseDto(false, "large");
+    public void testGetConfigAssessmentMode() throws IOException {
+        ConfigResponseDto config = new ConfigResponseDto(30, "NEUTRAL", false, false, false, "NONE");
         String jsonResponse = gson.toJson(config);
 
         mockWebServer.enqueue(new MockResponse()
@@ -309,13 +311,14 @@ public class ApiServiceTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals(Boolean.FALSE, response.body().getKioskMode());
-        assertEquals("large", response.body().getTextSize());
+        assertEquals("NEUTRAL", response.body().getFeedbackStyle());
+        assertEquals(Boolean.FALSE, response.body().getAiScaffoldingEnabled());
+        assertEquals("NONE", response.body().getMascotSelection());
     }
 
     @Test
     public void testGetConfigWithNullValues() throws IOException {
-        ConfigResponseDto config = new ConfigResponseDto(null, null);
+        ConfigResponseDto config = new ConfigResponseDto(null, null, null, null, null, null);
         String jsonResponse = gson.toJson(config);
 
         mockWebServer.enqueue(new MockResponse()
@@ -328,8 +331,8 @@ public class ApiServiceTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertNull(response.body().getKioskMode());
         assertNull(response.body().getTextSize());
+        assertNull(response.body().getFeedbackStyle());
     }
 
     // ========== POST /pair Tests ==========

@@ -11,7 +11,7 @@ import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.FeedbackDto;
 import com.manuscripta.student.network.FeedbackResponse;
-import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
 import java.io.IOException;
@@ -37,23 +37,32 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     private final FeedbackDao feedbackDao;
     /** The Retrofit API service for network calls. */
     private final ApiService apiService;
-    /** The TCP socket manager for sending acknowledgements. */
-    private final TcpSocketManager tcpSocketManager;
+    /** Handles retry logic for sending ACK messages over TCP. */
+    private final AckRetrySender ackRetrySender;
 
     /**
      * Creates a new FeedbackRepositoryImpl.
      *
-     * @param feedbackDao      The DAO for feedback persistence
-     * @param apiService       The Retrofit API service
-     * @param tcpSocketManager The TCP socket manager for sending ACK
+     * @param feedbackDao    The DAO for feedback persistence
+     * @param apiService     The Retrofit API service
+     * @param ackRetrySender The retry sender for ACK messages
      */
     @Inject
     public FeedbackRepositoryImpl(@NonNull FeedbackDao feedbackDao,
                                   @NonNull ApiService apiService,
-                                  @NonNull TcpSocketManager tcpSocketManager) {
+                                  @NonNull AckRetrySender ackRetrySender) {
+        if (feedbackDao == null) {
+            throw new IllegalArgumentException("FeedbackDao cannot be null");
+        }
+        if (apiService == null) {
+            throw new IllegalArgumentException("ApiService cannot be null");
+        }
+        if (ackRetrySender == null) {
+            throw new IllegalArgumentException("AckRetrySender cannot be null");
+        }
         this.feedbackDao = feedbackDao;
         this.apiService = apiService;
-        this.tcpSocketManager = tcpSocketManager;
+        this.ackRetrySender = ackRetrySender;
     }
 
     @Override
@@ -67,8 +76,7 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
         if (!response.isSuccessful()) {
             if (response.code() == 404) {
-                // No feedback available - this is not an error, send ACK
-                sendAcknowledgement(deviceId);
+                // No feedback available — nothing to acknowledge
                 return;
             }
             throw new IOException("Failed to fetch feedback: HTTP " + response.code());
@@ -76,12 +84,12 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
 
         FeedbackResponse feedbackResponse = response.body();
         if (feedbackResponse == null || feedbackResponse.getFeedback() == null) {
-            sendAcknowledgement(deviceId);
             return;
         }
 
         // Convert DTOs to entities via domain model for validation
         List<FeedbackEntity> entities = new ArrayList<>();
+        List<String> feedbackIds = new ArrayList<>();
         for (FeedbackDto dto : feedbackResponse.getFeedback()) {
             try {
                 // Validate through domain model
@@ -94,6 +102,7 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
                 // Convert to entity for persistence
                 FeedbackEntity entity = FeedbackMapper.toEntity(domainFeedback);
                 entities.add(entity);
+                feedbackIds.add(dto.getId());
             } catch (IllegalArgumentException e) {
                 // Log and skip invalid feedback entries
                 Log.w(TAG, "Skipping invalid feedback: " + e.getMessage());
@@ -104,21 +113,9 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
             feedbackDao.insertAll(entities);
         }
 
-        // Send acknowledgement via TCP
-        sendAcknowledgement(deviceId);
-    }
-
-    /**
-     * Sends a FEEDBACK_ACK message to the server.
-     *
-     * @param deviceId The device ID to include in the acknowledgement
-     */
-    private void sendAcknowledgement(@NonNull String deviceId) {
-        FeedbackAckMessage ackMessage = new FeedbackAckMessage(deviceId);
-        try {
-            tcpSocketManager.send(ackMessage);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to send FEEDBACK_ACK: " + e.getMessage());
+        // Per API Contract §3.6.2, send one FEEDBACK_ACK per successfully stored entity
+        for (String feedbackId : feedbackIds) {
+            ackRetrySender.send(new FeedbackAckMessage(deviceId, feedbackId), TAG);
         }
     }
 

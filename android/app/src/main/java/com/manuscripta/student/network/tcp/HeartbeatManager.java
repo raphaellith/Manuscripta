@@ -15,15 +15,13 @@ import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  * Manages the TCP heartbeat mechanism for maintaining connection and triggering fetches.
@@ -49,7 +47,6 @@ import javax.inject.Singleton;
  * @see HeartbeatConfig
  * @see TcpSocketManager
  */
-@Singleton
 public class HeartbeatManager implements TcpMessageListener {
 
     /** Tag for logging. */
@@ -105,18 +102,22 @@ public class HeartbeatManager implements TcpMessageListener {
     private ScheduledFuture<?> heartbeatFuture;
     /** Provider for current device status. */
     @Nullable
-    private DeviceStatusProvider statusProvider;
+    private volatile DeviceStatusProvider statusProvider;
     /** Callback for when materials are available. */
     @Nullable
-    private MaterialAvailableCallback materialCallback;
+    private volatile MaterialAvailableCallback materialCallback;
     /** Callback for when feedback is available. */
     @Nullable
-    private FeedbackAvailableCallback feedbackCallback;
+    private volatile FeedbackAvailableCallback feedbackCallback;
+    /** Executor owned by this manager for dispatching material/feedback callbacks. */
+    private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
 
     /** The heartbeat configuration. */
-    private HeartbeatConfig config;
+    private volatile HeartbeatConfig config;
     /** Whether the heartbeat is currently running. */
     private final AtomicBoolean running = new AtomicBoolean(false);
+    /** Whether this manager has been permanently destroyed. */
+    private final AtomicBoolean destroyed = new AtomicBoolean(false);
     /** Counter for heartbeats sent. */
     private final AtomicLong heartbeatCount = new AtomicLong(0);
     /** Timestamp of the last heartbeat sent. */
@@ -127,7 +128,6 @@ public class HeartbeatManager implements TcpMessageListener {
      *
      * @param socketManager The TCP socket manager for sending messages.
      */
-    @Inject
     public HeartbeatManager(@NonNull TcpSocketManager socketManager) {
         this(socketManager, new HeartbeatConfig(), new Gson());
     }
@@ -268,17 +268,20 @@ public class HeartbeatManager implements TcpMessageListener {
 
     @Override
     public void onMessageReceived(@NonNull TcpMessage message) {
+        if (destroyed.get()) {
+            return;
+        }
         if (message instanceof DistributeMaterialMessage) {
             Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
             MaterialAvailableCallback callback = this.materialCallback;
             if (callback != null) {
-                callback.onMaterialsAvailable();
+                callbackExecutor.execute(callback::onMaterialsAvailable);
             }
         } else if (message instanceof ReturnFeedbackMessage) {
             Log.d(TAG, "Received RETURN_FEEDBACK signal");
             FeedbackAvailableCallback callback = this.feedbackCallback;
             if (callback != null) {
-                callback.onFeedbackAvailable();
+                callbackExecutor.execute(callback::onFeedbackAvailable);
             }
         }
     }
@@ -399,7 +402,9 @@ public class HeartbeatManager implements TcpMessageListener {
      * Cleans up resources. Should be called when the manager is no longer needed.
      */
     public void destroy() {
-        stop();
+        destroyed.set(true);
         socketManager.removeMessageListener(this);
+        stop();
+        callbackExecutor.shutdown();
     }
 }
