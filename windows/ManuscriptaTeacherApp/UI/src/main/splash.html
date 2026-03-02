@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Manuscripta Teacher Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .error-container {
+            display: none;
+        }
+        
+        .error-container.visible {
+            display: block;
+        }
+        
+        .error-message {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-width: 400px;
+        }
+        
+        .error-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #ffcccc;
+        }
+        
+        .error-text {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📚</div>
+        <h1>Manuscripta Teacher Portal</h1>
+        
+        <div id="loading-container">
+            <div class="spinner"></div>
+            <p class="status" id="status-text">Starting application...</p>
+        </div>
+        
+        <div id="error-container" class="error-container">
+            <div class="error-message">
+                <div class="error-title">⚠️ Startup Error</div>
+                <p class="error-text" id="error-text">The application failed to start.</p>
+                <div class="buttons">
+                    <button class="btn-primary" id="retry-btn">Retry</button>
+                    <button class="btn-secondary" id="exit-btn">Exit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // IPC communication will be set up by preload script
+        // For now, this is a static splash screen
+        
+        // Update status text via IPC
+        if (window.splashAPI) {
+            window.splashAPI.onStatusUpdate((status) => {
+                document.getElementById('status-text').textContent = status;
+            });
+            
+            window.splashAPI.onError((error) => {
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('error-container').classList.add('visible');
+                document.getElementById('error-text').textContent = error;
+            });
+        }
+        
+        document.getElementById('retry-btn')?.addEventListener('click', () => {
+            if (window.splashAPI) {
+                window.splashAPI.retry();
+            }
+        });
+        
+        document.getElementById('exit-btn')?.addEventListener('click', () => {
+            if (window.splashAPI) {
+                window.splashAPI.exit();
+            }
+        });
+    </script>
+</body>
+</html>

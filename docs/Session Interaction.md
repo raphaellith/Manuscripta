@@ -51,6 +51,8 @@ This is specified in `API Contract.md` §2.5.
 
 (2) The Android client may evaluate the correctness of the response if it is straightforward to do so (such as for multiple choice, true / false or simple blank filling questions), and place the result of evaluation in the `IsCorrect` field.
 
+(3) Each Android client must not, at any point, submit two responses related to the same question.
+
 ## Section 4A: Raising Hand
 
 (1) The Android client should signal that its user is asked for help by sending a TCP `HAND_RAISED` (0x11) message.
@@ -60,9 +62,6 @@ This is specified in `API Contract.md` §2.5.
 (3) If the Android client does not receive an acknowledgement specified in (2) from the Windows machine within 3 seconds, it should resend the `HAND_RAISED` message, until a `HAND_ACK` message is received.
 
 (4) If the Windows device receives multiple `HAND_RAISED` messages from the same Android device, it should only signal the teacher once before acknowledgement from the user.
-
-(3) Each Android client must not, at any point, submit two responses related to the same question.
-
 
 ## Section 5: Lifetime of a Session
 
@@ -128,10 +127,9 @@ A session shall be automatically transitioned to `CANCELLED` if the device is de
 
     (a) On receipt of `UNPAIR` (0x04), the Android device must terminate the TCP connection. The severance of the connection serves as the acknowledgement.
 
-
 ## Section 7: Returning Feedback
 
-(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x07`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
+(1) The Windows client returns feedback by sending a TCP `RETURN_FEEDBACK` message (opcode `0x06`), as specified in `API Contract.md` §3.4, to the Android device which are the intended recipient.
 
 (2) The Android client must, on receipt of the message specified in (1), call `GET /feedback/{deviceId}` as specified in `API Contract.md` §2.6, to retrieve all feedback available thereto.
 
