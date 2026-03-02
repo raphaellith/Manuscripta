@@ -109,16 +109,34 @@ public class MaterialGenerationService : IMaterialGenerationService
             generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
         }
         catch (HttpRequestException ex) when (
-            !useFallback &&
             (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
         {
             // §1(6)(a): fall back when primary model is unavailable or has insufficient resources at runtime.
-            modelToUse = FallbackModel;
-            useFallback = true;
-            await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-            generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            if (!useFallback)
+            {
+                modelToUse = FallbackModel;
+                useFallback = true;
+                try
+                {
+                    await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                    generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+                }
+                catch (Exception fallbackEx)
+                {
+                    throw new InvalidOperationException(
+                        $"Both primary (qwen3:8b) and fallback (granite4) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
+                        fallbackEx);
+                }
+            }
+            else
+            {
+                // Already on fallback, so this is a genuine failure
+                throw new InvalidOperationException(
+                    $"The fallback model (granite4) also failed due to insufficient system memory (requires 3.0+ GiB). Please close other applications and try again.",
+                    ex);
+            }
         }
 
         // §3B(3)(e): Validate and refine
