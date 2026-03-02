@@ -19,6 +19,14 @@ const AppContent: React.FC = () => {
     const { isLoading, error, isConnected, backendState, refreshData } = useAppContext();
     const [activeView, setActiveView] = useState<View>('lesson-library');
 
+    React.useEffect(() => {
+        const handleNavigate = (e: Event) => {
+            const customEvent = e as CustomEvent<{ view: View }>;
+            setActiveView(customEvent.detail.view);
+        };
+        window.addEventListener('app-navigate', handleNavigate);
+        return () => window.removeEventListener('app-navigate', handleNavigate);
+    }, []);
     /**
      * Render connection status indicator.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i): Display reconnecting indicator.

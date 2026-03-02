@@ -155,23 +155,29 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `Task<bool> InstallRuntimeDependency(string dependencyId)`: Installs the runtime dependency with the specified dependencyId per Runtime Dependency Management Specification §2(2). Returns `true` on success, `false` on failure.
 
-    (n) Methods for reMarkable device management.
+    (n) Methods for external device management.
 
-        (i) `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`: Pairs a reMarkable device by authenticating with the one-time code, creating the configuration file, and persisting the `ReMarkableDeviceEntity`. Returns the UUID of the newly created device entity.
+        (i) `Task<Guid> PairExternalDevice(string name, ExternalDeviceType type, string configurationData)`: Pairs an external device by persisting the `ExternalDeviceEntity` and any required files (e.g. rmapi conf). For reMarkable, `configurationData` is the one-time code. For Kindle, `configurationData` is the Kindle email address. Returns the UUID of the newly created device entity.
 
-        (ii) `Task UnpairReMarkableDevice(Guid deviceId)`: Unpairs a reMarkable device by deleting the `ReMarkableDeviceEntity` and the corresponding rmapi configuration file.
+        (ii) `Task UnpairExternalDevice(Guid deviceId)`: Unpairs an external device by deleting the `ExternalDeviceEntity` and any related local files.
 
-        (iii) `Task<List<ReMarkableDeviceEntity>> GetAllReMarkableDevices()`: Retrieves all paired reMarkable devices.
+        (iii) `Task<List<ExternalDeviceEntity>> GetAllExternalDevices()`: Retrieves all paired external devices.
 
-        (iv) `Task UpdateReMarkableDevice(ReMarkableDeviceEntity entity)`: Updates a reMarkable device entity, identified by its UUID.
+        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID.
 
-        (v) [DELETED]
+        (v) `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified external devices by dispatching it through their respective delivery mechanisms. Returns when all deployments are complete or have failed.
 
-        (vi) [DELETED]
+    (o) Methods for email credential management.
 
-        (vii) `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified reMarkable devices by generating a PDF and uploading it to each device's reMarkable cloud via rmapi. Returns when all uploads are complete or have failed.
-    
-    (o) Methods for base configuration and device-specific overrides.
+        (i) `Task SaveEmailCredentials(EmailCredentialEntity credentials)`: Validates, tests, and persists the email credentials per Email Handling Specification Section 2(4). Replaces any existing credentials.
+
+        (ii) `Task<EmailCredentialEntity?> GetEmailCredentials()`: Retrieves the stored email credentials, if any. The `Password` field shall be redacted in the returned entity.
+
+        (iii) `Task DeleteEmailCredentials()`: Deletes the stored email credentials per Email Handling Specification Section 2(5).
+
+        (iv) `Task<bool> CheckEmailCredentialAvailability()`: Checks whether valid email credentials have been configured per Email Handling Specification Section 2A(1). Returns `true` if available, `false` otherwise.
+
+    (p) Methods for base configuration and device-specific overrides.
 
         (i) `Task<ConfigurationEntity> GetBaseConfiguration()`: Retrieves the base configuration assumed by all Android devices.
 
@@ -225,3 +231,9 @@ For a description of how these server methods and client handlers are expected t
         (i) `RuntimeDependencyNotInstalled`, with parameter `dependencyIds` (List<String>): Notifies the frontend that the list of runtime dependencies specified by `dependencyIds` have not been installed properly.
 
         (ii) `RuntimeDependencyInstallProgress`, with parameters `dependencyId` (string), `phase` (string), `progressPercentage` (int?) and `errorMessage` (string?): Notifies the frontend of the progress of a runtime dependency installation. The `phase` parameter shall be one of "Downloading", "Verifying", "Installing", "Completed" or "Failed". The `progressPercentage` parameter shall be an integer between 0 and 100 inclusive when `phase` is "Downloading", and null otherwise. The `errorMessage` parameter shall contain the error description when `phase` is "Failed", and null otherwise.
+
+    (g) Handlers for capability requirements.
+
+        (i) `ExternalDeviceAuthInvalid`, with parameter `deviceId` (Guid): Notifies the frontend that the specified external device requires re-authentication (e.g. revoked reMarkable token).
+
+        (ii) `EmailCredentialsNotConfigured`: Notifies the frontend that an operation failed because email credentials have not been configured.

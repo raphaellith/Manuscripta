@@ -43,10 +43,16 @@ public class MainDbContext : DbContext
     public DbSet<ConfigurationEntity> Configurations { get; set; }
     
     /// <summary>
-    /// Paired reMarkable devices.
-    /// Per PersistenceAndCascadingRules.md §1(1)(h).
+    /// Paired external devices (reMarkable, Kindle).
+    /// Per PersistenceAndCascadingRules.md §1(1)(i).
     /// </summary>
-    public DbSet<ReMarkableDeviceEntity> ReMarkableDevices { get; set; }
+    public DbSet<ExternalDeviceEntity> ExternalDevices { get; set; }
+
+    /// <summary>
+    /// Email credentials for SMTP dispatch.
+    /// Per PersistenceAndCascadingRules.md §1(1)(j).
+    /// </summary>
+    public DbSet<EmailCredentialEntity> EmailCredentials { get; set; }
     
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
@@ -159,11 +165,19 @@ public class MainDbContext : DbContext
             entity.Property(e => e.MascotSelection).HasConversion<string>();
         });
         
-        // Configure ReMarkableDeviceEntity
-        // Per PersistenceAndCascadingRules.md §1(1)(h)
-        modelBuilder.Entity<ReMarkableDeviceEntity>(entity =>
+        // Configure ExternalDeviceEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(i)
+        modelBuilder.Entity<ExternalDeviceEntity>(entity =>
         {
             entity.HasKey(e => e.DeviceId);
+            entity.Property(e => e.Type).HasConversion<string>();
+        });
+
+        // Configure EmailCredentialEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(j)
+        modelBuilder.Entity<EmailCredentialEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
