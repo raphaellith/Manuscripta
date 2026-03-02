@@ -219,6 +219,33 @@ public class OllamaClientService : IDependencyService
     }
 
     /// <summary>
+    /// Unloads a model from Ollama's memory to free up system resources.
+    /// Uses a minimal generation request with keep_alive set to 1 second to force unloading.
+    /// </summary>
+    public virtual async Task UnloadModelAsync(string modelName)
+    {
+        try
+        {
+            // Send a minimal request with keep_alive: 1s to force unloading
+            var request = new
+            {
+                model = modelName,
+                prompt = "",
+                stream = false,
+                keep_alive = "1s"
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("/api/generate", request);
+            // Don't check for success - unload is a best-effort operation
+            _ = await response.Content.ReadAsStringAsync();
+        }
+        catch
+        {
+            // Unload failures are not critical - continue anyway
+        }
+    }
+
+    /// <summary>
     /// Checks if the system has sufficient resources to generate with a given model.
     /// See GenAISpec.md §1(6) - detection of insufficient resources.
     /// </summary>

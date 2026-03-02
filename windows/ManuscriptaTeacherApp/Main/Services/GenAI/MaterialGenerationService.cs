@@ -120,6 +120,10 @@ public class MaterialGenerationService : IMaterialGenerationService
                 useFallback = true;
                 try
                 {
+                    // Unload the primary model to free memory before attempting fallback
+                    await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                    await Task.Delay(500); // Brief delay to allow memory to be released
+                    
                     await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
                     generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
                 }
@@ -134,7 +138,7 @@ public class MaterialGenerationService : IMaterialGenerationService
             {
                 // Already on fallback, so this is a genuine failure
                 throw new InvalidOperationException(
-                    $"The fallback model (granite4) also failed due to insufficient system memory (requires 3.0+ GiB). Please close other applications and try again.",
+                    $"The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
                     ex);
             }
         }
