@@ -16,7 +16,10 @@ public class OllamaClientService : IDependencyService
     public OllamaClientService()
     {
         _baseUrl = "http://localhost:11434";
-        _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
+        _httpClient = new HttpClient { 
+            BaseAddress = new Uri(_baseUrl),
+            Timeout = TimeSpan.FromSeconds(300) // 5 minutes for material generation
+        };
     }
 
     /// <summary>

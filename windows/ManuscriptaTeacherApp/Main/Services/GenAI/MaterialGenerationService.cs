@@ -63,7 +63,7 @@ public class MaterialGenerationService : IMaterialGenerationService
                 throw new InvalidOperationException("Insufficient resources for primary model");
             }
         }
-        catch (Exception)
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient resources"))
         {
             // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
             modelToUse = FallbackModel;
