@@ -63,7 +63,7 @@ public class PairingManager implements TcpMessageListener {
     private final Object lock = new Object();
 
     /** The pairing configuration. */
-    private PairingConfig config;
+    private volatile PairingConfig config;
     /** The current pairing state. */
     private final MutableLiveData<PairingState> pairingState;
     /** Whether a pairing attempt is in progress. */
@@ -79,10 +79,10 @@ public class PairingManager implements TcpMessageListener {
     private ScheduledFuture<?> timeoutFuture;
     /** The callback for pairing events. */
     @Nullable
-    private PairingCallback callback;
+    private volatile PairingCallback callback;
     /** The device ID being used for pairing. */
     @Nullable
-    private String deviceId;
+    private volatile String deviceId;
     /** The host for the current pairing attempt. */
     @Nullable
     private String currentHost;
@@ -455,7 +455,6 @@ public class PairingManager implements TcpMessageListener {
      * @return The device ID, or null if not set.
      */
     @Nullable
-    @VisibleForTesting
     public String getDeviceId() {
         return deviceId;
     }

@@ -138,7 +138,7 @@ public interface MaterialRepository {
      *   <li>Fetches materials via HTTP GET /distribution/{deviceId}</li>
      *   <li>Downloads any attachment files referenced in content</li>
      *   <li>Saves materials to local storage</li>
-     *   <li>Sends DISTRIBUTE_ACK to confirm receipt</li>
+it      *   <li>Sends one DISTRIBUTE_ACK per successfully received material (§3.6.2)</li>
      * </ol>
      *
      * <p><b>Threading:</b> This method performs network I/O and should be called
