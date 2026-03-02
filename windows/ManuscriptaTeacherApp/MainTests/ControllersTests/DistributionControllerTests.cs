@@ -248,7 +248,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Field names should be PascalCase (not camelCase)
@@ -293,7 +293,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Enum values should be SCREAMING_SNAKE_CASE strings
@@ -331,7 +331,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - LessonId should NOT be present in Android DTO
@@ -363,7 +363,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - ReadingAge and ActualAge should NOT be present
@@ -399,7 +399,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - MarkScheme should NOT be present in Android DTO
@@ -438,7 +438,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Should have flat structure with MaterialType discriminator
@@ -480,7 +480,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Should have flat structure with QuestionType discriminator
@@ -517,7 +517,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
         var materials = json.RootElement.GetProperty("materials").EnumerateArray().First();
@@ -556,7 +556,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
         var question = json.RootElement.GetProperty("questions").EnumerateArray().First();
@@ -594,7 +594,7 @@ public class DistributionControllerSerialisationTests : IClassFixture<TestWebApp
         }).CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/api/v1/distribution/{_testDeviceId}");
+        var response = await client.GetAsync($"/api/v2/distribution/{_testDeviceId}");
         var content = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
         var materials = json.RootElement.GetProperty("materials").EnumerateArray().First();

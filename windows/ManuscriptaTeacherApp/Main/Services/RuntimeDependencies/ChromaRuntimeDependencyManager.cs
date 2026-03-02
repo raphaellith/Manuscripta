@@ -361,10 +361,10 @@ namespace Main.Services.RuntimeDependencies
                         // Try multiple endpoints - the CLI version may have different endpoint availability
                         var endpoints = new[] 
                         { 
-                            ("http://localhost:8000/api/v1/", "base API path"),
+                            ("http://localhost:8000/api/v2/", "base API path"),
                             ("http://localhost:8000/", "root"),
-                            ("http://127.0.0.1:8000/api/v1/", "base API path (IP)"),
-                            ("http://localhost:8000/api/v1/heartbeat", "heartbeat endpoint")
+                            ("http://127.0.0.1:8000/api/v2/", "base API path (IP)"),
+                            ("http://localhost:8000/api/v2/heartbeat", "heartbeat endpoint")
                         };
                         
                         HttpResponseMessage? response = null;
@@ -815,7 +815,7 @@ namespace Main.Services.RuntimeDependencies
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-                var response = await httpClient.GetAsync("http://localhost:8000/api/v1/heartbeat");
+                var response = await httpClient.GetAsync("http://localhost:8000/api/v2/heartbeat");
                 return response.IsSuccessStatusCode;
             }
             catch

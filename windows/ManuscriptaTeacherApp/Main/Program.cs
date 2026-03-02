@@ -60,7 +60,7 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 // Note: ChromaDB.Client is a client-server library. The database path is configured
 // on the server side (e.g., `chroma run --path /path/to/store`), not in the C# client.
 // The client connects via HTTP to the running server using the URI below.
-var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v1/";
+var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
 
 builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
 builder.Services.AddHttpClient();
