@@ -23,6 +23,18 @@ namespace Main.Services.RuntimeDependencies
 
         public override string DependencyId => "ollama";
 
+        /// <summary>
+        /// Returns the base directory used for storing runtime dependency data.
+        /// By default this is the user's ApplicationData special folder.  Exposed
+        /// as a virtual method so unit tests can override it without relying on
+        /// environment variable hacks (Path.GetFolderPath caches values on some
+        /// platforms).
+        /// </summary>
+        protected virtual string GetAppDataFolder()
+        {
+            return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        }
+
         public OllamaRuntimeDependencyManager(
             ILogger<OllamaRuntimeDependencyManager> logger,
             HttpClient httpClient)
@@ -55,11 +67,37 @@ namespace Main.Services.RuntimeDependencies
         protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
             var binDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                GetAppDataFolder(),
                 "ManuscriptaTeacherApp",
                 "bin"
             );
             Directory.CreateDirectory(binDir);
+
+            // Path to the directory where Ollama will be extracted, used later during
+            // PerformInstallDependencyAsync.  Add this directory to PATH as well so
+            // that commands like "ollama pull" work immediately after installation.
+            var extractDir = Path.Combine(binDir, "ollama");
+
+            // Ensure the extraction directory is on the PATH for both the current process and the user.
+            // This satisfies GenAISpec §1A(3)(b) and ensures that spawned "ollama" commands
+            // can be resolved even when the application is launched without a pre-existing
+            // PATH entry.
+            try
+            {
+                var pathEnv = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? string.Empty;
+                var pathItems = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
+                if (!pathItems.Any(p => string.Equals(p, extractDir, StringComparison.OrdinalIgnoreCase)))
+                {
+                    pathItems.Add(extractDir);
+                    var newPath = string.Join(Path.PathSeparator, pathItems);
+                    Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.Process);
+                    Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.User);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to update PATH environment variable with Ollama extract directory");
+            }
 
             var zipPath = Path.Combine(binDir, "ollama-windows-amd64.zip");
             var downloadUrl = "https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip";
@@ -117,7 +155,7 @@ namespace Main.Services.RuntimeDependencies
         protected override async Task VerifyDownloadAsync(IProgress<RuntimeDependencyProgress> progress)
         {
             var binDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                GetAppDataFolder(),
                 "ManuscriptaTeacherApp",
                 "bin"
             );
@@ -188,7 +226,7 @@ namespace Main.Services.RuntimeDependencies
         protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
             var binDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                GetAppDataFolder(),
                 "ManuscriptaTeacherApp",
                 "bin"
             );
@@ -199,16 +237,86 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
-                // Remove existing directory if present
+                // If an existing installation directory exists, try to remove it safely.
                 if (Directory.Exists(extractDir))
                 {
-                    Directory.Delete(extractDir, true);
+                    try
+                    {
+                        // Kill any running ollama processes that may lock files
+                        var procs = System.Diagnostics.Process.GetProcessesByName("ollama");
+                        foreach (var p in procs)
+                        {
+                            try
+                            {
+                                p.Kill();
+                                p.WaitForExit(5000);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to stop ollama process {Id}", p.Id);
+                            }
+                        }
+
+                        // Ensure files are writable (clear read-only attributes) before deletion
+                        var allFiles = Directory.GetFiles(extractDir, "*", SearchOption.AllDirectories);
+                        foreach (var f in allFiles)
+                        {
+                            try
+                            {
+                                File.SetAttributes(f, FileAttributes.Normal);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogDebug(ex, "Failed to clear attributes on {File}", f);
+                            }
+                        }
+
+                        Directory.Delete(extractDir, true);
+                    }
+                    catch (UnauthorizedAccessException uaEx)
+                    {
+                        _logger.LogWarning(uaEx, "Unauthorized access deleting existing Ollama directory, retrying with attribute cleanup");
+                        // Second attempt: clear file attributes recursively then delete
+                        try
+                        {
+                            var files = Directory.GetFiles(extractDir, "*", SearchOption.AllDirectories);
+                            foreach (var f in files)
+                            {
+                                try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
+                            }
+
+                            Directory.Delete(extractDir, true);
+                        }
+                        catch (Exception ex2)
+                        {
+                            _logger.LogError(ex2, "Failed to remove existing Ollama directory after retry");
+                            throw;
+                        }
+                    }
                 }
 
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractDir);
 
                 // Delete the ZIP file
                 File.Delete(zipPath);
+
+                // After extraction ensure the directory is on PATH (in case it wasn't picked up earlier)
+                try
+                {
+                    var pathEnv = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? string.Empty;
+                    var pathItems = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    if (!pathItems.Any(p => string.Equals(p, extractDir, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        pathItems.Add(extractDir);
+                        var newPath = string.Join(Path.PathSeparator, pathItems);
+                        Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.Process);
+                        Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.User);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to update PATH after Ollama extraction");
+                }
 
                 _logger.LogInformation("Ollama extracted successfully");
 
@@ -252,7 +360,7 @@ namespace Main.Services.RuntimeDependencies
 
                 // Delete the installation directory
                 var binDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    GetAppDataFolder(),
                     "ManuscriptaTeacherApp",
                     "bin"
                 );

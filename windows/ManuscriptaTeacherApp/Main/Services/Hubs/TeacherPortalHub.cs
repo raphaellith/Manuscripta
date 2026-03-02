@@ -1119,6 +1119,24 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<GenerationResult> GenerateReading(GenerationRequest request)
     {
+        // Pre-check required AI runtime dependencies. If any are missing, notify frontend and abort.
+        var missing = new List<string>();
+        if (!await CheckRuntimeDependencyAvailability("ollama"))
+            missing.Add("ollama");
+        if (!await CheckRuntimeDependencyAvailability("nomic-embed-text"))
+            missing.Add("nomic-embed-text");
+        // Also ensure model availability (treated as runtime dependencies per GenAISpec)
+        if (!await CheckRuntimeDependencyAvailability("qwen3:8b"))
+            missing.Add("qwen3:8b");
+        if (!await CheckRuntimeDependencyAvailability("granite4"))
+            missing.Add("granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
         try
         {
             return await _materialGenerationService.GenerateReading(request);
@@ -1136,6 +1154,23 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
     {
+        // Pre-check required AI runtime dependencies. If any are missing, notify frontend and abort.
+        var missing = new List<string>();
+        if (!await CheckRuntimeDependencyAvailability("ollama"))
+            missing.Add("ollama");
+        if (!await CheckRuntimeDependencyAvailability("nomic-embed-text"))
+            missing.Add("nomic-embed-text");
+        if (!await CheckRuntimeDependencyAvailability("qwen3:8b"))
+            missing.Add("qwen3:8b");
+        if (!await CheckRuntimeDependencyAvailability("granite4"))
+            missing.Add("granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
         try
         {
             return await _materialGenerationService.GenerateWorksheet(request);

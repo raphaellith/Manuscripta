@@ -32,6 +32,53 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
+        /// Starts the external process used to pull the model. Exposed
+        /// virtually so tests can substitute a dummy process without touching
+        /// the filesystem or requiring Ollama.
+        /// </summary>
+        protected virtual Process StartPullProcess(string args)
+        {
+            // Ollama extraction directory
+            var binDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ManuscriptaTeacherApp",
+                "bin",
+                "ollama"
+            );
+
+            // Check if ollama.exe exists in the expected location
+            var ollamaExePath = Path.Combine(binDir, "ollama.exe");
+            if (!File.Exists(ollamaExePath))
+            {
+                throw new InvalidOperationException(
+                    $"Ollama executable not found at {ollamaExePath}. "
+                    + "Ensure Ollama runtime dependency is installed before downloading models.");
+            }
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = ollamaExePath,  // Use full path to ensure it's found
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            // Ensure the Ollama extraction directory is on the PATH so that subprocess calls
+            // to ollama will work correctly from within the pulled models.
+            var pathEnv = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? string.Empty;
+            var pathItems = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (!pathItems.Any(p => string.Equals(p, binDir, StringComparison.OrdinalIgnoreCase)))
+            {
+                pathItems.Add(binDir);
+            }
+            psi.EnvironmentVariables["PATH"] = string.Join(Path.PathSeparator, pathItems);
+
+            return Process.Start(psi) ?? throw new InvalidOperationException("Failed to start ollama process");
+        }
+
+        /// <summary>
         /// Checks if the IBM Granite 4.0 model is available by querying Ollama's API.
         /// Per GenAISpec.md §1D(3)(a).
         /// </summary>
@@ -81,27 +128,37 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
-                var processStartInfo = new ProcessStartInfo
+                using var process = StartPullProcess("pull granite4");
+
+                // read output and error asynchronously to avoid blocking when buffers fill
+                var stdOut = new List<string>();
+                var stdErr = new List<string>();
+
+                process.OutputDataReceived += (s, e) =>
                 {
-                    FileName = "ollama",
-                    Arguments = "pull granite4",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
+                    if (e.Data != null)
+                    {
+                        stdOut.Add(e.Data);
+                        _logger.LogDebug("[ollama] {Line}", e.Data);
+                    }
+                };
+                process.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        stdErr.Add(e.Data);
+                        _logger.LogWarning("[ollama err] {Line}", e.Data);
+                    }
                 };
 
-                using var process = Process.Start(processStartInfo);
-                if (process == null)
-                {
-                    throw new InvalidOperationException("Failed to start ollama pull process");
-                }
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
                 await Task.Run(() => process.WaitForExit());
 
                 if (process.ExitCode != 0)
                 {
-                    var errorOutput = await process.StandardError.ReadToEndAsync();
+                    var errorOutput = string.Join(Environment.NewLine, stdErr);
                     throw new InvalidOperationException($"ollama pull granite4 failed with exit code {process.ExitCode}: {errorOutput}");
                 }
 
