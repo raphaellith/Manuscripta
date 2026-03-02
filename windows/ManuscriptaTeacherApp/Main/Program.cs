@@ -175,6 +175,10 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
 builder.Services.AddHostedService<HubEventBridge>();
 
+// Register embedding initialization as background service per GenAISpec.md §3A(8)
+// This runs asynchronously after startup to avoid blocking the health endpoint
+builder.Services.AddHostedService<EmbeddingInitializationHostedService>();
+
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
@@ -274,10 +278,6 @@ if (!app.Environment.IsEnvironment("Testing"))
         
         // DbInitializer.Initialize(context);
 
-    // Initialize embedding startup handler per GenAISpec.md §3A(8)
-    var embeddingService = services.GetRequiredService<Main.Services.GenAI.IEmbeddingService>();
-    await embeddingService.InitializeFailedEmbeddingsAsync();
-
         // Orphan file removal per PersistenceAndCascadingRules §3
         // Delete attachment files not linked to any entity
         var fileService = services.GetRequiredService<IFileService>();
@@ -369,6 +369,9 @@ if (!app.Environment.IsEnvironment("Testing"))
         }
     }
 }
+
+// Per FrontendWorkflowSpecifications §2ZA(5)(a)-(d): Embedding initialization is now a background
+// hosted service and will not block startup, ensuring the health endpoint responds quickly.
 
 // Port-based routing per API Contract.md §Ports and FrontendWorkflowSpecifications §2ZA(8).
 // - SignalR and health endpoint: available on ANY bound port (frontend uses dynamic port selection)
