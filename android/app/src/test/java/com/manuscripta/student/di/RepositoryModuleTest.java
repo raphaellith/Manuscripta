@@ -2,7 +2,9 @@ package com.manuscripta.student.di;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,22 +28,19 @@ import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.data.repository.SessionRepositoryImpl;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.tcp.AckRetrySender;
+import com.manuscripta.student.network.tcp.HeartbeatManager;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.robolectric.RobolectricTestRunner;
-import androidx.test.core.app.ApplicationProvider;
-import org.robolectric.annotation.Config;
 
 /**
  * Unit tests for {@link RepositoryModule}.
  */
-@RunWith(RobolectricTestRunner.class)
-@Config(sdk = 28)
 public class RepositoryModuleTest {
 
     private RepositoryModule repositoryModule;
@@ -56,6 +55,9 @@ public class RepositoryModuleTest {
     private TcpSocketManager mockTcpSocketManager;
     private AckRetrySender mockAckRetrySender;
     private PairingManager mockPairingManager;
+    private DeviceStatusRepository mockDeviceStatusRepository;
+    private FeedbackRepository mockFeedbackRepository;
+    private MaterialRepository mockMaterialRepository;
 
     @Before
     public void setUp() {
@@ -71,6 +73,9 @@ public class RepositoryModuleTest {
         mockTcpSocketManager = mock(TcpSocketManager.class);
         mockAckRetrySender = mock(AckRetrySender.class);
         mockPairingManager = mock(PairingManager.class);
+        mockDeviceStatusRepository = mock(DeviceStatusRepository.class);
+        mockFeedbackRepository = mock(FeedbackRepository.class);
+        mockMaterialRepository = mock(MaterialRepository.class);
     }
 
     @Test
@@ -121,7 +126,9 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideFileStorageManager_returnsFileStorageManager() {
-        Context context = ApplicationProvider.getApplicationContext();
+        Context context = mock(Context.class);
+        when(context.getApplicationContext()).thenReturn(context);
+        when(context.getFilesDir()).thenReturn(new java.io.File("/tmp/test"));
 
         FileStorageManager result = repositoryModule.provideFileStorageManager(context);
 
@@ -141,7 +148,7 @@ public class RepositoryModuleTest {
 
         MaterialRepository result = repositoryModule.provideMaterialRepository(
                 mockMaterialDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockAckRetrySender, mockPairingManager);
+                mockTcpSocketManager, mockAckRetrySender);
 
         assertNotNull(result);
         assertTrue(result instanceof MaterialRepositoryImpl);
@@ -182,5 +189,123 @@ public class RepositoryModuleTest {
 
         assertNotNull(result);
         assertTrue(result instanceof DeviceStatusRepositoryImpl);
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_returnsWiredManager() {
+        HeartbeatManager result = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        try {
+            assertNotNull(result);
+        } finally {
+            result.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_materialCallback_triggersSync()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
+
+            verify(mockMaterialRepository, timeout(2000)).syncMaterials("device-1");
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_feedbackCallback_triggersFetch()
+            throws Exception {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        try {
+            hm.onMessageReceived(new ReturnFeedbackMessage());
+
+            verify(mockFeedbackRepository, timeout(2000))
+                    .fetchAndStoreFeedback("device-1");
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_statusProvider_returnsStatus() {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+        when(mockTcpSocketManager.isConnected()).thenReturn(true);
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        // Trigger a heartbeat by starting and waiting for the first scheduled send
+        try {
+            hm.start();
+            verify(mockDeviceStatusRepository, timeout(5000))
+                    .getDeviceStatus("device-1");
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_nullDeviceId_skipsCallbacks() throws Exception {
+        when(mockPairingManager.getDeviceId()).thenReturn(null);
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
+            hm.onMessageReceived(new ReturnFeedbackMessage());
+
+            // With null device ID, neither repository should be called
+            verify(mockMaterialRepository, org.mockito.Mockito.never())
+                    .syncMaterials(anyString());
+            verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                    .fetchAndStoreFeedback(anyString());
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_emptyDeviceId_skipsCallbacks() throws Exception {
+        when(mockPairingManager.getDeviceId()).thenReturn("   ");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository);
+
+        try {
+            hm.onMessageReceived(new DistributeMaterialMessage());
+            hm.onMessageReceived(new ReturnFeedbackMessage());
+
+            verify(mockMaterialRepository, org.mockito.Mockito.never())
+                    .syncMaterials(anyString());
+            verify(mockFeedbackRepository, org.mockito.Mockito.never())
+                    .fetchAndStoreFeedback(anyString());
+        } finally {
+            hm.destroy();
+        }
     }
 }

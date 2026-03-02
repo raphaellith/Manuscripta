@@ -16,10 +16,6 @@ import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
 import com.manuscripta.student.network.tcp.AckRetrySender;
-import com.manuscripta.student.network.tcp.PairingManager;
-import com.manuscripta.student.network.tcp.TcpMessage;
-import com.manuscripta.student.network.tcp.TcpMessageListenerAdapter;
-import com.manuscripta.student.network.tcp.TcpOpcode;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
 import com.manuscripta.student.utils.ContentParser;
@@ -73,9 +69,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** Handles retry logic for sending ACK messages over TCP. */
     private final AckRetrySender ackRetrySender;
 
-    /** The pairing manager for retrieving the current device ID. */
-    private final PairingManager pairingManager;
-
     /** Executor for running sync operations on a background thread. */
     private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
@@ -108,7 +101,6 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * @param apiService         The API service for network operations
      * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
      * @param ackRetrySender     The retry sender for ACK messages
-     * @param pairingManager     The pairing manager for retrieving the current device ID
      * @throws IllegalArgumentException if any dependency is null
      */
     @Inject
@@ -116,8 +108,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                                   @NonNull FileStorageManager fileStorageManager,
                                   @NonNull ApiService apiService,
                                   @NonNull TcpSocketManager tcpSocketManager,
-                                  @NonNull AckRetrySender ackRetrySender,
-                                  @NonNull PairingManager pairingManager) {
+                                  @NonNull AckRetrySender ackRetrySender) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
         }
@@ -133,33 +124,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         if (ackRetrySender == null) {
             throw new IllegalArgumentException("AckRetrySender cannot be null");
         }
-        if (pairingManager == null) {
-            throw new IllegalArgumentException("PairingManager cannot be null");
-        }
         this.materialDao = materialDao;
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
         this.ackRetrySender = ackRetrySender;
-        this.pairingManager = pairingManager;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
-
-        // Register as a listener for DISTRIBUTE_MATERIAL signals from the TCP layer.
-        // When the server signals that new materials are available, trigger a sync.
-        tcpSocketManager.addMessageListener(new TcpMessageListenerAdapter() {
-            @Override
-            public void onMessageReceived(@NonNull TcpMessage message) {
-                if (message.getOpcode() == TcpOpcode.DISTRIBUTE_MATERIAL) {
-                    String deviceId = pairingManager.getDeviceId();
-                    if (deviceId != null && !deviceId.trim().isEmpty()) {
-                        Log.d(TAG, "DISTRIBUTE_MATERIAL signal received, triggering sync");
-                        syncExecutor.execute(() -> syncMaterials(deviceId));
-                    } else {
-                        Log.w(TAG, "DISTRIBUTE_MATERIAL received but device ID not available");
-                    }
-                }
-            }
-        });
 
         // Initialize LiveData with existing materials from database on a background thread.
         // This avoids blocking the main thread during Hilt injection at app startup.
