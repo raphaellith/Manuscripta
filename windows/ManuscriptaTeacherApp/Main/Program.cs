@@ -178,6 +178,34 @@ if (!app.Environment.IsEnvironment("Testing"))
         bool isEfCoreTool = AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "ef");
         if (!isEfCoreTool)
         {
+            // Pre-migration schema fixup: handle databases where AddReMarkableDevices was applied
+            // before the SourceDocuments column was added to UnitEntity. Since the migration ID is
+            // already in __EFMigrationsHistory, EF skips it and the column is never created.
+            try
+            {
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+
+                using var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText =
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Units' " +
+                    "AND sql NOT LIKE '%SourceDocuments%'";
+                var needsFixup = Convert.ToInt64(await checkCmd.ExecuteScalarAsync()) > 0;
+
+                if (needsFixup)
+                {
+                    using var alterCmd = conn.CreateCommand();
+                    alterCmd.CommandText = "ALTER TABLE \"Units\" ADD COLUMN \"SourceDocuments\" TEXT NOT NULL DEFAULT '[]'";
+                    await alterCmd.ExecuteNonQueryAsync();
+                    Console.WriteLine("[MIGRATION FIXUP] Added missing SourceDocuments column to Units table.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore on fresh databases where the Units table doesn't exist yet
+                Console.WriteLine($"[MIGRATION FIXUP] Skipped (expected on fresh DB): {ex.Message}");
+            }
+
             context.Database.Migrate();
         }
         
