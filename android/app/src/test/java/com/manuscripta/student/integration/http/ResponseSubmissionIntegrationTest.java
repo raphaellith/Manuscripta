@@ -114,6 +114,33 @@ public class ResponseSubmissionIntegrationTest {
         assertEquals(201, response.code());
     }
 
+    /**
+     * Verifies that a batch containing a malformed response is
+     * rejected entirely. Per API Contract §4.7, all-or-nothing
+     * semantics apply: if any response is invalid the whole batch
+     * must return a client-error status.
+     *
+     * @throws Exception if the network call fails unexpectedly
+     */
+    @Test
+    public void submitBatchResponses_malformed_returnsClientError()
+            throws Exception {
+        ResponseDto valid = buildTestResponse();
+        ResponseDto malformed = new ResponseDto();
+        // One valid + one all-null — batch should be rejected
+
+        BatchResponseDto batch = new BatchResponseDto(
+                Arrays.asList(valid, malformed));
+
+        Response<Void> response = harness.getApiService()
+                .submitBatchResponses(batch).execute();
+
+        assertNotNull(response);
+        int code = response.code();
+        assertTrue("Expected 4xx for batch with malformed entry",
+                code >= 400 && code < 500);
+    }
+
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------

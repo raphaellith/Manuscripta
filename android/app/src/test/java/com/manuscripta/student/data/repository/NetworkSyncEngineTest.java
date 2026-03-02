@@ -213,7 +213,7 @@ public class NetworkSyncEngineTest {
         assertNotNull(capturedDto);
         assertEquals(TEST_ID, capturedDto.getId());
         assertEquals(TEST_QUESTION_ID, capturedDto.getQuestionId());
-        assertEquals(TEST_DEVICE_ID, capturedDto.getStudentId());
+        assertEquals(TEST_DEVICE_ID, capturedDto.getDeviceId());
         assertEquals("2021-12-20T11:33:20Z", capturedDto.getTimestamp());
         assertEquals("Test answer", capturedDto.getAnswer());
         assertNull(capturedDto.getMaterialId());

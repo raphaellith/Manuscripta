@@ -210,7 +210,7 @@ public class ResponseMapperTest {
         assertEquals(TEST_ID, dto.getId());
         assertEquals(TEST_QUESTION_ID, dto.getQuestionId());
         assertEquals(TEST_MATERIAL_ID, dto.getMaterialId());
-        assertEquals(TEST_DEVICE_ID, dto.getStudentId());
+        assertEquals(TEST_DEVICE_ID, dto.getDeviceId());
         assertEquals(TEST_ANSWER, dto.getAnswer());
         assertNotNull(dto.getTimestamp());
         // isCorrect is false, so should be null (only set when true)

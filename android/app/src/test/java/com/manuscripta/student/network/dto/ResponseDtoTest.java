@@ -18,7 +18,7 @@ public class ResponseDtoTest {
     private static final String TEST_ID = "550e8400-e29b-41d4-a716-446655440000";
     private static final String TEST_QUESTION_ID = "q-uuid-123";
     private static final String TEST_MATERIAL_ID = "mat-uuid-456";
-    private static final String TEST_STUDENT_ID = "device-uuid-789";
+    private static final String TEST_DEVICE_ID = "device-uuid-789";
     private static final String TEST_ANSWER = "3";
     private static final String TEST_TIMESTAMP = "2023-10-27T10:05:00Z";
     private static final Boolean TEST_IS_CORRECT = true;
@@ -30,7 +30,7 @@ public class ResponseDtoTest {
         assertNull(dto.getId());
         assertNull(dto.getQuestionId());
         assertNull(dto.getMaterialId());
-        assertNull(dto.getStudentId());
+        assertNull(dto.getDeviceId());
         assertNull(dto.getAnswer());
         assertNull(dto.getTimestamp());
         assertNull(dto.getIsCorrect());
@@ -42,7 +42,7 @@ public class ResponseDtoTest {
                 TEST_ID,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 TEST_ANSWER,
                 TEST_TIMESTAMP,
                 TEST_IS_CORRECT
@@ -51,7 +51,7 @@ public class ResponseDtoTest {
         assertEquals(TEST_ID, dto.getId());
         assertEquals(TEST_QUESTION_ID, dto.getQuestionId());
         assertEquals(TEST_MATERIAL_ID, dto.getMaterialId());
-        assertEquals(TEST_STUDENT_ID, dto.getStudentId());
+        assertEquals(TEST_DEVICE_ID, dto.getDeviceId());
         assertEquals(TEST_ANSWER, dto.getAnswer());
         assertEquals(TEST_TIMESTAMP, dto.getTimestamp());
         assertEquals(TEST_IS_CORRECT, dto.getIsCorrect());
@@ -64,7 +64,7 @@ public class ResponseDtoTest {
         assertNull(dto.getId());
         assertNull(dto.getQuestionId());
         assertNull(dto.getMaterialId());
-        assertNull(dto.getStudentId());
+        assertNull(dto.getDeviceId());
         assertNull(dto.getAnswer());
         assertNull(dto.getTimestamp());
         assertNull(dto.getIsCorrect());
@@ -104,14 +104,14 @@ public class ResponseDtoTest {
     }
 
     @Test
-    public void testSetStudentId() {
+    public void testSetDeviceId() {
         ResponseDto dto = new ResponseDto();
 
-        dto.setStudentId(TEST_STUDENT_ID);
-        assertEquals(TEST_STUDENT_ID, dto.getStudentId());
+        dto.setDeviceId(TEST_DEVICE_ID);
+        assertEquals(TEST_DEVICE_ID, dto.getDeviceId());
 
-        dto.setStudentId(null);
-        assertNull(dto.getStudentId());
+        dto.setDeviceId(null);
+        assertNull(dto.getDeviceId());
     }
 
     @Test
@@ -161,7 +161,7 @@ public class ResponseDtoTest {
         assertTrue(result.contains(TEST_ID));
         assertTrue(result.contains(TEST_QUESTION_ID));
         assertTrue(result.contains(TEST_MATERIAL_ID));
-        assertTrue(result.contains(TEST_STUDENT_ID));
+        assertTrue(result.contains(TEST_DEVICE_ID));
         assertTrue(result.contains(TEST_ANSWER));
         assertTrue(result.contains(TEST_TIMESTAMP));
     }
@@ -235,10 +235,10 @@ public class ResponseDtoTest {
     }
 
     @Test
-    public void testEqualsDifferentStudentId() {
+    public void testEqualsDifferentDeviceId() {
         ResponseDto dto1 = createTestResponseDto();
         ResponseDto dto2 = createTestResponseDto();
-        dto2.setStudentId("different-student-id");
+        dto2.setDeviceId("different-device-id");
 
         assertFalse(dto1.equals(dto2));
     }
@@ -273,7 +273,7 @@ public class ResponseDtoTest {
     @Test
     public void testEqualsNullVsNonNullId() {
         ResponseDto dto1 = new ResponseDto(null, TEST_QUESTION_ID, TEST_MATERIAL_ID,
-                TEST_STUDENT_ID, TEST_ANSWER, TEST_TIMESTAMP, TEST_IS_CORRECT);
+                TEST_DEVICE_ID, TEST_ANSWER, TEST_TIMESTAMP, TEST_IS_CORRECT);
         ResponseDto dto2 = createTestResponseDto();
 
         assertFalse(dto1.equals(dto2));
@@ -330,7 +330,7 @@ public class ResponseDtoTest {
                 androidGeneratedId,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 TEST_ANSWER,
                 TEST_TIMESTAMP,
                 TEST_IS_CORRECT
@@ -346,7 +346,7 @@ public class ResponseDtoTest {
                 TEST_ID,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 "2",  // Index of selected option
                 TEST_TIMESTAMP,
                 true
@@ -363,7 +363,7 @@ public class ResponseDtoTest {
                 TEST_ID,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 writtenAnswer,
                 TEST_TIMESTAMP,
                 null  // Not evaluated yet
@@ -381,7 +381,7 @@ public class ResponseDtoTest {
                 TEST_ID,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 TEST_ANSWER,
                 isoTimestamp,
                 TEST_IS_CORRECT
@@ -395,7 +395,7 @@ public class ResponseDtoTest {
                 TEST_ID,
                 TEST_QUESTION_ID,
                 TEST_MATERIAL_ID,
-                TEST_STUDENT_ID,
+                TEST_DEVICE_ID,
                 TEST_ANSWER,
                 TEST_TIMESTAMP,
                 TEST_IS_CORRECT

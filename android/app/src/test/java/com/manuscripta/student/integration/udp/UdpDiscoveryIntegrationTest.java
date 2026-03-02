@@ -82,6 +82,10 @@ public class UdpDiscoveryIntegrationTest {
 
         DiscoveryMessage msg = DiscoveryMessageParser.parse(data);
         assertNotNull(msg);
+        assertNotNull("IP address should be present",
+                msg.getIpAddress());
+        assertTrue("IP address should not be empty",
+                !msg.getIpAddress().isEmpty());
     }
 
     /**
