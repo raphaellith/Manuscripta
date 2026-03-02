@@ -263,7 +263,7 @@ public class HeartbeatManagerTest {
 
         heartbeatManager.onMessageReceived(new DistributeMaterialMessage());
 
-        assertTrue(latch.await(2, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
