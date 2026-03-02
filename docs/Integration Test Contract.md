@@ -38,15 +38,15 @@ Both applications must agree on the following default port assignments, consiste
 
 (2) Both sides must be configured to use the **same ports** in the test environment.
 
-(3) The HTTP base URL assumed by client tests is `http://{host}:{httpPort}/`, where host defaults to `localhost`.
+(3) The HTTP base URL assumed by client tests is `http://{host}:{httpPort}/`, where `{host}` is the server machine's IP address on the shared network.
 
 ### 2.2. Server Host
 
-(1) The client defaults to `localhost`, overridable via configuration. The server binds to all interfaces by default.
+(1) Integration tests are run **across two physical machines on the same network** — the client (Android tablet or development machine running the test suite) and the server (Windows machine running the teacher application).
 
-(2) When running tests locally on the same machine, `localhost` is sufficient.
+(2) The client must be configured with the server's reachable IP address or hostname. The server binds to all interfaces by default.
 
-(3) When running across the network (e.g., CI with separate containers), both sides must be configured with the correct reachable hostname or IP address.
+(3) Both machines must be on the same subnet for UDP broadcast discovery to work (broadcast packets do not cross subnet boundaries).
 
 ### 2.3. HTTP Route Prefix
 
@@ -596,13 +596,19 @@ dotnet run --environment Integration
 
 See §12 for the full list of server-side requirements in integration-test mode.
 
-### 11.3. CI Pipeline Considerations
+### 11.3. Manual Two-Machine Execution
 
-(1) Integration tests require a running server instance. CI pipelines must start the server as a background process before executing client integration tests.
+Integration tests are run manually across two machines on the same network:
 
-(2) The test device must be fresh (no prior pairing state) or the server must handle re-pairing gracefully.
+(1) **Start the server first.** On the Windows machine, launch the server in integration-test mode (§12.1). Wait for the readiness signal (§12.6) or confirm UDP broadcasts are being sent.
 
-(3) Port conflicts must be avoided. The default ports (5910–5913) should be reserved for integration test use.
+(2) **Configure the client.** On the Android device or development machine, set the server host to the Windows machine's IP address (via the platform's configuration mechanism) and verify the port settings match.
+
+(3) **Run the client test suite.** Execute the integration tests from the client machine. All assertions happen client-side.
+
+(4) The test device must be fresh (no prior pairing state) or the server must handle re-pairing gracefully.
+
+(5) Port conflicts must be avoided. The default ports (5910–5913) should be reserved for integration test use. Ensure no firewall rules block traffic on these ports between the two machines.
 
 ---
 
