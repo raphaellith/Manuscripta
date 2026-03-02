@@ -102,20 +102,22 @@ public class HeartbeatManager implements TcpMessageListener {
     private ScheduledFuture<?> heartbeatFuture;
     /** Provider for current device status. */
     @Nullable
-    private DeviceStatusProvider statusProvider;
+    private volatile DeviceStatusProvider statusProvider;
     /** Callback for when materials are available. */
     @Nullable
-    private MaterialAvailableCallback materialCallback;
+    private volatile MaterialAvailableCallback materialCallback;
     /** Callback for when feedback is available. */
     @Nullable
-    private FeedbackAvailableCallback feedbackCallback;
+    private volatile FeedbackAvailableCallback feedbackCallback;
     /** Executor owned by this manager for dispatching material/feedback callbacks. */
     private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
 
     /** The heartbeat configuration. */
-    private HeartbeatConfig config;
+    private volatile HeartbeatConfig config;
     /** Whether the heartbeat is currently running. */
     private final AtomicBoolean running = new AtomicBoolean(false);
+    /** Whether this manager has been permanently destroyed. */
+    private final AtomicBoolean destroyed = new AtomicBoolean(false);
     /** Counter for heartbeats sent. */
     private final AtomicLong heartbeatCount = new AtomicLong(0);
     /** Timestamp of the last heartbeat sent. */
@@ -266,6 +268,9 @@ public class HeartbeatManager implements TcpMessageListener {
 
     @Override
     public void onMessageReceived(@NonNull TcpMessage message) {
+        if (destroyed.get()) {
+            return;
+        }
         if (message instanceof DistributeMaterialMessage) {
             Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
             MaterialAvailableCallback callback = this.materialCallback;
@@ -397,6 +402,7 @@ public class HeartbeatManager implements TcpMessageListener {
      * Cleans up resources. Should be called when the manager is no longer needed.
      */
     public void destroy() {
+        destroyed.set(true);
         socketManager.removeMessageListener(this);
         stop();
         callbackExecutor.shutdown();
