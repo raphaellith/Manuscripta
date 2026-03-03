@@ -80,7 +80,7 @@ namespace Main.Services.RuntimeDependencies
             }
 
             var zipPath = Path.Combine(binDir, "ollama-openvino-windows-amd64.zip");
-            var downloadUrl = "https://drive.google.com/file/d/1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507/view?usp=sharing";
+            var downloadUrl = "https://drive.google.com/uc?export=download&id=1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507";
 
             _logger.LogInformation("Downloading OV-Ollama from {Url}", downloadUrl);
 
