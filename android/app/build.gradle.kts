@@ -88,6 +88,13 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
+// Exclude end-to-end integration tests (require a live server) from the unit test run
+tasks.withType<Test> {
+    useJUnit {
+        excludeCategories("com.manuscripta.student.integration.IntegrationTest")
+    }
+}
+
 // Checkstyle configuration
 checkstyle {
     toolVersion = "10.12.0"

@@ -230,6 +230,9 @@ public class RepositoryModule {
                                                     ApiService apiService,
                                                     TcpSocketManager tcpSocketManager) {
         return new ConfigRepositoryImpl(preferences, apiService, tcpSocketManager);
+    }
+
+    /**
      * Provides the HeartbeatManager wired with material, feedback, and status callbacks.
      *
      * @param tcpSocketManager       The TcpSocketManager instance
