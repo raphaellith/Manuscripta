@@ -255,13 +255,15 @@ namespace Main.Services.RuntimeDependencies
                     var tempWheelPath = Path.Combine(binDir, Path.GetFileName(url));
                     await File.WriteAllBytesAsync(tempWheelPath, wheelBytes);
 
-                    using var archive = System.IO.Compression.ZipFile.OpenRead(tempWheelPath);
-                    foreach (var entry in archive.Entries)
+                    using (var archive = System.IO.Compression.ZipFile.OpenRead(tempWheelPath))
                     {
-                        if (entry.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                        foreach (var entry in archive.Entries)
                         {
-                            var destPath = Path.Combine(extractDir, entry.Name);
-                            entry.ExtractToFile(destPath, overwrite: true);
+                            if (entry.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var destPath = Path.Combine(extractDir, entry.Name);
+                                entry.ExtractToFile(destPath, overwrite: true);
+                            }
                         }
                     }
 
