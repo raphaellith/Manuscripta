@@ -18,9 +18,9 @@ import androidx.annotation.NonNull;
 public final class HeartbeatConfig {
 
     /**
-     * Default heartbeat interval in milliseconds (5 seconds).
+     * Default heartbeat interval in milliseconds (3 seconds).
      */
-    public static final long DEFAULT_INTERVAL_MS = 5000L;
+    public static final long DEFAULT_INTERVAL_MS = 3000L;
 
     /**
      * Minimum allowed heartbeat interval in milliseconds (1 second).
@@ -39,7 +39,7 @@ public final class HeartbeatConfig {
 
     /**
      * Creates a new HeartbeatConfig with default settings.
-     * Heartbeat is enabled with a 5-second interval.
+     * Heartbeat is enabled with a 3-second interval.
      */
     public HeartbeatConfig() {
         this(DEFAULT_INTERVAL_MS, true);
