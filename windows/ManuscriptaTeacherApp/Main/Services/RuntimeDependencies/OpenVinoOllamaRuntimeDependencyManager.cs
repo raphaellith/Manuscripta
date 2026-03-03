@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Main.Models;
 using Main.Services.GenAI;
@@ -93,16 +94,53 @@ namespace Main.Services.RuntimeDependencies
                 // Direct file download from Google Drive is often blocked by a "Virus scan warning" page.
                 // We attempt to fetch the file, but if it returns HTML we throw so the frontend defaults to manual.
                 var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
-                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
+                var activeResponse = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                activeResponse.EnsureSuccessStatusCode();
 
-                if (response.Content.Headers.ContentType?.MediaType?.Contains("text/html") == true)
+                if (activeResponse.Content.Headers.ContentType?.MediaType?.Contains("text/html") == true)
                 {
-                    throw new InvalidOperationException("Google Drive returned an HTML page instead of the zip file. Manual installation required.");
+                    _logger.LogInformation("Google Drive returned a virus scan warning page. Attempting to bypass...");
+                    var html = await activeResponse.Content.ReadAsStringAsync();
+
+                    var confirmMatch = Regex.Match(html, @"name=""confirm""\s+value=""([^""]+)""");
+                    var uuidMatch = Regex.Match(html, @"name=""uuid""\s+value=""([^""]+)""");
+
+                    if (confirmMatch.Success)
+                    {
+                        var confirmToken = confirmMatch.Groups[1].Value;
+                        var uuidParam = uuidMatch.Success ? $"&uuid={uuidMatch.Groups[1].Value}" : "";
+
+                        var targetId = Regex.Match(downloadUrl, @"id=([^&]+)").Groups[1].Value;
+                        if (string.IsNullOrEmpty(targetId)) targetId = "1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507"; // fallback if regex fails
+
+                        var bypassUrl = $"https://drive.usercontent.google.com/download?id={targetId}&export=download&confirm={confirmToken}{uuidParam}";
+
+                        _logger.LogInformation("Bypass URL generated. Submitting confirmation request...");
+
+                        // Dispose previous response as we are replacing it
+                        activeResponse.Dispose();
+
+                        // Using same HttpClient helps persist cookies from the original request
+                        var bypassRequest = new HttpRequestMessage(HttpMethod.Get, bypassUrl);
+                        activeResponse = await _httpClient.SendAsync(bypassRequest, HttpCompletionOption.ResponseHeadersRead);
+                        activeResponse.EnsureSuccessStatusCode();
+
+                        if (activeResponse.Content.Headers.ContentType?.MediaType?.Contains("text/html") == true)
+                        {
+                            activeResponse.Dispose();
+                            throw new InvalidOperationException("Google Drive bypass failed (returned HTML again). Manual installation required.");
+                        }
+                    }
+                    else
+                    {
+                        activeResponse.Dispose();
+                        throw new InvalidOperationException("Google Drive returned an HTML page but bypass tokens could not be found. Manual installation required.");
+                    }
                 }
 
-                var totalBytes = response.Content.Headers.ContentLength ?? -1;
-                using var contentStream = await response.Content.ReadAsStreamAsync();
+                using var finalResponse = activeResponse;
+                var totalBytes = finalResponse.Content.Headers.ContentLength ?? -1;
+                using var contentStream = await finalResponse.Content.ReadAsStreamAsync();
                 using var fileStream = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
 
                 var buffer = new byte[8192];
