@@ -18,6 +18,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -345,6 +346,39 @@ public class ErrorInterceptorTest {
         Response response = interceptor.intercept(mockChain);
 
         // Assert - interceptor logs the error and still returns the response
+        assertNotNull(response);
+        assertEquals(500, response.code());
+    }
+
+    // ========== Server error with non-empty body ==========
+
+    @Test
+    public void testIntercept_500Error_withNonEmptyBody_logsBody() throws IOException {
+        String errorBody = "{\"error\":\"Internal server error\"}";
+        Response errorResponse = createResponseWithBody(500, "Internal Server Error", errorBody);
+        when(mockChain.proceed(any(Request.class))).thenReturn(errorResponse);
+
+        Response response = interceptor.intercept(mockChain);
+
+        assertNotNull(response);
+        assertEquals(500, response.code());
+        assertNotNull(response.body());
+    }
+
+    @Test
+    public void testIntercept_peekBodyIOException_handlesGracefully() throws IOException {
+        Response mockErrorResponse = mock(Response.class);
+        ResponseBody mockBody = mock(ResponseBody.class);
+
+        when(mockErrorResponse.isSuccessful()).thenReturn(false);
+        when(mockErrorResponse.code()).thenReturn(500);
+        when(mockErrorResponse.request()).thenReturn(testRequest);
+        when(mockErrorResponse.body()).thenReturn(mockBody);
+        when(mockErrorResponse.peekBody(anyLong())).thenThrow(new IOException("peek failed"));
+        when(mockChain.proceed(any(Request.class))).thenReturn(mockErrorResponse);
+
+        Response response = interceptor.intercept(mockChain);
+
         assertNotNull(response);
         assertEquals(500, response.code());
     }

@@ -14,6 +14,10 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import okio.BufferedSource;
+import okio.Okio;
+
+import java.io.ByteArrayInputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -426,6 +430,130 @@ public class LoggingInterceptorTest {
         // Assert
         assertNotNull(result);
         assertEquals(204, result.code());
+    }
+
+    // ========== Body size limit tests ==========
+
+    @Test
+    public void testIntercept_requestBodyUnknownLength_skipsBodyLogging() throws IOException {
+        RequestBody unknownLengthBody = new RequestBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("application/json");
+            }
+
+            @Override
+            public long contentLength() {
+                return -1L; // unknown length
+            }
+
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException {
+                sink.writeUtf8("{}");
+            }
+        };
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .post(unknownLengthBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
+    @Test
+    public void testIntercept_requestBodyTooLarge_skipsBodyLogging() throws IOException {
+        final long oversizeLength = 2 * 1024 * 1024L; // 2 MB
+        RequestBody largeBody = new RequestBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("application/octet-stream");
+            }
+
+            @Override
+            public long contentLength() {
+                return oversizeLength;
+            }
+
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException {
+                // no-op: body logging should be skipped before writeTo is called
+            }
+        };
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/upload")
+                .post(largeBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(MediaType.parse("text/plain"), ""))
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
+    @Test
+    public void testIntercept_responseTooLarge_skipsBodyLogging() throws IOException {
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .get()
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        final long oversizeLength = 2 * 1024 * 1024L; // 2 MB
+        ResponseBody largeResponseBody = new ResponseBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("application/octet-stream");
+            }
+
+            @Override
+            public long contentLength() {
+                return oversizeLength;
+            }
+
+            @Override
+            public BufferedSource source() {
+                return Okio.buffer(Okio.source(new ByteArrayInputStream(new byte[0])));
+            }
+        };
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(largeResponseBody)
+                .build();
+        when(mockChain.proceed(any(Request.class))).thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+        assertEquals(200, result.code());
     }
 
     // ========== JSON response body tests ==========

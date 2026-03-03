@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -32,6 +33,8 @@ import com.manuscripta.student.utils.FileStorageManager;
 
 import java.io.IOException;
 
+import okhttp3.MediaType;
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Response;
 
@@ -75,10 +78,16 @@ public class MaterialRepositoryImplTest {
     @Mock
     private Call<DistributionBundleDto> mockDistributionCall;
 
+    @Mock
+    private Call<ResponseBody> mockAttachmentCall;
+
     private MaterialRepositoryImpl repository;
 
     private static final String TEST_MATERIAL_ID = "test-material-123";
     private static final String TEST_DEVICE_ID = "test-device-456";
+    private static final String TEST_ATTACHMENT_ID = "550e8400-e29b-41d4-a716-446655440000";
+    private static final String CONTENT_WITH_ATTACHMENT =
+            "Content /attachments/" + TEST_ATTACHMENT_ID;
 
     @Before
     public void setUp() {
@@ -596,6 +605,113 @@ public class MaterialRepositoryImplTest {
                 () -> repository.saveMaterials(materials));
 
         assertTrue(exception.getMessage().contains("null at index 1"));
+    }
+
+    // ========== Attachment download tests ==========
+
+    @Test
+    public void testSyncMaterials_withAttachment_successfulDownload_savesFile() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
+                CONTENT_WITH_ATTACHMENT, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        ResponseBody attachmentBody = ResponseBody.create(MediaType.parse("image/png"),
+                new byte[]{1, 2, 3});
+        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute()).thenReturn(Response.success(attachmentBody));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockFileStorageManager).saveAttachment(
+                eq("mat-1"), eq(TEST_ATTACHMENT_ID), eq("png"), any(byte[].class));
+        verify(mockAckRetrySender).send(any(DistributeAckMessage.class), anyString());
+    }
+
+    @Test
+    public void testSyncMaterials_withAttachment_nullContentType_defaultsToBin() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
+                CONTENT_WITH_ATTACHMENT, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        ResponseBody attachmentBody = ResponseBody.create((MediaType) null, new byte[]{1, 2, 3});
+        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute()).thenReturn(Response.success(attachmentBody));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockFileStorageManager).saveAttachment(
+                eq("mat-1"), eq(TEST_ATTACHMENT_ID), eq("bin"), any(byte[].class));
+    }
+
+    @Test
+    public void testSyncMaterials_withAttachment_httpFailure_skipsAck() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
+                CONTENT_WITH_ATTACHMENT, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute()).thenReturn(
+                Response.error(404, ResponseBody.create(null, "")));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
+    }
+
+    @Test
+    public void testSyncMaterials_withAttachment_nullResponseBody_skipsAck() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
+                CONTENT_WITH_ATTACHMENT, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute()).thenReturn(Response.<ResponseBody>success(null));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
+    }
+
+    @Test
+    public void testSyncMaterials_withAttachment_ioException_skipsAck() throws IOException {
+        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
+                CONTENT_WITH_ATTACHMENT, null, null, 0L);
+        DistributionBundleDto bundle = new DistributionBundleDto(
+                Collections.singletonList(dto), Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+
+        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute()).thenThrow(new IOException("Network error"));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
+    }
+
+    @Test
+    public void testSyncMaterials_unexpectedException_doesNotNotifyCallback() throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute()).thenThrow(new RuntimeException("Unexpected error"));
+
+        final boolean[] callbackCalled = {false};
+        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        assertFalse(callbackCalled[0]);
     }
 
     // ========== Helper methods ==========
