@@ -217,7 +217,7 @@ For a list of all server method and client handlers to be implemented for commun
 
 (2) When such notification is received, the frontend shall —
 
-    (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies;
+    (a) display a modal indicating to the user that runtime dependency(ies) are missing, the name and purpose of those dependencies, and a confirmation that the user wishes to install those dependencies. Where an inference runtime dependency is to be installed (Standard Ollama per GenAISpec §1A or OV-Ollama per GenAISpec §1G), the modal shall indicate which runtime has been selected and, for OV-Ollama, note that Intel NPU acceleration will be enabled;
 
     (b) if confirmation is received, for each missing runtime dependency, sequentially —
 
@@ -975,6 +975,22 @@ For a list of all server method and client handlers to be implemented for commun
     (a) re-check the availability of each runtime dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` per Section 3A(3)(c); and
 
     (b) reinstall each runtime dependency by calling `Task<bool> InstallRuntimeDependency(string dependencyId)` per Section 3A(2)(b)(i).
+
+(2A) **Inference Runtime Selection**
+
+    The frontend shall provide a control in the Settings interface to —
+
+    (a) display the currently active inference runtime (Standard Ollama or OV-Ollama), as reported by `Task<string> GetActiveInferenceRuntime()` (NetworkingAPISpec §1(1)(nz)(iii));
+
+    (b) display whether an Intel NPU was detected, and whether OV-Ollama is recommended;
+
+    (c) allow the user to switch between Standard Ollama and OV-Ollama by calling `Task<bool> SwitchInferenceRuntime(string runtimeId)` (NetworkingAPISpec §1(1)(nz)(iv)), where `runtimeId` is `"standard"` or `"openvino"`. On a successful return (`true`), the frontend shall update the displayed runtime status immediately;
+
+    (d) warn the user that switching runtime may require re-downloading models in a different format;
+
+    (e) disable the OV-Ollama option if the `OpenVinoOllamaRuntimeDependencyManager` dependency is not installed.
+
+[Explanatory Note: No dedicated SignalR handler is required for runtime changes. The switch is user-initiated, so the frontend obtains the result from the `SwitchInferenceRuntime` return value. On subsequent startups, the frontend queries the persisted preference via `GetActiveInferenceRuntime`.]
 
 (3) **Email Credential Configuration**
 

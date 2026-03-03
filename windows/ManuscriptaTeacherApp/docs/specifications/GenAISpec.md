@@ -9,16 +9,22 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 ## Section 1 — General Principles
 
-(1) All GenAI functionalities of the Windows application must be provided locally via Ollama.
+(1) All GenAI functionalities of the Windows application must be provided locally via an Ollama-compatible inference server. The application shall support two Ollama variants —
+
+    (a) the standard Ollama release ("Standard Ollama"), which uses GGUF-format models; and
+
+    (b) an OpenVINO-accelerated Ollama build ("OV-Ollama"), which uses OpenVINO Intermediate Representation (IR) format models and may leverage Intel NPU, iGPU, or optimised CPU inference paths.
+
+(1A) In this specification, "the active Ollama instance" means whichever variant is currently installed and running pursuant to §1F.
 
 (2) The following models shall be used, with task-specific assignments:
 
-| Purpose | Model | Ollama Name | Rationale |
-|---------|-------|-------------|----------|
-| Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
-| Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
-| Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
+| Purpose | Model | Ollama Name | Standard Format | OV-Ollama Format | Rationale |
+|---------|-------|-------------|-----------------|-------------------|----------|
+| Material generation | Qwen3 8B | `qwen3:8b` | GGUF | IR (INT4) | Better instruction adherence for structured output |
+| Content modification | IBM Granite 4.0 | `granite4` | GGUF | IR (INT4) | Speed for inline edits |
+| Feedback generation | IBM Granite 4.0 | `granite4` | GGUF | IR (INT4) | Less structured output required |
+| Embeddings | Nomic Embed Text | `nomic-embed-text` | GGUF | IR (INT4) | Optimised for retrieval |
 
 (3) [Deleted.]
 
@@ -34,9 +40,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (7) [Deleted.]
 
-(8) Prior to any operation requiring Ollama, Chroma or any large language model, the application shall verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification and Sections 1A to 1E of this document.
+(8) Prior to any operation requiring the active Ollama instance, Chroma or any large language model, the application shall verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification and Sections 1A to 1F of this document.
 
-(9) As Ollama, Chroma, large language models are treated as runtime dependencies, the application shall not assume on startup that they have already been installed. They must only be installed upon user consent expressed from the frontend.
+(9) As the active Ollama instance, the OpenVINO runtime (where applicable), Chroma, and large language models are treated as runtime dependencies, the application shall not assume on startup that they have already been installed. They must only be installed upon user consent expressed from the frontend.
 
 
 
@@ -151,6 +157,118 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 
 
+## Section 1F — Inference Runtime Selection
+
+(1) The application shall support two inference runtimes — Standard Ollama and OV-Ollama — as defined in §1(1)(a) and §1(1)(b) respectively. Only one runtime shall be active at any given time.
+
+(2) On first launch, and whenever inference runtime dependencies are installed, the application shall determine the preferred runtime as follows —
+
+    (a) the backend shall detect whether an Intel NPU is present by querying the Windows Management Instrumentation (WMI) class `Win32_PnPEntity` for devices whose `Name` property contains "Intel" and "NPU", or by checking for the presence of the `intel_npu` driver;
+
+    (b) if an Intel NPU is detected, the application shall prefer OV-Ollama;
+
+    (c) if no Intel NPU is detected, the application shall use Standard Ollama;
+
+    (d) the user may override the preferred runtime via the Settings interface (FrontendWorkflowSpecifications §7(2A)). The override shall be persisted as an `InferencePreferenceEntity` (AdditionalValidationRules §3F) and shall take effect on the next application startup or when `SwitchInferenceRuntime` (NetworkingAPISpec §1(1)(nz)(iv)) is invoked.
+
+(3) When OV-Ollama is the active runtime, the OpenVINO runtime libraries shall be required as a dependency. The management of this dependency is specified in §1G.
+
+(4) When OV-Ollama is the active runtime, model-specific dependency managers (§1C–§1E) shall source models in IR format as specified in §1H, rather than pulling GGUF models via `ollama pull`.
+
+(5) If the active runtime fails its availability check (`CheckDependencyAvailabilityAsync()`) —
+
+    (a) the application shall attempt to fall back to the other runtime, provided it is installed;
+
+    (b) if neither runtime is available, the application shall notify the frontend in accordance with the Backend Runtime Dependency Management Specification Section 3(2).
+
+(6) A class `InferenceRuntimeSelector` shall be provided as a singleton to —
+
+    (a) determine the active runtime on startup pursuant to Subsection (2);
+
+    (b) expose a property `ActiveRuntime` of an enumeration type `InferenceRuntime` with values `Standard` and `OpenVino`;
+
+    (c) expose a method `Task<Boolean> TrySwitchRuntimeAsync(InferenceRuntime target)` that, subject to dependency availability, switches the active runtime, persists the preference as an `InferencePreferenceEntity` as defined in Additional Validation Rules Section 3F, and restarts the Ollama daemon accordingly.
+
+
+## Section 1G — Ascertaining the Availability of OV-Ollama
+
+(1) The `OpenVinoOllamaRuntimeDependencyManager` class shall manage the availability and installation of the OpenVINO-accelerated Ollama build by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `OpenVinoOllamaRuntimeDependencyManager` class shall have the unique identifier `"ollama-openvino"`.
+
+(3) The `OpenVinoOllamaRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of OV-Ollama by —
+
+        (i) calling `http://localhost:11434/api/version`; and
+
+        (ii) verifying that the version response indicates OpenVINO backend support. The response should be inspected for an `openvino` field or tag. If the endpoint returns a 200 status code but no OpenVINO indicator is present, the method shall return `false`.
+
+    (b) `Task DownloadDependencyAsync()` shall —
+
+        (i) download the OpenVINO-enabled Ollama build from the URL specified in Appendix A (`OV_OLLAMA_DOWNLOAD_URL`) and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino.zip`;
+
+        (ii) download the OpenVINO GenAI runtime package from the URL specified in Appendix A (`OV_GENAI_RUNTIME_URL`) and store it as `%AppData%\ManuscriptaTeacherApp\bin\openvino-genai-runtime.zip`.
+
+    (c) `Task VerifyDownloadAsync()` shall verify the downloaded files as follows —
+
+        (i) for the OV-Ollama build archive: as the `zhaohb/ollama_ov` project does not publish SHA256 checksums for its release assets, this step shall be implemented as a no-op for this file. The absence of published checksums shall be clearly documented in comments, and this decision shall be revisited if the project begins publishing checksums in the future.
+
+        (ii) for the OpenVINO GenAI runtime archive: the SHA256 hash of the downloaded file shall be compared against the checksum published alongside the runtime release on the OpenVINO downloads page. If no checksum is available, this step shall be a no-op for this file.
+
+    (d) `Task PerformInstallDependencyAsync()` shall —
+
+        (i) extract the OV-Ollama build to `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\`;
+
+        (ii) extract the OpenVINO GenAI runtime to `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\`;
+
+        (iii) delete the ZIP files;
+
+        (iv) set the environment variables `OpenVINO_DIR` and `PATH` to include the OpenVINO runtime library directory for the `ollama serve` process;
+
+        (v) start `ollama serve` from the OV-Ollama directory with the environment variables specified in (iv) and with `GODEBUG=cgocheck=0`.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes associated with OV-Ollama, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` and `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\` directories, and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`. The same `OllamaClientService` class is used because OV-Ollama exposes an identical REST API.
+
+
+## Section 1H — Model Provisioning for OV-Ollama
+
+(1) When OV-Ollama is the active runtime, models shall be provided in OpenVINO IR format rather than GGUF. The model provisioning process differs from the standard `ollama pull` mechanism specified in §1C(3)(b), §1D(3)(b), and §1E(3)(b).
+
+(2) IR-format models shall be obtained by one of the following means, applied in order of preference —
+
+    (a) downloading a pre-converted IR model archive from a URL specified in Appendix A, if such an archive is available for the model; or
+
+    (b) converting the model from Hugging Face format to IR format at install time using the `optimum-intel` command-line tool.
+
+(3) Where method (2)(a) is used —
+
+    (a) the archive shall be downloaded to `%AppData%\ManuscriptaTeacherApp\bin\models\{model-name}\`;
+
+    (b) the archive shall be extracted in place and the archive file deleted;
+
+    (c) the model shall be registered with OV-Ollama using an Ollama `Modelfile` that references the extracted IR directory, and `ollama create {model-name} -f Modelfile` shall be invoked.
+
+(4) Where method (2)(b) is used —
+
+    (a) Python and `optimum-intel` shall be treated as additional runtime dependencies and managed accordingly;
+
+    (b) the conversion command shall be `optimum-cli export openvino --model {huggingface-model-id} --weight-format int4 {output-directory}`;
+
+    (c) this method should only be used as a fallback if pre-converted archives are unavailable.
+
+(5) The model-specific dependency manager classes (§1C, §1D, §1E) shall detect the active runtime via `InferenceRuntimeSelector.ActiveRuntime` and —
+
+    (a) if `Standard`, use the existing GGUF provisioning logic (`ollama pull`);
+
+    (b) if `OpenVino`, use the IR provisioning logic specified in (2)–(4);
+
+    (c) `CheckDependencyAvailabilityAsync()` and `UninstallDependencyAsync()` shall continue to use the Ollama REST API (`/api/tags`, `ollama rm`), as the API is identical for both runtimes.
+
+
+
 ## Section 2 — Document Chunking and Vector Storage
 
 (1) When a source document transcript is chunked, as part of the indexing workflow in §3A(2) —
@@ -205,7 +323,21 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | §3E | `EmbeddingStatusService` |
 | §3F | `OutputValidationService` |
 
-(2) All service classes shall depend on a common `OllamaClientService` for low-level Ollama API interactions (model verification, chat completion, embedding generation).
+(2) All service classes shall depend on a common inference client interface, `IInferenceClient`, for low-level API interactions (model verification, chat completion, embedding generation). The `OllamaClientService` class shall implement `IInferenceClient`. The active implementation shall be resolved at runtime via dependency injection.
+
+(2A) The `IInferenceClient` interface shall declare the following methods —
+
+    (a) `Task<float[]> GenerateEmbeddingAsync(string text, string model)` — as currently specified in `OllamaClientService`.
+
+    (b) `Task<string> GenerateChatCompletionAsync(string model, string prompt, string? systemPrompt)` — as currently specified in `OllamaClientService`.
+
+    (c) `Task<bool> IsModelAvailableAsync(string modelName)` — as currently specified in `OllamaClientService`.
+
+    (d) `Task EnsureModelReadyAsync(string modelName)` — as currently specified in `OllamaClientService`.
+
+    (e) `Task<bool> CanGenerateWithModelAsync(string modelName)` — as currently specified in `OllamaClientService`.
+
+Since both Standard Ollama and OV-Ollama expose identical REST APIs, a single `OllamaClientService` implementation of `IInferenceClient` is sufficient for both runtimes. The interface is introduced to allow future non-Ollama backends without modifying dependent service classes.
 
 ### Section 3A — Source Document Indexing
 
@@ -560,6 +692,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
 | `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
 | `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
+| `OV_OLLAMA_DOWNLOAD_URL` | `https://drive.google.com/file/d/1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507/view?usp=sharing` | Download URL for the OpenVINO-accelerated Ollama build (Google Drive, hosted by `zhaohb/ollama_ov`) |
+| `OV_GENAI_RUNTIME_URL` | `https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.2.0.0.dev20250513/openvino_genai_windows_2025.2.0.0.dev20250513_x86_64.zip` | Download URL for the OpenVINO GenAI runtime (nightly build, must match OV-Ollama version) |
+| `OV_OLLAMA_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` | Installation directory for OV-Ollama |
+| `OV_RUNTIME_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\` | Installation directory for OpenVINO runtime libraries |
+| `IR_MODEL_BASE_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\models\` | Base directory for IR-format models |
 
 ---
 
@@ -570,30 +707,35 @@ The following diagram provides an illustrative overview of the workflows defined
 ```mermaid
 sequenceDiagram
     participant Frontend
+    participant Selector as InferenceRuntimeSelector
     participant Hub as TeacherPortalHub
     participant RAG as DocumentEmbeddingService
-    participant Ollama
+    participant Inference as IInferenceClient (Ollama)
 
-    Note over Frontend,Ollama: Source Document Indexing (§3A)
+    Note over Frontend,Inference: Runtime Selection (§1F)
+    Frontend->>Selector: Query active runtime
+    Selector-->>Frontend: Standard | OpenVino
+
+    Note over Frontend,Inference: Source Document Indexing (§3A)
     Frontend->>Hub: CreateSourceDocument()
     Hub->>RAG: IndexSourceDocumentAsync()
-    RAG->>Ollama: nomic-embed-text
+    RAG->>Inference: nomic-embed-text
     RAG->>RAG: Store in ChromaDB
     Hub-->>Frontend: EmbeddingStatus: INDEXED
 
-    Note over Frontend,Ollama: Material Generation (§3B)
+    Note over Frontend,Inference: Material Generation (§3B)
     Frontend->>Hub: GenerateReading(request)
     Hub->>RAG: Retrieve top-K chunks
     RAG-->>Hub: chunks[]
-    Hub->>Ollama: granite4
-    Ollama-->>Hub: content
+    Hub->>Inference: qwen3:8b / granite4
+    Inference-->>Hub: content
     Hub-->>Frontend: generated content
 
-    Note over Frontend,Ollama: Content Modification (§3C)
+    Note over Frontend,Inference: Content Modification (§3C)
     Frontend->>Hub: ModifyContent(selection, instruction)
     Hub->>RAG: Retrieve context (optional)
-    Hub->>Ollama: granite4
-    Ollama-->>Hub: modified content
+    Hub->>Inference: granite4
+    Inference-->>Hub: modified content
     Hub-->>Frontend: modified content
 ```
 

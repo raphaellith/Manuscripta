@@ -155,6 +155,10 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `Task<bool> InstallRuntimeDependency(string dependencyId)`: Installs the runtime dependency with the specified dependencyId per Runtime Dependency Management Specification §2(2). Returns `true` on success, `false` on failure.
 
+        (iii) `Task<string> GetActiveInferenceRuntime()`: Returns the identifier of the currently active inference runtime — `"standard"` for Standard Ollama or `"openvino"` for OV-Ollama — as determined by `InferenceRuntimeSelector` per GenAISpec §1F.
+
+        (iv) `Task<bool> SwitchInferenceRuntime(string runtimeId)`: Switches the active inference runtime to the one identified by `runtimeId` (either `"standard"` or `"openvino"`). Returns `true` if the switch was successful and the preference has been persisted, `false` if the target runtime's dependencies are not installed. See GenAISpec §1F(6)(c).
+
     (n) Methods for external device management.
 
         (i) `Task<Guid> PairExternalDevice(string name, ExternalDeviceType type, string configurationData)`: Pairs an external device by persisting the `ExternalDeviceEntity` and any required files (e.g. rmapi conf). For reMarkable, `configurationData` is the one-time code. For Kindle, `configurationData` is the Kindle email address. Returns the UUID of the newly created device entity.

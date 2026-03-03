@@ -272,3 +272,22 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) The `SmtpPort` specified in Paragraph (1)(c) must be a valid port number (1-65535).
 
     (b) Only one `EmailCredentialEntity` may exist at any time.
+
+
+### Section 3F — Inference Preference
+
+(1) An inference preference is represented by an `InferencePreferenceEntity` class. This class must contain the following attributes.
+
+    (a) `PreferredRuntime` (enum InferenceRuntime): The user's preferred inference runtime. Possible values are:
+
+        (i) `STANDARD` — Standard Ollama, using GGUF-format models.
+
+        (ii) `OPENVINO` — OpenVINO-accelerated Ollama, using IR-format models and Intel NPU/iGPU/CPU acceleration.
+
+(2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
+
+    (a) Only one `InferencePreferenceEntity` may exist at any time.
+
+    (b) The default value of `PreferredRuntime`, applied when no entity exists, shall be determined at runtime by the `InferenceRuntimeSelector` (GenAISpec §1F(2)) — `OPENVINO` if an Intel NPU is detected, `STANDARD` otherwise.
+
+(3) This entity shall not appear in Data Transfer Objects used for communication with the Android client.
