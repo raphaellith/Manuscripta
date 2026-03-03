@@ -104,9 +104,9 @@ public class QuestionExtractionService
         var data = new QuestionData();
         var lines = propertiesBlock.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var line in lines)
+        for (int i = 0; i < lines.Length; i++)
         {
-            var trimmedLine = line.Trim();
+            var trimmedLine = lines[i].Trim();
             if (string.IsNullOrEmpty(trimmedLine))
                 continue;
 
@@ -116,7 +116,21 @@ public class QuestionExtractionService
             }
             else if (trimmedLine.StartsWith("options:"))
             {
-                data.Options = ParseList(trimmedLine, "options:");
+                // Check if options are inline (array format) or multi-line (YAML list format)
+                var inlineValue = trimmedLine.Substring("options:".Length).Trim();
+                if (inlineValue.StartsWith("["))
+                {
+                    // Inline array format: options: ["Option 1", "Option 2"]
+                    data.Options = ParseList(trimmedLine, "options:");
+                }
+                else
+                {
+                    // Multi-line YAML list format:
+                    // options:
+                    //   - "Option A"
+                    //   - "Option B"
+                    data.Options = ParseYamlList(lines, ref i);
+                }
             }
             else if (trimmedLine.StartsWith("correct:"))
             {
@@ -195,6 +209,56 @@ public class QuestionExtractionService
             items.Add(match.Groups[1].Value);
         }
 
+        return items;
+    }
+
+    /// <summary>
+    /// Parses a YAML list format spanning multiple lines.
+    /// Expected format:
+    ///   - "Item 1"
+    ///   - "Item 2"
+    /// </summary>
+    /// <param name="lines">All lines from the properties block</param>
+    /// <param name="currentIndex">Current line index (will be updated to the last consumed line)</param>
+    private List<string> ParseYamlList(string[] lines, ref int currentIndex)
+    {
+        var items = new List<string>();
+        
+        // Move to the next line after "options:"
+        currentIndex++;
+        
+        // Parse subsequent lines that start with "-"
+        while (currentIndex < lines.Length)
+        {
+            var line = lines[currentIndex];
+            var trimmedLine = line.Trim();
+            
+            // Check if line starts with "-" (list item marker)
+            if (trimmedLine.StartsWith("-"))
+            {
+                // Extract the quoted value after "-"
+                var itemPattern = new Regex(@"-\s*""([^""]+)""");
+                var match = itemPattern.Match(trimmedLine);
+                
+                if (match.Success)
+                {
+                    items.Add(match.Groups[1].Value);
+                    currentIndex++;
+                }
+                else
+                {
+                    // Invalid format, stop parsing this list
+                    break;
+                }
+            }
+            else
+            {
+                // No longer a list item, decrement index to allow parsing of this line
+                currentIndex--;
+                break;
+            }
+        }
+        
         return items;
     }
 
