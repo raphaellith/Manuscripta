@@ -337,7 +337,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (e) `Task<bool> CanGenerateWithModelAsync(string modelName)` — as currently specified in `OllamaClientService`.
 
-Since both Standard Ollama and OV-Ollama expose identical REST APIs, a single `OllamaClientService` implementation of `IInferenceClient` is sufficient for both runtimes. The interface is introduced to allow future non-Ollama backends without modifying dependent service classes.
+[Explanatory Note: Since both Standard Ollama and OV-Ollama expose identical REST APIs, a single `OllamaClientService` implementation of `IInferenceClient` is sufficient for both runtimes. The interface is introduced to allow future non-Ollama backends without modifying dependent service classes.]
 
 ### Section 3A — Source Document Indexing
 
