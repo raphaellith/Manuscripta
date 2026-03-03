@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -237,6 +238,34 @@ namespace Main.Services.RuntimeDependencies
                 else
                 {
                     throw new FileNotFoundException("Downloaded executable not found.", tempExePath);
+                }
+
+                // Download missing OpenVINO GenAI runtime dependencies from official PyPI wheels
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Downloading OpenVINO GenAI DLLs" });
+                
+                var pypiWheelUrls = new[] {
+                    "https://files.pythonhosted.org/packages/79/93/f352dfcf7a405e75369853ce835f74e224c1d7d9aa40ca569ec6ac5b53ca/openvino_genai-2024.5.0.0-cp310-cp310-win_amd64.whl",
+                    "https://files.pythonhosted.org/packages/fd/51/5428a4e208f71a7a97ad58415475d8b08e297dfc1cfeea836d468cce7bec/openvino-2024.5.0-17288-cp310-cp310-win_amd64.whl",
+                    "https://files.pythonhosted.org/packages/aa/c1/a7207947755a2903de352f2f8519d8d99d875d1a54ddf321993f95a36af3/openvino_tokenizers-2024.5.0.0-py3-none-win_amd64.whl"
+                };
+
+                foreach (var url in pypiWheelUrls)
+                {
+                    var wheelBytes = await _httpClient.GetByteArrayAsync(url);
+                    var tempWheelPath = Path.Combine(binDir, Path.GetFileName(url));
+                    await File.WriteAllBytesAsync(tempWheelPath, wheelBytes);
+
+                    using var archive = System.IO.Compression.ZipFile.OpenRead(tempWheelPath);
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (entry.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var destPath = Path.Combine(extractDir, entry.Name);
+                            entry.ExtractToFile(destPath, overwrite: true);
+                        }
+                    }
+
+                    File.Delete(tempWheelPath);
                 }
 
                 try
