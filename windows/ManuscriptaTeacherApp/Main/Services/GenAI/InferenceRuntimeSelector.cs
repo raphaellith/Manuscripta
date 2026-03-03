@@ -74,4 +74,10 @@ public class InferenceRuntimeSelector : IInferenceRuntimeSelector
         var activeRuntime = await GetActiveRuntimeAsync();
         return activeRuntime == InferenceRuntime.OPENVINO ? "http://localhost:11435" : "http://localhost:11434";
     }
+
+    /// <summary>
+    /// Returns the base URL for Standard Ollama (always http://localhost:11434).
+    /// Per GenAISpec.md §1F(7)(a): embedding operations always use this URL.
+    /// </summary>
+    public string GetStandardOllamaBaseUrl() => "http://localhost:11434";
 }

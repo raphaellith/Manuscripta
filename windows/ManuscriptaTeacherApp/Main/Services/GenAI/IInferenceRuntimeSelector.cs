@@ -32,4 +32,10 @@ public interface IInferenceRuntimeSelector
     /// Standard: http://localhost:11434, OpenVINO: http://localhost:11435.
     /// </summary>
     Task<string> GetActiveRuntimeBaseUrlAsync();
+
+    /// <summary>
+    /// Returns the base URL for Standard Ollama (always http://localhost:11434).
+    /// Per GenAISpec.md §1F(7)(a): embedding operations always use this URL.
+    /// </summary>
+    string GetStandardOllamaBaseUrl();
 }

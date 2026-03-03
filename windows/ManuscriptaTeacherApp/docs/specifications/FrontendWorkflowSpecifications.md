@@ -986,7 +986,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) allow the user to switch between Standard Ollama and OV-Ollama by calling `Task<bool> SwitchInferenceRuntime(string runtimeId)` (NetworkingAPISpec §1(1)(nz)(iv)), where `runtimeId` is `"standard"` or `"openvino"`. On a successful return (`true`), the frontend shall update the displayed runtime status immediately;
 
-    (d) warn the user that switching runtime may require re-downloading models in a different format;
+    (d) warn the user that switching runtime may require re-downloading generation models (such as Qwen3 and Granite) in a different format. The warning shall note that the embedding model (`nomic-embed-text`) is shared across both runtimes and does not need to be re-downloaded;
 
     (e) disable the OV-Ollama option if the `OpenVinoOllamaRuntimeDependencyManager` dependency is not installed.
 

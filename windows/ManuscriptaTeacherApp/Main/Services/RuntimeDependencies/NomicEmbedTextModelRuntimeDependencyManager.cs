@@ -36,13 +36,14 @@ namespace Main.Services.RuntimeDependencies
 
         /// <summary>
         /// Checks if the Nomic Embed Text model is available by querying Ollama's API.
-        /// Per GenAISpec.md §1E(3)(a).
+        /// Per GenAISpec.md §1E(3)(a) and §1H(5A): always targets Standard Ollama on port 11434,
+        /// regardless of the active inference runtime.
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
         {
             try
             {
-                var baseUrl = await _inferenceRuntimeSelector.GetActiveRuntimeBaseUrlAsync();
+                var baseUrl = _inferenceRuntimeSelector.GetStandardOllamaBaseUrl();
                 var response = await _httpClient.GetAsync($"{baseUrl}/api/tags");
                 if (!response.IsSuccessStatusCode)
                 {

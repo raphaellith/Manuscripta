@@ -143,7 +143,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) The `NomicEmbedTextModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying the Standard Ollama API endpoint `http://localhost:11434/api/tags` — regardless of the active inference runtime — and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
 
     (b) `Task DownloadDependencyAsync()` shall download the Nomic Embed Text model by calling `ollama pull nomic-embed-text` via the command line. This operation may take significant time and download data.
 
@@ -189,6 +189,18 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (c) expose a method `Task<Boolean> TrySwitchRuntimeAsync(InferenceRuntime target)` that, subject to dependency availability, switches the active runtime, persists the preference as an `InferencePreferenceEntity` as defined in Additional Validation Rules Section 3F, and restarts the Ollama daemon accordingly.
 
+(7) Notwithstanding §1F(1), when OV-Ollama is the active runtime for generation, Standard Ollama shall remain the exclusive runtime for embedding operations. Specifically —
+
+    (a) calls to `GenerateEmbeddingAsync()` shall always be routed to `http://localhost:11434` (Standard Ollama), regardless of the active runtime selection;
+
+    (b) calls to `GenerateChatCompletionAsync()` shall be routed to the active runtime's base URL as determined by `IInferenceRuntimeSelector`;
+
+    (c) the `OllamaClientService` class shall implement this routing internally by maintaining a separate base URL for embedding operations that always resolves to Standard Ollama;
+
+    (d) as a consequence, Standard Ollama must be installed and running whenever OV-Ollama is the active runtime. The dependency chain shall enforce that `ollama` (Standard) is installed before `ollama-openvino`.
+
+[Explanatory Note: The `zhaohb/ollama_ov` model library does not include any embedding model. Until an OpenVINO IR equivalent of `nomic-embed-text` becomes available, embedding operations must be served by Standard Ollama. This design treats Standard Ollama as the "base" and OV-Ollama as a generation-only accelerator overlay.]
+
 
 ## Section 1G — Ascertaining the Availability of OV-Ollama
 
@@ -206,29 +218,25 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (b) `Task DownloadDependencyAsync()` shall —
 
-        (i) download the OpenVINO-enabled Ollama build from the URL specified in Appendix A (`OV_OLLAMA_DOWNLOAD_URL`) and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino.zip`;
+        (i) download the OpenVINO-enabled Ollama executable from the URL specified in Appendix A (`OV_OLLAMA_DOWNLOAD_URL`), bypassing any Google Drive virus-scan confirmation pages as necessary, and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino-windows-amd64.exe`. The downloaded file shall be validated to ensure it is a binary executable, not an HTML artefact, by checking the response Content-Type and verifying that the file size exceeds 50 MB.
 
-        (ii) download the OpenVINO GenAI runtime package from the URL specified in Appendix A (`OV_GENAI_RUNTIME_URL`) and store it as `%AppData%\ManuscriptaTeacherApp\bin\openvino-genai-runtime.zip`.
+    [Explanatory Note: The `zhaohb/ollama_ov` Google Drive link hosts a standalone `.exe`, not a ZIP archive. Google Drive also interposes an HTML virus-scan warning page for large files, which must be bypassed by extracting confirmation tokens from the HTML response.]
 
-    (c) `Task VerifyDownloadAsync()` shall verify the downloaded files as follows —
-
-        (i) for the OV-Ollama build archive: as the `zhaohb/ollama_ov` project does not publish SHA256 checksums for its release assets, this step shall be implemented as a no-op for this file. The absence of published checksums shall be clearly documented in comments, and this decision shall be revisited if the project begins publishing checksums in the future.
-
-        (ii) for the OpenVINO GenAI runtime archive: the SHA256 hash of the downloaded file shall be compared against the checksum published alongside the runtime release on the OpenVINO downloads page. If no checksum is available, this step shall be a no-op for this file.
+    (c) `Task VerifyDownloadAsync()` shall verify the downloaded executable by confirming that it is greater than 50 MB in size and is not an HTML document. As the `zhaohb/ollama_ov` project does not publish SHA256 checksums, cryptographic verification is not feasible.
 
     (d) `Task PerformInstallDependencyAsync()` shall —
 
-        (i) extract the OV-Ollama build to `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\`;
+        (i) create the directory `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` and move the downloaded executable into it as `ollama.exe`;
 
-        (ii) extract the OpenVINO GenAI runtime to `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\`;
+        (ii) download the OpenVINO GenAI runtime archive from the URL specified in Appendix A (`OV_GENAI_RUNTIME_URL`) and extract all Release-variant `.dll` files from the archive into `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\`, colocated alongside `ollama.exe`. Debug-variant DLLs (those in `Debug/` subdirectories or with names ending in `d.dll`) shall be excluded. The archive shall be deleted after extraction;
 
-        (iii) delete the ZIP files;
+        (iii) add `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` to the `PATH` environment variable for both the current process and the user scope;
 
-        (iv) set the environment variables `OpenVINO_DIR` and `PATH` to include the OpenVINO runtime library directory for the `ollama serve` process;
+        (iv) start `ollama.exe serve` from the OV-Ollama directory with `WorkingDirectory` set to the OV-Ollama installation directory, and with the environment variables `GODEBUG=cgocheck=0` and `OLLAMA_HOST=127.0.0.1:11435`.
 
-        (v) start `ollama serve` from the OV-Ollama directory with the environment variables specified in (iv), with `GODEBUG=cgocheck=0`, and with `OLLAMA_HOST=127.0.0.1:11435` to avoid port collisions with Standard Ollama.
+    [Explanatory Note: The OV-Ollama executable dynamically links against OpenVINO native libraries (`openvino_c.dll`, `openvino_genai.dll`, `tbb12.dll`, etc.). Windows resolves DLLs by searching the executable's directory first, so colocating DLLs eliminates the need for `OpenVINO_DIR` and `setupvars.bat`.]
 
-    (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes associated with OV-Ollama, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` and `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\` directories, and return `true` on success.
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes associated with OV-Ollama, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` directory, and return `true` on success.
 
     (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`. The same `OllamaClientService` class is used because OV-Ollama exposes an identical REST API.
 
@@ -259,13 +267,15 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (c) this method should only be used as a fallback if pre-converted archives are unavailable.
 
-(5) The model-specific dependency manager classes (§1C, §1D, §1E) shall detect the active runtime via `InferenceRuntimeSelector.ActiveRuntime` and —
+(5) The model-specific dependency manager classes (§1C, §1D) shall detect the active runtime via `InferenceRuntimeSelector.ActiveRuntime` and —
 
-    (a) if `Standard`, use the existing GGUF provisioning logic (`ollama pull`);
+    (a) if `Standard`, use the existing GGUF provisioning logic (`ollama pull`) targeting Standard Ollama on port 11434;
 
-    (b) if `OpenVino`, use the IR provisioning logic specified in (2)–(4);
+    (b) if `OpenVino`, use the IR provisioning logic specified in (2)–(4) targeting OV-Ollama on port 11435;
 
-    (c) `CheckDependencyAvailabilityAsync()` and `UninstallDependencyAsync()` shall continue to use the Ollama REST API (`/api/tags`, `ollama rm`), as the API is identical for both runtimes.
+    (c) `CheckDependencyAvailabilityAsync()` and `UninstallDependencyAsync()` shall target the appropriate runtime's API endpoint based on the active runtime.
+
+(5A) The `NomicEmbedTextModelRuntimeDependencyManager` (§1E) is excluded from Subsection (5). It shall always use Standard Ollama (`ollama pull nomic-embed-text`) and always target the Standard Ollama API endpoint on port 11434, irrespective of the active runtime.
 
 
 
@@ -693,10 +703,10 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
 | `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
 | `OV_OLLAMA_DOWNLOAD_URL` | `https://drive.google.com/file/d/1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507/view?usp=sharing` | Download URL for the OpenVINO-accelerated Ollama build (Google Drive, hosted by `zhaohb/ollama_ov`) |
-| `OV_GENAI_RUNTIME_URL` | `https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.2.0.0.dev20250513/openvino_genai_windows_2025.2.0.0.dev20250513_x86_64.zip` | Download URL for the OpenVINO GenAI runtime (nightly build, must match OV-Ollama version) |
-| `OV_OLLAMA_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` | Installation directory for OV-Ollama |
-| `OV_RUNTIME_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\` | Installation directory for OpenVINO runtime libraries |
+| `OV_GENAI_RUNTIME_URL` | `https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc3/openvino_genai_windows_2025.4.0.0rc3_x86_64.zip` | Download URL for the OpenVINO GenAI runtime (pre-release, must match OV-Ollama version) |
+| `OV_OLLAMA_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` | Installation directory for OV-Ollama (DLLs colocated here) |
 | `IR_MODEL_BASE_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\models\` | Base directory for IR-format models |
+| `STANDARD_OLLAMA_BASE_URL` | `http://localhost:11434` | Standard Ollama endpoint, always used for embedding operations |
 
 ---
 

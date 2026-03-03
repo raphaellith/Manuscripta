@@ -91,6 +91,7 @@ public class OllamaClientService : IInferenceClient
     /// <summary>
     /// Generates embeddings for the given text.
     /// See GenAISpec.md §2(2).
+    /// Per GenAISpec.md §1F(7)(a): always routes to Standard Ollama (port 11434).
     /// </summary>
     public virtual async Task<float[]> GenerateEmbeddingAsync(string text, string model = "nomic-embed-text")
     {
@@ -100,7 +101,7 @@ public class OllamaClientService : IInferenceClient
             prompt = text
         };
 
-        var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/embeddings", request);
+        var response = await _httpClient.PostAsJsonAsync($"{_runtimeSelector.GetStandardOllamaBaseUrl()}/api/embeddings", request);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
