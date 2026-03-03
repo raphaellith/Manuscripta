@@ -63,7 +63,8 @@ public class TeacherPortalHub : Hub
     private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
+    private readonly IInferenceRuntimeSelector _inferenceRuntimeSelector;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -101,7 +102,8 @@ public class TeacherPortalHub : Hub
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
         IEmbeddingService documentEmbeddingService,
-        OllamaClientService ollamaClient)
+        IInferenceClient ollamaClient,
+        IInferenceRuntimeSelector inferenceRuntimeSelector)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -142,6 +144,7 @@ public class TeacherPortalHub : Hub
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
+        _inferenceRuntimeSelector = inferenceRuntimeSelector ?? throw new ArgumentNullException(nameof(inferenceRuntimeSelector));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -1502,6 +1505,35 @@ MARK SCHEME:
         {
             throw new HubException($"Failed to retry feedback dispatch: {ex.Message}");
         }
+    }
+
+    #endregion
+
+    #region AI Configuration - NetworkingAPISpec §1(1)(nz)
+
+    /// <summary>
+    /// Retrieves the active inference runtime variant (e.g., STANDARD, OPENVINO).
+    /// Per NetworkingAPISpec §1(1)(nz)(iii).
+    /// </summary>
+    public async Task<string> GetActiveInferenceRuntime()
+    {
+        var runtime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+        return runtime.ToString();
+    }
+
+    /// <summary>
+    /// Switches the active inference runtime variant to the specified value.
+    /// Returns true on success, false if the runtime string is invalid.
+    /// Per NetworkingAPISpec §1(1)(nz)(iv).
+    /// </summary>
+    public async Task<bool> SwitchInferenceRuntime(string runtimeId)
+    {
+        if (Enum.TryParse<InferenceRuntime>(runtimeId, true, out var newRuntime))
+        {
+            await _inferenceRuntimeSelector.SwitchRuntimeAsync(newRuntime);
+            return true;
+        }
+        return false;
     }
 
     #endregion

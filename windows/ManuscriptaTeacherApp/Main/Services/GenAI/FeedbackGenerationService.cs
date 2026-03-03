@@ -17,7 +17,7 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class FeedbackGenerationService : IHostedService, IFeedbackGenerationService
 {
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
     private readonly FeedbackQueueService _queueService;
     private readonly IHubContext<TeacherPortalHub> _hubContext;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -30,7 +30,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
     public FeedbackGenerationService(
-        OllamaClientService ollamaClient,
+        IInferenceClient ollamaClient,
         FeedbackQueueService queueService,
         IHubContext<TeacherPortalHub> hubContext,
         IServiceScopeFactory scopeFactory,

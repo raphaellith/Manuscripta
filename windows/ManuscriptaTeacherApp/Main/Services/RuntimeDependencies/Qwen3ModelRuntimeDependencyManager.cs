@@ -18,6 +18,7 @@ namespace Main.Services.RuntimeDependencies
     {
         private readonly ILogger<Qwen3ModelRuntimeDependencyManager> _logger;
         private readonly HttpClient _httpClient;
+        private readonly IInferenceRuntimeSelector _inferenceRuntimeSelector;
         private static OllamaClientService? _ollamaClientServiceInstance;
         private readonly object _serviceLock = new object();
 
@@ -25,10 +26,12 @@ namespace Main.Services.RuntimeDependencies
 
         public Qwen3ModelRuntimeDependencyManager(
             ILogger<Qwen3ModelRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IInferenceRuntimeSelector inferenceRuntimeSelector)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _inferenceRuntimeSelector = inferenceRuntimeSelector;
         }
 
         /// <summary>
@@ -76,14 +79,17 @@ namespace Main.Services.RuntimeDependencies
         /// virtually so tests can substitute a dummy process without touching
         /// the filesystem or requiring Ollama.
         /// </summary>
-        protected virtual Process StartPullProcess(string args)
+        protected virtual async Task<Process> StartPullProcessAsync(string args)
         {
+            var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+            var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+
             // Ollama extraction directory
             var binDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "ManuscriptaTeacherApp",
                 "bin",
-                "ollama"
+                dirName
             );
 
             // Check if ollama.exe exists in the expected location
@@ -124,7 +130,7 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
-                using var process = StartPullProcess("pull qwen3:8b");
+                using var process = await StartPullProcessAsync("pull qwen3:8b");
 
                 // read output and error asynchronously to avoid blocking when buffers fill
                 var stdOut = new List<string>();
@@ -216,9 +222,26 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
+                var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+                var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+
+                var binDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "ManuscriptaTeacherApp",
+                    "bin",
+                    dirName
+                );
+                
+                var ollamaExePath = Path.Combine(binDir, "ollama.exe");
+                if (!File.Exists(ollamaExePath))
+                {
+                    _logger.LogWarning("ollama.exe not found during uninstall. Skipping rm.");
+                    return true;
+                }
+
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = "ollama",
+                    FileName = ollamaExePath,
                     Arguments = "rm qwen3:8b",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

@@ -6,9 +6,9 @@ namespace Main.Services.GenAI;
 
 /// <summary>
 /// Provides low-level Ollama API interactions for model verification, chat completion, and embedding generation.
-/// See GenAISpec.md §3(2).
+/// See GenAISpec.md §3(2). Implements IInferenceClient per §3(2A).
 /// </summary>
-public class OllamaClientService : IDependencyService
+public class OllamaClientService : IInferenceClient
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;

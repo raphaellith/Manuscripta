@@ -53,6 +53,12 @@ public class MainDbContext : DbContext
     /// Per PersistenceAndCascadingRules.md §1(1)(j).
     /// </summary>
     public DbSet<EmailCredentialEntity> EmailCredentials { get; set; }
+
+    /// <summary>
+    /// Inference runtime preference (singleton).
+    /// Per PersistenceAndCascadingRules.md §1(1)(k).
+    /// </summary>
+    public DbSet<InferencePreferenceEntity> InferencePreferences { get; set; }
     
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
@@ -178,6 +184,14 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<EmailCredentialEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        // Configure InferencePreferenceEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(k)
+        modelBuilder.Entity<InferencePreferenceEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PreferredRuntime).HasConversion<string>();
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.

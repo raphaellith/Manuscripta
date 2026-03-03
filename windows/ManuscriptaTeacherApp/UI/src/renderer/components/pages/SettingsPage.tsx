@@ -10,6 +10,7 @@ import type { ConfigurationEntity, FeedbackStyle, MascotSelection } from "../../
 
 import { EmailCredentialSettings } from "../settings/EmailCredentialSettings";
 import { RuntimeDependencySettings } from "../settings/RuntimeDependencySettings";
+import { InferenceRuntimeSettings } from "../settings/InferenceRuntimeSettings";
 import { SETTINGS_SECTION_MAX_WIDTH } from "../../constants/ui";
 
 export const SettingsPage: React.FC = () => {
@@ -259,6 +260,9 @@ export const SettingsPage: React.FC = () => {
 
                 <section>
                     <RuntimeDependencySettings />
+                </section>
+                <section>
+                    <InferenceRuntimeSettings />
                 </section>
                 <section>
                     <EmailCredentialSettings />

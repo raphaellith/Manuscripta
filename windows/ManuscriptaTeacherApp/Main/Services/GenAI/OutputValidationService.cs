@@ -11,13 +11,13 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class OutputValidationService
 {
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
     private readonly MainDbContext _dbContext;
     private readonly IFileService _fileService;
     private const int MaxRefinementIterations = 3;
 
     public OutputValidationService(
-        OllamaClientService ollamaClient,
+        IInferenceClient ollamaClient,
         MainDbContext dbContext,
         IFileService fileService)
     {

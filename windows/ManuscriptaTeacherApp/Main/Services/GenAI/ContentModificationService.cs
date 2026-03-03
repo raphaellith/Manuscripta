@@ -9,14 +9,14 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class ContentModificationService : IContentModificationService
 {
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
     private const string ModificationModel = "granite4";
 
     public ContentModificationService(
-        OllamaClientService ollamaClient,
+        IInferenceClient ollamaClient,
         IEmbeddingService embeddingService,
         OutputValidationService validationService)
     {

@@ -39,6 +39,16 @@ export const DEPENDENCY_METADATA: Record<string, RuntimeDependencyMetadata> = {
             </>
         )
     },
+    'ollama-openvino': {
+        name: 'Ollama for OpenVINO',
+        description: 'An optimized version of Ollama that utilizes Intel NPU for hardware-accelerated AI generation.',
+        manualUrl: 'https://github.com/openvino-toolkit/openvino',
+        manualPathInfo: (
+            <>
+                Download Ollama for OpenVINO and place it in the appropriate bin directory under <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino</span>.
+            </>
+        )
+    },
     'qwen3:8b': {
         name: 'Qwen3 8B Model',
         description: 'The Qwen3 8B language model is required for AI-powered material generation and feedback.',

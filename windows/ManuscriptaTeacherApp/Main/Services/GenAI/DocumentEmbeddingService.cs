@@ -17,7 +17,7 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class DocumentEmbeddingService : IEmbeddingService
 {
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
     private readonly ChromaClient _chromaClient;
     private readonly ChromaConfigurationOptions _chromaOptions;
     private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
@@ -30,7 +30,7 @@ public class DocumentEmbeddingService : IEmbeddingService
     private const int MaxEmbeddingRetries = 3;
 
     public DocumentEmbeddingService(
-        OllamaClientService ollamaClient,
+        IInferenceClient ollamaClient,
         ChromaClient chromaClient,
         ChromaConfigurationOptions chromaOptions,
         HttpClient httpClient,

@@ -815,6 +815,23 @@ class SignalRService {
         return this.subscribe("RuntimeDependencyInstallProgress", callback as (...args: unknown[]) => void);
     }
 
+    // ==========================================
+    // Inference Runtime Management
+    // ==========================================
+
+    /**
+     * Gets the active inference runtime setting ("STANDARD" or "OPENVINO").
+     */
+    public async getActiveInferenceRuntime(): Promise<string> {
+        return await this.getConnection().invoke<string>("GetActiveInferenceRuntime");
+    }
+
+    /**
+     * Switches the inference runtime.
+     */
+    public async switchInferenceRuntime(runtimeName: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("SwitchInferenceRuntime", runtimeName);
+    }
 }
 
 const signalRService = new SignalRService();

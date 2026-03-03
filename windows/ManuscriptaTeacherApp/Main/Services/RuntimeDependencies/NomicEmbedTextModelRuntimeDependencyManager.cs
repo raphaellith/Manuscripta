@@ -18,6 +18,7 @@ namespace Main.Services.RuntimeDependencies
     {
         private readonly ILogger<NomicEmbedTextModelRuntimeDependencyManager> _logger;
         private readonly HttpClient _httpClient;
+        private readonly IInferenceRuntimeSelector _inferenceRuntimeSelector;
         private static OllamaClientService? _ollamaClientServiceInstance;
         private readonly object _serviceLock = new object();
 
@@ -25,10 +26,12 @@ namespace Main.Services.RuntimeDependencies
 
         public NomicEmbedTextModelRuntimeDependencyManager(
             ILogger<NomicEmbedTextModelRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IInferenceRuntimeSelector inferenceRuntimeSelector)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _inferenceRuntimeSelector = inferenceRuntimeSelector;
         }
 
         /// <summary>
@@ -75,19 +78,17 @@ namespace Main.Services.RuntimeDependencies
         /// Downloads the Nomic Embed Text model via `ollama pull nomic-embed-text`.
         /// Per GenAISpec.md §1E(3)(b).
         /// </summary>
-        /// <summary>
-        /// Starts the external process used to pull the model. Exposed
-        /// virtually so tests can substitute a dummy process without touching
-        /// the filesystem or requiring Ollama.
-        /// </summary>
-        protected virtual Process StartPullProcess(string args)
+        protected virtual async Task<Process> StartPullProcessAsync(string args)
         {
+            var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+            var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+
             // Ollama extraction directory
             var binDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "ManuscriptaTeacherApp",
                 "bin",
-                "ollama"
+                dirName
             );
 
             // Check if ollama.exe exists in the expected location
@@ -128,7 +129,7 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
-                using var process = StartPullProcess("pull nomic-embed-text");
+                using var process = await StartPullProcessAsync("pull nomic-embed-text");
 
                 // read output and error asynchronously to avoid blocking when buffers fill
                 var stdOut = new List<string>();
@@ -219,9 +220,26 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
+                var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+                var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+
+                var binDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "ManuscriptaTeacherApp",
+                    "bin",
+                    dirName
+                );
+                
+                var ollamaExePath = Path.Combine(binDir, "ollama.exe");
+                if (!File.Exists(ollamaExePath))
+                {
+                    _logger.LogWarning("ollama.exe not found during uninstall. Skipping rm.");
+                    return true;
+                }
+
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = "ollama",
+                    FileName = ollamaExePath,
                     Arguments = "rm nomic-embed-text",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

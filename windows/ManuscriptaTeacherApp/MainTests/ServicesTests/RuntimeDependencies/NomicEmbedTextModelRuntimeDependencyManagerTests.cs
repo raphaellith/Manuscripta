@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Main.Models;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,7 +18,7 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<NomicEmbedTextModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new NomicEmbedTextModelRuntimeDependencyManager(logger.Object, httpClient);
+        var manager = new NomicEmbedTextModelRuntimeDependencyManager(logger.Object, httpClient, new Mock<IInferenceRuntimeSelector>().Object);
 
         Assert.Equal("nomic-embed-text", manager.DependencyId);
     }
@@ -27,7 +28,7 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<NomicEmbedTextModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new TestableNomicEmbedTextManager(logger.Object, httpClient);
+        var manager = new TestableNomicEmbedTextManager(logger.Object, httpClient, new Mock<IInferenceRuntimeSelector>().Object);
 
         // act
         await manager.PublicDownload(new Progress<RuntimeDependencyProgress>());
@@ -43,15 +44,15 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     /// </summary>
     private class TestableNomicEmbedTextManager : NomicEmbedTextModelRuntimeDependencyManager
     {
-        public TestableNomicEmbedTextManager(ILogger<NomicEmbedTextModelRuntimeDependencyManager> logger, HttpClient httpClient)
-            : base(logger, httpClient)
+        public TestableNomicEmbedTextManager(ILogger<NomicEmbedTextModelRuntimeDependencyManager> logger, HttpClient httpClient, IInferenceRuntimeSelector inferenceRuntimeSelector)
+            : base(logger, httpClient, inferenceRuntimeSelector)
         {
         }
 
         public Task PublicDownload(IProgress<RuntimeDependencyProgress> progress)
             => DownloadDependencyAsync(progress);
 
-        protected override Process StartPullProcess(string args)
+        protected override Task<Process> StartPullProcessAsync(string args)
         {
             // construct a command that prints some lines
             var psi = new ProcessStartInfo
@@ -73,7 +74,7 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
                 psi.Arguments = "-c \"for i in 1 2 3 4 5; do echo line $i; done\"";
             }
 
-            return Process.Start(psi) ?? throw new InvalidOperationException("failed to start test process");
+            return Task.FromResult(Process.Start(psi) ?? throw new InvalidOperationException("failed to start test process"));
         }
     }
 }

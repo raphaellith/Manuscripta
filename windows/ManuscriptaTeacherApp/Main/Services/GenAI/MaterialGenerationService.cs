@@ -8,7 +8,7 @@ namespace Main.Services.GenAI;
 /// </summary>
 public class MaterialGenerationService : IMaterialGenerationService
 {
-    private readonly OllamaClientService _ollamaClient;
+    private readonly IInferenceClient _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
@@ -16,7 +16,7 @@ public class MaterialGenerationService : IMaterialGenerationService
     private const string FallbackModel = "granite4";
 
     public MaterialGenerationService(
-        OllamaClientService ollamaClient,
+        IInferenceClient ollamaClient,
         IEmbeddingService embeddingService,
         OutputValidationService validationService)
     {

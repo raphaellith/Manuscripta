@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Main.Models;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,12 +21,13 @@ public class GraniteModelRuntimeDependencyManagerTests
     {
         public TestableGraniteModelRuntimeDependencyManager(
             ILogger<GraniteModelRuntimeDependencyManager> logger,
-            HttpClient httpClient)
-            : base(logger, httpClient)
+            HttpClient httpClient,
+            IInferenceRuntimeSelector inferenceRuntimeSelector)
+            : base(logger, httpClient, inferenceRuntimeSelector)
         {
         }
 
-        protected override Process StartPullProcess(string args)
+        protected override Task<Process> StartPullProcessAsync(string args)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -46,7 +48,7 @@ public class GraniteModelRuntimeDependencyManagerTests
                 startInfo.Arguments = "-c \"echo progress1; echo progress2\"";
             }
 
-            return Process.Start(startInfo) ?? throw new InvalidOperationException("failed to start test process");
+            return Task.FromResult(Process.Start(startInfo) ?? throw new InvalidOperationException("failed to start test process"));
         }
 
         public async Task PublicDownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
@@ -61,7 +63,8 @@ public class GraniteModelRuntimeDependencyManagerTests
         // Arrange
         var mockLogger = new Mock<ILogger<GraniteModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new GraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient);
+        var mockRuntimeSelector = new Mock<IInferenceRuntimeSelector>();
+        var manager = new GraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient, mockRuntimeSelector.Object);
 
         // Act
         var id = manager.DependencyId;
@@ -76,7 +79,8 @@ public class GraniteModelRuntimeDependencyManagerTests
         // Arrange
         var mockLogger = new Mock<ILogger<GraniteModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new TestableGraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient);
+        var mockRuntimeSelector = new Mock<IInferenceRuntimeSelector>();
+        var manager = new TestableGraniteModelRuntimeDependencyManager(mockLogger.Object, httpClient, mockRuntimeSelector.Object);
         var progress = new Progress<RuntimeDependencyProgress>();
 
         // Act

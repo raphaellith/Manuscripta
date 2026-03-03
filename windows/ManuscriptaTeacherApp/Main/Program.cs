@@ -122,6 +122,7 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 // Register GenAI services
 // See GenAISpec.md §3(1) and §3(2)
 builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddSingleton<IInferenceClient>(sp => sp.GetRequiredService<OllamaClientService>());
 builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
 builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
 builder.Services.AddScoped<IContentModificationService, ContentModificationService>();
@@ -134,6 +135,8 @@ builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
 builder.Services.AddScoped<OutputValidationService>();
 builder.Services.AddScoped<QuestionExtractionService>();
 
+builder.Services.AddSingleton<IInferenceRuntimeSelector, InferenceRuntimeSelector>();
+
 // Register Runtime Dependency Management
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependencyRegistry>(sp =>
@@ -141,6 +144,7 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
     var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
     var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
     var ollamaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+    var openvinoManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.OpenVinoOllamaRuntimeDependencyManager>();
     var chromaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
     var qwen3Manager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
     var graniteManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
@@ -148,6 +152,7 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
     
     registry.Register(rmapiManager);
     registry.Register(ollamaManager);
+    registry.Register(openvinoManager);
     registry.Register(chromaManager);
     registry.Register(qwen3Manager);
     registry.Register(graniteManager);
@@ -156,6 +161,7 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
 });
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.OpenVinoOllamaRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
