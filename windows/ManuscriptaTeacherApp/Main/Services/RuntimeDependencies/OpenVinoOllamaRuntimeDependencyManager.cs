@@ -79,14 +79,14 @@ namespace Main.Services.RuntimeDependencies
                 _logger.LogWarning(ex, "Failed to update PATH environment variable with OV-Ollama extract directory");
             }
 
-            var zipPath = Path.Combine(binDir, "ollama-openvino-windows-amd64.zip");
+            var tempExePath = Path.Combine(binDir, "ollama-openvino-windows-amd64.exe");
             var downloadUrl = "https://drive.google.com/uc?export=download&id=1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507";
 
-            _logger.LogInformation("Downloading OV-Ollama from {Url}", downloadUrl);
+            _logger.LogInformation("Downloading OV-Ollama as executable from {Url}", downloadUrl);
 
-            if (File.Exists(zipPath))
+            if (File.Exists(tempExePath))
             {
-                File.Delete(zipPath);
+                File.Delete(tempExePath);
             }
 
             try
@@ -147,7 +147,7 @@ namespace Main.Services.RuntimeDependencies
                 using var finalResponse = activeResponse;
                 var totalBytes = finalResponse.Content.Headers.ContentLength ?? -1;
                 using var contentStream = await finalResponse.Content.ReadAsStreamAsync();
-                using var fileStream = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                using var fileStream = new FileStream(tempExePath, FileMode.Create, FileAccess.Write, FileShare.None);
 
                 var buffer = new byte[8192];
                 var totalRead = 0L;
@@ -180,7 +180,7 @@ namespace Main.Services.RuntimeDependencies
                     throw new InvalidDataException($"Downloaded file is too small ({totalRead} bytes). Google Drive download likely failed.");
                 }
 
-                _logger.LogInformation("OV-Ollama downloaded successfully to {Path}", zipPath);
+                _logger.LogInformation("OV-Ollama downloaded successfully to {Path}", tempExePath);
             }
             catch (Exception ex)
             {
@@ -200,10 +200,11 @@ namespace Main.Services.RuntimeDependencies
         protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
             var binDir = Path.Combine(GetAppDataFolder(), "ManuscriptaTeacherApp", "bin");
-            var zipPath = Path.Combine(binDir, "ollama-openvino-windows-amd64.zip");
+            var tempExePath = Path.Combine(binDir, "ollama-openvino-windows-amd64.exe");
             var extractDir = Path.Combine(binDir, "ollama-openvino");
+            var finalExePath = Path.Combine(extractDir, "ollama.exe");
 
-            _logger.LogInformation("Extracting OV-Ollama to {Path}", extractDir);
+            _logger.LogInformation("Installing OV-Ollama executable to {Path}", extractDir);
 
             try
             {
@@ -228,8 +229,15 @@ namespace Main.Services.RuntimeDependencies
                     }
                 }
 
-                System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractDir);
-                File.Delete(zipPath);
+                Directory.CreateDirectory(extractDir);
+                if (File.Exists(tempExePath))
+                {
+                    File.Move(tempExePath, finalExePath, overwrite: true);
+                }
+                else
+                {
+                    throw new FileNotFoundException("Downloaded executable not found.", tempExePath);
+                }
 
                 try
                 {
