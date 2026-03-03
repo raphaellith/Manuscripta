@@ -993,6 +993,9 @@ public class TeacherPortalHub : Hub
     /// <summary>
     /// Checks whether the runtime dependency with the specified dependencyId is available and functional.
     /// Per NetworkingAPISpec §1(1)(nz)(i) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
+    /// Per GenAISpec §1A(3)(a): Ollama availability is determined solely by a 200 response
+    /// from http://localhost:11434/api/version. No test generation is performed here to
+    /// avoid blocking the frontend with an expensive model probe.
     /// </summary>
     public async Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)
     {
@@ -1000,27 +1003,27 @@ public class TeacherPortalHub : Hub
         if (manager == null)
             throw new HubException($"Dependency {dependencyId} not found");
 
-        var available = await manager.CheckDependencyAvailabilityAsync();
-        if (!available)
-            return false;
+        return await manager.CheckDependencyAvailabilityAsync();
+    }
 
-        // Special case: even when the Ollama daemon is running, we must also
-        // verify that the primary model can actually generate without running
-        // out of memory.  This prevents the UI from enabling AI immediately
-        // after a heavy memory event such as starting ChromaDB.
-        if (dependencyId == "ollama")
+    /// <summary>
+    /// Checks multiple runtime dependencies concurrently and returns a list of missing dependency IDs.
+    /// This avoids sequential blocking when several independent checks are needed.
+    /// </summary>
+    private async Task<List<string>> CheckMultipleDependenciesAsync(params string[] dependencyIds)
+    {
+        var tasks = dependencyIds.Select(async id =>
         {
-            try
-            {
-                return await _materialGenerationService.CanGenerateWithPrimaryModelAsync();
-            }
-            catch
-            {
-                return false;
-            }
-        }
+            var available = await CheckRuntimeDependencyAvailability(id);
+            return (id, available);
+        }).ToArray();
 
-        return true;
+        var results = await Task.WhenAll(tasks);
+
+        return results
+            .Where(r => !r.available)
+            .Select(r => r.id)
+            .ToList();
     }
 
     /// <summary>
@@ -1197,17 +1200,9 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<GenerationResult> GenerateReading(GenerationRequest request)
     {
-        // Pre-check required AI runtime dependencies. If any are missing, notify frontend and abort.
-        var missing = new List<string>();
-        if (!await CheckRuntimeDependencyAvailability("ollama"))
-            missing.Add("ollama");
-        if (!await CheckRuntimeDependencyAvailability("nomic-embed-text"))
-            missing.Add("nomic-embed-text");
-        // Also ensure model availability (treated as runtime dependencies per GenAISpec)
-        if (!await CheckRuntimeDependencyAvailability("qwen3:8b"))
-            missing.Add("qwen3:8b");
-        if (!await CheckRuntimeDependencyAvailability("granite4"))
-            missing.Add("granite4");
+        // Pre-check required AI runtime dependencies concurrently.
+        // If any are missing, notify frontend and abort.
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
 
         if (missing.Count > 0)
         {
@@ -1232,16 +1227,9 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
     {
-        // Pre-check required AI runtime dependencies. If any are missing, notify frontend and abort.
-        var missing = new List<string>();
-        if (!await CheckRuntimeDependencyAvailability("ollama"))
-            missing.Add("ollama");
-        if (!await CheckRuntimeDependencyAvailability("nomic-embed-text"))
-            missing.Add("nomic-embed-text");
-        if (!await CheckRuntimeDependencyAvailability("qwen3:8b"))
-            missing.Add("qwen3:8b");
-        if (!await CheckRuntimeDependencyAvailability("granite4"))
-            missing.Add("granite4");
+        // Pre-check required AI runtime dependencies concurrently.
+        // If any are missing, notify frontend and abort.
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
 
         if (missing.Count > 0)
         {

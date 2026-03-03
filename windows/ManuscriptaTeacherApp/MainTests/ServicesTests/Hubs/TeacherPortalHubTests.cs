@@ -2102,119 +2102,39 @@ public class TeacherPortalHubTests
     }
 
     [Fact]
-    public async Task CheckRuntimeDependencyAvailability_Ollama_UsesModelCheck()
+    public async Task CheckRuntimeDependencyAvailability_Ollama_DelegatesOnlyToManager()
     {
-        // Arrange
+        // Per GenAISpec §1A(3)(a): Ollama availability is determined solely
+        // by CheckDependencyAvailabilityAsync (HTTP GET to /api/version).
+        // No CanGenerateWithPrimaryModelAsync probe should be performed.
         var dependencyId = "ollama";
         var mockManager = new Mock<RuntimeDependencyManagerBase>();
         mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
         _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
 
-        var mockMaterial = new Mock<IMaterialGenerationService>();
-        mockMaterial.Setup(s => s.CanGenerateWithPrimaryModelAsync()).ReturnsAsync(false);
-
-        var hub = new TeacherPortalHub(
-            _mockUnitCollectionService.Object,
-            _mockUnitService.Object,
-            _mockLessonService.Object,
-            _mockMaterialService.Object,
-            _mockQuestionService.Object,
-            _mockSourceDocumentService.Object,
-            _mockAttachmentService.Object,
-            _mockUnitCollectionRepository.Object,
-            _mockUnitRepository.Object,
-            _mockLessonRepository.Object,
-            _mockMaterialRepository.Object,
-            _mockQuestionRepository.Object,
-            _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object,
-            _mockUdpBroadcastService.Object,
-            _mockTcpPairingService.Object,
-            _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object,
-            _mockFeedbackRepository.Object,
-            _mockResponseRepository.Object,
-            _mockLogger.Object,
-            _mockMaterialPdfService.Object,
-            _mockRmapiService.Object,
-            _mockExternalDeviceRepository.Object,
-            _mockEmailCredentialRepository.Object,
-            _mockExternalDeviceDeploymentService.Object,
-            _mockEmailService.Object,
-            _mockRuntimeDependencyRegistry.Object,
-            _mockConfigurationService.Object,
-            mockMaterial.Object,
-            _contentModificationService,
-            _embeddingStatusService,
-            _feedbackQueueService,
-            _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
-
         // Act
-        var result = await hub.CheckRuntimeDependencyAvailability(dependencyId);
+        var result = await _hub.CheckRuntimeDependencyAvailability(dependencyId);
 
-        // Assert
-        Assert.False(result);
-        mockMaterial.Verify(s => s.CanGenerateWithPrimaryModelAsync(), Times.Once);
+        // Assert — returns true when manager reports available, no model probe
+        Assert.True(result);
+        mockManager.Verify(m => m.CheckDependencyAvailabilityAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task CheckRuntimeDependencyAvailability_Ollama_ReturnsTrueWhenModelOk()
+    public async Task CheckRuntimeDependencyAvailability_Ollama_ReturnsFalseWhenManagerReportsFalse()
     {
-        // Arrange
+        // Arrange — manager reports Ollama daemon is not reachable
         var dependencyId = "ollama";
         var mockManager = new Mock<RuntimeDependencyManagerBase>();
-        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(false);
         _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(dependencyId)).Returns(mockManager.Object);
 
-        var mockMaterial = new Mock<IMaterialGenerationService>();
-        mockMaterial.Setup(s => s.CanGenerateWithPrimaryModelAsync()).ReturnsAsync(true);
-
-        var hub = new TeacherPortalHub(
-            _mockUnitCollectionService.Object,
-            _mockUnitService.Object,
-            _mockLessonService.Object,
-            _mockMaterialService.Object,
-            _mockQuestionService.Object,
-            _mockSourceDocumentService.Object,
-            _mockAttachmentService.Object,
-            _mockUnitCollectionRepository.Object,
-            _mockUnitRepository.Object,
-            _mockLessonRepository.Object,
-            _mockMaterialRepository.Object,
-            _mockQuestionRepository.Object,
-            _mockSourceDocumentRepository.Object,
-            _mockAttachmentRepository.Object,
-            _mockUdpBroadcastService.Object,
-            _mockTcpPairingService.Object,
-            _mockDeviceRegistryService.Object,
-            _mockDeviceStatusCacheService.Object,
-            _mockDistributionService.Object,
-            _mockFeedbackRepository.Object,
-            _mockResponseRepository.Object,
-            _mockLogger.Object,
-            _mockMaterialPdfService.Object,
-            _mockRmapiService.Object,
-            _mockExternalDeviceRepository.Object,
-            _mockEmailCredentialRepository.Object,
-            _mockExternalDeviceDeploymentService.Object,
-            _mockEmailService.Object,
-            _mockRuntimeDependencyRegistry.Object,
-            _mockConfigurationService.Object,
-            mockMaterial.Object,
-            _contentModificationService,
-            _embeddingStatusService,
-            _feedbackQueueService,
-            _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
-
         // Act
-        var result = await hub.CheckRuntimeDependencyAvailability(dependencyId);
+        var result = await _hub.CheckRuntimeDependencyAvailability(dependencyId);
 
         // Assert
-        Assert.True(result);
-        mockMaterial.Verify(s => s.CanGenerateWithPrimaryModelAsync(), Times.Once);
+        Assert.False(result);
+        mockManager.Verify(m => m.CheckDependencyAvailabilityAsync(), Times.Once);
     }
 
     [Fact]

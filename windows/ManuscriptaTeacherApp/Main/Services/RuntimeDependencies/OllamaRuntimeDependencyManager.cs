@@ -46,12 +46,15 @@ namespace Main.Services.RuntimeDependencies
         /// <summary>
         /// Checks if Ollama is available by calling http://localhost:11434/api/version.
         /// Per GenAISpec.md §1A(3)(a).
+        /// Uses a short timeout (5 seconds) to avoid blocking the frontend if the
+        /// daemon is present but unresponsive.
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
         {
             try
             {
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
                 return response.StatusCode == System.Net.HttpStatusCode.OK;
             }
             catch
