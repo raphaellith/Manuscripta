@@ -120,8 +120,14 @@ namespace Main.Services.RuntimeDependencies
                         // Dispose previous response as we are replacing it
                         activeResponse.Dispose();
 
-                        // Using same HttpClient helps persist cookies from the original request
+                        // Using same HttpClient alongside explicit cookie forwarding
                         var bypassRequest = new HttpRequestMessage(HttpMethod.Get, bypassUrl);
+                        if (activeResponse.Headers.TryGetValues("Set-Cookie", out var cookies))
+                        {
+                            var cookieString = string.Join("; ", cookies.Select(c => c.Split(';')[0]));
+                            bypassRequest.Headers.Add("Cookie", cookieString);
+                        }
+                        
                         activeResponse = await _httpClient.SendAsync(bypassRequest, HttpCompletionOption.ResponseHeadersRead);
                         activeResponse.EnsureSuccessStatusCode();
 
@@ -161,6 +167,17 @@ namespace Main.Services.RuntimeDependencies
                             ProgressPercentage = progressPercentage
                         });
                     }
+                }
+
+                if (totalBytes > 0 && totalRead != totalBytes)
+                {
+                    throw new IOException($"Download truncated. Received {totalRead} bytes out of {totalBytes}.");
+                }
+                
+                if (totalRead < 50_000_000)
+                {
+                    // OV-Ollama is 118MB; if it's less than 50MB, it's garbage/HTML
+                    throw new InvalidDataException($"Downloaded file is too small ({totalRead} bytes). Google Drive download likely failed.");
                 }
 
                 _logger.LogInformation("OV-Ollama downloaded successfully to {Path}", zipPath);
