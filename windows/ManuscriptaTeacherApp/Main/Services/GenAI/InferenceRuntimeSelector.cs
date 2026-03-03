@@ -68,4 +68,10 @@ public class InferenceRuntimeSelector : IInferenceRuntimeSelector
         _logger.LogInformation("DetectNpuHardwareAsync called. Returning stubbed value: true.");
         return Task.FromResult(true);
     }
+
+    public async Task<string> GetActiveRuntimeBaseUrlAsync()
+    {
+        var activeRuntime = await GetActiveRuntimeAsync();
+        return activeRuntime == InferenceRuntime.OPENVINO ? "http://localhost:11435" : "http://localhost:11434";
+    }
 }

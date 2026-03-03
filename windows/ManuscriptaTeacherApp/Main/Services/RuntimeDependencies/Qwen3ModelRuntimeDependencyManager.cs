@@ -42,7 +42,8 @@ namespace Main.Services.RuntimeDependencies
         {
             try
             {
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/tags");
+                var baseUrl = await _inferenceRuntimeSelector.GetActiveRuntimeBaseUrlAsync();
+                var response = await _httpClient.GetAsync($"{baseUrl}/api/tags");
                 if (!response.IsSuccessStatusCode)
                 {
                     return false;
@@ -283,7 +284,7 @@ namespace Main.Services.RuntimeDependencies
             {
                 if (_ollamaClientServiceInstance == null)
                 {
-                    _ollamaClientServiceInstance = new OllamaClientService();
+                    _ollamaClientServiceInstance = new OllamaClientService(_inferenceRuntimeSelector);
                 }
 
                 return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);

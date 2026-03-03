@@ -27,7 +27,7 @@ public class MaterialGenerationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService
         {
@@ -64,7 +64,7 @@ public class MaterialGenerationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService
         {
@@ -101,7 +101,7 @@ public class MaterialGenerationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService { CanGenerateResult = false };
         var embeddingService = new Mock<IEmbeddingService>();
@@ -120,7 +120,7 @@ public class MaterialGenerationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService { ThrowOnCanGenerate = true };
         var embeddingService = new Mock<IEmbeddingService>();
@@ -136,6 +136,8 @@ public class MaterialGenerationServiceTests
 
     private sealed class FakeOllamaClientService : OllamaClientService
     {
+        public FakeOllamaClientService() : base(new Mock<IInferenceRuntimeSelector>().Object) { }
+
         public bool ThrowOnPrimaryChat { get; set; }
         public string PrimaryChatResponse { get; set; } = "primary";
         public string FallbackChatResponse { get; set; } = "fallback";

@@ -27,12 +27,16 @@ namespace Main.Services.RuntimeDependencies
             return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         }
 
+        private readonly IInferenceRuntimeSelector _runtimeSelector;
+
         public OpenVinoOllamaRuntimeDependencyManager(
             ILogger<OpenVinoOllamaRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IInferenceRuntimeSelector runtimeSelector)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _runtimeSelector = runtimeSelector;
         }
 
         public override async Task<bool> CheckDependencyAvailabilityAsync()
@@ -41,7 +45,7 @@ namespace Main.Services.RuntimeDependencies
             {
                 // OV-Ollama exposes the same API as Standard Ollama
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
+                var response = await _httpClient.GetAsync("http://localhost:11435/api/version", cts.Token);
                 return response.StatusCode == System.Net.HttpStatusCode.OK;
             }
             catch
@@ -233,7 +237,7 @@ namespace Main.Services.RuntimeDependencies
             {
                 if (_ollamaClientServiceInstance == null)
                 {
-                    _ollamaClientServiceInstance = new OllamaClientService();
+                    _ollamaClientServiceInstance = new OllamaClientService(_runtimeSelector);
                 }
 
                 return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);
@@ -256,6 +260,7 @@ namespace Main.Services.RuntimeDependencies
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            processStartInfo.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
 
             using var process = System.Diagnostics.Process.Start(processStartInfo);
             if (process == null) throw new InvalidOperationException("Failed to start OV-Ollama daemon process");
@@ -265,7 +270,7 @@ namespace Main.Services.RuntimeDependencies
                 await Task.Delay(500);
                 try
                 {
-                    var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                    var response = await _httpClient.GetAsync("http://localhost:11435/api/version");
                     if (response.StatusCode == System.Net.HttpStatusCode.OK) return;
                 }
                 catch { }

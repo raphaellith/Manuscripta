@@ -26,4 +26,10 @@ public interface IInferenceRuntimeSelector
     /// Per GenAISpec.md §1F(3).
     /// </summary>
     Task<bool> DetectNpuHardwareAsync();
+
+    /// <summary>
+    /// Returns the base URL for the active inference runtime.
+    /// Standard: http://localhost:11434, OpenVINO: http://localhost:11435.
+    /// </summary>
+    Task<string> GetActiveRuntimeBaseUrlAsync();
 }

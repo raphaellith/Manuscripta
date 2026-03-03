@@ -11,15 +11,19 @@ namespace Main.Services.GenAI;
 public class OllamaClientService : IInferenceClient
 {
     private readonly HttpClient _httpClient;
-    private readonly string _baseUrl;
+    private readonly IInferenceRuntimeSelector _runtimeSelector;
 
-    public OllamaClientService()
+    public OllamaClientService(IInferenceRuntimeSelector runtimeSelector)
     {
-        _baseUrl = "http://localhost:11434";
+        _runtimeSelector = runtimeSelector;
         _httpClient = new HttpClient { 
-            BaseAddress = new Uri(_baseUrl),
             Timeout = TimeSpan.FromSeconds(300) // 5 minutes for material generation
         };
+    }
+
+    private async Task<string> GetBaseUrlAsync()
+    {
+        return await _runtimeSelector.GetActiveRuntimeBaseUrlAsync();
     }
 
     /// <summary>
@@ -30,7 +34,7 @@ public class OllamaClientService : IInferenceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync("/");
+            var response = await _httpClient.GetAsync($"{await GetBaseUrlAsync()}/");
             return response.IsSuccessStatusCode;
         }
         catch
@@ -47,7 +51,7 @@ public class OllamaClientService : IInferenceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/tags");
+            var response = await _httpClient.GetAsync($"{await GetBaseUrlAsync()}/api/tags");
             if (!response.IsSuccessStatusCode) return false;
 
             var content = await response.Content.ReadAsStringAsync();
@@ -78,7 +82,7 @@ public class OllamaClientService : IInferenceClient
     public virtual async Task PullModelAsync(string modelName)
     {
         var request = new { name = modelName };
-        var response = await _httpClient.PostAsJsonAsync("/api/pull", request);
+        var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/pull", request);
         response.EnsureSuccessStatusCode();
         // Consume the streaming response to wait for the pull operation to complete.
         _ = await response.Content.ReadAsStringAsync();
@@ -96,7 +100,7 @@ public class OllamaClientService : IInferenceClient
             prompt = text
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/embeddings", request);
+        var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/embeddings", request);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
@@ -145,7 +149,7 @@ public class OllamaClientService : IInferenceClient
             stream = false
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/chat", request);
+        var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/chat", request);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync();
@@ -238,7 +242,7 @@ public class OllamaClientService : IInferenceClient
                 keep_alive = "1s"
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/generate", request);
+            var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/generate", request);
             // Don't check for success - unload is a best-effort operation
             _ = await response.Content.ReadAsStringAsync();
         }
@@ -259,7 +263,7 @@ public class OllamaClientService : IInferenceClient
             // Attempt a test generation with a more realistic prompt to detect resource constraints
             // Use a longer prompt that better simulates actual generation workloads
             var testPrompt = @"Generate educational content based on the following: This is a test prompt to verify sufficient system resources are available. Please provide a brief response to confirm the model can process requests of this size and complexity. The response should demonstrate the model's ability to handle typical content generation tasks.";
-            var response = await _httpClient.PostAsJsonAsync("/api/chat", new
+            var response = await _httpClient.PostAsJsonAsync($"{await GetBaseUrlAsync()}/api/chat", new
             {
                 model = modelName,
                 messages = new[] { new { role = "user", content = testPrompt } },

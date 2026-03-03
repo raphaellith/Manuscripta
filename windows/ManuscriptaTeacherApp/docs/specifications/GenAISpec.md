@@ -200,7 +200,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of OV-Ollama by —
 
-        (i) calling `http://localhost:11434/api/version`; and
+        (i) calling `http://localhost:11435/api/version`; and
 
         (ii) verifying that the version response indicates OpenVINO backend support. The response should be inspected for an `openvino` field or tag. If the endpoint returns a 200 status code but no OpenVINO indicator is present, the method shall return `false`.
 
@@ -226,7 +226,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) set the environment variables `OpenVINO_DIR` and `PATH` to include the OpenVINO runtime library directory for the `ollama serve` process;
 
-        (v) start `ollama serve` from the OV-Ollama directory with the environment variables specified in (iv) and with `GODEBUG=cgocheck=0`.
+        (v) start `ollama serve` from the OV-Ollama directory with the environment variables specified in (iv), with `GODEBUG=cgocheck=0`, and with `OLLAMA_HOST=127.0.0.1:11435` to avoid port collisions with Standard Ollama.
 
     (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes associated with OV-Ollama, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` and `%AppData%\ManuscriptaTeacherApp\bin\openvino-runtime\` directories, and return `true` on success.
 
@@ -337,7 +337,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (e) `Task<bool> CanGenerateWithModelAsync(string modelName)` — as currently specified in `OllamaClientService`.
 
-[Explanatory Note: Since both Standard Ollama and OV-Ollama expose identical REST APIs, a single `OllamaClientService` implementation of `IInferenceClient` is sufficient for both runtimes. The interface is introduced to allow future non-Ollama backends without modifying dependent service classes.]
+[Explanatory Note: Since both Standard Ollama and OV-Ollama expose identical REST APIs, a single `OllamaClientService` implementation of `IInferenceClient` is sufficient for both runtimes. The `OllamaClientService` must resolve the appropriate base URL (`http://localhost:11434` or `http://localhost:11435`) dynamically based on the active runtime selected via `IInferenceRuntimeSelector`. The interface is introduced to allow future non-Ollama backends without modifying dependent service classes.]
 
 ### Section 3A — Source Document Indexing
 

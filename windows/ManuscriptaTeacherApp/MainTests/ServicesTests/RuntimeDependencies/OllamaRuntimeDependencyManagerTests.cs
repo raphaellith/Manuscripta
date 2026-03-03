@@ -18,7 +18,7 @@ public class OllamaRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<OllamaRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new OllamaRuntimeDependencyManager(logger.Object, httpClient);
+        var manager = new OllamaRuntimeDependencyManager(logger.Object, httpClient, new Mock<Main.Services.GenAI.IInferenceRuntimeSelector>().Object);
 
         Assert.Equal("ollama", manager.DependencyId);
     }
@@ -99,7 +99,7 @@ public class OllamaRuntimeDependencyManagerTests
         private readonly string _overrideAppData;
 
         public TestableOllamaRuntimeDependencyManager(ILogger<OllamaRuntimeDependencyManager> logger, HttpClient httpClient, string overrideAppData)
-            : base(logger, httpClient)
+            : base(logger, httpClient, new Mock<Main.Services.GenAI.IInferenceRuntimeSelector>().Object)
         {
             _overrideAppData = overrideAppData;
         }

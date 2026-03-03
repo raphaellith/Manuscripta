@@ -33,7 +33,7 @@ public class OutputValidationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var content = "# Title\nSimple content without markers.";
 
@@ -95,7 +95,7 @@ public class OutputValidationServiceTests
         fileService.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns<string>(path => fileExists.Any(id => path.Contains(id.ToString(), StringComparison.Ordinal)));
 
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService(new Mock<IInferenceRuntimeSelector>().Object), dbContext, fileService.Object);
 
         var content = $@"#### Too Deep\n\n" +
                       $"!!! question id=\"{validQuestionId}\"\n" +

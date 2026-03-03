@@ -35,12 +35,16 @@ namespace Main.Services.RuntimeDependencies
             return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         }
 
+        private readonly IInferenceRuntimeSelector _runtimeSelector;
+
         public OllamaRuntimeDependencyManager(
             ILogger<OllamaRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IInferenceRuntimeSelector runtimeSelector)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _runtimeSelector = runtimeSelector;
         }
 
         /// <summary>
@@ -394,7 +398,7 @@ namespace Main.Services.RuntimeDependencies
             {
                 if (_ollamaClientServiceInstance == null)
                 {
-                    _ollamaClientServiceInstance = new OllamaClientService();
+                    _ollamaClientServiceInstance = new OllamaClientService(_runtimeSelector);
                 }
 
                 return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);
