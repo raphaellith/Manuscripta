@@ -235,34 +235,6 @@ public class RepositoryModule {
     }
 
     /**
-     * Provides the SharedPreferences instance for configuration storage.
-     *
-     * @param context Application context
-     * @return SharedPreferences instance
-     */
-    @Provides
-    @Singleton
-    public SharedPreferences provideSharedPreferences(@ApplicationContext Context context) {
-        return context.getSharedPreferences("manuscripta_config", Context.MODE_PRIVATE);
-    }
-
-    /**
-     * Provides the ConfigRepository implementation.
-     *
-     * @param preferences      The SharedPreferences instance
-     * @param apiService       The ApiService instance
-     * @param tcpSocketManager The TcpSocketManager instance
-     * @return ConfigRepository instance
-     */
-    @Provides
-    @Singleton
-    public ConfigRepository provideConfigRepository(SharedPreferences preferences,
-                                                    ApiService apiService,
-                                                    TcpSocketManager tcpSocketManager) {
-        return new ConfigRepositoryImpl(preferences, apiService, tcpSocketManager);
-    }
-
-    /**
      * Provides the HeartbeatManager wired with material, feedback, and status callbacks.
      *
      * @param tcpSocketManager       The TcpSocketManager instance
