@@ -275,7 +275,7 @@ export const LessonLibraryPage: React.FC = () => {
         });
 
         // Per §4B(2)(a1)(v): Generate unique ID for cancellation tracking
-        const generationId = self.crypto.randomUUID();
+        const generationId = crypto.randomUUID();
         generationIdRef.current = generationId;
         setCurrentGenerationId(generationId);
 

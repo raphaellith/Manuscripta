@@ -184,6 +184,11 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    // Allow CancelGeneration to execute concurrently with an in-progress
+    // GenerateReading/GenerateWorksheet call on the same connection.
+    // Default is 1, which serialises all hub invocations and prevents
+    // cancellation from reaching the server while generation is running.
+    hubOptions.MaximumParallelInvocationsPerClient = 2;
 });
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
