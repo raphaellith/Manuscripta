@@ -158,6 +158,24 @@ namespace Main.Services.RuntimeDependencies
         {
             _logger.LogInformation("Pulling IBM Granite 4.0 model via OV-Ollama");
 
+            // Verify OV-Ollama server is running before attempting pull
+            try
+            {
+                var serverCheck = await _httpClient.GetAsync("http://localhost:11435/api/version");
+                if (!serverCheck.IsSuccessStatusCode)
+                {
+                    throw new InvalidOperationException(
+                        "OV-Ollama server is not responding on port 11435. "
+                        + "Ensure the OpenVINO Ollama runtime dependency is installed and running.");
+                }
+            }
+            catch (HttpRequestException)
+            {
+                throw new InvalidOperationException(
+                    "OV-Ollama server is not running on port 11435. "
+                    + "Ensure the OpenVINO Ollama runtime dependency is installed and running.");
+            }
+
             progress?.Report(new RuntimeDependencyProgress
             {
                 Phase = "Downloading",
@@ -191,7 +209,15 @@ namespace Main.Services.RuntimeDependencies
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await Task.Run(() => process.WaitForExit());
+                // Timeout after 10 minutes to prevent infinite hanging
+                var exited = await Task.Run(() => process.WaitForExit(600_000));
+                if (!exited)
+                {
+                    try { process.Kill(); } catch { }
+                    throw new TimeoutException(
+                        $"OV-Ollama pull {MODEL_TAG} timed out after 10 minutes. "
+                        + "The OV-Ollama server may not be functioning correctly.");
+                }
 
                 if (process.ExitCode != 0)
                 {
@@ -202,7 +228,7 @@ namespace Main.Services.RuntimeDependencies
 
                 _logger.LogInformation("IBM Granite 4.0 model pulled via OV-Ollama successfully");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not TimeoutException && ex is not InvalidOperationException)
             {
                 _logger.LogError(ex, "Failed to pull IBM Granite 4.0 model via OV-Ollama");
                 throw;
