@@ -453,8 +453,9 @@ public class OllamaClientService : IDependencyService
     }
 
     /// <summary>
-    /// Checks if the system has sufficient resources to generate with a given model.
-    /// See GenAISpec.md §1(6) - detection of insufficient resources.
+    /// Optional probe to check if the system has sufficient resources to generate with a given model.
+    /// This is not used in the critical generation path; per GenAISpec.md §1(6), resource failures
+    /// are handled reactively during generation with automatic fallback.
     /// </summary>
     public virtual async Task<bool> CanGenerateWithModelAsync(string modelName)
     {

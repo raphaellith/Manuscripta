@@ -26,9 +26,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation is unavailable or insufficient resources are detected —
+(6) If the primary model (`qwen3:8b`) for material generation fails during generation due to resource constraints —
 
-    (a) the backend may fall back to a smaller model (`granite4`).
+    (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
     (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
 

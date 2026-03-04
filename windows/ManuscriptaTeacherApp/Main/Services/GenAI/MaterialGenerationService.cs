@@ -54,38 +54,8 @@ public class MaterialGenerationService : IMaterialGenerationService
         string modelToUse = PrimaryModel;
         bool useFallback = false;
 
-        // §1(6): Check for insufficient resources per GenAISpec §1(6)
-        try
-        {
-            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
-            var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
-            if (!canUsePrimary)
-            {
-                throw new InvalidOperationException("Insufficient resources for primary model");
-            }
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient resources"))
-        {
-            // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
-            modelToUse = FallbackModel;
-            useFallback = true;
-            
-            // CRITICAL: Unload the primary model from memory before attempting fallback
-            // The pre-check may have loaded the primary model into memory, which prevents
-            // the smaller fallback model from fitting in available memory
-            await _ollamaClient.UnloadModelAsync(PrimaryModel);
-            await Task.Delay(1000); // Wait longer for memory to be reclaimed
-            
-            try
-            {
-                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-            }
-            catch
-            {
-                throw new InvalidOperationException(
-                    "Both primary and fallback models are unavailable. Please check your Ollama installation and available system memory.");
-            }
-        }
+        // §1(4): Ensure model is available (but skip costly resource probe to reduce latency)
+        await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
         // §3B(3)(a): Embed the description
         // Ensure embedding model is ready per GenAISpec §2(2)
@@ -122,7 +92,7 @@ public class MaterialGenerationService : IMaterialGenerationService
              ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
         {
-            // §1(6)(a): fall back when primary model is unavailable or has insufficient resources at runtime.
+            // §1(6)(a): Fall back when primary model fails during generation due to resource constraints.
             if (!useFallback)
             {
                 modelToUse = FallbackModel;
@@ -189,11 +159,9 @@ public class MaterialGenerationService : IMaterialGenerationService
     }
 
     /// <summary>
-    /// Lightweight probe used by the frontend availability check.  Attempts a
-    /// quick generation test with the primary model to detect low‑memory
-    /// situations that would cause a real request to fail.  Mirrors the logic in
-    /// OllamaClientService.CanGenerateWithModelAsync but scoped to the primary
-    /// model name.
+    /// Optional probe for frontend availability checks. Not used in the critical
+    /// generation path; per GenAISpec.md §1(6), resource failures during generation
+    /// trigger automatic fallback to a smaller model.
     /// </summary>
     public async Task<bool> CanGenerateWithPrimaryModelAsync()
     {
