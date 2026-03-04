@@ -64,8 +64,10 @@ public class PairingManager implements TcpMessageListener {
 
     /** The pairing configuration. */
     private volatile PairingConfig config;
-    /** The current pairing state. */
+    /** The current pairing state (LiveData for UI observers). */
     private final MutableLiveData<PairingState> pairingState;
+    /** Volatile mirror of the pairing state for thread-safe synchronous reads. */
+    private volatile PairingState currentStateSnapshot = PairingState.NOT_PAIRED;
     /** Whether a pairing attempt is in progress. */
     private final AtomicBoolean pairingInProgress = new AtomicBoolean(false);
     /** The current retry attempt number. */
@@ -161,8 +163,7 @@ public class PairingManager implements TcpMessageListener {
      */
     @NonNull
     public PairingState getCurrentState() {
-        PairingState state = pairingState.getValue();
-        return state != null ? state : PairingState.NOT_PAIRED;
+        return currentStateSnapshot;
     }
 
     /**
@@ -428,6 +429,7 @@ public class PairingManager implements TcpMessageListener {
      * @param state The new pairing state.
      */
     private void updatePairingState(@NonNull PairingState state) {
+        currentStateSnapshot = state;
         pairingState.postValue(state);
     }
 
