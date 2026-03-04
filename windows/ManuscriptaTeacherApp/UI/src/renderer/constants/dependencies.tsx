@@ -81,5 +81,27 @@ export const DEPENDENCY_METADATA: Record<string, RuntimeDependencyMetadata> = {
                 <span className="font-mono">ollama pull nomic-embed-text</span> in a terminal.
             </>
         )
+    },
+    'qwen3:8b-openvino': {
+        name: 'Qwen3 8B Model (OpenVINO)',
+        description: 'The Qwen3 8B model in OpenVINO IR format for hardware-accelerated generation via OV-Ollama.',
+        manualUrl: 'https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov',
+        manualPathInfo: (
+            <>
+                Download the OpenVINO IR model from HuggingFace and place it in{' '}
+                <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\models\qwen3-8b\</span>
+            </>
+        )
+    },
+    'granite4-openvino': {
+        name: 'IBM Granite 4.0 Model (OpenVINO)',
+        description: 'The IBM Granite 4.0 model in OpenVINO IR format for hardware-accelerated generation via OV-Ollama.',
+        manualUrl: 'https://huggingface.co/llmware/granite-4-micro-ov',
+        manualPathInfo: (
+            <>
+                Download the OpenVINO IR model from HuggingFace and place it in{' '}
+                <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\models\granite4\</span>
+            </>
+        )
     }
 };

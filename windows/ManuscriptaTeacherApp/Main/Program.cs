@@ -149,6 +149,8 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
     var qwen3Manager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
     var graniteManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
     var nomicManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
+    var qwen3OVManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3OVModelRuntimeDependencyManager>();
+    var graniteOVManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteOVModelRuntimeDependencyManager>();
     
     registry.Register(rmapiManager);
     registry.Register(ollamaManager);
@@ -157,6 +159,8 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
     registry.Register(qwen3Manager);
     registry.Register(graniteManager);
     registry.Register(nomicManager);
+    registry.Register(qwen3OVManager);
+    registry.Register(graniteOVManager);
     return registry;
 });
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
@@ -166,6 +170,8 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.ChromaRuntimeDep
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3OVModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteOVModelRuntimeDependencyManager>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();

@@ -1205,7 +1205,13 @@ public class TeacherPortalHub : Hub
     {
         // Pre-check required AI runtime dependencies concurrently.
         // If any are missing, notify frontend and abort.
-        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+        // Per §1H(5A): select generation model IDs based on active runtime.
+        var runtime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+        var genModelIds = runtime == Models.Entities.InferenceRuntime.OPENVINO
+            ? new[] { "qwen3:8b-openvino", "granite4-openvino" }
+            : new[] { "qwen3:8b", "granite4" };
+        var missing = await CheckMultipleDependenciesAsync(
+            new[] { "ollama", "nomic-embed-text" }.Concat(genModelIds).ToArray());
 
         if (missing.Count > 0)
         {
@@ -1232,7 +1238,13 @@ public class TeacherPortalHub : Hub
     {
         // Pre-check required AI runtime dependencies concurrently.
         // If any are missing, notify frontend and abort.
-        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+        // Per §1H(5A): select generation model IDs based on active runtime.
+        var runtime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
+        var genModelIds = runtime == Models.Entities.InferenceRuntime.OPENVINO
+            ? new[] { "qwen3:8b-openvino", "granite4-openvino" }
+            : new[] { "qwen3:8b", "granite4" };
+        var missing = await CheckMultipleDependenciesAsync(
+            new[] { "ollama", "nomic-embed-text" }.Concat(genModelIds).ToArray());
 
         if (missing.Count > 0)
         {

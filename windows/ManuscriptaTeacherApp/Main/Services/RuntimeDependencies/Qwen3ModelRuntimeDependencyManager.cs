@@ -35,14 +35,14 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
-        /// Checks if the Qwen3 8B model is available by querying Ollama's API.
-        /// Per GenAISpec.md §1C(3)(a).
+        /// Checks if the Qwen3 8B GGUF model is available on Standard Ollama.
+        /// Per GenAISpec.md §1C(3)(a). Always targets port 11434.
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
         {
             try
             {
-                var baseUrl = await _inferenceRuntimeSelector.GetActiveRuntimeBaseUrlAsync();
+                var baseUrl = _inferenceRuntimeSelector.GetStandardOllamaBaseUrl();
                 var response = await _httpClient.GetAsync($"{baseUrl}/api/tags");
                 if (!response.IsSuccessStatusCode)
                 {
@@ -80,10 +80,10 @@ namespace Main.Services.RuntimeDependencies
         /// virtually so tests can substitute a dummy process without touching
         /// the filesystem or requiring Ollama.
         /// </summary>
-        protected virtual async Task<Process> StartPullProcessAsync(string args)
+        protected virtual Task<Process> StartPullProcessAsync(string args)
         {
-            var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
-            var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+            // Always use Standard Ollama binary for GGUF model pull. Per §1C(3)(b).
+            var dirName = "ollama";
 
             // Ollama extraction directory
             var binDir = Path.Combine(
@@ -122,7 +122,8 @@ namespace Main.Services.RuntimeDependencies
             }
             psi.EnvironmentVariables["PATH"] = string.Join(Path.PathSeparator, pathItems);
 
-            return Process.Start(psi) ?? throw new InvalidOperationException("Failed to start ollama process");
+            return Task.FromResult(
+                Process.Start(psi) ?? throw new InvalidOperationException("Failed to start ollama process"));
         }
 
         protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
@@ -223,8 +224,8 @@ namespace Main.Services.RuntimeDependencies
 
             try
             {
-                var activeRuntime = await _inferenceRuntimeSelector.GetActiveRuntimeAsync();
-                var dirName = activeRuntime == Models.Entities.InferenceRuntime.OPENVINO ? "ollama-openvino" : "ollama";
+                // Always use Standard Ollama binary for GGUF model removal. Per §1C(3)(e).
+                var dirName = "ollama";
 
                 var binDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

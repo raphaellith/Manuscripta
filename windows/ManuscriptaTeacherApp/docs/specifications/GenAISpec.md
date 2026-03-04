@@ -95,46 +95,88 @@ Frontend workflows interacting with these functionalities are defined in Fronten
     (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `ChromaClientService`.
 
 
-## Section 1C - Ascertaining the availability of Qwen3 8B Model
+## Section 1C — Ascertaining the Availability of Qwen3 8B Model (Standard Ollama)
 
-(1) The `Qwen3ModelRuntimeDependencyManager` class shall manage the availability and installation of the Qwen3 8B model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+(1) The `Qwen3ModelRuntimeDependencyManager` class shall manage the availability and installation of the Qwen3 8B model **in GGUF format for Standard Ollama** by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
 
 (2) The `Qwen3ModelRuntimeDependencyManager` class shall have the unique identifier `"qwen3:8b"`.
 
 (3) The `Qwen3ModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying **Standard Ollama's** API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
 
-    (b) `Task DownloadDependencyAsync()` shall download the Qwen3 8B model by calling `ollama pull qwen3:8b` via the command line. This operation may take significant time and download several gigabytes of data.
+    (b) `Task DownloadDependencyAsync()` shall download the Qwen3 8B model by calling **the Standard Ollama executable at `%AppData%\ManuscriptaTeacherApp\bin\ollama\ollama.exe`** with `pull qwen3:8b` via the command line. This operation may take significant time and download several gigabytes of data.
 
     (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
 
     (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
 
-    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Qwen3 8B model by calling `ollama rm qwen3:8b` and return `true` on success.
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Qwen3 8B model from Standard Ollama by calling **the Standard Ollama executable** with `rm qwen3:8b` and return `true` on success.
 
-    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the Qwen3 8B model.
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
 
 
-## Section 1D - Ascertaining the availability of IBM Granite 4.0 Model
+## Section 1CA — Ascertaining the Availability of Qwen3 8B Model (OV-Ollama)
 
-(1) The `GraniteModelRuntimeDependencyManager` class shall manage the availability and installation of the IBM Granite 4.0 model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+(1) The `Qwen3OVModelRuntimeDependencyManager` class shall manage the availability and installation of the Qwen3 8B model **in OpenVINO IR format** for OV-Ollama, by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `Qwen3OVModelRuntimeDependencyManager` class shall have the unique identifier `"qwen3:8b-openvino"`.
+
+(3) The `Qwen3OVModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IR-format Qwen3 8B model by querying the OV-Ollama API endpoint `http://localhost:11435/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall provision the Qwen3 8B model in IR format by downloading all files from the HuggingFace repository specified in Appendix A (`QWEN3_IR_HF_REPO`) using the HuggingFace REST API (`https://huggingface.co/api/models/{repo_id}/tree/main` to list files, then downloading each file) into the local directory `%AppData%\ManuscriptaTeacherApp\bin\models\qwen3-8b\`. If the HuggingFace download fails, the implementation shall fall back to local conversion per §1H(4).
+
+    (c) `Task VerifyDownloadAsync()` shall verify that the IR model directory exists and contains the required model files (`openvino_model.xml`, `openvino_model.bin`).
+
+    (d) `Task PerformInstallDependencyAsync()` shall register the IR model with OV-Ollama using an Ollama `Modelfile` that references the IR directory, and invoke `ollama create qwen3:8b -f Modelfile` using the OV-Ollama executable at `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\ollama.exe`.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the model from OV-Ollama by calling the OV-Ollama executable with `rm qwen3:8b`, delete the IR model directory at `%AppData%\ManuscriptaTeacherApp\bin\models\qwen3-8b\`, and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
+
+
+## Section 1D — Ascertaining the Availability of IBM Granite 4.0 Model (Standard Ollama)
+
+(1) The `GraniteModelRuntimeDependencyManager` class shall manage the availability and installation of the IBM Granite 4.0 model **in GGUF format for Standard Ollama** by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
 
 (2) The `GraniteModelRuntimeDependencyManager` class shall have the unique identifier `"granite4"`.
 
 (3) The `GraniteModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying **Standard Ollama's** API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
 
-    (b) `Task DownloadDependencyAsync()` shall download the IBM Granite 4.0 model by calling `ollama pull granite4` via the command line. This operation may take significant time and download several gigabytes of data.
+    (b) `Task DownloadDependencyAsync()` shall download the IBM Granite 4.0 model by calling **the Standard Ollama executable at `%AppData%\ManuscriptaTeacherApp\bin\ollama\ollama.exe`** with `pull granite4` via the command line. This operation may take significant time and download several gigabytes of data.
 
     (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
 
     (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
 
-    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the IBM Granite 4.0 model by calling `ollama rm granite4` and return `true` on success.
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the IBM Granite 4.0 model from Standard Ollama by calling **the Standard Ollama executable** with `rm granite4` and return `true` on success.
 
-    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the IBM Granite 4.0 model.
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
+
+
+## Section 1DA — Ascertaining the Availability of IBM Granite 4.0 Model (OV-Ollama)
+
+(1) The `GraniteOVModelRuntimeDependencyManager` class shall manage the availability and installation of the IBM Granite 4.0 model **in OpenVINO IR format** for OV-Ollama, by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `GraniteOVModelRuntimeDependencyManager` class shall have the unique identifier `"granite4-openvino"`.
+
+(3) The `GraniteOVModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IR-format IBM Granite 4.0 model by querying the OV-Ollama API endpoint `http://localhost:11435/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall provision the IBM Granite 4.0 model in IR format by downloading all files from the HuggingFace repository specified in Appendix A (`GRANITE4_IR_HF_REPO`) using the HuggingFace REST API (`https://huggingface.co/api/models/{repo_id}/tree/main` to list files, then downloading each file) into the local directory `%AppData%\ManuscriptaTeacherApp\bin\models\granite4\`. If the HuggingFace download fails, the implementation shall fall back to local conversion per §1H(4).
+
+    (c) `Task VerifyDownloadAsync()` shall verify that the IR model directory exists and contains the required model files (`openvino_model.xml`, `openvino_model.bin`).
+
+    (d) `Task PerformInstallDependencyAsync()` shall register the IR model with OV-Ollama using an Ollama `Modelfile` that references the IR directory, and invoke `ollama create granite4 -f Modelfile` using the OV-Ollama executable at `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\ollama.exe`.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the model from OV-Ollama by calling the OV-Ollama executable with `rm granite4`, delete the IR model directory at `%AppData%\ManuscriptaTeacherApp\bin\models\granite4\`, and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
 
 
 ## Section 1E - Ascertaining the availability of Nomic Embed Text Model
@@ -271,15 +313,21 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (c) this method should only be used as a fallback if pre-converted archives are unavailable.
 
-(5) The model-specific dependency manager classes (§1C, §1D) shall detect the active runtime via `InferenceRuntimeSelector.ActiveRuntime` and —
+(5) The model-specific dependency managers shall be separated by runtime —
 
-    (a) if `Standard`, use the existing GGUF provisioning logic (`ollama pull`) targeting Standard Ollama on port 11434;
+    (a) Standard Ollama GGUF models shall be managed by §1C (`qwen3:8b`), §1D (`granite4`), and §1E (`nomic-embed-text`). These managers shall always target Standard Ollama on port 11434.
 
-    (b) if `OpenVino`, use the IR provisioning logic specified in (2)–(4) targeting OV-Ollama on port 11435;
+    (b) OV-Ollama IR models shall be managed by §1CA (`qwen3:8b-openvino`) and §1DA (`granite4-openvino`). These managers shall always target OV-Ollama on port 11435.
 
-    (c) `CheckDependencyAvailabilityAsync()` and `UninstallDependencyAsync()` shall target the appropriate runtime's API endpoint based on the active runtime.
+    (c) There shall be no OV-Ollama equivalent for `nomic-embed-text` per §1F(7). The embedding model shall always be managed by §1E and shall always target Standard Ollama.
 
-(5A) The `NomicEmbedTextModelRuntimeDependencyManager` (§1E) is excluded from Subsection (5). It shall always use Standard Ollama (`ollama pull nomic-embed-text`) and always target the Standard Ollama API endpoint on port 11434, irrespective of the active runtime.
+(5A) Pre-generation dependency checks (e.g., in `TeacherPortalHub.GenerateReading`) shall select the appropriate generation model dependency IDs based on the active runtime —
+
+    (a) if `Standard`: check `"qwen3:8b"` and `"granite4"`;
+
+    (b) if `OpenVino`: check `"qwen3:8b-openvino"` and `"granite4-openvino"`.
+
+    (c) The `"ollama"` and `"nomic-embed-text"` dependencies shall always be checked regardless of the active runtime, per §1F(7)(d).
 
 
 
@@ -711,6 +759,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OV_OLLAMA_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` | Installation directory for OV-Ollama (DLLs colocated here) |
 | `IR_MODEL_BASE_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\models\` | Base directory for IR-format models |
 | `STANDARD_OLLAMA_BASE_URL` | `http://localhost:11434` | Standard Ollama endpoint, always used for embedding operations |
+| `OV_OLLAMA_BASE_URL` | `http://localhost:11435` | OV-Ollama endpoint, used for generation when OpenVINO is active |
+| `QWEN3_IR_HF_REPO` | `OpenVINO/Qwen3-8B-int4-ov` | HuggingFace repository for pre-converted Qwen3 8B INT4 IR model (official Intel/OpenVINO conversion, compat. OV 2026.0.0+) |
+| `GRANITE4_IR_HF_REPO` | `llmware/granite-4-micro-ov` | HuggingFace repository for pre-converted Granite 4 Micro INT4 IR model (community conversion by llmware) |
 
 ---
 
