@@ -285,10 +285,13 @@ namespace Main.Services.RuntimeDependencies
                 }
                 catch { }
 
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Ensuring Standard Ollama is running" });
+                await EnsureStandardOllamaRunningAsync();
+
                 progress?.Report(new RuntimeDependencyProgress { Phase = "Starting OV-Ollama daemon" });
                 await StartOllamaDaemonAsync(extractDir);
 
-                _logger.LogInformation("OV-Ollama daemon started.");
+                _logger.LogInformation("Both Standard Ollama and OV-Ollama daemons started.");
             }
             catch (Exception ex)
             {
@@ -337,6 +340,79 @@ namespace Main.Services.RuntimeDependencies
 
                 return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);
             }
+        }
+
+        /// <summary>
+        /// Ensures that Standard Ollama is running on port 11434 for embedding operations.
+        /// Per GenAISpec.md §1G(3)(d)(iv) and §1F(7)(d): Standard Ollama must be running
+        /// whenever OV-Ollama is the active runtime.
+        /// </summary>
+        private async Task EnsureStandardOllamaRunningAsync()
+        {
+            // Check if Standard Ollama is already running
+            try
+            {
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(3));
+                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    _logger.LogInformation("Standard Ollama is already running on port 11434.");
+                    return;
+                }
+            }
+            catch
+            {
+                // Standard Ollama is not running — start it
+            }
+
+            _logger.LogInformation("Standard Ollama is not running. Starting it for embedding operations...");
+
+            var standardOllamaDir = Path.Combine(GetAppDataFolder(), "ManuscriptaTeacherApp", "bin", "ollama");
+            var standardOllamaExe = Path.Combine(standardOllamaDir, "ollama.exe");
+
+            if (!File.Exists(standardOllamaExe))
+            {
+                throw new InvalidOperationException(
+                    $"Standard Ollama executable not found at {standardOllamaExe}. " +
+                    "Standard Ollama must be installed before OV-Ollama can be used. " +
+                    "Per GenAISpec.md §1F(7)(d).");
+            }
+
+            var processStartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = standardOllamaExe,
+                Arguments = "serve",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            var process = System.Diagnostics.Process.Start(processStartInfo);
+            if (process == null)
+            {
+                throw new InvalidOperationException("Failed to start Standard Ollama daemon process");
+            }
+
+            // Wait for Standard Ollama daemon to become ready on port 11434
+            for (int i = 0; i < 30; i++)
+            {
+                await Task.Delay(500);
+                try
+                {
+                    var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        _logger.LogInformation("Standard Ollama daemon started successfully on port 11434.");
+                        return;
+                    }
+                }
+                catch
+                {
+                    // Daemon not ready yet
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Standard Ollama daemon failed to start on port 11434 within timeout period");
         }
 
         private async Task StartOllamaDaemonAsync(string ollamaDir)

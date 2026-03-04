@@ -56,6 +56,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Ollama by calling `http://localhost:11434/api/version`. It shall return true if the HTTP request succeeds with a 200 status code, and false if the request fails.
 
+    [Explanatory Note: This availability check always targets http://localhost:11434, regardless of the active inference runtime. When OV-Ollama is active, Standard Ollama is still expected to be running on port 11434 for embedding operations per §1F(7). The check is therefore always meaningful.]
+
     (b) `Task DownloadDependencyAsync()` shall download the standalone Windows release from `https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip` and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-windows-amd64.zip`. It shall also ensure that the `ManuscriptaTeacherApp` directory is included in the PATH environmental variable.
 
     (c) `Task VerifyDownloadAsync()` shall verify the downloaded ZIP file by comparing its SHA256 hash output against the published checksum. The checksum shall be retrieved from `https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt`, in which the checksum precedes the file name `./ollama-windows-amd64.zip`.
@@ -232,7 +234,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iii) add `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` to the `PATH` environment variable for both the current process and the user scope;
 
-        (iv) start `ollama.exe serve` from the OV-Ollama directory with `WorkingDirectory` set to the OV-Ollama installation directory, and with the environment variables `GODEBUG=cgocheck=0` and `OLLAMA_HOST=127.0.0.1:11435`.
+        (iv) before starting OV-Ollama, verify that Standard Ollama is running on port 11434 by calling `http://localhost:11434/api/version`. If it is not running, start Standard Ollama's daemon by invoking the Standard Ollama executable at `%AppData%\ManuscriptaTeacherApp\bin\ollama\ollama.exe` with `serve` (without any `OLLAMA_HOST` override, defaulting to port 11434). Wait until `http://localhost:11434/api/version` returns HTTP 200 before proceeding;
+
+        (v) start `ollama.exe serve` from the OV-Ollama directory with `WorkingDirectory` set to the OV-Ollama installation directory, and with the environment variables `GODEBUG=cgocheck=0` and `OLLAMA_HOST=127.0.0.1:11435`.
 
     [Explanatory Note: The OV-Ollama executable dynamically links against OpenVINO native libraries (`openvino_c.dll`, `openvino_genai.dll`, `tbb12.dll`, etc.). Windows resolves DLLs by searching the executable's directory first, so colocating DLLs eliminates the need for `OpenVINO_DIR` and `setupvars.bat`.]
 
