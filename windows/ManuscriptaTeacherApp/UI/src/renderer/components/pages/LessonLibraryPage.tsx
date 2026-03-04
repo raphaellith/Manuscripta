@@ -268,7 +268,9 @@ export const LessonLibraryPage: React.FC = () => {
                 : await generateWorksheet(generationRequest);
 
             // Update material with generated content
-            await updateMaterial({
+            // Backend may transform content (e.g., question-draft extraction per §3B(4a)),
+            // so use the returned entity which reflects the actual saved state.
+            const updatedMaterial = await updateMaterial({
                 ...createdMaterial,
                 content: generationResult.content,
                 readingAge,
@@ -279,12 +281,7 @@ export const LessonLibraryPage: React.FC = () => {
 
             // Per §4B(2)(b): Display content in editor modal
             // Note: Validation warnings will be displayed by the editor modal if present
-            setModal({ type: 'editMaterial', material: {
-                ...createdMaterial,
-                content: generationResult.content,
-                readingAge,
-                actualAge,
-            }});
+            setModal({ type: 'editMaterial', material: updatedMaterial });
         } catch (error) {
             console.error('AI generation failed:', error);
             // Roll back material creation

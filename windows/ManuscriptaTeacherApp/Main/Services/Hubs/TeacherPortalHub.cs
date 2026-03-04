@@ -64,6 +64,7 @@ public class TeacherPortalHub : Hub
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
     private readonly OllamaClientService _ollamaClient;
+    private readonly QuestionExtractionService _questionExtractionService;
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -101,7 +102,8 @@ public class TeacherPortalHub : Hub
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
         IEmbeddingService documentEmbeddingService,
-        OllamaClientService ollamaClient)
+        OllamaClientService ollamaClient,
+        QuestionExtractionService questionExtractionService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -142,6 +144,7 @@ public class TeacherPortalHub : Hub
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
+        _questionExtractionService = questionExtractionService ?? throw new ArgumentNullException(nameof(questionExtractionService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -297,16 +300,25 @@ public class TeacherPortalHub : Hub
     /// Updates a material entity.
     /// Per NetworkingAPISpec §1(1)(d)(iii).
     /// </summary>
-    public async Task UpdateMaterial(InternalUpdateMaterialDto dto)
+    public async Task<MaterialEntity> UpdateMaterial(InternalUpdateMaterialDto dto)
     {
         // Get existing material to determine concrete type (using repository directly)
         var existing = await _materialRepository.GetByIdAsync(dto.Id);
         if (existing == null)
             throw new HubException($"Material with ID {dto.Id} not found.");
 
+        var content = dto.Content;
+
+        // §3B(4a): Extract and create questions from question-draft markers in worksheet content
+        if (content != null && content.Contains("!!! question-draft"))
+        {
+            var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(content, dto.Id);
+            content = extractionResult.ModifiedContent;
+        }
+
         // Update properties
         existing.Title = dto.Title;
-        existing.Content = dto.Content;
+        existing.Content = content;
         existing.Metadata = dto.Metadata;
         existing.VocabularyTerms = dto.VocabularyTerms;
         existing.ReadingAge = dto.ReadingAge;
@@ -314,6 +326,7 @@ public class TeacherPortalHub : Hub
         existing.Timestamp = DateTime.UtcNow;
 
         await _materialRepository.UpdateAsync(existing);
+        return existing;
     }
 
     /// <summary>

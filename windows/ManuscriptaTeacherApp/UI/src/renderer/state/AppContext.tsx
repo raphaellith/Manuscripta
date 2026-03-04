@@ -52,7 +52,7 @@ interface AppContextValue extends AppState {
     deleteLesson: (id: string) => Promise<void>;
 
     createMaterial: (dto: InternalCreateMaterialDto) => Promise<MaterialEntity>;
-    updateMaterial: (entity: MaterialEntity) => Promise<void>;
+    updateMaterial: (entity: MaterialEntity) => Promise<MaterialEntity>;
     deleteMaterial: (id: string) => Promise<void>;
 
     // AI Generation - NetworkingAPISpec §1(1)(i)
@@ -282,12 +282,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         return created;
     };
 
-    const updateMaterial = async (entity: MaterialEntity) => {
-        await signalRService.updateMaterial(entity);
+    const updateMaterial = async (entity: MaterialEntity): Promise<MaterialEntity> => {
+        const updated = await signalRService.updateMaterial(entity);
         setState(prev => ({
             ...prev,
-            materials: prev.materials.map(m => m.id === entity.id ? entity : m),
+            materials: prev.materials.map(m => m.id === updated.id ? updated : m),
         }));
+        return updated;
     };
 
     const deleteMaterial = async (id: string) => {

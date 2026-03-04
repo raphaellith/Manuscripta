@@ -341,8 +341,8 @@ class SignalRService {
         return await this.getConnection().invoke<MaterialEntity[]>("GetAllMaterials");
     }
 
-    public async updateMaterial(entity: MaterialEntity): Promise<void> {
-        await this.getConnection().invoke("UpdateMaterial", entity);
+    public async updateMaterial(entity: MaterialEntity): Promise<MaterialEntity> {
+        return await this.getConnection().invoke<MaterialEntity>("UpdateMaterial", entity);
     }
 
     public async deleteMaterial(id: string): Promise<void> {

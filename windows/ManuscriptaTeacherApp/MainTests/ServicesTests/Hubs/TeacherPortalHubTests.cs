@@ -64,6 +64,7 @@ public class TeacherPortalHubTests
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<OllamaClientService> _mockOllamaClientService;
+    private readonly QuestionExtractionService _questionExtractionService;
     private readonly TeacherPortalHub _hub;
 
     public TeacherPortalHubTests()
@@ -104,6 +105,7 @@ public class TeacherPortalHubTests
         _embeddingStatusService = new StubEmbeddingStatusService();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockOllamaClientService = new Mock<OllamaClientService>();
+        _questionExtractionService = new QuestionExtractionService(_mockQuestionService.Object);
         _feedbackQueueService = new FeedbackQueueService(
             _mockHubContext.Object,
             _mockTcpPairingService.Object,
@@ -145,7 +147,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
     }
 
     #region Constructor Tests
@@ -189,7 +192,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -231,7 +235,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -273,7 +278,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -315,7 +321,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -357,7 +364,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -399,7 +407,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -441,7 +450,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -483,7 +493,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -525,7 +536,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -567,7 +579,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -609,7 +622,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -651,7 +665,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -693,7 +708,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -735,7 +751,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
     }
 
     [Fact]
@@ -777,7 +794,51 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object));
+            _mockOllamaClientService.Object,
+            _questionExtractionService));
+    }
+
+    [Fact]
+    public void Constructor_NullQuestionExtractionService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object,
+            null!));
     }
 
     #endregion
@@ -1058,9 +1119,13 @@ public class TeacherPortalHubTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _hub.UpdateMaterial(dto);
+        var result = await _hub.UpdateMaterial(dto);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(materialId, result.Id);
+        Assert.Equal("Updated Title", result.Title);
+        Assert.Equal("Updated Content", result.Content);
         _mockMaterialRepository.Verify(r => r.GetByIdAsync(materialId), Times.Once);
         _mockMaterialRepository.Verify(r => r.UpdateAsync(It.Is<MaterialEntity>(m =>
             m.Id == materialId &&
@@ -1878,7 +1943,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
 
         var mockClientProxy = new Mock<ISingleClientProxy>();
         mockClientProxy
@@ -1958,7 +2024,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
 
         var mockClientProxy = new Mock<ISingleClientProxy>();
         mockClientProxy
@@ -2045,7 +2112,8 @@ public class TeacherPortalHubTests
             _embeddingStatusService,
             _feedbackQueueService,
             _mockEmbeddingService.Object,
-            _mockOllamaClientService.Object);
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
 
         var mockClientProxy = new Mock<ISingleClientProxy>();
         mockClientProxy
