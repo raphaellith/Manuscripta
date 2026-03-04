@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+#if DEBUG
 using Main.Testing;
+#endif
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,7 +129,9 @@ if (builder.Environment.IsEnvironment("Integration"))
 {
     builder.Services.AddHostedService<UdpBroadcastHostedService>();
     builder.Services.AddHostedService<TcpPairingHostedService>();
+#if DEBUG
     builder.Services.AddHostedService<IntegrationSeedService>();
+#endif
 }
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.

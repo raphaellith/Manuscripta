@@ -32,6 +32,13 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\Quill Logo.png" LogicalName="QuillLogo.png" />
   </ItemGroup>
+
+  <!-- Exclude Testing/ code from Release builds so simulation/integration endpoints
+       do not exist in a production binary. Debug builds keep them for local
+       Integration-mode testing. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="Testing\**" />
+  </ItemGroup>
 </Project>
 
 
