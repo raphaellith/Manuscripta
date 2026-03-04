@@ -270,8 +270,24 @@ namespace Main.Services.RuntimeDependencies
             await CreateTarGzAsync(modelDir, tarGzPath);
 
             // Step 2: Create Modelfile with ModelType "OpenVINO" (mandatory per ollama_ov docs)
+            // TEMPLATE is required for chat formatting — without it the model receives
+            // raw text and returns blank output.
             var modelfilePath = Path.Combine(Path.GetDirectoryName(modelDir)!, $"{MODEL_DIR_NAME}_Modelfile");
-            var modelfileContent = $"FROM {tarGzPath}\nModelType \"OpenVINO\"\nInferDevice \"GPU\"";
+            var modelfileContent = $@"FROM {tarGzPath}
+ModelType ""OpenVINO""
+InferDevice ""GPU""
+TEMPLATE """"""{{{{ if .System }}}}<|system|>
+{{{{ .System }}}}
+{{{{ end }}}}{{{{ if .Prompt }}}}<|user|>
+{{{{ .Prompt }}}}
+{{{{ end }}}}<|assistant|>
+{{{{ .Response }}}}""""""
+PARAMETER stop ""<|system|>""
+PARAMETER stop ""<|user|>""
+PARAMETER stop ""<|assistant|>""
+PARAMETER temperature 0.7
+PARAMETER num_ctx 4096
+";
             await File.WriteAllTextAsync(modelfilePath, modelfileContent);
 
             _logger.LogInformation("Created Modelfile at {Path} with content:\n{Content}", modelfilePath, modelfileContent);
