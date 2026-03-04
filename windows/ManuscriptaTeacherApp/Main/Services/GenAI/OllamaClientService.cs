@@ -260,19 +260,25 @@ public class OllamaClientService : IDependencyService
                 if (string.IsNullOrEmpty(token) && !done)
                     continue;
 
-                // Per §3H(4): Process think tags
-                var (processedToken, newIsThinking, newPartialTag) = ProcessThinkTags(
+                // Per §3H(4): Process think tags - yields segments with correct IsThinking per segment
+                var (segments, newIsThinking, newPartialTag) = ProcessThinkTags(
                     partialTag + token, isInThinkBlock);
 
                 isInThinkBlock = newIsThinking;
                 partialTag = newPartialTag;
 
-                // Only yield if we have content or this is the final chunk
-                if (!string.IsNullOrEmpty(processedToken) || done)
+                // Yield each segment with its correct IsThinking flag
+                for (int segIdx = 0; segIdx < segments.Count; segIdx++)
                 {
-                    yield return new StreamingGenerationChunk(processedToken, isInThinkBlock, done);
+                    var seg = segments[segIdx];
+                    bool isLastSegment = segIdx == segments.Count - 1;
+                    // Only the final segment of the final JSON line should have done=true
+                    bool segmentDone = done && isLastSegment;
+                    yield return new StreamingGenerationChunk(seg.Content, seg.IsThinking, segmentDone);
                 }
-                else if (done)
+
+                // If no segments but done flag is set, yield empty done chunk
+                if (segments.Count == 0 && done)
                 {
                     yield return new StreamingGenerationChunk("", isInThinkBlock, true);
                 }
@@ -281,14 +287,15 @@ public class OllamaClientService : IDependencyService
     }
 
     /// <summary>
-    /// Processes think tags in a token, stripping tags and tracking state.
+    /// Processes think tags in a token, returning segments with correct IsThinking flags.
     /// Per GenAISpec.md §3H(4)(c).
     /// </summary>
-    /// <returns>Tuple of (processed token, is currently in think block, remaining partial tag)</returns>
-    private static (string ProcessedToken, bool IsThinking, string PartialTag) ProcessThinkTags(
+    /// <returns>Tuple of (list of content segments with IsThinking flags, final think state, remaining partial tag)</returns>
+    private static (List<(string Content, bool IsThinking)> Segments, bool IsThinking, string PartialTag) ProcessThinkTags(
         string input, bool wasThinking)
     {
-        var result = new System.Text.StringBuilder();
+        var segments = new List<(string Content, bool IsThinking)>();
+        var currentSegment = new System.Text.StringBuilder();
         bool isThinking = wasThinking;
         string partialTag = "";
         int i = 0;
@@ -301,6 +308,12 @@ public class OllamaClientService : IDependencyService
                 // Check for <think> tag
                 if (i + 7 <= input.Length && input.Substring(i, 7) == "<think>")
                 {
+                    // Flush current segment before state change
+                    if (currentSegment.Length > 0)
+                    {
+                        segments.Add((currentSegment.ToString(), isThinking));
+                        currentSegment.Clear();
+                    }
                     isThinking = true;
                     i += 7;
                     continue;
@@ -309,6 +322,12 @@ public class OllamaClientService : IDependencyService
                 // Check for </think> tag
                 if (i + 8 <= input.Length && input.Substring(i, 8) == "</think>")
                 {
+                    // Flush current segment before state change
+                    if (currentSegment.Length > 0)
+                    {
+                        segments.Add((currentSegment.ToString(), isThinking));
+                        currentSegment.Clear();
+                    }
                     isThinking = false;
                     i += 8;
                     continue;
@@ -323,11 +342,17 @@ public class OllamaClientService : IDependencyService
                 }
             }
 
-            result.Append(input[i]);
+            currentSegment.Append(input[i]);
             i++;
         }
 
-        return (result.ToString(), isThinking, partialTag);
+        // Flush any remaining content
+        if (currentSegment.Length > 0)
+        {
+            segments.Add((currentSegment.ToString(), isThinking));
+        }
+
+        return (segments, isThinking, partialTag);
     }
 
     /// <summary>

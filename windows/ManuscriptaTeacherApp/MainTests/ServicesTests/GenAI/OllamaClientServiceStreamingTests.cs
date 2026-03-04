@@ -88,13 +88,12 @@ public class OllamaClientServiceStreamingTests
             chunks.Add(chunk);
         }
 
-        // Assert: First chunk after <think> tag should have IsThinking = true
+        // Assert: Content inside <think> block should have IsThinking = true
         Assert.True(chunks[0].IsThinking);
         Assert.Equal("Reasoning", chunks[0].Token);
 
-        // After </think> tag is processed in the same chunk, IsThinking reflects final state = false
-        // The content " here" precedes </think> but the state returned is after tag processing
-        Assert.False(chunks[1].IsThinking);
+        // Content " here" is inside the think block, so IsThinking should be true
+        Assert.True(chunks[1].IsThinking);
         Assert.Equal(" here", chunks[1].Token);
 
         Assert.False(chunks[2].IsThinking); // Content after </think>
@@ -293,24 +292,36 @@ public class OllamaClientServiceStreamingTests
                     if (string.IsNullOrEmpty(token) && !done)
                         continue;
 
-                    var (processedToken, newIsThinking, newPartialTag) = ProcessThinkTags(
+                    // Process think tags - yields segments with correct IsThinking per segment
+                    var (segments, newIsThinking, newPartialTag) = ProcessThinkTags(
                         partialTag + token, isInThinkBlock);
 
                     isInThinkBlock = newIsThinking;
                     partialTag = newPartialTag;
 
-                    if (!string.IsNullOrEmpty(processedToken) || done)
+                    // Yield each segment with its correct IsThinking flag
+                    for (int segIdx = 0; segIdx < segments.Count; segIdx++)
                     {
-                        yield return new StreamingGenerationChunk(processedToken, isInThinkBlock, done);
+                        var seg = segments[segIdx];
+                        bool isLastSegment = segIdx == segments.Count - 1;
+                        bool segmentDone = done && isLastSegment;
+                        yield return new StreamingGenerationChunk(seg.Content, seg.IsThinking, segmentDone);
+                    }
+
+                    // If no segments but done flag is set, yield empty done chunk
+                    if (segments.Count == 0 && done)
+                    {
+                        yield return new StreamingGenerationChunk("", isInThinkBlock, true);
                     }
                 }
             }
         }
 
-        private static (string ProcessedToken, bool IsThinking, string PartialTag) ProcessThinkTags(
+        private static (List<(string Content, bool IsThinking)> Segments, bool IsThinking, string PartialTag) ProcessThinkTags(
             string input, bool wasThinking)
         {
-            var result = new StringBuilder();
+            var segments = new List<(string Content, bool IsThinking)>();
+            var currentSegment = new StringBuilder();
             bool isThinking = wasThinking;
             string partialTag = "";
             int i = 0;
@@ -321,6 +332,12 @@ public class OllamaClientServiceStreamingTests
                 {
                     if (i + 7 <= input.Length && input.Substring(i, 7) == "<think>")
                     {
+                        // Flush current segment before state change
+                        if (currentSegment.Length > 0)
+                        {
+                            segments.Add((currentSegment.ToString(), isThinking));
+                            currentSegment.Clear();
+                        }
                         isThinking = true;
                         i += 7;
                         continue;
@@ -328,6 +345,12 @@ public class OllamaClientServiceStreamingTests
 
                     if (i + 8 <= input.Length && input.Substring(i, 8) == "</think>")
                     {
+                        // Flush current segment before state change
+                        if (currentSegment.Length > 0)
+                        {
+                            segments.Add((currentSegment.ToString(), isThinking));
+                            currentSegment.Clear();
+                        }
                         isThinking = false;
                         i += 8;
                         continue;
@@ -341,11 +364,17 @@ public class OllamaClientServiceStreamingTests
                     }
                 }
 
-                result.Append(input[i]);
+                currentSegment.Append(input[i]);
                 i++;
             }
 
-            return (result.ToString(), isThinking, partialTag);
+            // Flush any remaining content
+            if (currentSegment.Length > 0)
+            {
+                segments.Add((currentSegment.ToString(), isThinking));
+            }
+
+            return (segments, isThinking, partialTag);
         }
 
         private static bool IsPartialThinkTag(string s)
