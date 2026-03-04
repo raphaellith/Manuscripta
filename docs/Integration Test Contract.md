@@ -591,7 +591,7 @@ The server must be started in **integration-test mode** (see §12.1) so that all
 
 ```bash
 cd windows/ManuscriptaTeacherApp/Main
-dotnet run --environment Integration
+ASPNETCORE_ENVIRONMENT=Integration dotnet run --no-launch-profile
 ```
 
 See §12 for the full list of server-side requirements in integration-test mode.

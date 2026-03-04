@@ -121,6 +121,7 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
+
 builder.Services.AddHostedService<HubEventBridge>();
 
 // Integration mode: auto-start network services and seed test data
@@ -306,6 +307,24 @@ if (app.Environment.IsEnvironment("Testing"))
     app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
     app.MapControllers();
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+}
+else if (app.Environment.IsEnvironment("Integration"))
+{
+    // Integration environment: same port routing as production per IntegrationTestSpecification §2(5).
+    var httpApiHostInteg = $"*:{networkSettings.HttpPort}";
+    app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+    app.MapControllers().RequireHost(httpApiHostInteg);
+    app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+
+    // Per IntegrationTestSpecification §2(6): readiness log
+    app.Logger.LogInformation("Integration test services ready");
+
+    // Per IntegrationTestSpecification §2(2): auto-start UDP broadcasting and TCP listener.
+    // Mirrors TeacherPortalHub.PairDevices() which calls these services directly.
+    var udpService = app.Services.GetRequiredService<IUdpBroadcastService>();
+    var tcpService = app.Services.GetRequiredService<ITcpPairingService>();
+    await udpService.StartBroadcastingAsync(CancellationToken.None);
+    await tcpService.StartListeningAsync(CancellationToken.None);
 }
 else
 {

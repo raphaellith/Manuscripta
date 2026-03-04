@@ -1,6 +1,9 @@
 package com.manuscripta.student.network.tcp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -81,6 +84,36 @@ public class AckRetrySenderTest {
         sender.send(message, "TestTag");
 
         verify(mockSocketManager, times(2)).send(message);
+    }
+
+    // ========== Constructor tests ==========
+
+    @Test
+    public void testConstructor_nullSocketManager_throwsException() {
+        assertThrows(IllegalArgumentException.class, () -> new AckRetrySender(null));
+    }
+
+    // ========== sleep() tests ==========
+
+    @Test
+    public void testSleep_normalCompletion_returnsTrue() {
+        AckRetrySender realSender = new AckRetrySender(mockSocketManager);
+
+        boolean result = realSender.sleep(1L);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSleep_interruptedThread_returnsFalse() {
+        AckRetrySender realSender = new AckRetrySender(mockSocketManager);
+        Thread.currentThread().interrupt();
+
+        boolean result = realSender.sleep(60_000L);
+
+        assertFalse(result);
+        // Clear the interrupt flag set by sleep() to avoid polluting other tests
+        Thread.interrupted();
     }
 
     @Test

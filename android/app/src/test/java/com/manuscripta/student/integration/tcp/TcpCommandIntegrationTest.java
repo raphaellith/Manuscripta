@@ -32,16 +32,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * Integration tests for TCP command messages.
  *
- * <p>After pairing, verifies that:</p>
+ * <p>
+ * After pairing, verifies that:
+ * </p>
  * <ul>
- *   <li>{@code HAND_RAISED} (0x11) can be sent and
- *       {@code HAND_ACK} (0x06) is received</li>
- *   <li>{@code DISTRIBUTE_ACK} (0x12) and
- *       {@code FEEDBACK_ACK} (0x13) are accepted by the server</li>
- *   <li>Server-initiated commands
- *       ({@code LOCK_SCREEN}, {@code UNLOCK_SCREEN},
- *       {@code REFRESH_CONFIG}, {@code UNPAIR}) can be received
- *       when triggered</li>
+ * <li>{@code HAND_RAISED} (0x11) can be sent and
+ * {@code HAND_ACK} (0x06) is received</li>
+ * <li>{@code DISTRIBUTE_ACK} (0x12) and
+ * {@code FEEDBACK_ACK} (0x13) are accepted by the server</li>
+ * <li>Server-initiated commands
+ * ({@code LOCK_SCREEN}, {@code UNLOCK_SCREEN},
+ * {@code REFRESH_CONFIG}, {@code UNPAIR}) can be received
+ * when triggered</li>
  * </ul>
  */
 @RunWith(RobolectricTestRunner.class)
@@ -155,11 +157,13 @@ public class TcpCommandIntegrationTest {
     /**
      * Verifies that server-initiated commands can be received.
      *
-     * <p>This test is conditional: if the server has been configured
+     * <p>
+     * This test is conditional: if the server has been configured
      * to trigger a command (e.g. via a test control API), one of
      * {@code LOCK_SCREEN}, {@code UNLOCK_SCREEN},
      * {@code REFRESH_CONFIG}, or {@code UNPAIR} should arrive.
-     * Without pre-staging, the test succeeds vacuously.</p>
+     * Without pre-staging, the test succeeds vacuously.
+     * </p>
      *
      * @throws Exception if an error occurs
      */
