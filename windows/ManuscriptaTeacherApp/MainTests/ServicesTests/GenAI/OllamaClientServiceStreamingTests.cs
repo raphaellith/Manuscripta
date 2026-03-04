@@ -239,7 +239,8 @@ public class OllamaClientServiceStreamingTests
             {
                 model = model,
                 messages = messages,
-                stream = true
+                stream = true,
+                options = new { enable_thinking = true }
             };
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")

@@ -191,11 +191,14 @@ public class OllamaClientService : IDependencyService
 
         messages.Add(new { role = "user", content = prompt });
 
+        // Per §3H(4): Enable thinking mode for models that support chain-of-thought
+        // (e.g., qwen3). This causes the model to emit <think>...</think> tags.
         var request = new
         {
             model = model,
             messages = messages,
-            stream = true
+            stream = true,
+            options = new { enable_thinking = true }
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
