@@ -46,7 +46,7 @@ public class FeedbackController : ControllerBase
         if (!Guid.TryParse(deviceId, out var parsedDeviceId))
         {
             _logger.LogWarning("Feedback request with invalid device ID format: {DeviceId}", deviceId);
-            return BadRequest(new { error = "DeviceId must be a valid GUID" });
+            return NotFound(new { error = "No feedback available for this device" });
         }
 
         _logger.LogInformation("Feedback request for device {DeviceId}", parsedDeviceId);

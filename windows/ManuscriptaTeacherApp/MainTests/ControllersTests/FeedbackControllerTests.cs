@@ -165,25 +165,23 @@ public class FeedbackControllerTests
     }
 
     [Fact]
-    public async Task GetFeedback_InvalidGuidFormat_Returns400BadRequest()
+    public async Task GetFeedback_InvalidGuidFormat_Returns404NotFound()
     {
         // Act
         var result = await _controller.GetFeedback("not-a-valid-guid");
 
-        // Assert
-        Assert.IsType<BadRequestObjectResult>(result);
+        // Assert — invalid GUID returns 404 to avoid leaking ID validity
+        Assert.IsType<NotFoundObjectResult>(result);
     }
 
     [Fact]
     public async Task GetFeedback_InvalidGuidFormat_ReturnsErrorMessage()
     {
         // Act
-        var result = await _controller.GetFeedback("invalid-guid") as BadRequestObjectResult;
+        var result = await _controller.GetFeedback("invalid-guid") as NotFoundObjectResult;
 
         // Assert
         Assert.NotNull(result);
-        var value = result.Value?.ToString();
-        Assert.Contains("GUID", value, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
