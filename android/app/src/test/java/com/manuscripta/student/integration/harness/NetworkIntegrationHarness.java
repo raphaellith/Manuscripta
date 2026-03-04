@@ -132,11 +132,16 @@ public class NetworkIntegrationHarness {
         pairingManager = new PairingManager(
                 tcpSocketManager, fastPairingConfig);
 
-        // --- HeartbeatManager with fast interval ---
-        HeartbeatConfig fastHeartbeatConfig = new HeartbeatConfig(
-                FAST_HEARTBEAT_INTERVAL_MS, true);
+        // --- HeartbeatManager — disabled by default ---
+        // Tests that need heartbeat (e.g., TcpHeartbeatIntegrationTest)
+        // must call setConfig(enabled=true) + start() explicitly.
+        // Without a DeviceStatusProvider, an auto-started heartbeat
+        // would send STATUS_UPDATE with no DeviceId, causing the
+        // server to log JSON parse warnings for every heartbeat.
+        HeartbeatConfig disabledHeartbeatConfig = new HeartbeatConfig(
+                FAST_HEARTBEAT_INTERVAL_MS, false);
         heartbeatManager = new HeartbeatManager(
-                tcpSocketManager, fastHeartbeatConfig);
+                tcpSocketManager, disabledHeartbeatConfig);
 
         // --- AckRetrySender ---
         ackRetrySender = new AckRetrySender(tcpSocketManager);

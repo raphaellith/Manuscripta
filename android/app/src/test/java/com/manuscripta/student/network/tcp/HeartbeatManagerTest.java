@@ -58,6 +58,10 @@ public class HeartbeatManagerTest {
         // Use minimum interval (1000ms) for tests - values below MIN_INTERVAL_MS are clamped
         HeartbeatConfig testConfig = new HeartbeatConfig(HeartbeatConfig.MIN_INTERVAL_MS, true);
         heartbeatManager = new HeartbeatManager(mockSocketManager, testConfig);
+        // Provide a valid DeviceStatus so heartbeats actually send
+        heartbeatManager.setDeviceStatusProvider(
+                () -> com.manuscripta.student.domain.model.DeviceStatus.create(
+                        "test-device-123", DeviceStatus.ON_TASK, 75, null, null));
     }
 
     @After
@@ -237,10 +241,10 @@ public class HeartbeatManagerTest {
         when(mockSocketManager.isConnected()).thenReturn(true);
         heartbeatManager.setDeviceStatusProvider(null);
 
-        // Should not throw
+        // Should not throw, and should skip sending
         heartbeatManager.sendHeartbeat();
 
-        verify(mockSocketManager).send(any());
+        verify(mockSocketManager, never()).send(any());
     }
 
     @Test
@@ -248,10 +252,10 @@ public class HeartbeatManagerTest {
         when(mockSocketManager.isConnected()).thenReturn(true);
         heartbeatManager.setDeviceStatusProvider(() -> null);
 
-        // Should not throw
+        // Should not throw, and should skip sending
         heartbeatManager.sendHeartbeat();
 
-        verify(mockSocketManager).send(any());
+        verify(mockSocketManager, never()).send(any());
     }
 
     // ========== DISTRIBUTE_MATERIAL handling tests ==========

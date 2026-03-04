@@ -352,6 +352,10 @@ public class HeartbeatManager implements TcpMessageListener {
 
         try {
             String jsonPayload = buildStatusJson();
+            if (jsonPayload == null) {
+                Log.d(TAG, "No device status available, skipping heartbeat");
+                return;
+            }
             StatusUpdateMessage message = new StatusUpdateMessage(jsonPayload);
             socketManager.send(message);
 
@@ -369,32 +373,29 @@ public class HeartbeatManager implements TcpMessageListener {
     /**
      * Builds the JSON payload for the STATUS_UPDATE message.
      *
-     * @return JSON string containing device status.
+     * @return JSON string containing device status, or null if no
+     *         valid status is available from the provider.
      */
-    @NonNull
+    @Nullable
     private String buildStatusJson() {
         DeviceStatusProvider provider = this.statusProvider;
         DeviceStatus status = provider != null ? provider.getDeviceStatus() : null;
 
-        Map<String, Object> json = new LinkedHashMap<>();
-        if (status != null) {
-            json.put("DeviceId", status.getDeviceId());
-            json.put("Status", status.getStatus().name());
-            json.put("BatteryLevel", status.getBatteryLevel());
-            if (status.getCurrentMaterialId() != null) {
-                json.put("CurrentMaterialId", status.getCurrentMaterialId());
-            }
-            if (status.getStudentView() != null) {
-                json.put("StudentView", status.getStudentView());
-            }
-            json.put("Timestamp", status.getLastUpdated() / 1000); // Convert to seconds
-        } else {
-            // Minimal payload when no status available
-            json.put("DeviceId", "unknown");
-            json.put("Status", "IDLE");
-            json.put("BatteryLevel", 0);
-            json.put("Timestamp", System.currentTimeMillis() / 1000);
+        if (status == null) {
+            return null;
         }
+
+        Map<String, Object> json = new LinkedHashMap<>();
+        json.put("DeviceId", status.getDeviceId());
+        json.put("Status", status.getStatus().name());
+        json.put("BatteryLevel", status.getBatteryLevel());
+        if (status.getCurrentMaterialId() != null) {
+            json.put("CurrentMaterialId", status.getCurrentMaterialId());
+        }
+        if (status.getStudentView() != null) {
+            json.put("StudentView", status.getStudentView());
+        }
+        json.put("Timestamp", status.getLastUpdated() / 1000); // Convert to seconds
         return gson.toJson(json);
     }
 

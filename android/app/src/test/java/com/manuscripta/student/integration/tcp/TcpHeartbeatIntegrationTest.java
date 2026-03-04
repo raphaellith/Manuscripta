@@ -4,9 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.manuscripta.student.domain.model.DeviceStatus;
 import com.manuscripta.student.integration.IntegrationTest;
 import com.manuscripta.student.integration.config.IntegrationTestConfig;
 import com.manuscripta.student.integration.harness.NetworkIntegrationHarness;
+import com.manuscripta.student.network.tcp.HeartbeatConfig;
 import com.manuscripta.student.network.tcp.PairingCallback;
 import com.manuscripta.student.network.tcp.TcpMessage;
 import com.manuscripta.student.network.tcp.TcpMessageListenerAdapter;
@@ -55,6 +57,17 @@ public class TcpHeartbeatIntegrationTest {
         harness = new NetworkIntegrationHarness(config);
         harness.setUp();
         pairDevice();
+
+        // Enable heartbeat with a valid DeviceStatusProvider so
+        // STATUS_UPDATE JSON contains a proper UUID device ID.
+        harness.getHeartbeatManager().setConfig(
+                new HeartbeatConfig(1000L, true));
+        harness.getHeartbeatManager().setDeviceStatusProvider(
+                () -> DeviceStatus.create(
+                        config.getTestDeviceId(),
+                        com.manuscripta.student.data.model
+                                .DeviceStatus.ON_TASK,
+                        75, null, null));
     }
 
     /** Stops heartbeat, disconnects, and releases resources. */
