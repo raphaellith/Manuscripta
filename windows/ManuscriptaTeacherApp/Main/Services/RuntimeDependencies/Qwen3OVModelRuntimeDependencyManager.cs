@@ -96,6 +96,7 @@ namespace Main.Services.RuntimeDependencies
 
         /// <summary>
         /// Gets the local directory where IR model files are stored.
+        /// Co-located with OV-Ollama's OLLAMA_MODELS directory.
         /// </summary>
         private string GetModelDirectory()
         {
@@ -103,6 +104,7 @@ namespace Main.Services.RuntimeDependencies
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "ManuscriptaTeacherApp",
                 "bin",
+                "ollama-openvino",
                 "models",
                 MODEL_DIR_NAME);
         }

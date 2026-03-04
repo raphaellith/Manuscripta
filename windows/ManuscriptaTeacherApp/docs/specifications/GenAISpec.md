@@ -757,7 +757,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OV_OLLAMA_DOWNLOAD_URL` | `https://drive.google.com/file/d/1Xo3ohbfC852KtJy_4xtn_YrYaH4Y_507/view?usp=sharing` | Download URL for the OpenVINO-accelerated Ollama build (Google Drive, hosted by `zhaohb/ollama_ov`) |
 | `OV_GENAI_RUNTIME_URL` | `https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc3/openvino_genai_windows_2025.4.0.0rc3_x86_64.zip` | Download URL for the OpenVINO GenAI runtime (pre-release, must match OV-Ollama version) |
 | `OV_OLLAMA_INSTALL_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\` | Installation directory for OV-Ollama (DLLs colocated here) |
-| `IR_MODEL_BASE_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\models\` | Base directory for IR-format models |
+| `IR_MODEL_BASE_DIR` | `%AppData%\ManuscriptaTeacherApp\bin\ollama-openvino\models\` | Base directory for IR-format models (co-located with OV-Ollama's OLLAMA_MODELS) |
 | `STANDARD_OLLAMA_BASE_URL` | `http://localhost:11434` | Standard Ollama endpoint, always used for embedding operations |
 | `OV_OLLAMA_BASE_URL` | `http://localhost:11435` | OV-Ollama endpoint, used for generation when OpenVINO is active |
 | `QWEN3_IR_HF_REPO` | `OpenVINO/Qwen3-8B-int4-ov` | HuggingFace repository for pre-converted Qwen3 8B INT4 IR model (official Intel/OpenVINO conversion, compat. OV 2026.0.0+) |
