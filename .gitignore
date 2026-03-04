@@ -6,6 +6,8 @@
 #########################
 /local/
 /android/local/
+/frontend-variants/
+claude.md
 
 # AI coding agent instructions (personal configuration)
 .github/copilot-instructions.md
