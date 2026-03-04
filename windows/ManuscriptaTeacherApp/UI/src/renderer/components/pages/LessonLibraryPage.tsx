@@ -4,7 +4,7 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
@@ -107,6 +107,8 @@ export const LessonLibraryPage: React.FC = () => {
     const [streamingContent, setStreamingContent] = useState('');
     const [streamingComplete, setStreamingComplete] = useState(false);
     // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
+    // Use ref for synchronous access during async operations (avoids stale closure issue)
+    const generationIdRef = useRef<string | null>(null);
     const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
     const [isCancelled, setIsCancelled] = useState(false);
 
@@ -274,6 +276,7 @@ export const LessonLibraryPage: React.FC = () => {
 
         // Per §4B(2)(a1)(v): Generate unique ID for cancellation tracking
         const generationId = self.crypto.randomUUID();
+        generationIdRef.current = generationId;
         setCurrentGenerationId(generationId);
 
         // Per §4B(2)(a1): Initialize streaming state
@@ -315,6 +318,7 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            generationIdRef.current = null;
             setCurrentGenerationId(null);
             setIsCancelled(false);
 
@@ -341,6 +345,7 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            generationIdRef.current = null;
             setCurrentGenerationId(null);
             // Don't reset isCancelled here - keep it true for UI feedback if cancelled
 
@@ -364,11 +369,13 @@ export const LessonLibraryPage: React.FC = () => {
     }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial, isCancelled]);
 
     // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancel generation handler
+    // Uses ref to avoid stale closure issue during async operations
     const handleCancelGeneration = useCallback(async () => {
-        if (currentGenerationId) {
-            await cancelGeneration(currentGenerationId);
+        const genId = generationIdRef.current;
+        if (genId) {
+            await cancelGeneration(genId);
         }
-    }, [currentGenerationId, cancelGeneration]);
+    }, [cancelGeneration]);
 
     const handleDeleteMaterial = async (materialId: string) => {
         await deleteMaterial(materialId);
