@@ -70,7 +70,7 @@ public class AttachmentEndpointIntegrationTest {
     public void getAttachment_validId_returns200WithContent()
             throws Exception {
         // Use a well-known test attachment ID (must be pre-staged)
-        String testAttachmentId = "test-attachment-001";
+        String testAttachmentId = "00000001-0000-0000-0000-000000000004";
 
         Response<ResponseBody> response = harness.getApiService()
                 .getAttachment(testAttachmentId).execute();
