@@ -14,11 +14,6 @@
     <InternalsVisibleTo Include="MainTests" />
   </ItemGroup>
 
-  <!-- Exclude Testing directory in Release builds -->
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Compile Remove="Testing\**" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="CSharpMath.SkiaSharp" Version="0.5.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
