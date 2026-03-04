@@ -237,3 +237,7 @@ For a description of how these server methods and client handlers are expected t
         (i) `ExternalDeviceAuthInvalid`, with parameter `deviceId` (Guid): Notifies the frontend that the specified external device requires re-authentication (e.g. revoked reMarkable token).
 
         (ii) `EmailCredentialsNotConfigured`: Notifies the frontend that an operation failed because email credentials have not been configured.
+
+    (h) Handlers for generation streaming.
+
+        (i) `OnGenerationProgress`, with parameters `token` (string), `isThinking` (bool), and `done` (bool): Notifies the frontend that a generation chunk has been received from the AI model. The `token` parameter contains the text fragment. The `isThinking` parameter indicates whether the token is part of the model's chain-of-thought reasoning. The `done` parameter indicates whether the stream has completed. See GenAISpec §3H(5)(a).

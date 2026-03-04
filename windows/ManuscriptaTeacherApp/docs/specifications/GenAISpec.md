@@ -294,7 +294,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (v) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C.
 
-    (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
+    (d) invoke `qwen3:8b` via Ollama to generate the content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (e) validate the generated content and apply refinement as specified in §3F.
 
@@ -358,7 +358,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
-    (c) invoke `granite4` via Ollama to generate the modified content.
+    (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
 
@@ -542,6 +542,49 @@ Frontend workflows interacting with these functionalities are defined in Fronten
         (iii) a human-readable description.
 
 (2) The frontend shall display warnings to the user, allowing them to manually correct issues in the editor modal.
+
+
+### Section 3H — Streaming Generation Output
+
+(1) When the backend generates content via `OllamaClientService`, it shall use Ollama's streaming mode (`"stream": true`) instead of awaiting the full response.
+
+(2) The `OllamaClientService` shall provide a new method —
+
+    (a) `IAsyncEnumerable<StreamingGenerationChunk> GenerateChatCompletionStreamingAsync(string model, string prompt, string? systemPrompt = null)` — which yields individual chunks as they are received from Ollama's streaming API.
+
+(3) A `StreamingGenerationChunk` shall contain —
+
+    (a) `string Token` — the token(s) received in this chunk.
+
+    (b) `bool IsThinking` — `true` if the token is part of the model's chain-of-thought reasoning (i.e., content enclosed within `<think>...</think>` tags emitted by the model), and `false` if the token is part of the final visible content.
+
+    (c) `bool Done` — `true` if this is the final chunk in the stream.
+
+(4) The backend shall parse the model's raw streaming output to distinguish between chain-of-thought and content tokens. Specifically —
+
+    (a) tokens received after a `<think>` tag and before the corresponding `</think>` tag shall be classified as chain-of-thought (`IsThinking = true`).
+
+    (b) all other tokens shall be classified as content (`IsThinking = false`).
+
+    (c) the `<think>` and `</think>` tags themselves shall not be forwarded to the frontend.
+
+(5) During a streaming generation (for `GenerateReading`, `GenerateWorksheet`, or `ModifyContent`), the backend shall —
+
+    (a) forward each `StreamingGenerationChunk` to the calling frontend client via the SignalR client handler `OnGenerationProgress` as defined in NetworkingAPISpec §2(1)(h).
+
+    (b) accumulate the full content output internally for subsequent validation per §3F.
+
+    (c) upon stream completion, perform validation and refinement as specified in §3F. During refinement iterations (if any), the backend shall continue streaming the refined output.
+
+    (d) return the final `GenerationResult` as before, so that the existing method signatures (`GenerateReading`, `GenerateWorksheet`, `ModifyContent`) remain unchanged. The `GenerationResult` return value shall contain the validated, post-processed content.
+
+(6) The existing non-streaming method `GenerateChatCompletionAsync` shall be retained for use cases that do not require streaming (e.g., feedback generation per §3D, embedding status checks, resource-availability probes).
+
+(7) If the SignalR connection is lost during streaming —
+
+    (a) the backend shall continue the generation to completion.
+
+    (b) the final `GenerationResult` shall still be returned upon reconnection if the hub invocation has not timed out.
 
 ---
 
