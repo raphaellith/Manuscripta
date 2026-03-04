@@ -371,7 +371,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall invoke `GenerateReading` (NetworkingAPISpec §1(1)(i)(i)) or `GenerateWorksheet` (NetworkingAPISpec §1(1)(i)(ii)) via `TeacherPortalHub` to generate a draft of the material.
 
-    (a1) Whilst the generation is in progress, the frontend shall subscribe to the `OnGenerationProgress` handler (NetworkingAPISpec §2(1)(h)(i)) and display a streaming generation view, which shall —
+    (a1) Before invoking the generation method, the frontend shall subscribe to the `OnGenerationStarted` handler (NetworkingAPISpec §2(1)(h)(ii)) to receive the server-generated generation ID for cancellation support. Whilst the generation is in progress, the frontend shall also subscribe to the `OnGenerationProgress` handler (NetworkingAPISpec §2(1)(h)(i)) and display a streaming generation view, which shall —
 
         (i) display chain-of-thought tokens (`isThinking = true`) in a visually distinct manner (e.g., a collapsible "Thinking…" section with muted or italic styling), to give the user evidence that the AI is actively reasoning.
 
@@ -381,9 +381,11 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) upon receipt of a chunk with `done = true`, remove the animated indicator and transition to the final content display.
 
-        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) via SignalR and close the streaming view without persisting any content.
+        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) with the generation ID received from `OnGenerationStarted`, and close the streaming view without persisting any content.
 
         (vi) the frontend shall handle `OperationCanceledException` from generation methods gracefully without displaying an error notification.
+
+        (vii) to prevent UI jank from high-frequency token streams, the frontend should buffer incoming tokens and batch state updates using `requestAnimationFrame` or a similar mechanism, rather than updating state on each individual token.
 
     (a2) The streaming generation view shall not permit editing of the content whilst generation is in progress. Editing shall be enabled only after the final `GenerationResult` is received per paragraph (b).
 

@@ -55,9 +55,10 @@ interface AppContextValue extends AppState {
     updateMaterial: (entity: MaterialEntity) => Promise<MaterialEntity>;
     deleteMaterial: (id: string) => Promise<void>;
 
-    // AI Generation - NetworkingAPISpec §2(1)(i) and (x)
-    generateReading: (request: GenerationRequest, generationId?: string) => Promise<GenerationResult>;
-    generateWorksheet: (request: GenerationRequest, generationId?: string) => Promise<GenerationResult>;
+    // AI Generation - NetworkingAPISpec §1(1)(i)(i-ii) and (x)
+    // Server generates unique ID and sends via OnGenerationStarted event
+    generateReading: (request: GenerationRequest) => Promise<GenerationResult>;
+    generateWorksheet: (request: GenerationRequest) => Promise<GenerationResult>;
     cancelGeneration: (generationId: string) => Promise<boolean>;
 
     // Helpers
@@ -313,13 +314,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const getQuestionsForMaterial = (materialId: string) =>
         state.questions.filter(q => q.materialId === materialId);
 
-    // AI Generation methods - Per NetworkingAPISpec §2(1)(i) and (x)
-    const generateReading = async (request: GenerationRequest, generationId?: string): Promise<GenerationResult> => {
-        return await signalRService.generateReading(request, generationId);
+    // AI Generation methods - Per NetworkingAPISpec §1(1)(i)(i-ii) and (x)
+    // Server generates unique ID and sends via OnGenerationStarted event
+    const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
+        return await signalRService.generateReading(request);
     };
 
-    const generateWorksheet = async (request: GenerationRequest, generationId?: string): Promise<GenerationResult> => {
-        return await signalRService.generateWorksheet(request, generationId);
+    const generateWorksheet = async (request: GenerationRequest): Promise<GenerationResult> => {
+        return await signalRService.generateWorksheet(request);
     };
 
     const cancelGeneration = async (generationId: string): Promise<boolean> => {

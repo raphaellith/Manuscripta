@@ -103,9 +103,9 @@ For a description of how these server methods and client handlers are expected t
 
     (i) Methods for GenAI functionalities, as specified in GenAISpec.
 
-        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request, Guid? generationId = null)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B. If `generationId` is provided, the generation may be cancelled via `CancelGeneration`.
+        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B. The server generates a unique generation ID and sends it via `OnGenerationStarted` before streaming begins, enabling cancellation via `CancelGeneration`.
 
-        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Guid? generationId = null)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B. If `generationId` is provided, the generation may be cancelled via `CancelGeneration`.
+        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B. The server generates a unique generation ID and sends it via `OnGenerationStarted` before streaming begins, enabling cancellation via `CancelGeneration`.
 
 
         (iii) `Task<string> GenerateFeedback(Guid questionId, Guid responseId)`: Generates feedback for a student response. See GenAISpec §3D(9).
@@ -122,7 +122,7 @@ For a description of how these server methods and client handlers are expected t
 
         (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
 
-        (x) `CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `void`. Throws `InvalidOperationException` if the specified generation is not found or has already completed. See GenAISpec §3H(8).
+        (x) `Task<bool> CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `true` if a matching in-progress generation was found and cancellation was requested; returns `false` if the specified generation ID is not found, has already completed, or belongs to a different connection. See GenAISpec §3H(8).
         
     (j) Methods for retrieving responses.
 
@@ -244,3 +244,7 @@ For a description of how these server methods and client handlers are expected t
     (h) Handlers for generation streaming.
 
         (i) `OnGenerationProgress`, with parameters `token` (string), `isThinking` (bool), and `done` (bool): Notifies the frontend that a generation chunk has been received from the AI model. The `token` parameter contains the text fragment. The `isThinking` parameter indicates whether the token is part of the model's chain-of-thought reasoning. The `done` parameter indicates whether the stream has completed. See GenAISpec §3H(5)(a).
+
+        (ii) `OnGenerationStarted`, with parameter `generationId` (string): Notifies the frontend that a generation has started and provides the server-generated ID for cancellation support. The frontend must subscribe to this event before invoking `GenerateReading` or `GenerateWorksheet` to receive the ID. See GenAISpec §3H(8).
+
+        (iii) `OnGenerationCancelled`, with parameter `generationId` (string): Notifies the frontend that a generation was cancelled. The frontend should clean up streaming state and display appropriate feedback to the user. See GenAISpec §3H(9).

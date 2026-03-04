@@ -274,14 +274,6 @@ export const LessonLibraryPage: React.FC = () => {
             materialType,
         });
 
-        // Per §4B(2)(a1)(v): Generate unique ID for cancellation tracking
-        const generationId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-        });
-        generationIdRef.current = generationId;
-        setCurrentGenerationId(generationId);
-
         // Per §4B(2)(a1): Initialize streaming state
         setIsGenerating(true);
         setStreamingThinking('');
@@ -289,32 +281,74 @@ export const LessonLibraryPage: React.FC = () => {
         setStreamingComplete(false);
         setIsCancelled(false);
 
+        // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe to OnGenerationStarted to receive server-generated ID
+        const unsubscribeStarted = signalRService.onGenerationStarted((serverGenerationId) => {
+            generationIdRef.current = serverGenerationId;
+            setCurrentGenerationId(serverGenerationId);
+        });
+
+        // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance optimization)
+        let thinkingBuffer = '';
+        let contentBuffer = '';
+        let flushScheduled = false;
+
+        const flushBufferedTokens = () => {
+            if (!thinkingBuffer && !contentBuffer) {
+                flushScheduled = false;
+                return;
+            }
+
+            if (thinkingBuffer) {
+                const chunk = thinkingBuffer;
+                thinkingBuffer = '';
+                setStreamingThinking(prev => prev + chunk);
+            }
+
+            if (contentBuffer) {
+                const chunk = contentBuffer;
+                contentBuffer = '';
+                setStreamingContent(prev => prev + chunk);
+            }
+
+            flushScheduled = false;
+        };
+
         // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
         const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
             if (isThinking) {
-                setStreamingThinking(prev => prev + token);
+                thinkingBuffer += token;
             } else {
-                setStreamingContent(prev => prev + token);
+                contentBuffer += token;
             }
+
+            if (!flushScheduled) {
+                flushScheduled = true;
+                window.requestAnimationFrame(flushBufferedTokens);
+            }
+
             if (done) {
+                // Ensure all remaining buffered tokens are flushed before marking complete
+                flushBufferedTokens();
                 setStreamingComplete(true);
             }
         });
 
         // Per §4B(2)(a1)(vi): Subscribe to cancellation events
         const unsubscribeCancelled = signalRService.onGenerationCancelled((cancelledId) => {
-            if (cancelledId === generationId) {
+            if (cancelledId === generationIdRef.current) {
                 setIsCancelled(true);
             }
         });
 
         try {
-            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet with generation ID
+            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
+            // Server generates and sends ID via OnGenerationStarted event
             const generationResult: GenerationResult = materialType === 'READING'
-                ? await generateReading(generationRequest, generationId)
-                : await generateWorksheet(generationRequest, generationId);
+                ? await generateReading(generationRequest)
+                : await generateWorksheet(generationRequest);
 
             // Per §4B(2)(b): Unsubscribe and clean up streaming state
+            unsubscribeStarted();
             unsubscribe();
             unsubscribeCancelled();
             setIsGenerating(false);
@@ -342,6 +376,7 @@ export const LessonLibraryPage: React.FC = () => {
             setModal({ type: 'editMaterial', material: updatedMaterial });
         } catch (error) {
             // Clean up on error
+            unsubscribeStarted();
             unsubscribe();
             unsubscribeCancelled();
             setIsGenerating(false);

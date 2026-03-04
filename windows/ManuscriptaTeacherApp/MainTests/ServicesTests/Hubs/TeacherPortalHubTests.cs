@@ -1955,6 +1955,11 @@ public class TeacherPortalHubTests
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
 
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
+
         var request = new GenerationRequest
         {
             Description = "test",
@@ -2035,6 +2040,11 @@ public class TeacherPortalHubTests
         var mockClients = new Mock<IHubCallerClients>();
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
+
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
 
         var request = new GenerationRequest
         {
@@ -2123,6 +2133,11 @@ public class TeacherPortalHubTests
         var mockClients = new Mock<IHubCallerClients>();
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
+
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
 
         var request = new GenerationRequest
         {

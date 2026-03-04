@@ -58,10 +58,17 @@ public class MaterialGenerationService : IMaterialGenerationService
         // This reduces latency by overlapping the generation model check with embedding/retrieval
         var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
+        // §3H(8): Check for cancellation throughout the pipeline
+        cancellationToken.ThrowIfCancellationRequested();
+
         // §3B(3)(a): Embed the description (runs in parallel with model check)
         // Ensure embedding model is ready per GenAISpec §2(2)
         await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
+        
+        cancellationToken.ThrowIfCancellationRequested();
         var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(request.Description);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // §3B(3)(b): Query ChromaDB for relevant chunks (runs in parallel with model check)
         var relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
@@ -70,6 +77,8 @@ public class MaterialGenerationService : IMaterialGenerationService
             request.SourceDocumentIds,
             DefaultTopK
         );
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // §3B(3)(c): Construct prompt
         var prompt = GenAIPromptBuilder.BuildGenerationPrompt(
