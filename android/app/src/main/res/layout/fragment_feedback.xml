@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    tools:context=".ui.feedback.FeedbackFragment">
+
+    <!-- Large icon (checkmark or cross) -->
+    <TextView
+        android:id="@+id/textIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_feedback_icon"
+        tools:text="✓" />
+
+    <!-- Title: "Correct!" or "Not quite right." -->
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_section"
+        android:layout_marginBottom="@dimen/spacing_section"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_feedback_title"
+        android:textStyle="bold"
+        tools:text="Correct!" />
+
+    <!-- Explanation card -->
+    <FrameLayout
+        android:id="@+id/cardExplanation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_section"
+        style="@style/Widget.Manuscripta.Card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- "The correct answer is:" label (incorrect variant only) -->
+            <TextView
+                android:id="@+id/textCorrectLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/correct_answer_label"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body_small"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- Explanation/answer text -->
+            <TextView
+                android:id="@+id/textExplanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body"
+                android:lineSpacingMultiplier="1.4"
+                tools:text="William won the battle." />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- Spacer (pushes button to bottom) -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Action button: "Next Question ►" or "Try Again" -->
+    <Button
+        android:id="@+id/buttonAction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_button"
+        android:gravity="center"
+        android:minHeight="@dimen/button_min_height"
+        android:paddingLeft="24dp"
+        android:paddingTop="16dp"
+        android:paddingRight="24dp"
+        android:paddingBottom="16dp"
+        android:textAllCaps="false"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold"
+        tools:text="Next Question ►" />
+
+</LinearLayout>

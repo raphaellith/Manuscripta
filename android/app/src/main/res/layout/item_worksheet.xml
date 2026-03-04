@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_section"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <!-- Question number -->
+    <TextView
+        android:id="@+id/textNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        tools:text="1. " />
+
+    <!-- Text before blank -->
+    <TextView
+        android:id="@+id/textBefore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        tools:text="The Battle of Hastings was fought in " />
+
+    <!-- Input field for blank -->
+    <EditText
+        android:id="@+id/editAnswer"
+        android:layout_width="192dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_heading_underline"
+        android:gravity="center"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:paddingBottom="4dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <!-- Text after blank -->
+    <TextView
+        android:id="@+id/textAfter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        tools:text="." />
+
+</LinearLayout>

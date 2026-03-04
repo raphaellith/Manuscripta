@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ManuscriptaStudentClient" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.ManuscriptaStudentClient" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- E-ink greyscale colour mapping -->
+        <item name="colorPrimary">@color/eink_black</item>
+        <item name="colorPrimaryDark">@color/eink_black</item>
+        <item name="colorAccent">@color/eink_dark</item>
+        <item name="android:colorBackground">@color/eink_cream</item>
+        <item name="android:windowBackground">@color/eink_cream</item>
+        <item name="android:textColorPrimary">@color/eink_black</item>
+        <item name="android:textColorSecondary">@color/eink_dark</item>
+    </style>
+
 </resources>

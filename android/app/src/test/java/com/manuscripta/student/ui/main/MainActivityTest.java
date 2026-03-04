@@ -1,9 +1,8 @@
 package com.manuscripta.student.ui.main;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import android.widget.TextView;
+import android.view.View;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -20,27 +19,33 @@ import dagger.hilt.android.testing.HiltAndroidRule;
 import dagger.hilt.android.testing.HiltAndroidTest;
 import dagger.hilt.android.testing.HiltTestApplication;
 
+/**
+ * Unit tests for {@link MainActivity}.
+ */
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner.class)
 @Config(application = HiltTestApplication.class, sdk = 33)
 public class MainActivityTest {
 
+    /** Hilt rule for dependency injection in tests. */
     @Rule
     public HiltAndroidRule hiltRule = new HiltAndroidRule(this);
 
+    /**
+     * Verifies the activity launches and the tab bar is present.
+     */
     @Test
-    public void activityLaunches_andSetsTextCorrectly() {
+    public void activityLaunches_andTabBarExists() {
         hiltRule.inject();
 
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+        try (ActivityScenario<MainActivity> scenario =
+                 ActivityScenario.launch(MainActivity.class)) {
 
             scenario.moveToState(Lifecycle.State.CREATED);
 
             scenario.onActivity(activity -> {
-                TextView textView = activity.findViewById(R.id.textView);
-
-                assertNotNull("TextView should exist", textView);
-                assertEquals("Hello, Manuscripta!", textView.getText().toString());
+                View tabBar = activity.findViewById(R.id.tabBar);
+                assertNotNull("Tab bar should exist", tabBar);
             });
         }
     }

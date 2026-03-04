@@ -7,6 +7,9 @@
 /local/
 /android/local/
 
+# Local reference prototypes (not tracked, for development reference only)
+/frontend-variants/manuscripta-tablet-ui-prototype/
+
 # AI coding agent instructions (personal configuration)
 .github/copilot-instructions.md
 .agent/
