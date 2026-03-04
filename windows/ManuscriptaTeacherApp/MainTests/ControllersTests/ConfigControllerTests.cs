@@ -93,19 +93,19 @@ public class ConfigControllerTests
     }
 
     [Fact]
-    public async Task GetConfig_InvalidGuidFormat_Returns400BadRequest()
+    public async Task GetConfig_InvalidGuidFormat_Returns404NotFound()
     {
         // Act
         var result = await _controller.GetConfig("not-a-guid");
 
-        // Assert — invalid device IDs are rejected without revealing config
-        Assert.IsType<BadRequestObjectResult>(result);
+        // Assert — invalid device IDs return 404 to avoid leaking ID validity
+        Assert.IsType<NotFoundObjectResult>(result);
         _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(It.IsAny<Guid>()), Times.Never);
         _mockConfigService.Verify(s => s.CompileConfigAsync(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetConfig_NonAndroidDevice_Returns403Forbidden()
+    public async Task GetConfig_NonAndroidDevice_Returns404NotFound()
     {
         // Arrange — per ConfigurationManagementSpecification: configs only for Android devices
         var deviceId = Guid.NewGuid();
@@ -115,9 +115,8 @@ public class ConfigControllerTests
         // Act
         var result = await _controller.GetConfig(deviceId.ToString());
 
-        // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
+        // Assert — non-Android devices get 404 to avoid leaking device type information
+        Assert.IsType<NotFoundObjectResult>(result);
         _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(deviceId), Times.Once);
         _mockConfigService.Verify(s => s.CompileConfigAsync(It.IsAny<Guid>()), Times.Never);
         _mockRefreshTracker.Verify(t => t.MarkConfigReceived(It.IsAny<string>()), Times.Never);

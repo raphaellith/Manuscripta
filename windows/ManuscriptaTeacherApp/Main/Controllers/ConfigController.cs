@@ -47,7 +47,7 @@ public class ConfigController : ControllerBase
         if (!Guid.TryParse(deviceId, out var deviceGuid))
         {
             _logger.LogWarning("Invalid device ID format: {DeviceId}", deviceId);
-            return BadRequest("Invalid device ID format.");
+            return NotFound("Device not found.");
         }
 
         // Validate device is Android using positive detection (checks if paired in Android registry)
@@ -58,7 +58,7 @@ public class ConfigController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogInformation("Configuration request from non-Android device {DeviceId}: {Reason}", deviceId, ex.Message);
-            return StatusCode(StatusCodes.Status403Forbidden, "Device is not a valid Android device for configuration management.");
+            return NotFound("Device not found.");
         }
 
         // Signal that this device has fetched config (ACK for REFRESH_CONFIG)
