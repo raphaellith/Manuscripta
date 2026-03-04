@@ -101,8 +101,8 @@ public class OutputValidationService
         // Valid: !!! question id="uuid" or !!! question id='uuid'
         var validQuestionPatterns = Regex.Matches(content, @"!!![\s]+question[\s]+id\s*=\s*['""]([^'""]+)['""]");
         
-        // Find any question markers that are NOT valid
-        var allQuestionMarkers = Regex.Matches(content, @"!!![\s]+question(?![\s]+id\s*=\s*['""])");
+        // Find any question markers that are NOT valid (exclude question-draft markers used for AI generation)
+        var allQuestionMarkers = Regex.Matches(content, @"!!![\s]+question(?!-draft)(?![\s]+id\s*=\s*['""])");
         foreach (Match match in allQuestionMarkers)
         {
             var lineNum = FindLineNumberForMatch(content, match);
@@ -213,10 +213,10 @@ public class OutputValidationService
         content = Regex.Replace(content, @"^#{4,}\s+", "### ", RegexOptions.Multiline);
 
         // §3F(5)(c): Reconstruct malformed question markers where id is parseable (Material Encoding Specification §4(4))
-        // Convert from malformed patterns to: !!! question id="uuid"
+        // Convert from malformed patterns to: !!! question id="uuid" (exclude question-draft markers)
         content = Regex.Replace(
             content,
-            @"!!![\s]+question[\s]*(?:id\s*=\s*)?['""]?([a-fA-F0-9-]+)['""]?",
+            @"!!![\s]+question(?!-draft)[\s]*(?:id\s*=\s*)?['""']?([a-fA-F0-9-]+)['""']?",
             "!!! question id=\"$1\""
         );
 
@@ -228,8 +228,8 @@ public class OutputValidationService
         );
 
         // §3F(5)(e): Remove invalid or empty custom markers
-        // Remove empty question markers
-        content = Regex.Replace(content, @"!!![\s]+question\s*(?:id\s*=\s*)?['""]?['""]?", "");
+        // Remove empty question markers (exclude question-draft markers)
+        content = Regex.Replace(content, @"!!![\s]+question(?!-draft)\s*(?:id\s*=\s*)?['""']?['""']?", "");
         // Remove empty PDF markers
         content = Regex.Replace(content, @"!!![\s]+pdf\s*(?:id\s*=\s*)?['""]?['""]?", "");
         
