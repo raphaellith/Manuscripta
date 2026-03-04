@@ -54,15 +54,16 @@ public class MaterialGenerationService : IMaterialGenerationService
         string modelToUse = PrimaryModel;
         bool useFallback = false;
 
-        // §1(4): Ensure model is available (but skip costly resource probe to reduce latency)
-        await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
+        // §1(4): Start model readiness check in parallel with RAG preparation
+        // This reduces latency by overlapping the generation model check with embedding/retrieval
+        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
-        // §3B(3)(a): Embed the description
+        // §3B(3)(a): Embed the description (runs in parallel with model check)
         // Ensure embedding model is ready per GenAISpec §2(2)
         await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
         var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(request.Description);
 
-        // §3B(3)(b): Query ChromaDB for relevant chunks
+        // §3B(3)(b): Query ChromaDB for relevant chunks (runs in parallel with model check)
         var relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
             queryEmbedding,
             request.UnitCollectionId,
@@ -79,6 +80,9 @@ public class MaterialGenerationService : IMaterialGenerationService
             relevantChunks,
             materialType
         );
+
+        // Await the model readiness check before streaming
+        await modelReadyTask;
 
         // §3B(3)(d): Invoke model with streaming per §3H(5)
         string generatedContent;
