@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+using Main.Testing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,16 @@ if (string.IsNullOrWhiteSpace(configuredConnectionString)
 else
 {
     dbConnectionString = configuredConnectionString;
+}
+
+// Integration mode: use an ephemeral temp-file database per Integration Test Contract §12.3
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    var tempDb = Path.Combine(
+        Path.GetTempPath(),
+        $"manuscripta_integration_{Guid.NewGuid()}.db");
+    dbConnectionString = $"Data Source={tempDb}";
+    Console.WriteLine($"Integration mode: using ephemeral database at {tempDb}");
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
@@ -103,12 +114,21 @@ builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
 builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
-// NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
+// NOTE: UDP broadcasting and TCP pairing are NOT auto-started in production.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
 builder.Services.AddHostedService<HubEventBridge>();
+
+// Integration mode: auto-start network services and seed test data
+// Per Integration Test Contract §12.1
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    builder.Services.AddHostedService<UdpBroadcastHostedService>();
+    builder.Services.AddHostedService<TcpPairingHostedService>();
+    builder.Services.AddHostedService<IntegrationSeedService>();
+}
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
@@ -163,8 +183,9 @@ if (app.Environment.IsDevelopment())
 // Apply CORS policy
 app.UseCors("AllowElectron");
 
-// Skip database initialization and orphan cleanup in Testing environment (for integration tests)
-if (!app.Environment.IsEnvironment("Testing"))
+// Skip database initialization and orphan cleanup in Testing/Integration environments
+// (Testing uses in-memory test server; Integration seeds via IntegrationSeedService)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment("Integration"))
 {
     using (var scope = app.Services.CreateScope())
     {
