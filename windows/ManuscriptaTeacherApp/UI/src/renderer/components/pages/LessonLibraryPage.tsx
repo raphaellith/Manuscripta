@@ -4,13 +4,14 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
+import { StreamingGenerationView } from '../editor/StreamingGenerationView';
 import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { markdownToHtml } from '../../utils/markdownConversion';
 import signalRService from '../../services/signalr/SignalRService';
@@ -98,6 +99,12 @@ export const LessonLibraryPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
     const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(true);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation state
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [streamingThinking, setStreamingThinking] = useState('');
+    const [streamingContent, setStreamingContent] = useState('');
+    const [streamingComplete, setStreamingComplete] = useState(false);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -245,7 +252,7 @@ export const LessonLibraryPage: React.FC = () => {
     // NOTE: we also proactively update aiDependenciesAvailable when the modal
     // opens or when dependencies are installed so that child components can
     // disable UI appropriately.
-    const handleCreateMaterialWithAI = async (
+    const handleCreateMaterialWithAI = useCallback(async (
         lessonId: string,
         title: string,
         materialType: MaterialType,
@@ -261,11 +268,36 @@ export const LessonLibraryPage: React.FC = () => {
             materialType,
         });
 
+        // Per §4B(2)(a1): Initialize streaming state
+        setIsGenerating(true);
+        setStreamingThinking('');
+        setStreamingContent('');
+        setStreamingComplete(false);
+
+        // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
+        const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
+            if (isThinking) {
+                setStreamingThinking(prev => prev + token);
+            } else {
+                setStreamingContent(prev => prev + token);
+            }
+            if (done) {
+                setStreamingComplete(true);
+            }
+        });
+
         try {
             // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
             const generationResult: GenerationResult = materialType === 'READING'
                 ? await generateReading(generationRequest)
                 : await generateWorksheet(generationRequest);
+
+            // Per §4B(2)(b): Unsubscribe and clean up streaming state
+            unsubscribe();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
 
             // Update material with generated content
             // Backend may transform content (e.g., question-draft extraction per §3B(4a)),
@@ -283,12 +315,19 @@ export const LessonLibraryPage: React.FC = () => {
             // Note: Validation warnings will be displayed by the editor modal if present
             setModal({ type: 'editMaterial', material: updatedMaterial });
         } catch (error) {
+            // Clean up on error
+            unsubscribe();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
+
             console.error('AI generation failed:', error);
             // Roll back material creation
             await deleteMaterial(createdMaterial.id);
             throw error;
         }
-    };
+    }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial]);
 
     const handleDeleteMaterial = async (materialId: string) => {
         await deleteMaterial(materialId);
@@ -547,6 +586,14 @@ export const LessonLibraryPage: React.FC = () => {
                     }}
                 />
             )}
+
+            {/* Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation view */}
+            <StreamingGenerationView
+                isVisible={isGenerating}
+                thinkingTokens={streamingThinking}
+                contentTokens={streamingContent}
+                isComplete={streamingComplete}
+            />
         </div>
     );
 };

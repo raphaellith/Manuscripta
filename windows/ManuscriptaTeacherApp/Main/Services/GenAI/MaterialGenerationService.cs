@@ -1,3 +1,4 @@
+using System.Text;
 using Main.Models.Dtos;
 
 namespace Main.Services.GenAI;
@@ -29,25 +30,25 @@ public class MaterialGenerationService : IMaterialGenerationService
     /// Generates reading content using AI.
     /// See GenAISpec.md §3B(1)(a).
     /// </summary>
-    public async Task<GenerationResult> GenerateReading(GenerationRequest request)
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
     {
-        return await GenerateMaterialAsync(request, "reading");
+        return await GenerateMaterialAsync(request, "reading", onChunk);
     }
 
     /// <summary>
     /// Generates worksheet content using AI.
     /// See GenAISpec.md §3B(1)(b).
     /// </summary>
-    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
     {
-        return await GenerateMaterialAsync(request, "worksheet");
+        return await GenerateMaterialAsync(request, "worksheet", onChunk);
     }
 
     /// <summary>
     /// Core material generation workflow.
     /// See GenAISpec.md §3B(3).
     /// </summary>
-    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType)
+    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType, Func<StreamingGenerationChunk, Task>? onChunk = null)
     {
         // Determine which model to use
         string modelToUse = PrimaryModel;
@@ -109,11 +110,11 @@ public class MaterialGenerationService : IMaterialGenerationService
             materialType
         );
 
-        // §3B(3)(d): Invoke model
+        // §3B(3)(d): Invoke model with streaming per §3H(5)
         string generatedContent;
         try
         {
-            generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk);
         }
         catch (HttpRequestException ex) when (
             ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
@@ -133,7 +134,7 @@ public class MaterialGenerationService : IMaterialGenerationService
                     await Task.Delay(500); // Brief delay to allow memory to be released
                     
                     await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-                    generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+                    generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk);
                 }
                 catch (Exception fallbackEx)
                 {
@@ -156,6 +157,35 @@ public class MaterialGenerationService : IMaterialGenerationService
 
         // §3B(3)(g): Return result. For worksheets, question-draft markers are processed when the material is created.
         return result;
+    }
+
+    /// <summary>
+    /// Invokes the model with streaming and accumulates content.
+    /// Per GenAISpec.md §3H(5).
+    /// </summary>
+    private async Task<string> InvokeModelStreamingAsync(
+        string model, string prompt, Func<StreamingGenerationChunk, Task>? onChunk)
+    {
+        // §3H(5)(b): Accumulate content tokens
+        var contentBuilder = new StringBuilder();
+
+        await foreach (var chunk in _ollamaClient.GenerateChatCompletionStreamingAsync(model, prompt))
+        {
+            // §3H(5)(a): Invoke callback for each chunk
+            if (onChunk != null)
+            {
+                await onChunk(chunk);
+            }
+
+            // §3H(5)(b): Only accumulate non-thinking tokens
+            if (!chunk.IsThinking && !string.IsNullOrEmpty(chunk.Token))
+            {
+                contentBuilder.Append(chunk.Token);
+            }
+        }
+
+        // §3H(5)(c): Return accumulated content for validation
+        return contentBuilder.ToString();
     }
 
     /// <summary>

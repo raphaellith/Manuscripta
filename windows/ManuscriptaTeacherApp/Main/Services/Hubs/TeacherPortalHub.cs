@@ -1225,7 +1225,11 @@ public class TeacherPortalHub : Hub
 
         try
         {
-            return await _materialGenerationService.GenerateReading(request);
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateReading(request, async chunk =>
+            {
+                await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+            });
         }
         catch (Exception ex)
         {
@@ -1252,7 +1256,11 @@ public class TeacherPortalHub : Hub
 
         try
         {
-            return await _materialGenerationService.GenerateWorksheet(request);
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateWorksheet(request, async chunk =>
+            {
+                await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+            });
         }
         catch (Exception ex)
         {
