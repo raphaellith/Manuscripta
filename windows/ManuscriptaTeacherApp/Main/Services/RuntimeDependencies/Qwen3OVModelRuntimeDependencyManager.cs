@@ -175,11 +175,12 @@ namespace Main.Services.RuntimeDependencies
                     ProgressPercentage = totalSize > 0 ? (int)(downloadedSize * 80 / totalSize) : (int)(i * 80.0 / fileList.Count)
                 });
 
-                using var fileResponse = await _httpClient.GetAsync(downloadUrl);
+                using var fileResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
                 fileResponse.EnsureSuccessStatusCode();
 
+                using var contentStream = await fileResponse.Content.ReadAsStreamAsync();
                 using var fileStream = File.Create(localPath);
-                await fileResponse.Content.CopyToAsync(fileStream);
+                await contentStream.CopyToAsync(fileStream);
 
                 downloadedSize += fileSize;
             }
