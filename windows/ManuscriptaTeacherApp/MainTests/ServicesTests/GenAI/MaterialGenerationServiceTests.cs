@@ -41,7 +41,7 @@ public class MaterialGenerationServiceTests
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string> { "chunk-a", "chunk-b" });
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, new Mock<IInferenceRuntimeSelector>().Object);
 
         var request = new GenerationRequest
         {
@@ -78,7 +78,7 @@ public class MaterialGenerationServiceTests
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string> { "chunk-a" });
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, new Mock<IInferenceRuntimeSelector>().Object);
 
         var request = new GenerationRequest
         {
@@ -109,7 +109,7 @@ public class MaterialGenerationServiceTests
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string>());
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, new Mock<IInferenceRuntimeSelector>().Object);
 
         var result = await service.CanGenerateWithPrimaryModelAsync();
         Assert.False(result);
@@ -128,7 +128,7 @@ public class MaterialGenerationServiceTests
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string>());
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, new Mock<IInferenceRuntimeSelector>().Object);
 
         var result = await service.CanGenerateWithPrimaryModelAsync();
         Assert.False(result);

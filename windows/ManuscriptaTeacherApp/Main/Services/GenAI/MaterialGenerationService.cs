@@ -1,4 +1,5 @@
 using Main.Models.Dtos;
+using Main.Models.Entities;
 
 namespace Main.Services.GenAI;
 
@@ -11,18 +12,38 @@ public class MaterialGenerationService : IMaterialGenerationService
     private readonly IInferenceClient _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
+    private readonly IInferenceRuntimeSelector _runtimeSelector;
     private const int DefaultTopK = 5;
-    private const string PrimaryModel = "qwen3:8b";
-    private const string FallbackModel = "granite4";
+
+    // Standard Ollama model names
+    private const string StandardPrimaryModel = "qwen3:8b";
+    private const string StandardFallbackModel = "granite4";
+
+    // OV-Ollama model names (per ollama_ov import tags)
+    private const string OvPrimaryModel = "qwen3-8b-int4-ov:v1";
+    private const string OvFallbackModel = "granite4-micro-ov:v1";
 
     public MaterialGenerationService(
         IInferenceClient ollamaClient,
         IEmbeddingService embeddingService,
-        OutputValidationService validationService)
+        OutputValidationService validationService,
+        IInferenceRuntimeSelector runtimeSelector)
     {
         _ollamaClient = ollamaClient;
         _embeddingService = embeddingService;
         _validationService = validationService;
+        _runtimeSelector = runtimeSelector;
+    }
+
+    /// <summary>
+    /// Gets the primary/fallback model names based on active runtime.
+    /// </summary>
+    private async Task<(string primary, string fallback)> GetModelNamesAsync()
+    {
+        var runtime = await _runtimeSelector.GetActiveRuntimeAsync();
+        return runtime == InferenceRuntime.OPENVINO
+            ? (OvPrimaryModel, OvFallbackModel)
+            : (StandardPrimaryModel, StandardFallbackModel);
     }
 
     /// <summary>
@@ -49,15 +70,17 @@ public class MaterialGenerationService : IMaterialGenerationService
     /// </summary>
     private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType)
     {
+        var (primaryModel, fallbackModel) = await GetModelNamesAsync();
+
         // Determine which model to use
-        string modelToUse = PrimaryModel;
+        string modelToUse = primaryModel;
         bool useFallback = false;
 
         // §1(6): Check for insufficient resources per GenAISpec §1(6)
         try
         {
-            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
-            var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
+            await _ollamaClient.EnsureModelReadyAsync(primaryModel);
+            var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(primaryModel);
             if (!canUsePrimary)
             {
                 throw new InvalidOperationException("Insufficient resources for primary model");
@@ -66,18 +89,18 @@ public class MaterialGenerationService : IMaterialGenerationService
         catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient resources"))
         {
             // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
-            modelToUse = FallbackModel;
+            modelToUse = fallbackModel;
             useFallback = true;
             
             // CRITICAL: Unload the primary model from memory before attempting fallback
             // The pre-check may have loaded the primary model into memory, which prevents
             // the smaller fallback model from fitting in available memory
-            await _ollamaClient.UnloadModelAsync(PrimaryModel);
+            await _ollamaClient.UnloadModelAsync(primaryModel);
             await Task.Delay(1000); // Wait longer for memory to be reclaimed
             
             try
             {
-                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                await _ollamaClient.EnsureModelReadyAsync(fallbackModel);
             }
             catch
             {
@@ -124,21 +147,21 @@ public class MaterialGenerationService : IMaterialGenerationService
             // §1(6)(a): fall back when primary model is unavailable or has insufficient resources at runtime.
             if (!useFallback)
             {
-                modelToUse = FallbackModel;
+                modelToUse = fallbackModel;
                 useFallback = true;
                 try
                 {
                     // Unload the primary model to free memory before attempting fallback
-                    await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                    await _ollamaClient.UnloadModelAsync(primaryModel);
                     await Task.Delay(500); // Brief delay to allow memory to be released
                     
-                    await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                    await _ollamaClient.EnsureModelReadyAsync(fallbackModel);
                     generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
                 }
                 catch (Exception fallbackEx)
                 {
                     throw new InvalidOperationException(
-                        $"Both primary (qwen3:8b) and fallback (granite4) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
+                        $"Both primary ({primaryModel}) and fallback ({fallbackModel}) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
                         fallbackEx);
                 }
             }
@@ -146,7 +169,7 @@ public class MaterialGenerationService : IMaterialGenerationService
             {
                 // Already on fallback, so this is a genuine failure
                 throw new InvalidOperationException(
-                    $"The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
+                    $"The fallback model ({fallbackModel}) also failed due to insufficient system memory. Please close other applications and try again.",
                     ex);
             }
         }
@@ -169,9 +192,10 @@ public class MaterialGenerationService : IMaterialGenerationService
     {
         try
         {
+            var (primaryModel, _) = await GetModelNamesAsync();
             // Ensure the model is at least pulled (will throw if daemon not running)
-            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
-            return await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
+            await _ollamaClient.EnsureModelReadyAsync(primaryModel);
+            return await _ollamaClient.CanGenerateWithModelAsync(primaryModel);
         }
         catch
         {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -14,9 +15,8 @@ namespace Main.Services.RuntimeDependencies
 {
     /// <summary>
     /// Manages the availability and installation of the Qwen3 8B model
-    /// for OV-Ollama. Uses `ollama pull` via the OV-Ollama binary, which
-    /// handles GGUF-to-IR conversion internally.
-    /// Per GenAISpec.md §1CA.
+    /// in OpenVINO IR format for OV-Ollama.
+    /// Per GenAISpec.md §1CA and zhaohb/ollama_ov import procedure.
     /// </summary>
     public class Qwen3OVModelRuntimeDependencyManager : RuntimeDependencyManagerBase
     {
@@ -27,9 +27,20 @@ namespace Main.Services.RuntimeDependencies
         private readonly object _serviceLock = new object();
 
         /// <summary>
-        /// The model name used with OV-Ollama.
+        /// HuggingFace repository for pre-converted Qwen3 8B INT4 IR model.
+        /// Per GenAISpec.md Appendix A (QWEN3_IR_HF_REPO).
         /// </summary>
-        private const string MODEL_TAG = "qwen3:8b";
+        private const string HF_REPO = "OpenVINO/Qwen3-8B-int4-ov";
+
+        /// <summary>
+        /// Local model directory name.
+        /// </summary>
+        private const string MODEL_DIR_NAME = "qwen3-8b-int4-ov";
+
+        /// <summary>
+        /// The model tag registered with OV-Ollama.
+        /// </summary>
+        private const string MODEL_TAG = "qwen3-8b-int4-ov:v1";
 
         public override string DependencyId => "qwen3:8b-openvino";
 
@@ -44,7 +55,8 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
-        /// Gets the OV-Ollama binary directory.
+        /// Gets the base directory for IR model downloads.
+        /// Co-located with OV-Ollama's installation.
         /// </summary>
         private string GetOvOllamaBinDir()
         {
@@ -61,6 +73,22 @@ namespace Main.Services.RuntimeDependencies
         private string GetOvOllamaModelsDir()
         {
             return Path.Combine(GetOvOllamaBinDir(), "models");
+        }
+
+        /// <summary>
+        /// Gets the local directory where IR model files are downloaded.
+        /// </summary>
+        private string GetModelDirectory()
+        {
+            return Path.Combine(GetOvOllamaBinDir(), "ir-downloads", MODEL_DIR_NAME);
+        }
+
+        /// <summary>
+        /// Gets the path to the OV-Ollama executable.
+        /// </summary>
+        private string GetOvOllamaExePath()
+        {
+            return Path.Combine(GetOvOllamaBinDir(), "ollama.exe");
         }
 
         /// <summary>
@@ -88,7 +116,7 @@ namespace Main.Services.RuntimeDependencies
                         if (model.TryGetProperty("name", out var name))
                         {
                             var modelName = name.GetString();
-                            if (modelName == MODEL_TAG || modelName?.StartsWith(MODEL_TAG) == true)
+                            if (modelName == MODEL_TAG || modelName?.StartsWith(MODEL_DIR_NAME) == true)
                             {
                                 return true;
                             }
@@ -105,13 +133,110 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
-        /// Starts an OV-Ollama process with the given arguments.
-        /// Sets OLLAMA_HOST to port 11435 and OLLAMA_MODELS to the isolated directory.
+        /// Downloads all files from the HuggingFace repository into the local model directory.
+        /// Per GenAISpec.md §1CA(3)(b).
         /// </summary>
-        protected virtual Task<Process> StartOvPullProcessAsync(string args)
+        protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
-            var binDir = GetOvOllamaBinDir();
-            var ollamaExePath = Path.Combine(binDir, "ollama.exe");
+            _logger.LogInformation("Downloading Qwen3 8B IR model from HuggingFace: {Repo}", HF_REPO);
+
+            progress?.Report(new RuntimeDependencyProgress
+            {
+                Phase = "Downloading",
+                ProgressPercentage = 0
+            });
+
+            var modelDir = GetModelDirectory();
+            Directory.CreateDirectory(modelDir);
+
+            // List all files in the HF repo
+            var treeUrl = $"https://huggingface.co/api/models/{HF_REPO}/tree/main";
+            var treeResponse = await _httpClient.GetAsync(treeUrl);
+            treeResponse.EnsureSuccessStatusCode();
+            var treeJson = await treeResponse.Content.ReadAsStringAsync();
+            var files = JsonDocument.Parse(treeJson);
+
+            var fileList = new List<(string path, long size)>();
+            foreach (var fileEntry in files.RootElement.EnumerateArray())
+            {
+                var type = fileEntry.GetProperty("type").GetString();
+                if (type == "file")
+                {
+                    var path = fileEntry.GetProperty("path").GetString()!;
+                    var size = fileEntry.TryGetProperty("size", out var sizeEl) ? sizeEl.GetInt64() : 0;
+                    fileList.Add((path, size));
+                }
+            }
+
+            var totalSize = fileList.Sum(f => f.size);
+            long downloadedSize = 0;
+
+            for (int i = 0; i < fileList.Count; i++)
+            {
+                var (filePath, fileSize) = fileList[i];
+                var localPath = Path.Combine(modelDir, filePath.Replace('/', Path.DirectorySeparatorChar));
+                var localDir = Path.GetDirectoryName(localPath)!;
+                Directory.CreateDirectory(localDir);
+
+                var downloadUrl = $"https://huggingface.co/{HF_REPO}/resolve/main/{filePath}";
+                _logger.LogInformation("Downloading {File} ({Index}/{Total})", filePath, i + 1, fileList.Count);
+
+                progress?.Report(new RuntimeDependencyProgress
+                {
+                    Phase = "Downloading",
+                    ProgressPercentage = totalSize > 0 ? (int)(downloadedSize * 70 / totalSize) : (int)(i * 70.0 / fileList.Count)
+                });
+
+                using var fileResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+                fileResponse.EnsureSuccessStatusCode();
+
+                using var contentStream = await fileResponse.Content.ReadAsStreamAsync();
+                using var fileStream = File.Create(localPath);
+                await contentStream.CopyToAsync(fileStream);
+
+                downloadedSize += fileSize;
+            }
+
+            progress?.Report(new RuntimeDependencyProgress
+            {
+                Phase = "Downloading",
+                ProgressPercentage = 70
+            });
+
+            _logger.LogInformation("Qwen3 8B IR model downloaded successfully to {Dir}", modelDir);
+        }
+
+        /// <summary>
+        /// Verifies that the IR model directory contains required files.
+        /// Per GenAISpec.md §1CA(3)(c).
+        /// </summary>
+        protected override Task VerifyDownloadAsync(IProgress<RuntimeDependencyProgress> progress)
+        {
+            var modelDir = GetModelDirectory();
+
+            // Check for key OpenVINO IR files
+            var hasXml = Directory.GetFiles(modelDir, "*.xml", SearchOption.AllDirectories).Any();
+            var hasBin = Directory.GetFiles(modelDir, "*.bin", SearchOption.AllDirectories).Any();
+
+            if (!hasXml || !hasBin)
+            {
+                throw new InvalidOperationException(
+                    $"IR model verification failed: no .xml or .bin files found in {modelDir}");
+            }
+
+            _logger.LogInformation("Qwen3 8B IR model verified successfully");
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Packages the IR model as tar.gz, creates a Modelfile with ModelType "OpenVINO",
+        /// and registers with OV-Ollama using `ollama create`.
+        /// Per zhaohb/ollama_ov import procedure.
+        /// </summary>
+        protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
+        {
+            var modelDir = GetModelDirectory();
+            var ollamaExePath = GetOvOllamaExePath();
 
             if (!File.Exists(ollamaExePath))
             {
@@ -120,53 +245,14 @@ namespace Main.Services.RuntimeDependencies
                     + "Ensure OpenVINO Ollama runtime dependency is installed first.");
             }
 
-            var modelsDir = GetOvOllamaModelsDir();
-            Directory.CreateDirectory(modelsDir);
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = ollamaExePath,
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
-            psi.EnvironmentVariables["OLLAMA_MODELS"] = modelsDir;
-
-            // Ensure the OV-Ollama directory is on the PATH
-            var pathEnv = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? string.Empty;
-            var pathItems = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
-            if (!pathItems.Any(p => string.Equals(p, binDir, StringComparison.OrdinalIgnoreCase)))
-            {
-                pathItems.Add(binDir);
-            }
-            psi.EnvironmentVariables["PATH"] = string.Join(Path.PathSeparator, pathItems);
-
-            return Task.FromResult(
-                Process.Start(psi) ?? throw new InvalidOperationException("Failed to start OV-Ollama process"));
-        }
-
-        /// <summary>
-        /// Downloads the Qwen3 8B model via OV-Ollama's `ollama pull`.
-        /// OV-Ollama handles GGUF-to-IR conversion internally.
-        /// Per GenAISpec.md §1CA(3)(b).
-        /// </summary>
-        protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
-        {
-            _logger.LogInformation("Pulling Qwen3 8B model via OV-Ollama");
-
-            // Verify OV-Ollama server is running before attempting pull
+            // Verify OV-Ollama server is running
             try
             {
                 var serverCheck = await _httpClient.GetAsync("http://localhost:11435/api/version");
                 if (!serverCheck.IsSuccessStatusCode)
                 {
                     throw new InvalidOperationException(
-                        "OV-Ollama server is not responding on port 11435. "
-                        + "Ensure the OpenVINO Ollama runtime dependency is installed and running.");
+                        "OV-Ollama server is not responding on port 11435.");
                 }
             }
             catch (HttpRequestException)
@@ -176,136 +262,200 @@ namespace Main.Services.RuntimeDependencies
                     + "Ensure the OpenVINO Ollama runtime dependency is installed and running.");
             }
 
-            progress?.Report(new RuntimeDependencyProgress
+            progress?.Report(new RuntimeDependencyProgress { Phase = "Packaging model" });
+
+            // Step 1: Package IR model directory as tar.gz
+            var tarGzPath = modelDir + ".tar.gz";
+            _logger.LogInformation("Packaging IR model as tar.gz: {Path}", tarGzPath);
+
+            if (File.Exists(tarGzPath))
             {
-                Phase = "Downloading",
-                ProgressPercentage = 0
-            });
-
-            try
-            {
-                using var process = await StartOvPullProcessAsync($"pull {MODEL_TAG}");
-
-                var stdOut = new List<string>();
-                var stdErr = new List<string>();
-
-                process.OutputDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                    {
-                        stdOut.Add(e.Data);
-                        _logger.LogDebug("[ov-ollama] {Line}", e.Data);
-                    }
-                };
-                process.ErrorDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                    {
-                        stdErr.Add(e.Data);
-                        _logger.LogWarning("[ov-ollama err] {Line}", e.Data);
-                    }
-                };
-
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                // Timeout after 10 minutes to prevent infinite hanging
-                var exited = await Task.Run(() => process.WaitForExit(600_000));
-                if (!exited)
-                {
-                    try { process.Kill(); } catch { }
-                    throw new TimeoutException(
-                        $"OV-Ollama pull {MODEL_TAG} timed out after 10 minutes. "
-                        + "The OV-Ollama server may not be functioning correctly.");
-                }
-
-                if (process.ExitCode != 0)
-                {
-                    var errorOutput = string.Join(Environment.NewLine, stdErr);
-                    throw new InvalidOperationException(
-                        $"OV-Ollama pull {MODEL_TAG} failed with exit code {process.ExitCode}: {errorOutput}");
-                }
-
-                _logger.LogInformation("Qwen3 8B model pulled via OV-Ollama successfully");
+                File.Delete(tarGzPath);
             }
-            catch (Exception ex) when (ex is not TimeoutException && ex is not InvalidOperationException)
+
+            using (var tarGzStream = File.Create(tarGzPath))
+            using (var gzipStream = new GZipStream(tarGzStream, CompressionLevel.Fastest))
             {
-                _logger.LogError(ex, "Failed to pull Qwen3 8B model via OV-Ollama");
-                throw;
+                // Use tar via process since .NET doesn't have native tar support
+                // Write all files from modelDir into the gzip stream as a tar
+                await CreateTarGzAsync(modelDir, tarGzPath);
             }
+
+            // Step 2: Create Modelfile with ModelType "OpenVINO" (mandatory per ollama_ov docs)
+            var modelfilePath = Path.Combine(Path.GetDirectoryName(modelDir)!, $"{MODEL_DIR_NAME}_Modelfile");
+            var modelfileContent = $"FROM {tarGzPath}\nModelType \"OpenVINO\"\nInferDevice \"GPU\"";
+            await File.WriteAllTextAsync(modelfilePath, modelfileContent);
+
+            _logger.LogInformation("Created Modelfile at {Path} with content:\n{Content}", modelfilePath, modelfileContent);
+
+            progress?.Report(new RuntimeDependencyProgress { Phase = "Registering model with OV-Ollama" });
+
+            // Step 3: ollama create with the Modelfile
+            var psi = new ProcessStartInfo
+            {
+                FileName = ollamaExePath,
+                Arguments = $"create {MODEL_TAG} -f \"{modelfilePath}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
+            psi.EnvironmentVariables["OLLAMA_MODELS"] = GetOvOllamaModelsDir();
+
+            using var process = Process.Start(psi);
+            if (process == null)
+            {
+                throw new InvalidOperationException("Failed to start ollama create process");
+            }
+
+            var stdOut = new List<string>();
+            var stdErr = new List<string>();
+
+            process.OutputDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                {
+                    stdOut.Add(e.Data);
+                    _logger.LogInformation("[ollama create] {Line}", e.Data);
+                }
+            };
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                {
+                    stdErr.Add(e.Data);
+                    _logger.LogWarning("[ollama create err] {Line}", e.Data);
+                }
+            };
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // Timeout after 10 minutes
+            var exited = await Task.Run(() => process.WaitForExit(600_000));
+            if (!exited)
+            {
+                try { process.Kill(); } catch { }
+                throw new TimeoutException(
+                    $"ollama create {MODEL_TAG} timed out after 10 minutes.");
+            }
+
+            if (process.ExitCode != 0)
+            {
+                var errorOutput = string.Join(Environment.NewLine, stdErr);
+                throw new InvalidOperationException(
+                    $"ollama create {MODEL_TAG} failed with exit code {process.ExitCode}: {errorOutput}");
+            }
+
+            _logger.LogInformation("Qwen3 8B IR model registered with OV-Ollama successfully as {Tag}", MODEL_TAG);
+
+            // Cleanup tar.gz and Modelfile
+            try { File.Delete(tarGzPath); } catch { }
+            try { File.Delete(modelfilePath); } catch { }
         }
 
         /// <summary>
-        /// Verification is a no-op — OV-Ollama verifies model integrity internally during pull.
-        /// Per GenAISpec.md §1CA(3)(c).
+        /// Creates a tar.gz archive from a directory using the system tar command.
         /// </summary>
-        protected override Task VerifyDownloadAsync(IProgress<RuntimeDependencyProgress> progress)
+        private static async Task CreateTarGzAsync(string sourceDir, string outputPath)
         {
-            _logger.LogInformation("Qwen3 8B OV model verification skipped (OV-Ollama verifies internally)");
-            return Task.CompletedTask;
+            // Delete the placeholder file created by the caller
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+
+            var parentDir = Path.GetDirectoryName(sourceDir)!;
+            var dirName = Path.GetFileName(sourceDir);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "tar",
+                Arguments = $"-zcf \"{outputPath}\" \"{dirName}\"",
+                WorkingDirectory = parentDir,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null)
+            {
+                throw new InvalidOperationException("Failed to start tar process");
+            }
+
+            await Task.Run(() => process.WaitForExit());
+
+            if (process.ExitCode != 0)
+            {
+                var errorOutput = await process.StandardError.ReadToEndAsync();
+                throw new InvalidOperationException(
+                    $"tar failed with exit code {process.ExitCode}: {errorOutput}");
+            }
         }
 
         /// <summary>
-        /// Verifies the model is available on OV-Ollama after pull.
-        /// Per GenAISpec.md §1CA(3)(d).
-        /// </summary>
-        protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
-        {
-            _logger.LogInformation("Verifying Qwen3 8B OV model installation");
-
-            try
-            {
-                progress?.Report(new RuntimeDependencyProgress { Phase = "Verifying model" });
-
-                var isAvailable = await CheckDependencyAvailabilityAsync();
-                if (!isAvailable)
-                {
-                    throw new InvalidOperationException("Qwen3 8B model is still not available on OV-Ollama after pull");
-                }
-
-                _logger.LogInformation("Qwen3 8B OV model installation verified");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to verify Qwen3 8B OV model installation");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Removes the model from OV-Ollama.
+        /// Removes the model from OV-Ollama and deletes downloaded IR files.
         /// Per GenAISpec.md §1CA(3)(e).
         /// </summary>
         public override async Task<bool> UninstallDependencyAsync()
         {
-            _logger.LogInformation("Uninstalling Qwen3 8B OV model");
+            _logger.LogInformation("Uninstalling Qwen3 8B IR model");
 
             try
             {
-                using var process = await StartOvPullProcessAsync($"rm {MODEL_TAG}");
+                var ollamaExePath = GetOvOllamaExePath();
 
-                await Task.Run(() => process.WaitForExit());
-
-                if (process.ExitCode != 0)
+                if (File.Exists(ollamaExePath))
                 {
-                    var errorOutput = await process.StandardError.ReadToEndAsync();
-                    _logger.LogWarning("OV-Ollama rm {Model} exited with code {ExitCode}: {Error}",
-                        MODEL_TAG, process.ExitCode, errorOutput);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = ollamaExePath,
+                        Arguments = $"rm {MODEL_TAG}",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+                    psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
+                    psi.EnvironmentVariables["OLLAMA_MODELS"] = GetOvOllamaModelsDir();
+
+                    using var process = Process.Start(psi);
+                    if (process != null)
+                    {
+                        await Task.Run(() => process.WaitForExit());
+                        if (process.ExitCode != 0)
+                        {
+                            var errorOutput = await process.StandardError.ReadToEndAsync();
+                            _logger.LogWarning("ollama rm {Model} exited with code {ExitCode}: {Error}",
+                                MODEL_TAG, process.ExitCode, errorOutput);
+                        }
+                    }
                 }
 
-                _logger.LogInformation("Qwen3 8B OV model uninstalled successfully");
+                // Delete the IR model download directory
+                var modelDir = GetModelDirectory();
+                if (Directory.Exists(modelDir))
+                {
+                    Directory.Delete(modelDir, recursive: true);
+                    _logger.LogInformation("Deleted IR model directory: {Dir}", modelDir);
+                }
+
+                _logger.LogInformation("Qwen3 8B IR model uninstalled successfully");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to uninstall Qwen3 8B OV model");
+                _logger.LogError(ex, "Failed to uninstall Qwen3 8B IR model");
                 return false;
             }
         }
 
         /// <summary>
         /// Provides a singleton instance of OllamaClientService.
-        /// Per GenAISpec.md §1CA(3)(f).
         /// </summary>
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
