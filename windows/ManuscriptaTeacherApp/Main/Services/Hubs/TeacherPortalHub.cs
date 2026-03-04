@@ -69,7 +69,7 @@ public class TeacherPortalHub : Hub
 
     /// <summary>
     /// Tracks active generation tasks by their ID for cancellation support.
-    /// Per NetworkingAPISpec §2(1)(x). Maps generation ID to (ConnectionId, CancellationTokenSource)
+    /// Per NetworkingAPISpec §1(1)(i)(x). Maps generation ID to (ConnectionId, CancellationTokenSource)
     /// for connection-scoped cancellation security.
     /// </summary>
     private static readonly ConcurrentDictionary<Guid, (string ConnectionId, CancellationTokenSource Cts)> _activeGenerations = new();
@@ -1237,11 +1237,11 @@ public class TeacherPortalHub : Hub
         var cts = new CancellationTokenSource();
         _activeGenerations[generationId] = (Context.ConnectionId, cts);
 
-        // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
-        await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
-
         try
         {
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
             // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
             return await _materialGenerationService.GenerateReading(request, async chunk =>
             {
@@ -1260,7 +1260,7 @@ public class TeacherPortalHub : Hub
         {
             // §3H(9): Generation was cancelled - notify frontend and re-throw
             await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
-            throw new HubException("Generation was cancelled by user.");
+            throw;
         }
         catch (Exception ex)
         {
@@ -1297,11 +1297,11 @@ public class TeacherPortalHub : Hub
         var cts = new CancellationTokenSource();
         _activeGenerations[generationId] = (Context.ConnectionId, cts);
 
-        // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
-        await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
-
         try
         {
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
             // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
             return await _materialGenerationService.GenerateWorksheet(request, async chunk =>
             {
@@ -1320,7 +1320,7 @@ public class TeacherPortalHub : Hub
         {
             // §3H(9): Generation was cancelled - notify frontend and re-throw
             await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
-            throw new HubException("Generation was cancelled by user.");
+            throw;
         }
         catch (Exception ex)
         {

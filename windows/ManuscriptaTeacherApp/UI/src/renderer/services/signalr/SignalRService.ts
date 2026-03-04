@@ -853,7 +853,7 @@ class SignalRService {
      * Subscribe to generation cancelled events.
      * Per NetworkingAPISpec §2(1)(h)(iii) and FrontendWorkflowSpecifications §4B(2)(a1)(vi).
      */
-    public onGenerationCancelled(callback: (generationId: string | null) => void): () => void {
+    public onGenerationCancelled(callback: (generationId: string) => void): () => void {
         return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
     }
 
