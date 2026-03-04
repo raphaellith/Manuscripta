@@ -273,13 +273,7 @@ namespace Main.Services.RuntimeDependencies
                 File.Delete(tarGzPath);
             }
 
-            using (var tarGzStream = File.Create(tarGzPath))
-            using (var gzipStream = new GZipStream(tarGzStream, CompressionLevel.Fastest))
-            {
-                // Use tar via process since .NET doesn't have native tar support
-                // Write all files from modelDir into the gzip stream as a tar
-                await CreateTarGzAsync(modelDir, tarGzPath);
-            }
+            await CreateTarGzAsync(modelDir, tarGzPath);
 
             // Step 2: Create Modelfile with ModelType "OpenVINO" (mandatory per ollama_ov docs)
             var modelfilePath = Path.Combine(Path.GetDirectoryName(modelDir)!, $"{MODEL_DIR_NAME}_Modelfile");
