@@ -99,7 +99,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("GET", request.getMethod());
-        assertEquals("/attachments/" + TEST_ATTACHMENT_ID, request.getPath());
+        assertEquals("/api/v1/attachments/" + TEST_ATTACHMENT_ID, request.getPath());
     }
 
     @Test
@@ -152,7 +152,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("GET", request.getMethod());
-        assertEquals("/distribution/" + TEST_DEVICE_ID, request.getPath());
+        assertEquals("/api/v1/distribution/" + TEST_DEVICE_ID, request.getPath());
     }
 
     @Test
@@ -239,7 +239,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("GET", request.getMethod());
-        assertEquals("/feedback/" + TEST_DEVICE_ID, request.getPath());
+        assertEquals("/api/v1/feedback/" + TEST_DEVICE_ID, request.getPath());
     }
 
     @Test
@@ -293,7 +293,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("GET", request.getMethod());
-        assertEquals("/config/" + TEST_DEVICE_ID, request.getPath());
+        assertEquals("/api/v1/config/" + TEST_DEVICE_ID, request.getPath());
     }
 
     @Test
@@ -350,7 +350,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("POST", request.getMethod());
-        assertEquals("/pair", request.getPath());
+        assertEquals("/api/v1/pair", request.getPath());
 
         String requestBody = request.getBody().readUtf8();
         assertTrue(requestBody.contains(TEST_DEVICE_ID));
@@ -402,7 +402,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("POST", request.getMethod());
-        assertEquals("/responses", request.getPath());
+        assertEquals("/api/v1/responses", request.getPath());
 
         String requestBody = request.getBody().readUtf8();
         assertTrue(requestBody.contains(TEST_RESPONSE_ID));
@@ -465,7 +465,7 @@ public class ApiServiceTest {
 
         RecordedRequest request = mockWebServer.takeRequest();
         assertEquals("POST", request.getMethod());
-        assertEquals("/responses/batch", request.getPath());
+        assertEquals("/api/v1/responses/batch", request.getPath());
 
         String requestBody = request.getBody().readUtf8();
         assertTrue(requestBody.contains("resp-1"));
