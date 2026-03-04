@@ -306,27 +306,34 @@ export function markdownToStreamingHtml(markdown: string): string {
     let processed = markdown;
 
     // --- Question-draft preview cards (GenAISpec Appendix C) ---
-    // Must run before marked to avoid interference with indented content.
-    // Matches complete question-draft blocks (header + indented body + blank line or EOF).
+    // Use HTML comment placeholders so `marked` doesn't mangle the generated HTML.
+    // Actual HTML is substituted back after marked.parse() (same pattern as center blocks).
+    const questionDraftBlocks: string[] = [];
+
+    // Matches complete question-draft blocks (header + indented body).
     processed = processed.replace(
         /^!!! question-draft type="(MULTIPLE_CHOICE|WRITTEN_ANSWER)"\n((?:[ ]{4}.*\n?)*)/gm,
         (_match, type: string, body: string) => {
-            return buildQuestionDraftHtml(type, body);
+            questionDraftBlocks.push(buildQuestionDraftHtml(type, body));
+            return `<!--QUESTION_DRAFT_${questionDraftBlocks.length - 1}-->\n`;
         }
     );
 
-    // --- Incomplete question-draft (streaming: header arrived but body still incoming) ---
+    // Incomplete question-draft (streaming: header arrived but body still incoming).
     processed = processed.replace(
         /^!!! question-draft type="(MULTIPLE_CHOICE|WRITTEN_ANSWER)"$/gm,
         (_match, type: string) => {
             const label = type === 'MULTIPLE_CHOICE' ? 'Multiple Choice' : 'Written Answer';
-            return `<div class="question-draft-preview question-draft-partial">` +
+            questionDraftBlocks.push(
+                `<div class="question-draft-preview question-draft-partial">` +
                 `<div class="question-draft-header">` +
                 `<span class="question-draft-badge">📝 Draft</span>` +
                 `<span class="question-draft-type">${label}</span>` +
                 `</div>` +
                 `<p class="question-draft-loading">Generating question…</p>` +
-                `</div>`;
+                `</div>`
+            );
+            return `<!--QUESTION_DRAFT_${questionDraftBlocks.length - 1}-->\n`;
         }
     );
 
@@ -341,16 +348,23 @@ export function markdownToStreamingHtml(markdown: string): string {
         }
     );
 
-    // --- PDF embeds ---
+    // --- PDF embeds (use placeholder to survive marked) ---
+    const miscBlocks: string[] = [];
     processed = processed.replace(
         /^!!! pdf id="([^"]+)"$/gm,
-        '<div class="streaming-pdf-placeholder">[PDF Attachment]</div>'
+        () => {
+            miscBlocks.push('<div class="streaming-pdf-placeholder">[PDF Attachment]</div>');
+            return `<!--MISC_BLOCK_${miscBlocks.length - 1}-->\n`;
+        }
     );
 
     // --- Question embeds (already-persisted, unlikely during stream but handle gracefully) ---
     processed = processed.replace(
         /^!!! question id="([^"]+)"$/gm,
-        '<div class="streaming-question-placeholder">[Embedded Question]</div>'
+        () => {
+            miscBlocks.push('<div class="streaming-question-placeholder">[Embedded Question]</div>');
+            return `<!--MISC_BLOCK_${miscBlocks.length - 1}-->\n`;
+        }
     );
 
     // --- Block LaTeX $$...$$ → KaTeX HTML ---
@@ -371,6 +385,18 @@ export function markdownToStreamingHtml(markdown: string): string {
 
     // --- Run marked for standard Markdown ---
     let html = marked.parse(processed, { async: false }) as string;
+
+    // --- Post-process question-draft blocks ---
+    html = html.replace(
+        /<!--QUESTION_DRAFT_(\d+)-->/g,
+        (_match, index) => questionDraftBlocks[parseInt(index)] ?? ''
+    );
+
+    // --- Post-process misc blocks (PDF embeds, question embeds) ---
+    html = html.replace(
+        /<!--MISC_BLOCK_(\d+)-->/g,
+        (_match, index) => miscBlocks[parseInt(index)] ?? ''
+    );
 
     // --- Post-process center blocks ---
     html = html.replace(
