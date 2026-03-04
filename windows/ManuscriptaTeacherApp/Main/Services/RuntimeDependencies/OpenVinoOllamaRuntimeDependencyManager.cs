@@ -434,6 +434,11 @@ namespace Main.Services.RuntimeDependencies
             };
             processStartInfo.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
             processStartInfo.EnvironmentVariables["GODEBUG"] = "cgocheck=0";
+            // Isolate OV-Ollama model storage from Standard Ollama to prevent
+            // OV-Ollama from seeing GGUF-format models and crashing.
+            var ovModelsDir = Path.Combine(ollamaDir, "models");
+            Directory.CreateDirectory(ovModelsDir);
+            processStartInfo.EnvironmentVariables["OLLAMA_MODELS"] = ovModelsDir;
 
             using var process = System.Diagnostics.Process.Start(processStartInfo);
             if (process == null) throw new InvalidOperationException("Failed to start OV-Ollama daemon process");

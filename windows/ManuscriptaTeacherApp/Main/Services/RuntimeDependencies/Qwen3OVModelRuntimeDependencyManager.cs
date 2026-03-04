@@ -249,6 +249,9 @@ namespace Main.Services.RuntimeDependencies
 
             // Set environment for OV-Ollama
             psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
+            psi.EnvironmentVariables["OLLAMA_MODELS"] = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ManuscriptaTeacherApp", "bin", "ollama-openvino", "models");
 
             using var process = Process.Start(psi);
             if (process == null)
@@ -292,6 +295,9 @@ namespace Main.Services.RuntimeDependencies
                         CreateNoWindow = true
                     };
                     psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
+            psi.EnvironmentVariables["OLLAMA_MODELS"] = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ManuscriptaTeacherApp", "bin", "ollama-openvino", "models");
 
                     using var process = Process.Start(psi);
                     if (process != null)
