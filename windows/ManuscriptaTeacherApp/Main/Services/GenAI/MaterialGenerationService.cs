@@ -28,27 +28,27 @@ public class MaterialGenerationService : IMaterialGenerationService
 
     /// <summary>
     /// Generates reading content using AI.
-    /// See GenAISpec.md §3B(1)(a).
+    /// See GenAISpec.md §3B(1)(a) and §3H(8).
     /// </summary>
-    public async Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
-        return await GenerateMaterialAsync(request, "reading", onChunk);
+        return await GenerateMaterialAsync(request, "reading", onChunk, cancellationToken);
     }
 
     /// <summary>
     /// Generates worksheet content using AI.
-    /// See GenAISpec.md §3B(1)(b).
+    /// See GenAISpec.md §3B(1)(b) and §3H(8).
     /// </summary>
-    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
-        return await GenerateMaterialAsync(request, "worksheet", onChunk);
+        return await GenerateMaterialAsync(request, "worksheet", onChunk, cancellationToken);
     }
 
     /// <summary>
     /// Core material generation workflow.
-    /// See GenAISpec.md §3B(3).
+    /// See GenAISpec.md §3B(3) and §3H(8).
     /// </summary>
-    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType, Func<StreamingGenerationChunk, Task>? onChunk = null)
+    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
         // Determine which model to use
         string modelToUse = PrimaryModel;
@@ -84,11 +84,14 @@ public class MaterialGenerationService : IMaterialGenerationService
         // Await the model readiness check before streaming
         await modelReadyTask;
 
+        // §3H(8): Check for cancellation before streaming begins
+        cancellationToken.ThrowIfCancellationRequested();
+
         // §3B(3)(d): Invoke model with streaming per §3H(5)
         string generatedContent;
         try
         {
-            generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk);
+            generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
         }
         catch (HttpRequestException ex) when (
             ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
@@ -108,7 +111,7 @@ public class MaterialGenerationService : IMaterialGenerationService
                     await Task.Delay(500); // Brief delay to allow memory to be released
                     
                     await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-                    generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk);
+                    generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
                 }
                 catch (Exception fallbackEx)
                 {
@@ -135,16 +138,18 @@ public class MaterialGenerationService : IMaterialGenerationService
 
     /// <summary>
     /// Invokes the model with streaming and accumulates content.
-    /// Per GenAISpec.md §3H(5).
+    /// Per GenAISpec.md §3H(5) and §3H(8).
     /// </summary>
     private async Task<string> InvokeModelStreamingAsync(
-        string model, string prompt, Func<StreamingGenerationChunk, Task>? onChunk)
+        string model, string prompt, Func<StreamingGenerationChunk, Task>? onChunk, CancellationToken cancellationToken)
     {
         // §3H(5)(b): Accumulate content tokens
         var contentBuilder = new StringBuilder();
 
-        await foreach (var chunk in _ollamaClient.GenerateChatCompletionStreamingAsync(model, prompt))
+        await foreach (var chunk in _ollamaClient.GenerateChatCompletionStreamingAsync(model, prompt, null, cancellationToken))
         {
+            // §3H(8): Check for cancellation during streaming
+            cancellationToken.ThrowIfCancellationRequested();
             // §3H(5)(a): Invoke callback for each chunk
             if (onChunk != null)
             {

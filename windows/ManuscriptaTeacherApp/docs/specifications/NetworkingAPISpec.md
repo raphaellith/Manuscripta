@@ -103,9 +103,10 @@ For a description of how these server methods and client handlers are expected t
 
     (i) Methods for GenAI functionalities, as specified in GenAISpec.
 
-        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B.
+        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request, Guid? generationId = null)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B. If `generationId` is provided, the generation may be cancelled via `CancelGeneration`.
 
-        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B.
+        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Guid? generationId = null)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B. If `generationId` is provided, the generation may be cancelled via `CancelGeneration`.
+
 
         (iii) `Task<string> GenerateFeedback(Guid questionId, Guid responseId)`: Generates feedback for a student response. See GenAISpec §3D(9).
 
@@ -120,6 +121,8 @@ For a description of how these server methods and client handlers are expected t
         (viii) `Task PrioritiseFeedbackGeneration(Guid responseId)`: Moves the specified response to the front of the AI feedback generation queue. See GenAISpec §3D(8A).
 
         (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
+
+        (x) `CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `void`. Throws `InvalidOperationException` if the specified generation is not found or has already completed. See GenAISpec §3H(8).
         
     (j) Methods for retrieving responses.
 

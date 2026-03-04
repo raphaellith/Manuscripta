@@ -144,3 +144,35 @@
 .streaming-generation-content::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
 }
+
+/* Per §4B(2)(a1)(v): Footer with cancel button */
+.streaming-generation-footer {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+/* Cancel button styling */
+.streaming-cancel-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #dc2626;
+    background-color: #ffffff;
+    border: 1px solid #dc2626;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.streaming-cancel-button:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.streaming-cancel-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+}

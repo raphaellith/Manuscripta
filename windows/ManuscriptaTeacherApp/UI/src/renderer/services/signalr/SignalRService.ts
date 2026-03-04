@@ -367,23 +367,37 @@ class SignalRService {
     }
 
     // ==========================================
-    // AI Generation - NetworkingAPISpec §1(1)(i)
+    // AI Generation - NetworkingAPISpec §2(1)(i)
     // ==========================================
 
     /**
      * Generates reading material content using AI.
-     * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
+     * Per NetworkingAPISpec §2(1)(i) and GenAISpec §3B.
+     * @param request The generation request parameters.
+     * @param generationId Optional generation ID for cancellation support.
      */
-    public async generateReading(request: GenerationRequest): Promise<GenerationResult> {
-        return await this.getConnection().invoke<GenerationResult>("GenerateReading", request);
+    public async generateReading(request: GenerationRequest, generationId?: string): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateReading", request, generationId ?? null);
     }
 
     /**
      * Generates worksheet material content using AI.
-     * Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec §3B.
+     * Per NetworkingAPISpec §2(1)(i) and GenAISpec §3B.
+     * @param request The generation request parameters.
+     * @param generationId Optional generation ID for cancellation support.
      */
-    public async generateWorksheet(request: GenerationRequest): Promise<GenerationResult> {
-        return await this.getConnection().invoke<GenerationResult>("GenerateWorksheet", request);
+    public async generateWorksheet(request: GenerationRequest, generationId?: string): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateWorksheet", request, generationId ?? null);
+    }
+
+    /**
+     * Cancels an in-progress generation operation.
+     * Per NetworkingAPISpec §2(1)(x).
+     * @param generationId The ID of the generation to cancel.
+     * @returns True if cancellation was requested; false if generation not found.
+     */
+    public async cancelGeneration(generationId: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CancelGeneration", generationId);
     }
 
     // ==========================================
@@ -825,6 +839,14 @@ class SignalRService {
      */
     public onGenerationProgress(callback: (token: string, isThinking: boolean, done: boolean) => void): () => void {
         return this.subscribe("OnGenerationProgress", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to generation cancelled events.
+     * Per NetworkingAPISpec §2(1)(h) and FrontendWorkflowSpecifications §4B(2)(a1)(vi).
+     */
+    public onGenerationCancelled(callback: (generationId: string | null) => void): () => void {
+        return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
     }
 
 }

@@ -90,6 +90,7 @@ export const LessonLibraryPage: React.FC = () => {
         deleteMaterial,
         generateReading,
         generateWorksheet,
+        cancelGeneration,
     } = useAppContext();
 
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
@@ -105,6 +106,9 @@ export const LessonLibraryPage: React.FC = () => {
     const [streamingThinking, setStreamingThinking] = useState('');
     const [streamingContent, setStreamingContent] = useState('');
     const [streamingComplete, setStreamingComplete] = useState(false);
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
+    const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
+    const [isCancelled, setIsCancelled] = useState(false);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -268,11 +272,16 @@ export const LessonLibraryPage: React.FC = () => {
             materialType,
         });
 
+        // Per §4B(2)(a1)(v): Generate unique ID for cancellation tracking
+        const generationId = crypto.randomUUID();
+        setCurrentGenerationId(generationId);
+
         // Per §4B(2)(a1): Initialize streaming state
         setIsGenerating(true);
         setStreamingThinking('');
         setStreamingContent('');
         setStreamingComplete(false);
+        setIsCancelled(false);
 
         // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
         const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
@@ -286,18 +295,28 @@ export const LessonLibraryPage: React.FC = () => {
             }
         });
 
+        // Per §4B(2)(a1)(vi): Subscribe to cancellation events
+        const unsubscribeCancelled = signalRService.onGenerationCancelled((cancelledId) => {
+            if (cancelledId === generationId) {
+                setIsCancelled(true);
+            }
+        });
+
         try {
-            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
+            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet with generation ID
             const generationResult: GenerationResult = materialType === 'READING'
-                ? await generateReading(generationRequest)
-                : await generateWorksheet(generationRequest);
+                ? await generateReading(generationRequest, generationId)
+                : await generateWorksheet(generationRequest, generationId);
 
             // Per §4B(2)(b): Unsubscribe and clean up streaming state
             unsubscribe();
+            unsubscribeCancelled();
             setIsGenerating(false);
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            setCurrentGenerationId(null);
+            setIsCancelled(false);
 
             // Update material with generated content
             // Backend may transform content (e.g., question-draft extraction per §3B(4a)),
@@ -317,17 +336,39 @@ export const LessonLibraryPage: React.FC = () => {
         } catch (error) {
             // Clean up on error
             unsubscribe();
+            unsubscribeCancelled();
             setIsGenerating(false);
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            setCurrentGenerationId(null);
+            // Don't reset isCancelled here - keep it true for UI feedback if cancelled
+
+            // Per §4B(2)(a1)(vi): Check if error was due to cancellation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('cancelled') || isCancelled) {
+                // Roll back material creation on cancellation
+                await deleteMaterial(createdMaterial.id);
+                // Reset cancelled state after brief delay to show message
+                setTimeout(() => {
+                    setIsCancelled(false);
+                }, 2000);
+                return; // Don't throw - cancellation is user-initiated
+            }
 
             console.error('AI generation failed:', error);
             // Roll back material creation
             await deleteMaterial(createdMaterial.id);
             throw error;
         }
-    }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial]);
+    }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial, isCancelled]);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancel generation handler
+    const handleCancelGeneration = useCallback(async () => {
+        if (currentGenerationId) {
+            await cancelGeneration(currentGenerationId);
+        }
+    }, [currentGenerationId, cancelGeneration]);
 
     const handleDeleteMaterial = async (materialId: string) => {
         await deleteMaterial(materialId);
@@ -593,6 +634,8 @@ export const LessonLibraryPage: React.FC = () => {
                 thinkingTokens={streamingThinking}
                 contentTokens={streamingContent}
                 isComplete={streamingComplete}
+                onCancel={handleCancelGeneration}
+                isCancelled={isCancelled}
             />
         </div>
     );

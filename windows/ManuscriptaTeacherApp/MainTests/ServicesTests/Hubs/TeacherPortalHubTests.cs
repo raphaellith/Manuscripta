@@ -2659,12 +2659,12 @@ public class TeacherPortalHubTests
 
     private sealed class StubMaterialGenerationService : IMaterialGenerationService
     {
-        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
 
-        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
@@ -2685,12 +2685,12 @@ public class TeacherPortalHubTests
             _exception = exception;
         }
 
-        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             throw _exception;
         }
 
-        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null)
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             throw _exception;
         }

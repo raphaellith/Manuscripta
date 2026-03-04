@@ -381,6 +381,10 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iv) upon receipt of a chunk with `done = true`, remove the animated indicator and transition to the final content display.
 
+        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) via SignalR and close the streaming view without persisting any content.
+
+        (vi) the frontend shall handle `OperationCanceledException` from generation methods gracefully without displaying an error notification.
+
     (a2) The streaming generation view shall not permit editing of the content whilst generation is in progress. Editing shall be enabled only after the final `GenerationResult` is received per paragraph (b).
 
     (b) on receiving the generation result, the frontend shall display the content in the editor modal as specified in Section 4C. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).

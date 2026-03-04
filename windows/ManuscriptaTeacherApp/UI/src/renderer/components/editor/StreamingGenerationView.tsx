@@ -6,6 +6,7 @@
  * - Thinking section: Chain-of-thought reasoning (collapsible)
  * - Content section: Generated content (progressively displayed)
  * - Animated cursor indicator during generation
+ * - Cancel button to abort generation
  */
 
 import React, { useRef, useEffect } from 'react';
@@ -21,6 +22,10 @@ interface StreamingGenerationViewProps {
     contentTokens: string;
     /** Whether generation has finished. Per §4B(2)(a1)(iv). */
     isComplete: boolean;
+    /** Callback to cancel the generation. Per FrontendWorkflowSpecifications §4B(2)(a1)(v). */
+    onCancel?: () => void;
+    /** Whether the generation was cancelled. */
+    isCancelled?: boolean;
 }
 
 /**
@@ -32,6 +37,8 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
     thinkingTokens,
     contentTokens,
     isComplete,
+    onCancel,
+    isCancelled = false,
 }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const thinkingRef = useRef<HTMLDetailsElement>(null);
@@ -61,9 +68,9 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
                 {/* Header */}
                 <div className="streaming-generation-header">
                     <h2 className="streaming-generation-title">
-                        {isComplete ? 'Generation Complete' : 'Generating Content...'}
+                        {isCancelled ? 'Generation Cancelled' : isComplete ? 'Generation Complete' : 'Generating Content...'}
                     </h2>
-                    {!isComplete && (
+                    {!isComplete && !isCancelled && (
                         <div className="streaming-generation-spinner" aria-label="Loading" />
                     )}
                 </div>
@@ -90,9 +97,22 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
                     <div className="streaming-content-section">
                         {contentTokens}
                         {/* Per §4B(2)(a1)(iii): Blinking cursor while generating */}
-                        {!isComplete && <span className="streaming-cursor">▌</span>}
+                        {!isComplete && !isCancelled && <span className="streaming-cursor">▌</span>}
                     </div>
                 </div>
+
+                {/* Per §4B(2)(a1)(v): Cancel button - shown during generation */}
+                {!isComplete && !isCancelled && onCancel && (
+                    <div className="streaming-generation-footer">
+                        <button
+                            className="streaming-cancel-button"
+                            onClick={onCancel}
+                            type="button"
+                        >
+                            Cancel Generation
+                        </button>
+                    </div>
+                )}
             </div>
         </div>,
         document.body

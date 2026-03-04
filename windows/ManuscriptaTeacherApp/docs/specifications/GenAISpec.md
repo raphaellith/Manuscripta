@@ -586,6 +586,18 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (b) the final `GenerationResult` shall still be returned upon reconnection if the hub invocation has not timed out.
 
+(8) The backend shall support cancellation of in-progress generation. Specifically —
+
+    (a) the streaming pipeline (`MaterialGenerationService`, `OllamaClientService`) shall accept a `CancellationToken` and honour cancellation requests by terminating the HTTP stream and ceasing chunk forwarding.
+
+    (b) if cancellation occurs during streaming, an `OperationCanceledException` shall be thrown.
+
+(9) Upon cancellation —
+
+    (a) no `GenerationResult` shall be returned to the caller.
+
+    (b) validation and refinement per §3F shall not be performed.
+
 ---
 
 ## Appendix A — Configuration Constants

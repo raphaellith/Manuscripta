@@ -10,6 +10,7 @@ using Main.Services.GenAI;
 using Main.Services.Network;
 using Main.Services.RuntimeDependencies;
 using Main.Models;
+using System.Collections.Concurrent;
 
 namespace Main.Services.Hubs;
 
@@ -65,6 +66,12 @@ public class TeacherPortalHub : Hub
     private readonly IEmbeddingService _documentEmbeddingService;
     private readonly OllamaClientService _ollamaClient;
     private readonly QuestionExtractionService _questionExtractionService;
+
+    /// <summary>
+    /// Tracks active generation tasks by their ID for cancellation support.
+    /// Per NetworkingAPISpec §2(1)(x).
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeGenerations = new();
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -1209,9 +1216,11 @@ public class TeacherPortalHub : Hub
 
     /// <summary>
     /// Generates reading content using AI.
-    /// Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec.md §3B(1)(a).
+    /// Per NetworkingAPISpec §2(1)(i) and GenAISpec.md §3B(1)(a).
     /// </summary>
-    public async Task<GenerationResult> GenerateReading(GenerationRequest request)
+    /// <param name="request">The generation request parameters.</param>
+    /// <param name="generationId">Optional generation ID for cancellation support. Per NetworkingAPISpec §2(1)(i).</param>
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request, Guid? generationId = null)
     {
         // Pre-check required AI runtime dependencies concurrently.
         // If any are missing, notify frontend and abort.
@@ -1221,6 +1230,14 @@ public class TeacherPortalHub : Hub
         {
             await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
             throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3H(8): Set up cancellation token if generation ID provided
+        CancellationTokenSource? cts = null;
+        if (generationId.HasValue)
+        {
+            cts = new CancellationTokenSource();
+            _activeGenerations[generationId.Value] = cts;
         }
 
         try
@@ -1229,20 +1246,37 @@ public class TeacherPortalHub : Hub
             return await _materialGenerationService.GenerateReading(request, async chunk =>
             {
                 await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
-            });
+            }, cts?.Token ?? default);
+        }
+        catch (OperationCanceledException)
+        {
+            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId);
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate reading: {ex.Message}", ex);
         }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            if (generationId.HasValue)
+            {
+                _activeGenerations.TryRemove(generationId.Value, out _);
+            }
+            cts?.Dispose();
+        }
     }
 
     /// <summary>
     /// Generates worksheet content using AI.
-    /// Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec.md §3B(1)(b).
+    /// Per NetworkingAPISpec §2(1)(i) and GenAISpec.md §3B(1)(b).
     /// </summary>
-    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+    /// <param name="request">The generation request parameters.</param>
+    /// <param name="generationId">Optional generation ID for cancellation support. Per NetworkingAPISpec §2(1)(i).</param>
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Guid? generationId = null)
     {
         // Pre-check required AI runtime dependencies concurrently.
         // If any are missing, notify frontend and abort.
@@ -1254,19 +1288,58 @@ public class TeacherPortalHub : Hub
             throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
         }
 
+        // §3H(8): Set up cancellation token if generation ID provided
+        CancellationTokenSource? cts = null;
+        if (generationId.HasValue)
+        {
+            cts = new CancellationTokenSource();
+            _activeGenerations[generationId.Value] = cts;
+        }
+
         try
         {
             // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
             return await _materialGenerationService.GenerateWorksheet(request, async chunk =>
             {
                 await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
-            });
+            }, cts?.Token ?? default);
+        }
+        catch (OperationCanceledException)
+        {
+            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId);
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate worksheet: {ex.Message}", ex);
         }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            if (generationId.HasValue)
+            {
+                _activeGenerations.TryRemove(generationId.Value, out _);
+            }
+            cts?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Cancels an in-progress generation operation.
+    /// Per NetworkingAPISpec §2(1)(x).
+    /// </summary>
+    /// <param name="generationId">The ID of the generation to cancel.</param>
+    /// <returns>True if cancellation was requested; false if generation not found.</returns>
+    public Task<bool> CancelGeneration(Guid generationId)
+    {
+        if (_activeGenerations.TryGetValue(generationId, out var cts))
+        {
+            cts.Cancel();
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
     }
 
     /// <summary>
