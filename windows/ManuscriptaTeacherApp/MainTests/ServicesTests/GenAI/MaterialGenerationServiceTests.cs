@@ -143,7 +143,7 @@ public class MaterialGenerationServiceTests
         public string FallbackChatResponse { get; set; } = "fallback";
         public List<string> ChatModels { get; } = new();
 
-        public override Task EnsureModelReadyAsync(string modelName)
+        public override Task EnsureModelReadyAsync(string modelName, bool useStandardOllama = false)
         {
             return Task.CompletedTask;
         }

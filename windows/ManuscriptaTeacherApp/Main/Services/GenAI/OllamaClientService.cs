@@ -30,11 +30,15 @@ public class OllamaClientService : IInferenceClient
     /// Verifies that Ollama's daemon is running.
     /// See GenAISpec.md §1(4)(b).
     /// </summary>
-    public virtual async Task<bool> IsOllamaRunningAsync()
+    /// <param name="useStandardOllama">If true, always targets Standard Ollama (port 11434).</param>
+    public virtual async Task<bool> IsOllamaRunningAsync(bool useStandardOllama = false)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{await GetBaseUrlAsync()}/");
+            var baseUrl = useStandardOllama
+                ? _runtimeSelector.GetStandardOllamaBaseUrl()
+                : await GetBaseUrlAsync();
+            var response = await _httpClient.GetAsync($"{baseUrl}/");
             return response.IsSuccessStatusCode;
         }
         catch
@@ -47,11 +51,16 @@ public class OllamaClientService : IInferenceClient
     /// Verifies that a model is locally available.
     /// See GenAISpec.md §1(4)(a).
     /// </summary>
-    public virtual async Task<bool> IsModelAvailableAsync(string modelName)
+    /// <param name="modelName">Name of the model to check.</param>
+    /// <param name="useStandardOllama">If true, always targets Standard Ollama (port 11434).</param>
+    public virtual async Task<bool> IsModelAvailableAsync(string modelName, bool useStandardOllama = false)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{await GetBaseUrlAsync()}/api/tags");
+            var baseUrl = useStandardOllama
+                ? _runtimeSelector.GetStandardOllamaBaseUrl()
+                : await GetBaseUrlAsync();
+            var response = await _httpClient.GetAsync($"{baseUrl}/api/tags");
             if (!response.IsSuccessStatusCode) return false;
 
             var content = await response.Content.ReadAsStringAsync();
@@ -211,15 +220,17 @@ public class OllamaClientService : IInferenceClient
     /// Ensures Ollama is running and the specified model is available.
     /// See GenAISpec.md §1(4).
     /// </summary>
-    public virtual async Task EnsureModelReadyAsync(string modelName)
+    /// <param name="modelName">Name of the model to check.</param>
+    /// <param name="useStandardOllama">If true, always targets Standard Ollama (port 11434). Use for embedding models.</param>
+    public virtual async Task EnsureModelReadyAsync(string modelName, bool useStandardOllama = false)
     {
-        if (!await IsOllamaRunningAsync())
+        if (!await IsOllamaRunningAsync(useStandardOllama))
         {
             throw new InvalidOperationException(
                 "Ollama is not running. Please ensure Ollama is installed and started.");
         }
 
-        if (!await IsModelAvailableAsync(modelName))
+        if (!await IsModelAvailableAsync(modelName, useStandardOllama))
         {
             throw new InvalidOperationException(
                 $"Model '{modelName}' is not available. Please install it using the Settings menu before generating content.");

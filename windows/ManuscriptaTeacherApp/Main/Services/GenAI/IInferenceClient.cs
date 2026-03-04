@@ -26,13 +26,13 @@ public interface IInferenceClient : IDependencyService
     /// Verifies that a model is locally available.
     /// Per GenAISpec.md §3(2A)(c).
     /// </summary>
-    Task<bool> IsModelAvailableAsync(string modelName);
+    Task<bool> IsModelAvailableAsync(string modelName, bool useStandardOllama = false);
 
     /// <summary>
     /// Ensures the inference server is running and the specified model is available.
     /// Per GenAISpec.md §3(2A)(d).
     /// </summary>
-    Task EnsureModelReadyAsync(string modelName);
+    Task EnsureModelReadyAsync(string modelName, bool useStandardOllama = false);
 
     /// <summary>
     /// Checks if the system has sufficient resources to generate with a given model.
