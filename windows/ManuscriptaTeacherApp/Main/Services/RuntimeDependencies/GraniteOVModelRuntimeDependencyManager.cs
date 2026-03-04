@@ -14,7 +14,8 @@ namespace Main.Services.RuntimeDependencies
 {
     /// <summary>
     /// Manages the availability and installation of the IBM Granite 4.0 model
-    /// in OpenVINO IR format for OV-Ollama.
+    /// for OV-Ollama. Uses `ollama pull` via the OV-Ollama binary, which
+    /// handles GGUF-to-IR conversion internally.
     /// Per GenAISpec.md §1DA.
     /// </summary>
     public class GraniteOVModelRuntimeDependencyManager : RuntimeDependencyManagerBase
@@ -26,18 +27,7 @@ namespace Main.Services.RuntimeDependencies
         private readonly object _serviceLock = new object();
 
         /// <summary>
-        /// HuggingFace repository for pre-converted Granite 4 Micro INT4 IR model.
-        /// Per GenAISpec.md Appendix A (GRANITE4_IR_HF_REPO).
-        /// </summary>
-        private const string HF_REPO = "llmware/granite-4-micro-ov";
-
-        /// <summary>
-        /// Local model directory name under IR_MODEL_BASE_DIR.
-        /// </summary>
-        private const string MODEL_DIR_NAME = "granite4";
-
-        /// <summary>
-        /// The model name as registered with OV-Ollama.
+        /// The model name used with OV-Ollama.
         /// </summary>
         private const string MODEL_TAG = "granite4";
 
@@ -54,7 +44,27 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
-        /// Checks if the IR-format IBM Granite 4.0 model is available on OV-Ollama.
+        /// Gets the OV-Ollama binary directory.
+        /// </summary>
+        private string GetOvOllamaBinDir()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ManuscriptaTeacherApp",
+                "bin",
+                "ollama-openvino");
+        }
+
+        /// <summary>
+        /// Gets the isolated OLLAMA_MODELS directory for OV-Ollama.
+        /// </summary>
+        private string GetOvOllamaModelsDir()
+        {
+            return Path.Combine(GetOvOllamaBinDir(), "models");
+        }
+
+        /// <summary>
+        /// Checks if the IBM Granite 4.0 model is available on OV-Ollama.
         /// Per GenAISpec.md §1DA(3)(a). Always targets port 11435.
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
@@ -95,135 +105,13 @@ namespace Main.Services.RuntimeDependencies
         }
 
         /// <summary>
-        /// Gets the local directory where IR model files are stored.
-        /// Co-located with OV-Ollama's OLLAMA_MODELS directory.
+        /// Starts an OV-Ollama process with the given arguments.
+        /// Sets OLLAMA_HOST to port 11435 and OLLAMA_MODELS to the isolated directory.
         /// </summary>
-        private string GetModelDirectory()
+        protected virtual Task<Process> StartOvPullProcessAsync(string args)
         {
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ManuscriptaTeacherApp",
-                "bin",
-                "ollama-openvino",
-                "models",
-                MODEL_DIR_NAME);
-        }
-
-        /// <summary>
-        /// Gets the path to the OV-Ollama executable.
-        /// </summary>
-        private string GetOvOllamaExePath()
-        {
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ManuscriptaTeacherApp",
-                "bin",
-                "ollama-openvino",
-                "ollama.exe");
-        }
-
-        /// <summary>
-        /// Downloads all files from the HuggingFace repository into the local model directory.
-        /// Per GenAISpec.md §1DA(3)(b).
-        /// </summary>
-        protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
-        {
-            _logger.LogInformation("Downloading IBM Granite 4.0 IR model from HuggingFace: {Repo}", HF_REPO);
-
-            progress?.Report(new RuntimeDependencyProgress
-            {
-                Phase = "Downloading",
-                ProgressPercentage = 0
-            });
-
-            var modelDir = GetModelDirectory();
-            Directory.CreateDirectory(modelDir);
-
-            // List all files in the HF repo
-            var treeUrl = $"https://huggingface.co/api/models/{HF_REPO}/tree/main";
-            var treeResponse = await _httpClient.GetAsync(treeUrl);
-            treeResponse.EnsureSuccessStatusCode();
-            var treeJson = await treeResponse.Content.ReadAsStringAsync();
-            var files = JsonDocument.Parse(treeJson);
-
-            var fileList = new List<(string path, long size)>();
-            foreach (var fileEntry in files.RootElement.EnumerateArray())
-            {
-                var type = fileEntry.GetProperty("type").GetString();
-                if (type == "file")
-                {
-                    var path = fileEntry.GetProperty("path").GetString()!;
-                    var size = fileEntry.TryGetProperty("size", out var sizeEl) ? sizeEl.GetInt64() : 0;
-                    fileList.Add((path, size));
-                }
-            }
-
-            var totalSize = fileList.Sum(f => f.size);
-            long downloadedSize = 0;
-
-            for (int i = 0; i < fileList.Count; i++)
-            {
-                var (filePath, fileSize) = fileList[i];
-                var localPath = Path.Combine(modelDir, filePath.Replace('/', Path.DirectorySeparatorChar));
-                var localDir = Path.GetDirectoryName(localPath)!;
-                Directory.CreateDirectory(localDir);
-
-                var downloadUrl = $"https://huggingface.co/{HF_REPO}/resolve/main/{filePath}";
-                _logger.LogInformation("Downloading {File} ({Index}/{Total})", filePath, i + 1, fileList.Count);
-
-                progress?.Report(new RuntimeDependencyProgress
-                {
-                    Phase = "Downloading",
-                    ProgressPercentage = totalSize > 0 ? (int)(downloadedSize * 80 / totalSize) : (int)(i * 80.0 / fileList.Count)
-                });
-
-                using var fileResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
-                fileResponse.EnsureSuccessStatusCode();
-
-                using var contentStream = await fileResponse.Content.ReadAsStreamAsync();
-                using var fileStream = File.Create(localPath);
-                await contentStream.CopyToAsync(fileStream);
-
-                downloadedSize += fileSize;
-            }
-
-            progress?.Report(new RuntimeDependencyProgress
-            {
-                Phase = "Downloading",
-                ProgressPercentage = 80
-            });
-
-            _logger.LogInformation("IBM Granite 4.0 IR model downloaded successfully to {Dir}", modelDir);
-        }
-
-        /// <summary>
-        /// Verifies that the IR model directory contains the required model files.
-        /// Per GenAISpec.md §1DA(3)(c).
-        /// </summary>
-        protected override Task VerifyDownloadAsync(IProgress<RuntimeDependencyProgress> progress)
-        {
-            var modelDir = GetModelDirectory();
-            var xmlPath = Path.Combine(modelDir, "openvino_model.xml");
-            var binPath = Path.Combine(modelDir, "openvino_model.bin");
-
-            if (!File.Exists(xmlPath) || !File.Exists(binPath))
-            {
-                throw new InvalidOperationException(
-                    $"IR model verification failed: openvino_model.xml or openvino_model.bin not found in {modelDir}");
-            }
-
-            _logger.LogInformation("IBM Granite 4.0 IR model verified successfully");
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Registers the IR model with OV-Ollama using a Modelfile.
-        /// Per GenAISpec.md §1DA(3)(d).
-        /// </summary>
-        protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
-        {
-            var modelDir = GetModelDirectory();
-            var ollamaExePath = GetOvOllamaExePath();
+            var binDir = GetOvOllamaBinDir();
+            var ollamaExePath = Path.Combine(binDir, "ollama.exe");
 
             if (!File.Exists(ollamaExePath))
             {
@@ -232,106 +120,159 @@ namespace Main.Services.RuntimeDependencies
                     + "Ensure OpenVINO Ollama runtime dependency is installed first.");
             }
 
-            // Create Modelfile that references the IR directory
-            var modelfilePath = Path.Combine(modelDir, "Modelfile");
-            var modelfileContent = $"FROM {modelDir}";
-            await File.WriteAllTextAsync(modelfilePath, modelfileContent);
-
-            _logger.LogInformation("Creating OV-Ollama model from IR directory: {Dir}", modelDir);
+            var modelsDir = GetOvOllamaModelsDir();
+            Directory.CreateDirectory(modelsDir);
 
             var psi = new ProcessStartInfo
             {
                 FileName = ollamaExePath,
-                Arguments = $"create {MODEL_TAG} -f \"{modelfilePath}\"",
+                Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
 
-            // Set environment for OV-Ollama
             psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
-            psi.EnvironmentVariables["OLLAMA_MODELS"] = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ManuscriptaTeacherApp", "bin", "ollama-openvino", "models");
+            psi.EnvironmentVariables["OLLAMA_MODELS"] = modelsDir;
 
-            using var process = Process.Start(psi);
-            if (process == null)
+            // Ensure the OV-Ollama directory is on the PATH
+            var pathEnv = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? string.Empty;
+            var pathItems = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (!pathItems.Any(p => string.Equals(p, binDir, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException("Failed to start ollama create process");
+                pathItems.Add(binDir);
             }
+            psi.EnvironmentVariables["PATH"] = string.Join(Path.PathSeparator, pathItems);
 
-            await Task.Run(() => process.WaitForExit());
-
-            if (process.ExitCode != 0)
-            {
-                var errorOutput = await process.StandardError.ReadToEndAsync();
-                throw new InvalidOperationException(
-                    $"ollama create {MODEL_TAG} failed with exit code {process.ExitCode}: {errorOutput}");
-            }
-
-            _logger.LogInformation("IBM Granite 4.0 IR model registered with OV-Ollama successfully");
+            return Task.FromResult(
+                Process.Start(psi) ?? throw new InvalidOperationException("Failed to start OV-Ollama process"));
         }
 
         /// <summary>
-        /// Removes the model from OV-Ollama and deletes the local IR directory.
+        /// Downloads the IBM Granite 4.0 model via OV-Ollama's `ollama pull`.
+        /// OV-Ollama handles GGUF-to-IR conversion internally.
+        /// Per GenAISpec.md §1DA(3)(b).
+        /// </summary>
+        protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
+        {
+            _logger.LogInformation("Pulling IBM Granite 4.0 model via OV-Ollama");
+
+            progress?.Report(new RuntimeDependencyProgress
+            {
+                Phase = "Downloading",
+                ProgressPercentage = 0
+            });
+
+            try
+            {
+                using var process = await StartOvPullProcessAsync($"pull {MODEL_TAG}");
+
+                var stdOut = new List<string>();
+                var stdErr = new List<string>();
+
+                process.OutputDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        stdOut.Add(e.Data);
+                        _logger.LogDebug("[ov-ollama] {Line}", e.Data);
+                    }
+                };
+                process.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        stdErr.Add(e.Data);
+                        _logger.LogWarning("[ov-ollama err] {Line}", e.Data);
+                    }
+                };
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await Task.Run(() => process.WaitForExit());
+
+                if (process.ExitCode != 0)
+                {
+                    var errorOutput = string.Join(Environment.NewLine, stdErr);
+                    throw new InvalidOperationException(
+                        $"OV-Ollama pull {MODEL_TAG} failed with exit code {process.ExitCode}: {errorOutput}");
+                }
+
+                _logger.LogInformation("IBM Granite 4.0 model pulled via OV-Ollama successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to pull IBM Granite 4.0 model via OV-Ollama");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Verification is a no-op — OV-Ollama verifies model integrity internally during pull.
+        /// Per GenAISpec.md §1DA(3)(c).
+        /// </summary>
+        protected override Task VerifyDownloadAsync(IProgress<RuntimeDependencyProgress> progress)
+        {
+            _logger.LogInformation("IBM Granite 4.0 OV model verification skipped (OV-Ollama verifies internally)");
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Verifies the model is available on OV-Ollama after pull.
+        /// Per GenAISpec.md §1DA(3)(d).
+        /// </summary>
+        protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
+        {
+            _logger.LogInformation("Verifying IBM Granite 4.0 OV model installation");
+
+            try
+            {
+                progress?.Report(new RuntimeDependencyProgress { Phase = "Verifying model" });
+
+                var isAvailable = await CheckDependencyAvailabilityAsync();
+                if (!isAvailable)
+                {
+                    throw new InvalidOperationException("IBM Granite 4.0 model is still not available on OV-Ollama after pull");
+                }
+
+                _logger.LogInformation("IBM Granite 4.0 OV model installation verified");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to verify IBM Granite 4.0 OV model installation");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Removes the model from OV-Ollama.
         /// Per GenAISpec.md §1DA(3)(e).
         /// </summary>
         public override async Task<bool> UninstallDependencyAsync()
         {
-            _logger.LogInformation("Uninstalling IBM Granite 4.0 IR model");
+            _logger.LogInformation("Uninstalling IBM Granite 4.0 OV model");
 
             try
             {
-                var ollamaExePath = GetOvOllamaExePath();
+                using var process = await StartOvPullProcessAsync($"rm {MODEL_TAG}");
 
-                if (File.Exists(ollamaExePath))
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = ollamaExePath,
-                        Arguments = $"rm {MODEL_TAG}",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    };
-                    psi.EnvironmentVariables["OLLAMA_HOST"] = "127.0.0.1:11435";
-            psi.EnvironmentVariables["OLLAMA_MODELS"] = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ManuscriptaTeacherApp", "bin", "ollama-openvino", "models");
+                await Task.Run(() => process.WaitForExit());
 
-                    using var process = Process.Start(psi);
-                    if (process != null)
-                    {
-                        await Task.Run(() => process.WaitForExit());
-                        if (process.ExitCode != 0)
-                        {
-                            var errorOutput = await process.StandardError.ReadToEndAsync();
-                            _logger.LogWarning("ollama rm {Model} exited with code {ExitCode}: {Error}",
-                                MODEL_TAG, process.ExitCode, errorOutput);
-                        }
-                    }
-                }
-                else
+                if (process.ExitCode != 0)
                 {
-                    _logger.LogWarning("OV-Ollama executable not found during uninstall. Skipping rm.");
+                    var errorOutput = await process.StandardError.ReadToEndAsync();
+                    _logger.LogWarning("OV-Ollama rm {Model} exited with code {ExitCode}: {Error}",
+                        MODEL_TAG, process.ExitCode, errorOutput);
                 }
 
-                // Delete the IR model directory
-                var modelDir = GetModelDirectory();
-                if (Directory.Exists(modelDir))
-                {
-                    Directory.Delete(modelDir, recursive: true);
-                    _logger.LogInformation("Deleted IR model directory: {Dir}", modelDir);
-                }
-
-                _logger.LogInformation("IBM Granite 4.0 IR model uninstalled successfully");
+                _logger.LogInformation("IBM Granite 4.0 OV model uninstalled successfully");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to uninstall IBM Granite 4.0 IR model");
+                _logger.LogError(ex, "Failed to uninstall IBM Granite 4.0 OV model");
                 return false;
             }
         }
