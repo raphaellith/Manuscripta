@@ -273,7 +273,7 @@ export const LessonLibraryPage: React.FC = () => {
         });
 
         // Per §4B(2)(a1)(v): Generate unique ID for cancellation tracking
-        const generationId = crypto.randomUUID();
+        const generationId = self.crypto.randomUUID();
         setCurrentGenerationId(generationId);
 
         // Per §4B(2)(a1): Initialize streaming state
