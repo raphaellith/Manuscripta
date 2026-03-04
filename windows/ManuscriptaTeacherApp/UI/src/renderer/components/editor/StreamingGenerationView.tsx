@@ -9,8 +9,10 @@
  * - Cancel button to abort generation
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
+import { markdownToStreamingHtml } from '../../utils/markdownConversion';
+import 'katex/dist/katex.min.css';
 import './StreamingGenerationView.css';
 
 interface StreamingGenerationViewProps {
@@ -42,6 +44,11 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
 }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const thinkingRef = useRef<HTMLDetailsElement>(null);
+
+    // Per §4B(2)(a1)(ii): Convert content Markdown to HTML for rich preview
+    // Uses tolerant live parsing — `marked` renders valid syntax and passes
+    // through incomplete/partial syntax as text.
+    const contentHtml = useMemo(() => markdownToStreamingHtml(contentTokens), [contentTokens]);
 
     // Per §4B(2)(a1): Auto-scroll to bottom on new tokens
     useEffect(() => {
@@ -93,9 +100,12 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
                         </details>
                     )}
 
-                    {/* Per §4B(2)(a1)(ii): Content section */}
+                    {/* Per §4B(2)(a1)(ii): Content section — rendered as rich HTML */}
                     <div className="streaming-content-section">
-                        {contentTokens}
+                        <div
+                            className="streaming-content-rendered"
+                            dangerouslySetInnerHTML={{ __html: contentHtml }}
+                        />
                         {/* Per §4B(2)(a1)(iii): Blinking cursor while generating */}
                         {!isComplete && !isCancelled && <span className="streaming-cursor">▌</span>}
                     </div>
