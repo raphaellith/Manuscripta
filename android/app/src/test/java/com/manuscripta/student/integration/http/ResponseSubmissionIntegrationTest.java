@@ -148,8 +148,8 @@ public class ResponseSubmissionIntegrationTest {
     private ResponseDto buildTestResponse() {
         return new ResponseDto(
                 UUID.randomUUID().toString(),
-                "test-question-001",
-                "test-material-001",
+                "00000001-0000-0000-0000-000000000002",
+                "00000001-0000-0000-0000-000000000003",
                 harness.getConfig().getTestDeviceId(),
                 "Sample answer",
                 Instant.now().toString(),
