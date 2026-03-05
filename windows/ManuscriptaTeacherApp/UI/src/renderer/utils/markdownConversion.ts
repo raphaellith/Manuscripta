@@ -424,7 +424,7 @@ export function markdownToStreamingHtml(markdown: string): string {
         }
     );
 
-    return html;
+    return stripLinksFromHtml(html);
 }
 
 /**

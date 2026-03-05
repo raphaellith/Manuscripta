@@ -109,7 +109,6 @@ export const LessonLibraryPage: React.FC = () => {
     // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
     // Use ref for synchronous access during async operations (avoids stale closure issue)
     const generationIdRef = useRef<string | null>(null);
-    const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
     const [isCancelled, setIsCancelled] = useState(false);
 
     const searchKeywords = useMemo(
@@ -284,7 +283,6 @@ export const LessonLibraryPage: React.FC = () => {
         // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe to OnGenerationStarted to receive server-generated ID
         const unsubscribeStarted = signalRService.onGenerationStarted((serverGenerationId) => {
             generationIdRef.current = serverGenerationId;
-            setCurrentGenerationId(serverGenerationId);
         });
 
         // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance optimization)
@@ -356,7 +354,6 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingContent('');
             setStreamingComplete(false);
             generationIdRef.current = null;
-            setCurrentGenerationId(null);
             setIsCancelled(false);
 
             // Update material with generated content
@@ -384,7 +381,6 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingContent('');
             setStreamingComplete(false);
             generationIdRef.current = null;
-            setCurrentGenerationId(null);
             // Don't reset isCancelled here - keep it true for UI feedback if cancelled
 
             // Per §4B(2)(a1)(vi): Check if error was due to cancellation
