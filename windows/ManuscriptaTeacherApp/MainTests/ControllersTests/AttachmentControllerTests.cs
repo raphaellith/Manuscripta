@@ -73,14 +73,14 @@ public class AttachmentControllerTests
     }
 
     [Fact]
-    public async Task GetAttachment_InvalidGuidFormat_Returns404NotFound()
+    public async Task GetAttachment_InvalidGuidFormat_Returns400BadRequest()
     {
         // Act
         var result = await _controller.GetAttachment("not-a-guid");
 
-        // Assert — invalid GUID returns 404 to avoid leaking ID validity
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        Assert.Equal(404, notFound.StatusCode);
+        // Assert — malformed GUID returns 400 per Validation Rules
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequest.StatusCode);
     }
 
     [Fact]

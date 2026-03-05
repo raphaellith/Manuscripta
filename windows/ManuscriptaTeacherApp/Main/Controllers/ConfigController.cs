@@ -47,7 +47,7 @@ public class ConfigController : ControllerBase
         if (!Guid.TryParse(deviceId, out var deviceGuid))
         {
             _logger.LogWarning("Invalid device ID format: {DeviceId}", deviceId);
-            return NotFound("Device not found.");
+            return BadRequest("Invalid device ID format.");
         }
 
         // Validate device is Android using positive detection (checks if paired in Android registry)

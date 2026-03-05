@@ -95,14 +95,28 @@ public class AttachmentEndpointIntegrationTest {
         }
 
         /**
-         * Verifies that requesting a nonexistent attachment returns 404.
+         * Verifies that a malformed (non-UUID) attachment ID returns 400.
          *
          * @throws Exception if the network call fails unexpectedly
          */
         @Test
-        public void getAttachment_unknownId_returns404() throws Exception {
+        public void getAttachment_malformedId_returns400() throws Exception {
                 Response<ResponseBody> response = harness.getApiService()
                                 .getAttachment("nonexistent-attachment-id")
+                                .execute();
+
+                assertEquals(400, response.code());
+        }
+
+        /**
+         * Verifies that a valid but nonexistent attachment UUID returns 404.
+         *
+         * @throws Exception if the network call fails unexpectedly
+         */
+        @Test
+        public void getAttachment_nonexistentId_returns404() throws Exception {
+                Response<ResponseBody> response = harness.getApiService()
+                                .getAttachment("ffffffff-ffff-ffff-ffff-ffffffffffff")
                                 .execute();
 
                 assertEquals(404, response.code());

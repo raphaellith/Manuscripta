@@ -149,9 +149,10 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | Materials staged for device | `200 OK` |
-| No materials staged / unknown device | `404 Not Found` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| No materials staged / unknown device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint.
+**Client assertion:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint. Malformed (non-UUID) device IDs return `400`.
 
 ### 4.3. GET /feedback/{deviceId} — Feedback Retrieval
 
@@ -173,9 +174,10 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | READY feedback available | `200 OK` |
-| No feedback available / unknown device | `404 Not Found` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| No feedback available / unknown device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null.
+**Client assertion:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null. Malformed (non-UUID) device IDs return `400`.
 
 ### 4.4. GET /config/{deviceId} — Configuration
 
@@ -194,10 +196,11 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | Valid paired device | `200 OK` |
-| Unknown device | `404 Not Found` |
-| Non-client device | `403 Forbidden` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| Unknown device (valid UUID) | `404 Not Found` |
+| Non-client device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values.
+**Client assertion:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values. Malformed (non-UUID) device IDs return `400`; valid but unknown/non-Android UUIDs return `404`.
 
 **Server note:** This endpoint also marks the device as having received configuration (implicit REFRESH_CONFIG acknowledgement, per `Session Interaction.md` §6(3)).
 
@@ -206,7 +209,8 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status | Response |
 |----------|----------------|----------|
 | Attachment exists | `200 OK` | Raw binary + `Content-Type` header |
-| Unknown ID | `404 Not Found` | — |
+| Malformed attachment ID (non-UUID) | `400 Bad Request` | — |
+| Unknown ID (valid UUID) | `404 Not Found` | — |
 
 **Client assertion:** Tests use a well-known test attachment ID of `00000001-0000-0000-0000-000000000004`. If this attachment is not pre-staged, the test gracefully accepts `404` and skips further assertions.
 

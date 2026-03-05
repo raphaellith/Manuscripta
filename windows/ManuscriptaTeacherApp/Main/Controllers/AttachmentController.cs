@@ -50,7 +50,7 @@ public class AttachmentController : ControllerBase
         if (!Guid.TryParse(id, out var attachmentId))
         {
             _logger.LogWarning("Attachment request with invalid ID format: {Id}", id);
-            return NotFound(new { error = "Attachment not found" });
+            return BadRequest(new { error = "Invalid attachment ID format" });
         }
 
         // Look up attachment entity

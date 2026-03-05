@@ -93,13 +93,13 @@ public class ConfigControllerTests
     }
 
     [Fact]
-    public async Task GetConfig_InvalidGuidFormat_Returns404NotFound()
+    public async Task GetConfig_InvalidGuidFormat_Returns400BadRequest()
     {
         // Act
         var result = await _controller.GetConfig("not-a-guid");
 
-        // Assert — invalid device IDs return 404 to avoid leaking ID validity
-        Assert.IsType<NotFoundObjectResult>(result);
+        // Assert — malformed device ID returns 400 per Validation Rules
+        Assert.IsType<BadRequestObjectResult>(result);
         _mockConfigService.Verify(s => s.ValidateAndroidDeviceAsync(It.IsAny<Guid>()), Times.Never);
         _mockConfigService.Verify(s => s.CompileConfigAsync(It.IsAny<Guid>()), Times.Never);
     }

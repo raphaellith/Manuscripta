@@ -142,20 +142,20 @@ public class DistributionControllerTests
     }
 
     [Fact]
-    public async Task GetDistribution_InvalidGuidFormat_Returns404NotFound()
+    public async Task GetDistribution_InvalidGuidFormat_Returns400BadRequest()
     {
         // Act
         var result = await _controller.GetDistribution("not-a-valid-guid");
 
-        // Assert — invalid GUID returns 404 to avoid leaking ID validity
-        Assert.IsType<NotFoundObjectResult>(result);
+        // Assert — malformed GUID returns 400 per Validation Rules
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
     public async Task GetDistribution_InvalidGuidFormat_ReturnsErrorMessage()
     {
         // Act
-        var result = await _controller.GetDistribution("invalid-guid") as NotFoundObjectResult;
+        var result = await _controller.GetDistribution("invalid-guid") as BadRequestObjectResult;
 
         // Assert
         Assert.NotNull(result);
