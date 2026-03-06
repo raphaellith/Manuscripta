@@ -818,6 +818,9 @@ public class TeacherPortalHub : Hub
         existing.Marks = entity.Marks;
         existing.Text = entity.Text;
         await _feedbackRepository.UpdateAsync(existing);
+
+        // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is updated
+        _feedbackQueueService.RemoveFromQueue(existing.ResponseId);
     }
 
     /// <summary>
@@ -1483,7 +1486,7 @@ public class TeacherPortalHub : Hub
     /// Returns the response ID currently being processed for feedback generation, or null if idle.
     /// Per GenAISpec.md §3D(4).
     /// </summary>
-    public Task<Guid?> GetCurrentlyGeneratingResponseId()
+    public Task<string?> GetCurrentlyGeneratingResponseId()
     {
         try
         {
