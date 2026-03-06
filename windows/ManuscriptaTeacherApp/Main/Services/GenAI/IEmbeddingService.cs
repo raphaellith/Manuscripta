@@ -14,7 +14,13 @@ public interface IEmbeddingService
     /// See GenAISpec.md §3A(1) and §3A(5)(a).
     /// </summary>
     Task IndexSourceDocumentByIdAsync(Guid sourceDocumentId);
-    Task RemoveSourceDocumentAsync(Guid sourceDocumentId);
+    /// <summary>
+    /// Removes all chunks for the given document from ChromaDB.
+    /// When <paramref name="throwOnError"/> is false (default), failures are logged but
+    /// not propagated—suitable for deletion flows where we must proceed even if ChromaDB is unavailable.
+    /// When true, exceptions are propagated—suitable for re-indexing where we must remove old chunks first.
+    /// </summary>
+    Task RemoveSourceDocumentAsync(Guid sourceDocumentId, bool throwOnError = false);
     Task<List<string>> RetrieveRelevantChunksAsync(
         float[] queryEmbedding,
         Guid unitCollectionId,

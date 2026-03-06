@@ -140,8 +140,10 @@ public class DocumentEmbeddingService : IEmbeddingService
     /// document was never indexed, or the server is not running), the
     /// failure is logged but not propagated, so that deletion of the
     /// source document entity from the database can still succeed.
+    /// When <paramref name="throwOnError"/> is true, exceptions are propagated—
+    /// suitable for re-indexing where we must remove old chunks before adding new ones.
     /// </summary>
-    public async Task RemoveSourceDocumentAsync(Guid sourceDocumentId)
+    public async Task RemoveSourceDocumentAsync(Guid sourceDocumentId, bool throwOnError = false)
     {
         try
         {
@@ -165,6 +167,11 @@ public class DocumentEmbeddingService : IEmbeddingService
         }
         catch (Exception ex)
         {
+            if (throwOnError)
+            {
+                throw;
+            }
+
             // Best-effort: if ChromaDB is unavailable the source document
             // entity has already been (or will be) deleted from the primary
             // data store, so there is nothing left to clean up once the
@@ -452,8 +459,10 @@ public class DocumentEmbeddingService : IEmbeddingService
     /// </summary>
     public async Task ReIndexSourceDocumentAsync(SourceDocumentEntity document)
     {
-        // §3A(3)(a): Remove existing chunks
-        await RemoveSourceDocumentAsync(document.Id);
+        // §3A(3)(a): Remove existing chunks.
+        // Pass throwOnError=true to ensure old chunks are removed before adding new ones.
+        // If removal fails, we must not proceed with re-indexing or we'll create duplicates.
+        await RemoveSourceDocumentAsync(document.Id, throwOnError: true);
         
         // §3A(3)(b): Re-index following the workflow in §3A(2)
         await IndexSourceDocumentAsync(document);
