@@ -76,6 +76,7 @@ export interface GenerationRequest {
     actualAge: number;             // Actual age of the audience
     durationInMinutes: number;     // Approximate completion time
     unitCollectionId: string;      // The unit collection containing source documents
+    title: string;                 // The title of the material to be generated
     sourceDocumentIds?: string[];  // Optional: specific source documents for context
 }
 

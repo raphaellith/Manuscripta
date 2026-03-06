@@ -128,6 +128,8 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (e) `UnitCollectionId` (Guid) — The unit collection containing source documents.
 
+    (f) `Title` (string) — The title of the material to be generated.
+
 (2) In addition to the mandatory fields in (1), a `GenerationRequest` object may have the following optional fields:
 
     (a) `SourceDocumentIds` (List<Guid>) — If provided, limits semantic retrieval to the specified source documents. If null or empty, all indexed documents in the unit collection are searched.

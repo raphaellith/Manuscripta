@@ -128,6 +128,7 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                 actualAge,
                 durationInMinutes,
                 unitCollectionId,
+                title: title.trim(),
                 // sourceDocumentIds is optional - if not provided, all indexed documents are searched
             };
 

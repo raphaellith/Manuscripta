@@ -1256,11 +1256,11 @@ public class TeacherPortalHub : Hub
                 }
             }, cts.Token);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
         {
-            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            // §3H(9): Generation was cancelled by user - notify frontend and re-throw as HubException
             await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
-            throw;
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
@@ -1316,11 +1316,11 @@ public class TeacherPortalHub : Hub
                 }
             }, cts.Token);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
         {
-            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            // §3H(9): Generation was cancelled by user - notify frontend and re-throw as HubException
             await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
-            throw;
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
