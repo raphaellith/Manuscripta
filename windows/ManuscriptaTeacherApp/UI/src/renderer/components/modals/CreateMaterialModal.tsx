@@ -195,6 +195,9 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                         <div className="text-xs text-gray-500 italic mt-2">
                             Note: Polls cannot be created via AI generation
                         </div>
+                        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-2">
+                            ⚠️ AI-generated materials may contain mistakes and should be reviewed before being deployed to students.
+                        </div>
                     </button>
                     <button
                         onClick={() => handleMethodSelect('MANUAL')}

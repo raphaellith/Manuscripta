@@ -295,7 +295,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) prompt the user to select the method of creation, through one of the following initial means:
 
-        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method.
+        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method. This option should also make clear that AI-generated materials may contain mistakes and should be reviewed before being deployed to students.
 
         (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll. When the material type selected is poll, the material should be initialised as a material containing one multiple choice question. For any other material type, the material should be initially empty.
     
@@ -365,7 +365,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) An approximate of the time, in minutes, that students would need to complete the material.
 
-    (f) The template the material is based on. [Subject to further specification of the concept of templates]
+    (f) [Deleted.]
 
 (2) Once information in subsection (1) have been collected -
 
