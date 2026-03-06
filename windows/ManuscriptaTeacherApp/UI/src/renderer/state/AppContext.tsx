@@ -55,9 +55,11 @@ interface AppContextValue extends AppState {
     updateMaterial: (entity: MaterialEntity) => Promise<MaterialEntity>;
     deleteMaterial: (id: string) => Promise<void>;
 
-    // AI Generation - NetworkingAPISpec §1(1)(i)
+    // AI Generation - NetworkingAPISpec §1(1)(i)(i-ii) and (x)
+    // Server generates unique ID and sends via OnGenerationStarted event
     generateReading: (request: GenerationRequest) => Promise<GenerationResult>;
     generateWorksheet: (request: GenerationRequest) => Promise<GenerationResult>;
+    cancelGeneration: (generationId: string) => Promise<boolean>;
 
     // Helpers
     getUnitsForCollection: (collectionId: string) => UnitEntity[];
@@ -312,13 +314,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const getQuestionsForMaterial = (materialId: string) =>
         state.questions.filter(q => q.materialId === materialId);
 
-    // AI Generation methods - Per NetworkingAPISpec §1(1)(i)
+    // AI Generation methods - Per NetworkingAPISpec §1(1)(i)(i-ii) and (x)
+    // Server generates unique ID and sends via OnGenerationStarted event
     const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
         return await signalRService.generateReading(request);
     };
 
     const generateWorksheet = async (request: GenerationRequest): Promise<GenerationResult> => {
         return await signalRService.generateWorksheet(request);
+    };
+
+    const cancelGeneration = async (generationId: string): Promise<boolean> => {
+        return await signalRService.cancelGeneration(generationId);
     };
 
     const value: AppContextValue = {
@@ -337,6 +344,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         deleteMaterial,
         generateReading,
         generateWorksheet,
+        cancelGeneration,
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,

@@ -371,6 +371,34 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall invoke `GenerateReading` (NetworkingAPISpec §1(1)(i)(i)) or `GenerateWorksheet` (NetworkingAPISpec §1(1)(i)(ii)) via `TeacherPortalHub` to generate a draft of the material.
 
+    (a1) Before invoking the generation method, the frontend shall subscribe to the `OnGenerationStarted` handler (NetworkingAPISpec §2(1)(h)(ii)) to receive the server-generated generation ID for cancellation support. Whilst the generation is in progress, the frontend shall also subscribe to the `OnGenerationProgress` handler (NetworkingAPISpec §2(1)(h)(i)) and display a streaming generation view, which shall —
+
+        (i) display chain-of-thought tokens (`isThinking = true`) in a visually distinct manner (e.g., a collapsible "Thinking…" section with muted or italic styling), to give the user evidence that the AI is actively reasoning.
+
+        (ii) display content tokens (`isThinking = false`) progressively, rendering them as they arrive, in a manner consistent with the editor's rendering capabilities. Specifically, the streaming view shall convert accumulated content Markdown to HTML using a streaming-specific conversion function (`markdownToStreamingHtml`) that —
+
+            (A) renders standard Markdown formatting (headings, bold, italic, lists, tables, code blocks, blockquotes, horizontal rules) via the same `marked` library used by the editor;
+
+            (B) renders inline and block LaTeX to KaTeX HTML, consistent with the editor's `InlineLatex` and `BlockLatex` extensions;
+
+            (C) renders `question-draft` markers (GenAISpec Appendix C) as styled preview cards matching the editor's `QuestionRef` visual appearance, with a "Draft" badge, question type tag, question text, multiple-choice options with correct-answer highlighting, and mark-scheme/correct-answer displays for written-answer questions;
+
+            (D) handles incomplete Markdown gracefully during streaming: `marked` shall be invoked tolerantly on each frame, rendering valid syntax and passing through unparsed/partial syntax as text;
+
+            (E) renders `!!! center` blocks, `!!! pdf` embeds, and `!!! question` references as appropriate placeholders.
+
+        (iii) display an animated indicator (e.g., a blinking cursor or pulsing dot) at the end of the streamed content to signal that generation is still in progress.
+
+        (iv) upon receipt of a chunk with `done = true`, remove the animated indicator and transition to the final content display.
+
+        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) with the generation ID received from `OnGenerationStarted`, and close the streaming view without persisting any content.
+
+        (vi) the frontend shall handle `OperationCanceledException` from generation methods gracefully without displaying an error notification.
+
+        (vii) to prevent UI jank from high-frequency token streams, the frontend should buffer incoming tokens and batch state updates using `requestAnimationFrame` or a similar mechanism, rather than updating state on each individual token.
+
+    (a2) The streaming generation view shall not permit editing of the content whilst generation is in progress. Editing shall be enabled only after the final `GenerationResult` is received per paragraph (b).
+
     (b) on receiving the generation result, the frontend shall display the content in the editor modal as specified in Section 4C. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
     (c) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
@@ -401,6 +429,10 @@ For a list of all server method and client handlers to be implemented for commun
         (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`.
 
         (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
+
+        (iv) Whilst the modification is in progress, the frontend shall display a streaming generation view in accordance with §4B(2)(a1), showing the AI's chain-of-thought and the progressively generated replacement content.
+
+        (v) The streaming generation view for content modification shall not replace the user's existing content until the final `GenerationResult` is received. An interim preview may be shown adjacent to or overlaid on the selected content.
 
     (b) modify the reading age and actual age metadata of the material.
 

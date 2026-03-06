@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using Moq;
 using Xunit;
@@ -1955,6 +1957,11 @@ public class TeacherPortalHubTests
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
 
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
+
         var request = new GenerationRequest
         {
             Description = "test",
@@ -2035,6 +2042,11 @@ public class TeacherPortalHubTests
         var mockClients = new Mock<IHubCallerClients>();
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
+
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
 
         var request = new GenerationRequest
         {
@@ -2123,6 +2135,11 @@ public class TeacherPortalHubTests
         var mockClients = new Mock<IHubCallerClients>();
         mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
         hub.Clients = mockClients.Object;
+
+        // Set up mock Context for server-side generation ID tracking
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
 
         var request = new GenerationRequest
         {
@@ -2655,16 +2672,177 @@ public class TeacherPortalHubTests
 
     #endregion
 
+    #region CancelGeneration Tests - NetworkingAPISpec §1(1)(i)(x)
+
+    /// <summary>
+    /// Helper: access the private static _activeGenerations field via reflection.
+    /// </summary>
+    private static ConcurrentDictionary<Guid, (string ConnectionId, CancellationTokenSource Cts)> GetActiveGenerations()
+    {
+        var field = typeof(TeacherPortalHub).GetField(
+            "_activeGenerations",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        return (ConcurrentDictionary<Guid, (string ConnectionId, CancellationTokenSource Cts)>)field!.GetValue(null)!;
+    }
+
+    /// <summary>
+    /// Helper: create a hub instance with mocked Context (returning the given connectionId)
+    /// and a no-op Clients.Caller for CancelGeneration tests.
+    /// </summary>
+    private TeacherPortalHub CreateHubWithContext(string connectionId)
+    {
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
+
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns(connectionId);
+        hub.Context = mockContext.Object;
+
+        return hub;
+    }
+
+    [Fact]
+    public async Task CancelGeneration_UnknownId_ReturnsFalse()
+    {
+        // Arrange
+        var hub = CreateHubWithContext("test-connection");
+        var unknownId = Guid.NewGuid();
+
+        // Act
+        var result = await hub.CancelGeneration(unknownId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CancelGeneration_DifferentConnection_ReturnsFalse()
+    {
+        // Arrange
+        var hub = CreateHubWithContext("caller-connection");
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+
+        var activeGenerations = GetActiveGenerations();
+        activeGenerations[generationId] = ("other-connection", cts);
+
+        try
+        {
+            // Act
+            var result = await hub.CancelGeneration(generationId);
+
+            // Assert
+            Assert.False(result);
+            Assert.False(cts.IsCancellationRequested);
+        }
+        finally
+        {
+            activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task CancelGeneration_MatchingConnection_ReturnsTrueAndCancelsToken()
+    {
+        // Arrange
+        var hub = CreateHubWithContext("test-connection");
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+
+        var activeGenerations = GetActiveGenerations();
+        activeGenerations[generationId] = ("test-connection", cts);
+
+        try
+        {
+            // Act
+            var result = await hub.CancelGeneration(generationId);
+
+            // Assert
+            Assert.True(result);
+            Assert.True(cts.IsCancellationRequested);
+        }
+        finally
+        {
+            activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task CancelGeneration_AlreadyDisposedCts_ReturnsTrueWithoutThrowing()
+    {
+        // Arrange
+        var hub = CreateHubWithContext("test-connection");
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        cts.Dispose(); // Simulate concurrent completion disposing the CTS
+
+        var activeGenerations = GetActiveGenerations();
+        activeGenerations[generationId] = ("test-connection", cts);
+
+        try
+        {
+            // Act
+            var result = await hub.CancelGeneration(generationId);
+
+            // Assert - should handle ObjectDisposedException gracefully
+            Assert.True(result);
+        }
+        finally
+        {
+            activeGenerations.TryRemove(generationId, out _);
+        }
+    }
+
+    #endregion
+
     #region Stub Services
 
     private sealed class StubMaterialGenerationService : IMaterialGenerationService
     {
-        public Task<GenerationResult> GenerateReading(GenerationRequest request)
+        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
 
-        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
@@ -2685,12 +2863,12 @@ public class TeacherPortalHubTests
             _exception = exception;
         }
 
-        public Task<GenerationResult> GenerateReading(GenerationRequest request)
+        public Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             throw _exception;
         }
 
-        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+        public Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             throw _exception;
         }

@@ -4,13 +4,14 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
 import { EditorModal } from '../editor/EditorModal';
+import { StreamingGenerationView } from '../editor/StreamingGenerationView';
 import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { markdownToHtml } from '../../utils/markdownConversion';
 import signalRService from '../../services/signalr/SignalRService';
@@ -89,6 +90,7 @@ export const LessonLibraryPage: React.FC = () => {
         deleteMaterial,
         generateReading,
         generateWorksheet,
+        cancelGeneration,
     } = useAppContext();
 
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
@@ -98,6 +100,16 @@ export const LessonLibraryPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
     const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(true);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation state
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [streamingThinking, setStreamingThinking] = useState('');
+    const [streamingContent, setStreamingContent] = useState('');
+    const [streamingComplete, setStreamingComplete] = useState(false);
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
+    // Use ref for synchronous access during async operations (avoids stale closure issue)
+    const generationIdRef = useRef<string | null>(null);
+    const [isCancelled, setIsCancelled] = useState(false);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -245,7 +257,7 @@ export const LessonLibraryPage: React.FC = () => {
     // NOTE: we also proactively update aiDependenciesAvailable when the modal
     // opens or when dependencies are installed so that child components can
     // disable UI appropriately.
-    const handleCreateMaterialWithAI = async (
+    const handleCreateMaterialWithAI = useCallback(async (
         lessonId: string,
         title: string,
         materialType: MaterialType,
@@ -261,11 +273,88 @@ export const LessonLibraryPage: React.FC = () => {
             materialType,
         });
 
+        // Per §4B(2)(a1): Initialize streaming state
+        setIsGenerating(true);
+        setStreamingThinking('');
+        setStreamingContent('');
+        setStreamingComplete(false);
+        setIsCancelled(false);
+
+        // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe to OnGenerationStarted to receive server-generated ID
+        const unsubscribeStarted = signalRService.onGenerationStarted((serverGenerationId) => {
+            generationIdRef.current = serverGenerationId;
+        });
+
+        // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance optimization)
+        let thinkingBuffer = '';
+        let contentBuffer = '';
+        let flushScheduled = false;
+
+        const flushBufferedTokens = () => {
+            if (!thinkingBuffer && !contentBuffer) {
+                flushScheduled = false;
+                return;
+            }
+
+            if (thinkingBuffer) {
+                const chunk = thinkingBuffer;
+                thinkingBuffer = '';
+                setStreamingThinking(prev => prev + chunk);
+            }
+
+            if (contentBuffer) {
+                const chunk = contentBuffer;
+                contentBuffer = '';
+                setStreamingContent(prev => prev + chunk);
+            }
+
+            flushScheduled = false;
+        };
+
+        // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
+        const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
+            if (isThinking) {
+                thinkingBuffer += token;
+            } else {
+                contentBuffer += token;
+            }
+
+            if (!flushScheduled) {
+                flushScheduled = true;
+                window.requestAnimationFrame(flushBufferedTokens);
+            }
+
+            if (done) {
+                // Ensure all remaining buffered tokens are flushed before marking complete
+                flushBufferedTokens();
+                setStreamingComplete(true);
+            }
+        });
+
+        // Per §4B(2)(a1)(vi): Subscribe to cancellation events
+        const unsubscribeCancelled = signalRService.onGenerationCancelled((cancelledId) => {
+            if (cancelledId === generationIdRef.current) {
+                setIsCancelled(true);
+            }
+        });
+
         try {
             // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
+            // Server generates and sends ID via OnGenerationStarted event
             const generationResult: GenerationResult = materialType === 'READING'
                 ? await generateReading(generationRequest)
                 : await generateWorksheet(generationRequest);
+
+            // Per §4B(2)(b): Unsubscribe and clean up streaming state
+            unsubscribeStarted();
+            unsubscribe();
+            unsubscribeCancelled();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
+            generationIdRef.current = null;
+            setIsCancelled(false);
 
             // Update material with generated content
             // Backend may transform content (e.g., question-draft extraction per §3B(4a)),
@@ -283,12 +372,44 @@ export const LessonLibraryPage: React.FC = () => {
             // Note: Validation warnings will be displayed by the editor modal if present
             setModal({ type: 'editMaterial', material: updatedMaterial });
         } catch (error) {
+            // Clean up on error
+            unsubscribeStarted();
+            unsubscribe();
+            unsubscribeCancelled();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
+            generationIdRef.current = null;
+            // Don't reset isCancelled here - keep it true for UI feedback if cancelled
+
+            // Per §4B(2)(a1)(vi): Check if error was due to cancellation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('cancelled') || isCancelled) {
+                // Roll back material creation on cancellation
+                await deleteMaterial(createdMaterial.id);
+                // Reset cancelled state after brief delay to show message
+                setTimeout(() => {
+                    setIsCancelled(false);
+                }, 2000);
+                return; // Don't throw - cancellation is user-initiated
+            }
+
             console.error('AI generation failed:', error);
             // Roll back material creation
             await deleteMaterial(createdMaterial.id);
             throw error;
         }
-    };
+    }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial, isCancelled]);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancel generation handler
+    // Uses ref to avoid stale closure issue during async operations
+    const handleCancelGeneration = useCallback(async () => {
+        const genId = generationIdRef.current;
+        if (genId) {
+            await cancelGeneration(genId);
+        }
+    }, [cancelGeneration]);
 
     const handleDeleteMaterial = async (materialId: string) => {
         await deleteMaterial(materialId);
@@ -547,6 +668,16 @@ export const LessonLibraryPage: React.FC = () => {
                     }}
                 />
             )}
+
+            {/* Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation view */}
+            <StreamingGenerationView
+                isVisible={isGenerating}
+                thinkingTokens={streamingThinking}
+                contentTokens={streamingContent}
+                isComplete={streamingComplete}
+                onCancel={handleCancelGeneration}
+                isCancelled={isCancelled}
+            />
         </div>
     );
 };

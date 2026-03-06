@@ -1,5 +1,7 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Main.Models.Dtos;
 using Main.Services.RuntimeDependencies;
 
 namespace Main.Services.GenAI;
@@ -172,6 +174,208 @@ public class OllamaClientService : IDependencyService
     }
 
     /// <summary>
+    /// Generates a streaming chat completion using the specified model.
+    /// Yields tokens as they arrive from Ollama.
+    /// Per GenAISpec.md §3H(2)(a).
+    /// </summary>
+    public virtual async IAsyncEnumerable<StreamingGenerationChunk> GenerateChatCompletionStreamingAsync(
+        string model, string prompt, string? systemPrompt = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var messages = new List<object>();
+
+        if (!string.IsNullOrEmpty(systemPrompt))
+        {
+            messages.Add(new { role = "system", content = systemPrompt });
+        }
+
+        messages.Add(new { role = "user", content = prompt });
+
+        // Per §3H(4): Enable thinking mode for models that support chain-of-thought
+        // (e.g., qwen3). This causes the model to emit <think>...</think> tags.
+        var request = new
+        {
+            model = model,
+            messages = messages,
+            stream = true,
+            options = new { enable_thinking = true }
+        };
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        {
+            Content = JsonContent.Create(request)
+        };
+
+        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            var errorSnippet = string.IsNullOrWhiteSpace(errorBody)
+                ? "No error payload returned by Ollama."
+                : errorBody.Length <= 512
+                    ? errorBody
+                    : errorBody[..512] + "...";
+
+            throw new HttpRequestException(
+                $"Ollama chat request failed with {(int)response.StatusCode} ({response.StatusCode}). {errorSnippet}");
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+
+        // Per §3H(4): Track think tag state
+        bool isInThinkBlock = false;
+        string partialTag = "";
+
+        while (!reader.EndOfStream)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            JsonDocument? doc = null;
+            try
+            {
+                doc = JsonDocument.Parse(line);
+            }
+            catch (JsonException)
+            {
+                // Skip malformed JSON lines
+                continue;
+            }
+
+            using (doc)
+            {
+                var root = doc.RootElement;
+
+                // Extract done flag
+                bool done = root.TryGetProperty("done", out var doneProp) && doneProp.GetBoolean();
+
+                // Extract content token
+                string token = "";
+                if (root.TryGetProperty("message", out var messageElement) &&
+                    messageElement.TryGetProperty("content", out var contentElement))
+                {
+                    token = contentElement.GetString() ?? "";
+                }
+
+                if (string.IsNullOrEmpty(token) && !done)
+                    continue;
+
+                // Per §3H(4): Process think tags - yields segments with correct IsThinking per segment
+                var (segments, newIsThinking, newPartialTag) = ProcessThinkTags(
+                    partialTag + token, isInThinkBlock);
+
+                isInThinkBlock = newIsThinking;
+                partialTag = newPartialTag;
+
+                // Yield each segment with its correct IsThinking flag
+                for (int segIdx = 0; segIdx < segments.Count; segIdx++)
+                {
+                    var seg = segments[segIdx];
+                    bool isLastSegment = segIdx == segments.Count - 1;
+                    // Only the final segment of the final JSON line should have done=true
+                    bool segmentDone = done && isLastSegment;
+                    yield return new StreamingGenerationChunk(seg.Content, seg.IsThinking, segmentDone);
+                }
+
+                // If no segments but done flag is set, yield empty done chunk
+                if (segments.Count == 0 && done)
+                {
+                    yield return new StreamingGenerationChunk("", isInThinkBlock, true);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Processes think tags in a token, returning segments with correct IsThinking flags.
+    /// Per GenAISpec.md §3H(4)(c).
+    /// </summary>
+    /// <returns>Tuple of (list of content segments with IsThinking flags, final think state, remaining partial tag)</returns>
+    private static (List<(string Content, bool IsThinking)> Segments, bool IsThinking, string PartialTag) ProcessThinkTags(
+        string input, bool wasThinking)
+    {
+        var segments = new List<(string Content, bool IsThinking)>();
+        var currentSegment = new System.Text.StringBuilder();
+        bool isThinking = wasThinking;
+        string partialTag = "";
+        int i = 0;
+
+        while (i < input.Length)
+        {
+            // Check for potential tag start
+            if (input[i] == '<')
+            {
+                // Check for <think> tag
+                if (i + 7 <= input.Length && input.Substring(i, 7) == "<think>")
+                {
+                    // Flush current segment before state change
+                    if (currentSegment.Length > 0)
+                    {
+                        segments.Add((currentSegment.ToString(), isThinking));
+                        currentSegment.Clear();
+                    }
+                    isThinking = true;
+                    i += 7;
+                    continue;
+                }
+
+                // Check for </think> tag
+                if (i + 8 <= input.Length && input.Substring(i, 8) == "</think>")
+                {
+                    // Flush current segment before state change
+                    if (currentSegment.Length > 0)
+                    {
+                        segments.Add((currentSegment.ToString(), isThinking));
+                        currentSegment.Clear();
+                    }
+                    isThinking = false;
+                    i += 8;
+                    continue;
+                }
+
+                // Check for partial tag at end of input
+                string remaining = input.Substring(i);
+                if (IsPartialThinkTag(remaining))
+                {
+                    partialTag = remaining;
+                    break;
+                }
+            }
+
+            currentSegment.Append(input[i]);
+            i++;
+        }
+
+        // Flush any remaining content
+        if (currentSegment.Length > 0)
+        {
+            segments.Add((currentSegment.ToString(), isThinking));
+        }
+
+        return (segments, isThinking, partialTag);
+    }
+
+    /// <summary>
+    /// Checks if a string could be the start of a think tag.
+    /// </summary>
+    private static bool IsPartialThinkTag(string s)
+    {
+        const string openTag = "<think>";
+        const string closeTag = "</think>";
+
+        // Check if it's a prefix of either tag
+        if (s.Length < openTag.Length && openTag.StartsWith(s))
+            return true;
+        if (s.Length < closeTag.Length && closeTag.StartsWith(s))
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
     /// Starts Ollama daemon if it's not running.
     /// See GenAISpec.md §1(4)(b).
     /// </summary>
@@ -249,8 +453,9 @@ public class OllamaClientService : IDependencyService
     }
 
     /// <summary>
-    /// Checks if the system has sufficient resources to generate with a given model.
-    /// See GenAISpec.md §1(6) - detection of insufficient resources.
+    /// Optional probe to check if the system has sufficient resources to generate with a given model.
+    /// This is not used in the critical generation path; per GenAISpec.md §1(6), resource failures
+    /// are handled reactively during generation with automatic fallback.
     /// </summary>
     public virtual async Task<bool> CanGenerateWithModelAsync(string modelName)
     {

@@ -1,3 +1,4 @@
+using System.Text;
 using Main.Models.Dtos;
 
 namespace Main.Services.GenAI;
@@ -27,77 +28,57 @@ public class MaterialGenerationService : IMaterialGenerationService
 
     /// <summary>
     /// Generates reading content using AI.
-    /// See GenAISpec.md §3B(1)(a).
+    /// See GenAISpec.md §3B(1)(a) and §3H(8).
     /// </summary>
-    public async Task<GenerationResult> GenerateReading(GenerationRequest request)
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
-        return await GenerateMaterialAsync(request, "reading");
+        return await GenerateMaterialAsync(request, "reading", onChunk, cancellationToken);
     }
 
     /// <summary>
     /// Generates worksheet content using AI.
-    /// See GenAISpec.md §3B(1)(b).
+    /// See GenAISpec.md §3B(1)(b) and §3H(8).
     /// </summary>
-    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
-        return await GenerateMaterialAsync(request, "worksheet");
+        return await GenerateMaterialAsync(request, "worksheet", onChunk, cancellationToken);
     }
 
     /// <summary>
     /// Core material generation workflow.
-    /// See GenAISpec.md §3B(3).
+    /// See GenAISpec.md §3B(3) and §3H(8).
     /// </summary>
-    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType)
+    private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
         // Determine which model to use
         string modelToUse = PrimaryModel;
         bool useFallback = false;
 
-        // §1(6): Check for insufficient resources per GenAISpec §1(6)
-        try
-        {
-            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
-            var canUsePrimary = await _ollamaClient.CanGenerateWithModelAsync(PrimaryModel);
-            if (!canUsePrimary)
-            {
-                throw new InvalidOperationException("Insufficient resources for primary model");
-            }
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient resources"))
-        {
-            // §1(6)(a): Fall back to smaller model if primary is unavailable or insufficient
-            modelToUse = FallbackModel;
-            useFallback = true;
-            
-            // CRITICAL: Unload the primary model from memory before attempting fallback
-            // The pre-check may have loaded the primary model into memory, which prevents
-            // the smaller fallback model from fitting in available memory
-            await _ollamaClient.UnloadModelAsync(PrimaryModel);
-            await Task.Delay(1000); // Wait longer for memory to be reclaimed
-            
-            try
-            {
-                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-            }
-            catch
-            {
-                throw new InvalidOperationException(
-                    "Both primary and fallback models are unavailable. Please check your Ollama installation and available system memory.");
-            }
-        }
+        // §1(4): Start model readiness check in parallel with RAG preparation
+        // This reduces latency by overlapping the generation model check with embedding/retrieval
+        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
-        // §3B(3)(a): Embed the description
+        // §3H(8): Check for cancellation throughout the pipeline
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // §3B(3)(a): Embed the description (runs in parallel with model check)
         // Ensure embedding model is ready per GenAISpec §2(2)
         await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
+        
+        cancellationToken.ThrowIfCancellationRequested();
         var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(request.Description);
 
-        // §3B(3)(b): Query ChromaDB for relevant chunks
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // §3B(3)(b): Query ChromaDB for relevant chunks (runs in parallel with model check)
         var relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
             queryEmbedding,
             request.UnitCollectionId,
             request.SourceDocumentIds,
             DefaultTopK
         );
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // §3B(3)(c): Construct prompt
         var prompt = GenAIPromptBuilder.BuildGenerationPrompt(
@@ -109,11 +90,17 @@ public class MaterialGenerationService : IMaterialGenerationService
             materialType
         );
 
-        // §3B(3)(d): Invoke model
+        // Await the model readiness check before streaming
+        await modelReadyTask;
+
+        // §3H(8): Check for cancellation before streaming begins
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // §3B(3)(d): Invoke model with streaming per §3H(5)
         string generatedContent;
         try
         {
-            generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
         }
         catch (HttpRequestException ex) when (
             ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
@@ -121,7 +108,7 @@ public class MaterialGenerationService : IMaterialGenerationService
              ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
              ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
         {
-            // §1(6)(a): fall back when primary model is unavailable or has insufficient resources at runtime.
+            // §1(6)(a): Fall back when primary model fails during generation due to resource constraints.
             if (!useFallback)
             {
                 modelToUse = FallbackModel;
@@ -133,7 +120,7 @@ public class MaterialGenerationService : IMaterialGenerationService
                     await Task.Delay(500); // Brief delay to allow memory to be released
                     
                     await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-                    generatedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+                    generatedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
                 }
                 catch (Exception fallbackEx)
                 {
@@ -159,11 +146,40 @@ public class MaterialGenerationService : IMaterialGenerationService
     }
 
     /// <summary>
-    /// Lightweight probe used by the frontend availability check.  Attempts a
-    /// quick generation test with the primary model to detect low‑memory
-    /// situations that would cause a real request to fail.  Mirrors the logic in
-    /// OllamaClientService.CanGenerateWithModelAsync but scoped to the primary
-    /// model name.
+    /// Invokes the model with streaming and accumulates content.
+    /// Per GenAISpec.md §3H(5) and §3H(8).
+    /// </summary>
+    private async Task<string> InvokeModelStreamingAsync(
+        string model, string prompt, Func<StreamingGenerationChunk, Task>? onChunk, CancellationToken cancellationToken)
+    {
+        // §3H(5)(b): Accumulate content tokens
+        var contentBuilder = new StringBuilder();
+
+        await foreach (var chunk in _ollamaClient.GenerateChatCompletionStreamingAsync(model, prompt, null, cancellationToken))
+        {
+            // §3H(8): Check for cancellation during streaming
+            cancellationToken.ThrowIfCancellationRequested();
+            // §3H(5)(a): Invoke callback for each chunk
+            if (onChunk != null)
+            {
+                await onChunk(chunk);
+            }
+
+            // §3H(5)(b): Only accumulate non-thinking tokens
+            if (!chunk.IsThinking && !string.IsNullOrEmpty(chunk.Token))
+            {
+                contentBuilder.Append(chunk.Token);
+            }
+        }
+
+        // §3H(5)(c): Return accumulated content for validation
+        return contentBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Optional probe for frontend availability checks. Not used in the critical
+    /// generation path; per GenAISpec.md §1(6), resource failures during generation
+    /// trigger automatic fallback to a smaller model.
     /// </summary>
     public async Task<bool> CanGenerateWithPrimaryModelAsync()
     {
