@@ -1,5 +1,7 @@
 package com.manuscripta.student.data.repository;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
@@ -7,7 +9,10 @@ import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.model.ResponseEntity;
 import com.manuscripta.student.domain.mapper.ResponseMapper;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.ApiService;
+import com.manuscripta.student.network.dto.ResponseDto;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -25,7 +30,6 @@ import javax.inject.Singleton;
  * <ul>
  *   <li>Local persistence via Room DAO</li>
  *   <li>Sync queue for offline responses</li>
- *   <li>Exponential backoff retry logic for failed syncs</li>
  *   <li>Thread-safe operations</li>
  * </ul>
  */
@@ -34,22 +38,6 @@ public class ResponseRepositoryImpl implements ResponseRepository {
 
     /** Tag for logging. */
     private static final String TAG = "ResponseRepositoryImpl";
-
-    /** Initial delay for exponential backoff in milliseconds. */
-    @VisibleForTesting
-    static final long INITIAL_BACKOFF_MS = 1000L;
-
-    /** Maximum delay for exponential backoff in milliseconds. */
-    @VisibleForTesting
-    static final long MAX_BACKOFF_MS = 32000L;
-
-    /** Maximum number of retry attempts. */
-    @VisibleForTesting
-    static final int MAX_RETRY_ATTEMPTS = 5;
-
-    /** Backoff multiplier for exponential growth. */
-    @VisibleForTesting
-    static final double BACKOFF_MULTIPLIER = 2.0;
 
     /** The DAO for response persistence. */
     private final ResponseDao responseDao;
@@ -64,13 +52,15 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     private final SyncEngine syncEngine;
 
     /**
-     * Creates a new ResponseRepositoryImpl with the given DAO.
+     * Creates a new ResponseRepositoryImpl with the given DAO and API service.
      *
      * @param responseDao The DAO for response persistence
+     * @param apiService  The API service for network operations
      */
     @Inject
-    public ResponseRepositoryImpl(@NonNull ResponseDao responseDao) {
-        this(responseDao, new DefaultSyncEngine());
+    public ResponseRepositoryImpl(@NonNull ResponseDao responseDao,
+                                   @NonNull ApiService apiService) {
+        this(responseDao, new NetworkSyncEngine(apiService));
     }
 
     /**
@@ -187,7 +177,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     }
 
     /**
-     * Performs the actual sync operation with retry logic.
+     * Performs the actual sync operation.
      *
      * @param callback Optional callback for sync progress
      */
@@ -205,7 +195,13 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         int failureCount = 0;
 
         for (ResponseEntity entity : unsyncedResponses) {
-            boolean synced = syncWithRetry(entity);
+            boolean synced;
+            try {
+                synced = syncEngine.syncResponse(entity);
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected exception syncing response: " + entity.getId(), e);
+                synced = false;
+            }
 
             if (synced) {
                 responseDao.markSynced(entity.getId());
@@ -216,72 +212,13 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             } else {
                 failureCount++;
                 if (callback != null) {
-                    callback.onSyncFailure(entity.getId(), "Sync failed after max retries");
+                    callback.onSyncFailure(entity.getId(), "Sync failed");
                 }
             }
         }
 
         if (callback != null) {
             callback.onSyncComplete(successCount, failureCount);
-        }
-    }
-
-    /**
-     * Attempts to sync a single response with exponential backoff retry.
-     *
-     * @param entity The response entity to sync
-     * @return true if sync succeeded, false otherwise
-     */
-    @VisibleForTesting
-    boolean syncWithRetry(@NonNull ResponseEntity entity) {
-        long backoffMs = INITIAL_BACKOFF_MS;
-
-        for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                if (syncEngine.syncResponse(entity)) {
-                    return true;
-                }
-            } catch (Exception e) {
-                // Log the exception to aid debugging - differentiates between expected
-                // network failures and unexpected bugs in sync code
-                android.util.Log.w(TAG, "Sync attempt " + (attempt + 1) + " failed for response "
-                        + entity.getId() + ": " + e.getMessage());
-            }
-
-            // Don't sleep after the last failed attempt
-            if (attempt < MAX_RETRY_ATTEMPTS - 1) {
-                sleep(backoffMs);
-                backoffMs = calculateNextBackoff(backoffMs);
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Calculates the next backoff delay using exponential backoff.
-     *
-     * @param currentBackoff The current backoff delay
-     * @return The next backoff delay, capped at MAX_BACKOFF_MS
-     */
-    @VisibleForTesting
-    long calculateNextBackoff(long currentBackoff) {
-        long nextBackoff = (long) (currentBackoff * BACKOFF_MULTIPLIER);
-        return Math.min(nextBackoff, MAX_BACKOFF_MS);
-    }
-
-    /**
-     * Sleep for the specified duration.
-     * This method is protected to allow testing without actual delays.
-     *
-     * @param millis The duration to sleep in milliseconds
-     */
-    @VisibleForTesting
-    protected void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -329,12 +266,80 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     }
 
     /**
+     * Network implementation of SyncEngine that uses ApiService to submit responses
+     * to the server via HTTP POST /responses.
+     *
+     * <p>Per API Contract §2.4, expects HTTP 201 Created on success.</p>
+     *
+     * <p>Retry logic is not handled here; it is managed transparently by
+     * {@link com.manuscripta.student.network.interceptor.RetryInterceptor}
+     * at the OkHttp interceptor layer.</p>
+     */
+    static class NetworkSyncEngine implements SyncEngine {
+
+        /** Tag for logging. */
+        private static final String TAG = "NetworkSyncEngine";
+
+        /** The API service for network operations. */
+        private final ApiService apiService;
+
+        /**
+         * Creates a NetworkSyncEngine with the given API service.
+         *
+         * @param apiService The API service for network operations
+         * @throws IllegalArgumentException if apiService is null
+         */
+        NetworkSyncEngine(@NonNull ApiService apiService) {
+            if (apiService == null) {
+                throw new IllegalArgumentException("ApiService cannot be null");
+            }
+            this.apiService = apiService;
+        }
+
+        @Override
+        public boolean syncResponse(@NonNull ResponseEntity entity) {
+            try {
+                // Convert ResponseEntity -> Response (domain) -> ResponseDto (network)
+                Response domainResponse = ResponseMapper.toDomain(entity);
+                // MaterialId is null because ResponseEntity doesn't contain it
+                // The server can derive it from questionId if needed
+                ResponseDto dto = ResponseMapper.toDto(domainResponse, null);
+
+                // Execute HTTP POST /responses
+                retrofit2.Response<Void> response = apiService.submitResponse(dto).execute();
+
+                // Per API Contract §2.4, expect HTTP 201 Created on success
+                if (response.code() == 201) {
+                    Log.d(TAG, "Successfully synced response: " + entity.getId());
+                    return true;
+                } else {
+                    Log.w(TAG, "Failed to sync response: " + entity.getId()
+                            + " - HTTP " + response.code());
+                    return false;
+                }
+            } catch (IOException e) {
+                // Return false so the response remains unsynced and can be retried in a later sync run
+                Log.e(TAG, "Network error syncing response: " + entity.getId()
+                        + " - " + e.getMessage());
+                return false;
+            } catch (Exception e) {
+                // Return false so the response stays in the local queue and is retried by a future sync run
+                Log.e(TAG, "Unexpected error syncing response: " + entity.getId()
+                        + " - " + e.getMessage(), e);
+                return false;
+            }
+        }
+    }
+
+    /**
      * Default implementation of SyncEngine.
      * Throws UnsupportedOperationException until network sync is implemented.
-     * 
-     * @see <a href="https://github.com/raphaellith/Manuscripta/issues/TBD">Issue: Implement Response Network Sync</a>
+     *
+     * @deprecated Replaced by NetworkSyncEngine. Kept for testing purposes.
      */
-    private static class DefaultSyncEngine implements SyncEngine {
+    @Deprecated
+    @VisibleForTesting
+    static class DefaultSyncEngine implements SyncEngine {
         @Override
         public boolean syncResponse(@NonNull ResponseEntity entity) {
             // Network sync not yet implemented - see android/issues.md

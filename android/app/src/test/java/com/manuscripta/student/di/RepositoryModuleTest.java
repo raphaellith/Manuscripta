@@ -108,7 +108,7 @@ public class RepositoryModuleTest {
 
     @Test
     public void testProvideResponseRepository_returnsRepository() {
-        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao);
+        ResponseRepository result = repositoryModule.provideResponseRepository(mockResponseDao, mockApiService);
 
         assertNotNull(result);
         assertTrue(result instanceof ResponseRepositoryImpl);
