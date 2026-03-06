@@ -62,4 +62,22 @@ public class FeedbackGenerationServiceTests
 
         Assert.False(service.ShouldGenerateFeedback(question));
     }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(4) (currently generating response visibility).
+    /// When idle, GetCurrentlyGeneratingResponseId returns null.
+    /// </summary>
+    [Fact]
+    public void GetCurrentlyGeneratingResponseId_WhenIdle_ReturnsNull()
+    {
+        var service = new FeedbackGenerationService(
+            null!,
+            null!,
+            null!,
+            new Mock<IServiceScopeFactory>().Object,
+            null!,
+            null!);
+
+        Assert.Null(service.GetCurrentlyGeneratingResponseId());
+    }
 }

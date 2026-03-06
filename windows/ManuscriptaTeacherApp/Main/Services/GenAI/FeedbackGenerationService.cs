@@ -29,6 +29,12 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
+    /// <summary>
+    /// Tracks the response ID currently being processed for generation.
+    /// See GenAISpec.md §3D(4).
+    /// </summary>
+    private Guid? _currentlyGeneratingResponseId;
+
     public FeedbackGenerationService(
         OllamaClientService ollamaClient,
         FeedbackQueueService queueService,
@@ -161,21 +167,39 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 return;
             }
 
-            // Check if feedback already exists
+            // Check if feedback already exists — per §6A(1A), overwrite PROVISIONAL feedback
             var existingFeedback = await _feedbackRepository.GetByResponseIdAsync(responseId);
             if (existingFeedback != null)
             {
-                return;
+                if (existingFeedback.Status == FeedbackStatus.PROVISIONAL)
+                {
+                    // Delete PROVISIONAL feedback to allow re-generation
+                    await _feedbackRepository.DeleteAsync(existingFeedback.Id);
+                }
+                else
+                {
+                    // Preserve READY/DELIVERED feedback — do not overwrite finalized assessments
+                    return;
+                }
             }
 
-            // Generate feedback
-            var feedback = await GenerateFeedbackAsync(question, response);
+            _currentlyGeneratingResponseId = responseId;
+            try
+            {
+                // Generate feedback
+                var feedback = await GenerateFeedbackAsync(question, response);
 
-            // Save feedback
-            await _feedbackRepository.AddAsync(feedback);
+                // Save feedback
+                await _feedbackRepository.AddAsync(feedback);
 
-            // Notify frontend of successful generation
-            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
+                // Notify frontend of successful generation
+                // Per NetworkingAPISpec §2(1)(c)(iii).
+                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
+            }
+            finally
+            {
+                _currentlyGeneratingResponseId = null;
+            }
         }
         catch (Exception ex)
         {
@@ -193,6 +217,12 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         return question.QuestionType == QuestionType.WRITTEN_ANSWER &&
                !string.IsNullOrEmpty(question.MarkScheme);
     }
+
+    /// <summary>
+    /// Returns the response ID currently being processed, or null if idle.
+    /// See GenAISpec.md §3D(4).
+    /// </summary>
+    public Guid? GetCurrentlyGeneratingResponseId() => _currentlyGeneratingResponseId;
 
     /// <summary>
     /// Generates AI feedback for a student response.

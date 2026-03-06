@@ -63,6 +63,7 @@ public class TeacherPortalHub : Hub
     private readonly IContentModificationService _contentModificationService;
     private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly IFeedbackGenerationService _feedbackGenerationService;
     private readonly IEmbeddingService _documentEmbeddingService;
     private readonly OllamaClientService _ollamaClient;
     private readonly QuestionExtractionService _questionExtractionService;
@@ -109,6 +110,7 @@ public class TeacherPortalHub : Hub
         IContentModificationService contentModificationService,
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
+        IFeedbackGenerationService feedbackGenerationService,
         IEmbeddingService documentEmbeddingService,
         OllamaClientService ollamaClient,
         QuestionExtractionService questionExtractionService)
@@ -133,6 +135,7 @@ public class TeacherPortalHub : Hub
         _contentModificationService = contentModificationService ?? throw new ArgumentNullException(nameof(contentModificationService));
         _embeddingStatusService = embeddingStatusService ?? throw new ArgumentNullException(nameof(embeddingStatusService));
         _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
+        _feedbackGenerationService = feedbackGenerationService ?? throw new ArgumentNullException(nameof(feedbackGenerationService));
         _documentEmbeddingService = documentEmbeddingService ?? throw new ArgumentNullException(nameof(documentEmbeddingService));
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _udpBroadcastService = udpBroadcastService ?? throw new ArgumentNullException(nameof(udpBroadcastService));
@@ -775,6 +778,10 @@ public class TeacherPortalHub : Hub
             // Status defaults to PROVISIONAL in constructor
 
             await _feedbackRepository.AddAsync(entity);
+
+            // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is created
+            _feedbackQueueService.RemoveFromQueue(dto.ResponseId);
+
             _logger.LogInformation("CreateFeedback success: Created Feedback {FeedbackId}", entity.Id);
             return entity;
         }
@@ -1453,6 +1460,38 @@ public class TeacherPortalHub : Hub
         catch (Exception ex)
         {
             throw new HubException($"Failed to prioritise feedback generation: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the list of response IDs currently queued for AI feedback generation.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<List<Guid>> GetFeedbackQueueStatus()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackQueueService.GetQueuedResponseIds());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get feedback queue status: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the response ID currently being processed for feedback generation, or null if idle.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<Guid?> GetCurrentlyGeneratingResponseId()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackGenerationService.GetCurrentlyGeneratingResponseId());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get currently generating response ID: {ex.Message}", ex);
         }
     }
 

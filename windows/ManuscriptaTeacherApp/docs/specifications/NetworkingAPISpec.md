@@ -213,6 +213,8 @@ For a description of how these server methods and client handlers are expected t
 
         (ii) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
 
+        (iii) `OnFeedbackGenerated`, with parameters `feedbackId` (Guid) and `responseId` (Guid): Notifies the frontend that AI feedback generation has succeeded for the specified response. The frontend shall use this as a signal to refresh feedback data. See GenAISpec §3D(8).
+
     (d) Handlers for embedding notifications.
 
         (i) `OnEmbeddingFailed`, with parameters `sourceDocumentId` (Guid) and `error` (string): Notifies the frontend that source document indexing has failed after all retries. See GenAISpec §3A(6)(b)(ii).
