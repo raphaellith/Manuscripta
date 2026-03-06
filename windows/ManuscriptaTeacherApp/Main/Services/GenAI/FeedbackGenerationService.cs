@@ -240,15 +240,19 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             // §3D(9)(b): Construct prompt
             var prompt = ConstructFeedbackPrompt(question, response);
 
-            // §3D(9)(c): Invoke model
-            var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
+            // §3D(9)(d): Invoke model
+            var rawResponse = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
 
-            // §3D(9)(d): Create feedback entity with PROVISIONAL status
+            // §3D(9)(e): Parse mark and feedback text from model response
+            var (marks, feedbackText) = ParseFeedbackResponse(rawResponse, question.MaxScore);
+
+            // §3D(9)(e): Create feedback entity with PROVISIONAL status
             var feedback = new FeedbackEntity
             {
                 Id = Guid.NewGuid(),
                 ResponseId = response.Id,
                 FeedbackText = feedbackText,
+                Marks = marks,
                 Status = FeedbackStatus.PROVISIONAL,
                 CreatedAt = DateTime.UtcNow
             };
@@ -270,16 +274,22 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// Constructs the feedback generation prompt.
     /// See GenAISpec.md §3D(9)(b).
     /// </summary>
-    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
+    private static string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
     {
         // §3D(9)(b)(iii): Include maximum score if present
+        // §3D(9)(c): Instruct the model to output a MARK line if MaxScore is present
         var maxScoreSection = question.MaxScore.HasValue
             ? $"Maximum Score:\n{question.MaxScore.Value}"
+            : "";
+
+        var markInstruction = question.MaxScore.HasValue
+            ? $"Begin your response with a line in the exact format: MARK: X\nwhere X is an integer between 0 and {question.MaxScore.Value} (inclusive) representing the mark you award.\nFollow the MARK line with a blank line, then provide the feedback text."
             : "";
 
         return $@"
 TASK:
 Generate constructive feedback for a student's response to the question given below.
+{markInstruction}
 Include a score justification explaining how well the response meets the mark scheme.
 Include specific strengths in the response.
 Include improvement suggestions for areas that could be enhanced.
@@ -296,5 +306,35 @@ MARK SCHEME:
 
 {maxScoreSection}
 ";
+    }
+
+    /// <summary>
+    /// Parses the AI model response to extract a numeric mark and feedback text.
+    /// See GenAISpec.md §3D(9)(e).
+    /// Expected format: first line "MARK: X" followed by feedback text.
+    /// </summary>
+    public static (int? marks, string feedbackText) ParseFeedbackResponse(string rawResponse, int? maxScore)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponse))
+            return (null, rawResponse ?? "");
+
+        var lines = rawResponse.Split('\n');
+        var firstLine = lines[0].Trim();
+
+        // §3D(9)(e)(i): Extract MARK: X from the first line
+        var match = System.Text.RegularExpressions.Regex.Match(firstLine, @"^MARK:\s*(\d+)$");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var mark))
+        {
+            // Clamp to valid range [0, MaxScore] per §2F(2)(c)
+            if (maxScore.HasValue)
+                mark = Math.Clamp(mark, 0, maxScore.Value);
+
+            // §3D(9)(e)(ii): Remaining text after the MARK line
+            var feedbackText = string.Join('\n', lines.Skip(1)).TrimStart('\n', '\r');
+            return (mark, feedbackText);
+        }
+
+        // No valid MARK line found — return entire response as text, no marks
+        return (null, rawResponse);
     }
 }

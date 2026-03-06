@@ -431,9 +431,17 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) the student's response text.
 
-    (c) invoke `granite4` via Ollama to generate feedback.
+    (c) the prompt shall instruct the model to begin its response with a mark line in the format `MARK: X` where X is an integer between 0 and the maximum score (inclusive), if the question has a `MaxScore`.
 
-    (d) return structured feedback including score justification and improvement suggestions.
+    (d) invoke `granite4` via Ollama to generate feedback.
+
+    (e) parse the model response to extract —
+
+        (i) the numeric mark from the `MARK: X` line, if present. The extracted value shall be stored in the `Marks` field of the `FeedbackEntity`.
+
+        (ii) the remaining text, which shall be stored in the `Text` field of the `FeedbackEntity`.
+
+    (f) return structured feedback including the mark (if applicable), score justification and improvement suggestions.
 
 
 ### Section 3DA — Feedback Approval Workflow

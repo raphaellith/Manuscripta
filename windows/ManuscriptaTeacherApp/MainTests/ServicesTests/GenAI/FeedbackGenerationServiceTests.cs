@@ -80,4 +80,89 @@ public class FeedbackGenerationServiceTests
 
         Assert.Null(service.GetCurrentlyGeneratingResponseId());
     }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e)(i)-(ii).
+    /// Valid MARK line extracts mark and remaining text.
+    /// </summary>
+    [Fact]
+    public void ParseFeedbackResponse_ValidMarkLine_ExtractsMarkAndText()
+    {
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(
+            "MARK: 3\n\nGood answer. You identified the key points.", maxScore: 5);
+
+        Assert.Equal(3, marks);
+        Assert.Equal("Good answer. You identified the key points.", text);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e)(i).
+    /// Mark exceeding MaxScore is clamped per §2F(2)(c).
+    /// </summary>
+    [Fact]
+    public void ParseFeedbackResponse_MarkExceedsMaxScore_ClampedToMax()
+    {
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(
+            "MARK: 10\n\nExcellent work.", maxScore: 5);
+
+        Assert.Equal(5, marks);
+        Assert.Equal("Excellent work.", text);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e).
+    /// No MARK line returns null marks and full text.
+    /// </summary>
+    [Fact]
+    public void ParseFeedbackResponse_NoMarkLine_ReturnsNullMarksAndFullText()
+    {
+        var raw = "This is just feedback text without a mark.";
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(raw, maxScore: 5);
+
+        Assert.Null(marks);
+        Assert.Equal(raw, text);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e).
+    /// When maxScore is null, mark is still extracted but not clamped.
+    /// </summary>
+    [Fact]
+    public void ParseFeedbackResponse_NoMaxScore_ExtractsMarkUnclamped()
+    {
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(
+            "MARK: 7\n\nSolid response.", maxScore: null);
+
+        Assert.Equal(7, marks);
+        Assert.Equal("Solid response.", text);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e).
+    /// Empty/null response returns gracefully.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void ParseFeedbackResponse_EmptyInput_ReturnsNullMarks(string? input)
+    {
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(input!, maxScore: 5);
+
+        Assert.Null(marks);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec §3D(9)(e).
+    /// MARK: 0 is a valid mark.
+    /// </summary>
+    [Fact]
+    public void ParseFeedbackResponse_ZeroMark_ExtractsZero()
+    {
+        var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(
+            "MARK: 0\n\nThe response does not address the question.", maxScore: 5);
+
+        Assert.Equal(0, marks);
+        Assert.Contains("does not address", text);
+    }
 }
