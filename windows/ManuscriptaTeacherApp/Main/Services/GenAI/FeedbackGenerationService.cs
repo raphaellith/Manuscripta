@@ -274,7 +274,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// Constructs the feedback generation prompt.
     /// See GenAISpec.md §3D(9)(b).
     /// </summary>
-    private static string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
+    public static string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
     {
         // §3D(9)(b)(iii): Include maximum score if present
         // §3D(9)(c): Instruct the model to output a MARK line if MaxScore is present
@@ -294,6 +294,7 @@ Include a score justification explaining how well the response meets the mark sc
 Include specific strengths in the response.
 Include improvement suggestions for areas that could be enhanced.
 Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
+Use British English throughout your response.
 
 QUESTION:
 {question.QuestionText}

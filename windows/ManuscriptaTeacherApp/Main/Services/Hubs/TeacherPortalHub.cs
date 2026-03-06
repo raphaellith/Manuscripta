@@ -1537,11 +1537,10 @@ public class TeacherPortalHub : Hub
                 throw new HubException($"Response {responseId} does not belong to question {questionId}");
             }
 
-            // Generate feedback via the feedback generation service
-            // Note: This returns the entire feedback entity, but spec asks for just the text
+            // Reuse the canonical prompt from FeedbackGenerationService
             var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(
                 "granite4",
-                ConstructFeedbackPrompt(question, response)
+                FeedbackGenerationService.ConstructFeedbackPrompt(question, response)
             );
 
             return feedbackText;
@@ -1554,37 +1553,6 @@ public class TeacherPortalHub : Hub
         {
             throw new HubException($"Failed to generate feedback: {ex.Message}", ex);
         }
-    }
-
-    /// <summary>
-    /// Constructs the feedback generation prompt.
-    /// See GenAISpec.md §3D(9)(b).
-    /// </summary>
-    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
-    {
-        var maxScoreSection = question.MaxScore.HasValue
-            ? $"Maximum Score:\n{question.MaxScore.Value}"
-            : "";
-
-        return $@"
-TASK:
-Generate constructive feedback for a student's response to the question given below.
-Include a score justification explaining how well the response meets the mark scheme.
-Include specific strengths in the response.
-Include improvement suggestions for areas that could be enhanced.
-Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
-
-QUESTION:
-{question.QuestionText}
-
-STUDENT'S RESPONSE:
-{response.ResponseText}
-
-MARK SCHEME:
-{question.MarkScheme}
-
-{maxScoreSection}
-";
     }
 
     #endregion

@@ -464,6 +464,7 @@ export const ResponsesPage: React.FC = () => {
         try {
             await signalRService.removeFromAiGenerationQueue(responseId);
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGeneratingResponseId(prev => prev === responseId ? null : prev);
             setGenerationFailedIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
         } catch (error) {
             console.error('Failed to dequeue response:', error);
