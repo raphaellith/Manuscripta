@@ -49,7 +49,8 @@ public class MaterialGenerationServiceTests
             ReadingAge = 10,
             ActualAge = 10,
             DurationInMinutes = 20,
-            UnitCollectionId = Guid.NewGuid()
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Ecosystems Reading"
         };
 
         var result = await service.GenerateReading(request);
@@ -86,7 +87,8 @@ public class MaterialGenerationServiceTests
             ReadingAge = 11,
             ActualAge = 11,
             DurationInMinutes = 15,
-            UnitCollectionId = Guid.NewGuid()
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Rivers Reading"
         };
 
         var result = await service.GenerateReading(request);

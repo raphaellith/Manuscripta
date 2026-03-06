@@ -106,7 +106,8 @@ public class MaterialGenerationService : IMaterialGenerationService
             request.ActualAge,
             request.DurationInMinutes,
             relevantChunks,
-            materialType
+            materialType,
+            request.Title
         );
 
         // §3B(3)(d): Invoke model

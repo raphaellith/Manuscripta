@@ -21,6 +21,9 @@ public class GenerationRequest
     /// <summary>The unit collection containing source documents.</summary>
     public required Guid UnitCollectionId { get; set; }
 
+    /// <summary>The title of the material to be generated.</summary>
+    public required string Title { get; set; }
+
     /// <summary>
     /// Optional. If provided, limits semantic retrieval to the specified source documents.
     /// If null or empty, all indexed documents in the unit collection are searched.

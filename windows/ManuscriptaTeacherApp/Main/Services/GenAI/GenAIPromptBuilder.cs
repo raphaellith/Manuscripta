@@ -57,7 +57,8 @@ Modified content:";
         int actualAge,
         int durationInMinutes,
         List<string> relevantChunks,
-        string materialType)
+        string materialType,
+        string title)
     {
         var contextSection = relevantChunks.Count > 0
             ? string.Join("\n\n", relevantChunks)
@@ -68,6 +69,10 @@ Modified content:";
         return $@"
 TASK:
 Create an educational {materialType} material based on the material description and source document context provided below, obeying all listed restraints.
+
+
+MATERIAL TITLE:
+{title}
 
 
 MATERIAL DESCRIPTION:

@@ -25,7 +25,12 @@ public static class MarkdownSyntaxGuide
 - Blockquotes: `> text`
 
 **Custom markers:**
-- Centred text: `!!! center` followed by indented content
+- Centred text: `!!! center`, with the centred content indented by 4 spaces. For example:
+
+```
+!!! center
+    This text is centred.
+```
 ";
 
         if (includeQuestionSyntax)

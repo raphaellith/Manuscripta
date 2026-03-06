@@ -1895,7 +1895,8 @@ public class TeacherPortalHubTests
             ReadingAge = 10,
             ActualAge = 10,
             DurationInMinutes = 30,
-            UnitCollectionId = Guid.NewGuid()
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Test Material"
         };
 
         await Assert.ThrowsAsync<HubException>(() => hub.GenerateReading(request));
@@ -1975,7 +1976,8 @@ public class TeacherPortalHubTests
             ReadingAge = 10,
             ActualAge = 10,
             DurationInMinutes = 30,
-            UnitCollectionId = Guid.NewGuid()
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Test Material"
         };
 
         await Assert.ThrowsAsync<HubException>(() => hub.GenerateReading(request));
@@ -2062,7 +2064,8 @@ public class TeacherPortalHubTests
             ReadingAge = 10,
             ActualAge = 10,
             DurationInMinutes = 30,
-            UnitCollectionId = Guid.NewGuid()
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Test Material"
         };
 
         await Assert.ThrowsAsync<HubException>(() => hub.GenerateReading(request));

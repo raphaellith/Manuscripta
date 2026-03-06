@@ -60,7 +60,8 @@ public class GenAIPromptBuilderTests
             actualAge: 12,
             durationInMinutes: 20,
             relevantChunks: new List<string> { "Context A" },
-            materialType: "reading"
+            materialType: "reading",
+            title: "Introduction to Science"
         );
 
         Assert.DoesNotContain("**Questions:**", prompt);
@@ -82,7 +83,8 @@ public class GenAIPromptBuilderTests
             actualAge: 12,
             durationInMinutes: 20,
             relevantChunks: new List<string> { "Context A" },
-            materialType: "worksheet"
+            materialType: "worksheet",
+            title: "Introduction to Science"
         );
 
         Assert.Contains("question-draft", prompt);
