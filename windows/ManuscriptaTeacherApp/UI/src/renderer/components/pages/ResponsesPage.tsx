@@ -128,10 +128,12 @@ const FeedbackInput: React.FC<{
                     </span>
                 </div>
                 <div className="flex gap-2">
-                    {/* Per §6A(1)(b): Write Manually — dequeue and allow manual entry */}
+                    {/* Per §6A(1)(b): Write Manually — dequeue and allow manual entry (disabled during generation) */}
                     <button
                         onClick={() => onWriteManually(responseId)}
-                        className="text-xs bg-white border border-gray-300 hover:border-brand-orange text-gray-700 py-1.5 px-3 rounded transition-colors"
+                        disabled={isGenerating}
+                        className={`text-xs bg-white border py-1.5 px-3 rounded transition-colors ${isGenerating ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 hover:border-brand-orange text-gray-700'}`}
+                        title={isGenerating ? 'Cannot cancel in-progress generation' : undefined}
                     >
                         Write Manually
                     </button>
