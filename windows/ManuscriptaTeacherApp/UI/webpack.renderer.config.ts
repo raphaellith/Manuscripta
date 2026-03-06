@@ -15,9 +15,15 @@ export const rendererConfig: Configuration = {
   plugins,
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    // Prioritize browser entry points
+    mainFields: ['browser', 'module', 'main'],
+    aliasFields: ['browser'],
     fallback: {
-      // mammoth -> jszip references Node.js 'stream'; provide browser polyfill
       stream: require.resolve('stream-browserify'),
     },
+  },
+  // mammoth is loaded via script tag and available as window.mammoth
+  externals: {
+    mammoth: 'mammoth',
   },
 };
