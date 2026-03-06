@@ -10,6 +10,7 @@ using Main.Services.GenAI;
 using Main.Services.Network;
 using Main.Services.RuntimeDependencies;
 using Main.Models;
+using System.Collections.Concurrent;
 
 namespace Main.Services.Hubs;
 
@@ -64,6 +65,14 @@ public class TeacherPortalHub : Hub
     private readonly FeedbackQueueService _feedbackQueueService;
     private readonly IEmbeddingService _documentEmbeddingService;
     private readonly OllamaClientService _ollamaClient;
+    private readonly QuestionExtractionService _questionExtractionService;
+
+    /// <summary>
+    /// Tracks active generation tasks by their ID for cancellation support.
+    /// Per NetworkingAPISpec §1(1)(i)(x). Maps generation ID to (ConnectionId, CancellationTokenSource)
+    /// for connection-scoped cancellation security.
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, (string ConnectionId, CancellationTokenSource Cts)> _activeGenerations = new();
 
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
@@ -101,7 +110,8 @@ public class TeacherPortalHub : Hub
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
         IEmbeddingService documentEmbeddingService,
-        OllamaClientService ollamaClient)
+        OllamaClientService ollamaClient,
+        QuestionExtractionService questionExtractionService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -142,6 +152,7 @@ public class TeacherPortalHub : Hub
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
+        _questionExtractionService = questionExtractionService ?? throw new ArgumentNullException(nameof(questionExtractionService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -297,16 +308,25 @@ public class TeacherPortalHub : Hub
     /// Updates a material entity.
     /// Per NetworkingAPISpec §1(1)(d)(iii).
     /// </summary>
-    public async Task UpdateMaterial(InternalUpdateMaterialDto dto)
+    public async Task<MaterialEntity> UpdateMaterial(InternalUpdateMaterialDto dto)
     {
         // Get existing material to determine concrete type (using repository directly)
         var existing = await _materialRepository.GetByIdAsync(dto.Id);
         if (existing == null)
             throw new HubException($"Material with ID {dto.Id} not found.");
 
+        var content = dto.Content;
+
+        // §3B(4a): Extract and create questions from question-draft markers in worksheet content
+        if (content != null && content.Contains("!!! question-draft"))
+        {
+            var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(content, dto.Id);
+            content = extractionResult.ModifiedContent;
+        }
+
         // Update properties
         existing.Title = dto.Title;
-        existing.Content = dto.Content;
+        existing.Content = content;
         existing.Metadata = dto.Metadata;
         existing.VocabularyTerms = dto.VocabularyTerms;
         existing.ReadingAge = dto.ReadingAge;
@@ -314,6 +334,7 @@ public class TeacherPortalHub : Hub
         existing.Timestamp = DateTime.UtcNow;
 
         await _materialRepository.UpdateAsync(existing);
+        return existing;
     }
 
     /// <summary>
@@ -1198,6 +1219,7 @@ public class TeacherPortalHub : Hub
     /// Generates reading content using AI.
     /// Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec.md §3B(1)(a).
     /// </summary>
+    /// <param name="request">The generation request parameters.</param>
     public async Task<GenerationResult> GenerateReading(GenerationRequest request)
     {
         // Pre-check required AI runtime dependencies concurrently.
@@ -1210,14 +1232,46 @@ public class TeacherPortalHub : Hub
             throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
         }
 
+        // §3H(8): Generate server-side ID and set up cancellation token
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
         try
         {
-            return await _materialGenerationService.GenerateReading(request);
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateReading(request, async chunk =>
+            {
+                // Per GenAISpec §3H(7): Continue generation even if client disconnects
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw;
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate reading: {ex.Message}", ex);
+        }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
         }
     }
 
@@ -1225,6 +1279,7 @@ public class TeacherPortalHub : Hub
     /// Generates worksheet content using AI.
     /// Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec.md §3B(1)(b).
     /// </summary>
+    /// <param name="request">The generation request parameters.</param>
     public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
     {
         // Pre-check required AI runtime dependencies concurrently.
@@ -1237,15 +1292,76 @@ public class TeacherPortalHub : Hub
             throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
         }
 
+        // §3H(8): Generate server-side ID and set up cancellation token
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
         try
         {
-            return await _materialGenerationService.GenerateWorksheet(request);
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateWorksheet(request, async chunk =>
+            {
+                // Per GenAISpec §3H(7): Continue generation even if client disconnects
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // §3H(9): Generation was cancelled - notify frontend and re-throw
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw;
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to generate worksheet: {ex.Message}", ex);
         }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Cancels an in-progress generation operation.
+    /// Per NetworkingAPISpec §1(1)(i)(x).
+    /// </summary>
+    /// <param name="generationId">The ID of the generation to cancel.</param>
+    /// <returns>True if cancellation was requested; false if generation not found or belongs to another connection.</returns>
+    public Task<bool> CancelGeneration(Guid generationId)
+    {
+        if (_activeGenerations.TryGetValue(generationId, out var entry))
+        {
+            // Security: Only allow cancellation from the same connection that started the generation
+            if (entry.ConnectionId != Context.ConnectionId)
+            {
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                entry.Cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // CTS was already disposed (generation completed concurrently) - not an error
+            }
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
     }
 
     /// <summary>

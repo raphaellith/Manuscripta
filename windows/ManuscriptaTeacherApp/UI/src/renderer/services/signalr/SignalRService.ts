@@ -341,8 +341,8 @@ class SignalRService {
         return await this.getConnection().invoke<MaterialEntity[]>("GetAllMaterials");
     }
 
-    public async updateMaterial(entity: MaterialEntity): Promise<void> {
-        await this.getConnection().invoke("UpdateMaterial", entity);
+    public async updateMaterial(entity: MaterialEntity): Promise<MaterialEntity> {
+        return await this.getConnection().invoke<MaterialEntity>("UpdateMaterial", entity);
     }
 
     public async deleteMaterial(id: string): Promise<void> {
@@ -373,6 +373,8 @@ class SignalRService {
     /**
      * Generates reading material content using AI.
      * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param request The generation request parameters.
      */
     public async generateReading(request: GenerationRequest): Promise<GenerationResult> {
         return await this.getConnection().invoke<GenerationResult>("GenerateReading", request);
@@ -381,9 +383,21 @@ class SignalRService {
     /**
      * Generates worksheet material content using AI.
      * Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec §3B.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param request The generation request parameters.
      */
     public async generateWorksheet(request: GenerationRequest): Promise<GenerationResult> {
         return await this.getConnection().invoke<GenerationResult>("GenerateWorksheet", request);
+    }
+
+    /**
+     * Cancels an in-progress generation operation.
+     * Per NetworkingAPISpec §1(1)(i)(x).
+     * @param generationId The ID of the generation to cancel.
+     * @returns True if cancellation was requested; false if generation not found or belongs to another connection.
+     */
+    public async cancelGeneration(generationId: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CancelGeneration", generationId);
     }
 
     // ==========================================
@@ -813,6 +827,34 @@ class SignalRService {
      */
     public onRuntimeDependencyInstallProgress(callback: (dependencyId: string, phase: string, progressPercentage: number | null, errorMessage: string | null) => void): () => void {
         return this.subscribe("RuntimeDependencyInstallProgress", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // AI Generation Progress - NetworkingAPISpec §2(1)(h)
+    // ==========================================
+
+    /**
+     * Subscribe to generation started events for receiving server-generated ID.
+     * Per NetworkingAPISpec §2(1)(h)(ii) and FrontendWorkflowSpecifications §4B(2)(a1).
+     */
+    public onGenerationStarted(callback: (generationId: string) => void): () => void {
+        return this.subscribe("OnGenerationStarted", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to generation progress events for streaming AI output.
+     * Per NetworkingAPISpec §2(1)(h)(i) and FrontendWorkflowSpecifications §4B(2)(a1).
+     */
+    public onGenerationProgress(callback: (token: string, isThinking: boolean, done: boolean) => void): () => void {
+        return this.subscribe("OnGenerationProgress", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to generation cancelled events.
+     * Per NetworkingAPISpec §2(1)(h)(iii) and FrontendWorkflowSpecifications §4B(2)(a1)(vi).
+     */
+    public onGenerationCancelled(callback: (generationId: string) => void): () => void {
+        return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
     }
 
 }

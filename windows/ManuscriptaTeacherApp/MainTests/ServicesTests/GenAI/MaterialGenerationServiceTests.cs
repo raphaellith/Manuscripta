@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;using System.Net;using System.Net;
+using System.Linq;
+using System.Net;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Main.Data;
 using Main.Models.Dtos;
@@ -183,6 +186,31 @@ public class MaterialGenerationServiceTests
             }
 
             return Task.FromResult(FallbackChatResponse);
+        }
+
+        /// <summary>
+        /// Streaming override that yields a single chunk with the same content as the non-streaming version.
+        /// Per GenAISpec §3H(2)(a).
+        /// </summary>
+        public override async IAsyncEnumerable<StreamingGenerationChunk> GenerateChatCompletionStreamingAsync(
+            string model, string prompt, string? systemPrompt = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ChatModels.Add(model);
+
+            if (model == "qwen3:8b" && ThrowOnPrimaryChat)
+            {
+                throw new HttpRequestException(
+                    "Primary model failed",
+                    null,
+                    HttpStatusCode.InternalServerError);
+            }
+
+            var content = model == "qwen3:8b" ? PrimaryChatResponse : FallbackChatResponse;
+            
+            // Yield a single chunk with the full content
+            await Task.CompletedTask; // Make async to satisfy compiler
+            yield return new StreamingGenerationChunk(content, false, true);
         }
     }
 }
