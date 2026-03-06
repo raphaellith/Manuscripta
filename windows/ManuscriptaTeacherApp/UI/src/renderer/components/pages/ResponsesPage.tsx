@@ -95,6 +95,16 @@ const FeedbackInput: React.FC<{
     const debouncedText = useDebounce(text, 1000);
     const lastSavedRef = useRef({ marks: feedback?.marks?.toString() ?? '', text: feedback?.text ?? '' });
 
+    // Sync local state when feedback data arrives or changes (e.g., after AI generation).
+    // Keyed on feedback?.id so user edits on the same feedback are not overwritten.
+    useEffect(() => {
+        const newMarks = feedback?.marks?.toString() ?? '';
+        const newText = feedback?.text ?? '';
+        setMarks(newMarks);
+        setText(newText);
+        lastSavedRef.current = { marks: newMarks, text: newText };
+    }, [feedback?.id]);
+
     // Auto-save on debounced change per §6(5)(d)(iv) / §6(6)(e)(iv)
     useEffect(() => {
         const currentMarks = debouncedMarks;
