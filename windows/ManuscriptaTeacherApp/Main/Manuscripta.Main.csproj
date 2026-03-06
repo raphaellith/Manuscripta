@@ -14,11 +14,6 @@
     <InternalsVisibleTo Include="MainTests" />
   </ItemGroup>
 
-  <!-- Exclude Testing directory in Release builds -->
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Compile Remove="Testing\**" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="CSharpMath.SkiaSharp" Version="0.5.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
@@ -36,6 +31,13 @@
   <!-- Embed the Quill Logo as a resource for PDF generation -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\Quill Logo.png" LogicalName="QuillLogo.png" />
+  </ItemGroup>
+
+  <!-- Exclude Testing/ code from Release builds so simulation/integration endpoints
+       do not exist in a production binary. Debug builds keep them for local
+       Integration-mode testing. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="Testing\**" />
   </ItemGroup>
 </Project>
 

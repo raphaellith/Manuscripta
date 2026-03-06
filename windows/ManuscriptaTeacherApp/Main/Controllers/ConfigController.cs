@@ -58,7 +58,7 @@ public class ConfigController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogInformation("Configuration request from non-Android device {DeviceId}: {Reason}", deviceId, ex.Message);
-            return StatusCode(StatusCodes.Status403Forbidden, "Device is not a valid Android device for configuration management.");
+            return NotFound("Device not found.");
         }
 
         // Signal that this device has fetched config (ACK for REFRESH_CONFIG)

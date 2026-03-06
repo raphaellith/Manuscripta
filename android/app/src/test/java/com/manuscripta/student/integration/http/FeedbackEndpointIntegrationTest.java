@@ -78,15 +78,30 @@ public class FeedbackEndpointIntegrationTest {
     }
 
     /**
-     * Verifies that an unknown device receives 404.
+     * Verifies that a malformed (non-UUID) device ID returns 400.
      *
      * @throws Exception if the network call fails unexpectedly
      */
     @Test
-    public void getFeedback_unknownDevice_returns404()
+    public void getFeedback_malformedDeviceId_returns400()
             throws Exception {
         Response<FeedbackResponse> response = harness.getApiService()
                 .getFeedback("nonexistent-device-id")
+                .execute();
+
+        assertEquals(400, response.code());
+    }
+
+    /**
+     * Verifies that a valid but nonexistent device UUID returns 404.
+     *
+     * @throws Exception if the network call fails unexpectedly
+     */
+    @Test
+    public void getFeedback_nonexistentDevice_returns404()
+            throws Exception {
+        Response<FeedbackResponse> response = harness.getApiService()
+                .getFeedback("ffffffff-ffff-ffff-ffff-ffffffffffff")
                 .execute();
 
         assertEquals(404, response.code());

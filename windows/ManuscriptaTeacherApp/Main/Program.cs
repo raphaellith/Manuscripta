@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Services;
 using Main.Services.Network;
+#if DEBUG
+using Main.Testing;
+#endif
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +38,16 @@ if (string.IsNullOrWhiteSpace(configuredConnectionString)
 else
 {
     dbConnectionString = configuredConnectionString;
+}
+
+// Integration mode: use an ephemeral temp-file database per Integration Test Contract §12.3
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    var tempDb = Path.Combine(
+        Path.GetTempPath(),
+        $"manuscripta_integration_{Guid.NewGuid()}.db");
+    dbConnectionString = $"Data Source={tempDb}";
+    Console.WriteLine($"Integration mode: using ephemeral database at {tempDb}");
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
@@ -103,13 +116,24 @@ builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
 builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
-// NOTE: UDP broadcasting and TCP pairing are NOT auto-started in production/development.
+// NOTE: UDP broadcasting and TCP pairing are NOT auto-started in production.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
 
 builder.Services.AddHostedService<HubEventBridge>();
+
+// Integration mode: auto-start network services and seed test data
+// Per Integration Test Contract §12.1
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    builder.Services.AddHostedService<UdpBroadcastHostedService>();
+    builder.Services.AddHostedService<TcpPairingHostedService>();
+#if DEBUG
+    builder.Services.AddHostedService<IntegrationSeedService>();
+#endif
+}
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
@@ -164,46 +188,9 @@ if (app.Environment.IsDevelopment())
 // Apply CORS policy
 app.UseCors("AllowElectron");
 
-// Skip database initialization and orphan cleanup in Testing environment (for unit/integration tests)
-if (app.Environment.IsEnvironment("Testing"))
-{
-    // Unit test environment: TestWebApplicationFactory handles DB setup
-}
-else if (app.Environment.IsEnvironment("Integration"))
-{
-    // Per IntegrationTestSpecification §3: ephemeral in-memory SQLite database.
-    // A sentinel connection must remain open to keep the shared in-memory DB alive
-    // across DbContext scopes (same pattern as NonTestingWebApplicationFactory).
-    var sentinelConnection = new Microsoft.Data.Sqlite.SqliteConnection(
-        app.Configuration.GetConnectionString("MainDbContext"));
-    sentinelConnection.Open();
-
-    // Per §3(4): use EnsureCreated() instead of Migrate() for ephemeral databases.
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-        context.Database.EnsureCreated();
-    }
-
-    // Per IntegrationTestSpecification §4(4): seed test data after schema creation,
-    // before network services begin accepting connections.
-    // Uses reflection to avoid compile-time dependency on Testing namespace,
-    // which is excluded from Release builds (see .csproj <Compile Remove="Testing\**" />).
-    var seederType = Type.GetType("Main.Testing.IntegrationTestDataSeeder, Manuscripta.Main");
-    if (seederType != null)
-    {
-        var seedMethod = seederType.GetMethod("SeedAsync", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-        if (seedMethod != null)
-        {
-            await (Task)seedMethod.Invoke(null, new object[] { app.Services })!;
-        }
-    }
-    else
-    {
-        app.Logger.LogWarning("IntegrationTestDataSeeder not found — Testing code excluded from this build configuration");
-    }
-}
-else
+// Skip database initialization and orphan cleanup in Testing/Integration environments
+// (Testing uses in-memory test server; Integration seeds via IntegrationSeedService)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment("Integration"))
 {
     using (var scope = app.Services.CreateScope())
     {

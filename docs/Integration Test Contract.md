@@ -66,10 +66,10 @@ Both sides must accept the following fixed test device for integration testing:
 
 | Field | Value |
 |-------|-------|
-| Device ID | `00000000-0000-0000-0000-000000000001` |
+| Device ID | `00000001-0000-0000-0000-000000000001` |
 | Device Name | `Integration Test Tablet` |
 
-(1) This device ID uses a well-known UUID to distinguish test traffic from production traffic.
+(1) This device ID is a valid UUID so that it passes the server's `Guid.TryParse()` validation on all endpoints.
 
 (2) The server must accept this ID in all endpoints that take a device ID, treating it as a valid paired device after registration via `POST /pair`.
 
@@ -81,7 +81,7 @@ Both sides must accept the following fixed test device for integration testing:
 
 ```
 POST /api/v1/pair
-Body: { "DeviceId": "00000000-0000-0000-0000-000000000001", "Name": "Integration Test Tablet" }
+Body: { "DeviceId": "00000001-0000-0000-0000-000000000001", "Name": "Integration Test Tablet" }
 Expected: 201 Created
 ```
 
@@ -149,9 +149,10 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | Materials staged for device | `200 OK` |
-| No materials staged / unknown device | `404 Not Found` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| No materials staged / unknown device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint.
+**Client assertion:** Tests verify `200` with a non-null body containing `materials` and `questions` arrays (which may be empty). The test device must be registered before calling this endpoint. Malformed (non-UUID) device IDs return `400`.
 
 ### 4.3. GET /feedback/{deviceId} — Feedback Retrieval
 
@@ -173,9 +174,10 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | READY feedback available | `200 OK` |
-| No feedback available / unknown device | `404 Not Found` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| No feedback available / unknown device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null.
+**Client assertion:** Tests accept either `200` or `404` as valid outcomes. When `200`, the `feedback` array is verified to be non-null. Malformed (non-UUID) device IDs return `400`.
 
 ### 4.4. GET /config/{deviceId} — Configuration
 
@@ -194,10 +196,11 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status |
 |----------|----------------|
 | Valid paired device | `200 OK` |
-| Unknown device | `404 Not Found` |
-| Non-client device | `403 Forbidden` |
+| Malformed device ID (non-UUID) | `400 Bad Request` |
+| Unknown device (valid UUID) | `404 Not Found` |
+| Non-client device (valid UUID) | `404 Not Found` |
 
-**Client assertion:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values.
+**Client assertion:** Tests verify `200` with a body containing at least `TextSize` and `FeedbackStyle` fields. If the server has no configuration for the test device, it must still return default values. Malformed (non-UUID) device IDs return `400`; valid but unknown/non-Android UUIDs return `404`.
 
 **Server note:** This endpoint also marks the device as having received configuration (implicit REFRESH_CONFIG acknowledgement, per `Session Interaction.md` §6(3)).
 
@@ -206,11 +209,12 @@ This section defines the exact request/response shapes and status codes that bot
 | Scenario | Expected Status | Response |
 |----------|----------------|----------|
 | Attachment exists | `200 OK` | Raw binary + `Content-Type` header |
-| Unknown ID | `404 Not Found` | — |
+| Malformed attachment ID (non-UUID) | `400 Bad Request` | — |
+| Unknown ID (valid UUID) | `404 Not Found` | — |
 
-**Client assertion:** Tests use a well-known test attachment ID of `10000000-0000-0000-0000-000000000050`. If this attachment is not pre-staged, the test gracefully accepts `404` and skips further assertions.
+**Client assertion:** Tests use a well-known test attachment ID of `00000001-0000-0000-0000-000000000004`. If this attachment is not pre-staged, the test gracefully accepts `404` and skips further assertions.
 
-**Server obligation:** To exercise the full attachment contract, the server must pre-stage a file with ID `10000000-0000-0000-0000-000000000050` in its attachment storage directory (see §12.2).
+**Server obligation:** To exercise the full attachment contract, the server must pre-stage a file with ID `00000001-0000-0000-0000-000000000004` in its attachment storage directory (see §12.2).
 
 ### 4.6. POST /responses — Single Response Submission
 
@@ -231,7 +235,7 @@ This section defines the exact request/response shapes and status codes that bot
 | Valid payload | `201 Created` |
 | Missing required fields | `400 Bad Request` |
 
-**Client assertion:** Tests use well-known IDs `10000000-0000-0000-0000-000000000020` (question) and `10000000-0000-0000-0000-000000000010` (material). These need not correspond to real entities in the database — the server must accept the response for persistence even if the referenced question does not exist, **or** the server should have these entities pre-staged (see §12.2).
+**Client assertion:** Tests use well-known IDs `00000001-0000-0000-0000-000000000002` (question) and `00000001-0000-0000-0000-000000000003` (material). These must be valid UUIDs for server `Guid.TryParse()` validation. The server should have these entities pre-staged (see §12.2) so that response mapping succeeds.
 
 ### 4.7. POST /responses/batch — Batch Response Submission
 
@@ -459,9 +463,9 @@ For integration tests to exercise their full paths, the server must pre-stage th
 
 | Data | Identifier | Purpose |
 |------|-----------|---------|
-| Attachment file | `10000000-0000-0000-0000-000000000050` | Attachment download test |
-| Question entity | `10000000-0000-0000-0000-000000000020` | Response submission test |
-| Material entity | `10000000-0000-0000-0000-000000000010` | Response submission test (material reference) |
+| Attachment file | `00000001-0000-0000-0000-000000000004` | Attachment download test |
+| Question entity | `00000001-0000-0000-0000-000000000002` | Response submission test |
+| Material entity | `00000001-0000-0000-0000-000000000003` | Response submission test (material reference) |
 | Material bundle | (any, for test device) | Distribution bundle test |
 | Feedback entities | (any, for test device) | Feedback retrieval test |
 | Configuration | (defaults for test device) | Config retrieval test |
@@ -474,7 +478,7 @@ The server team may satisfy these requirements through any of:
 
 (b) **Simulation API** — The server exposes endpoints under the `/api/simulation` prefix. These should be extended to support material, feedback, and attachment staging (see §12.4).
 
-(c) **Test fixture files** — For attachments, place a file named `10000000-0000-0000-0000-000000000050.{ext}` in the server's attachment storage directory.
+(c) **Test fixture files** — For attachments, place a file named `00000001-0000-0000-0000-000000000004.{ext}` in the server's attachment storage directory.
 
 (d) **Dedicated integration test environment** — Use a platform-appropriate mechanism (e.g., environment variable, launch profile) with configuration that seeds the database on startup.
 
@@ -558,7 +562,7 @@ Enums are serialised as **SCREAMING_SNAKE_CASE strings**:
 
 (2) Device IDs are generated by the client. Material, question, and feedback IDs are generated by the server. Per `Validation Rules.md` §3.
 
-(3) The test device ID (`00000000-0000-0000-0000-000000000001`) is a well-known fixed UUID reserved for integration testing.
+(3) All test entity IDs use the `00000001-0000-0000-0000-00000000000x` pattern to be easily identifiable as test data while remaining valid UUIDs.
 
 ### 10.5. String Encoding
 
@@ -642,10 +646,10 @@ In integration-test mode, the server **must** seed the following entities on sta
 
 | Entity | Identifier | Requirements |
 |--------|-----------|--------------|
-| Test device configuration | (for `00000000-...-001`) | Default configuration values: `TextSize` within 5–50, `FeedbackStyle` of `IMMEDIATE` or `NEUTRAL`, and reasonable defaults for all other fields per §4.4 |
-| Attachment file | `10000000-0000-0000-0000-000000000050` | Any binary file (e.g., a small PNG or PDF) accessible via `GET /attachments/10000000-0000-0000-0000-000000000050` |
-| Question entity | `10000000-0000-0000-0000-000000000020` | Linked to `10000000-0000-0000-0000-000000000010`, type `WRITTEN_ANSWER` or `MULTIPLE_CHOICE` |
-| Material entity | `10000000-0000-0000-0000-000000000010` | Assigned to the well-known test device (§3.1), type `READING` or `WORKSHEET` |
+| Test device configuration | (for `...000000000001`) | Default configuration values: `TextSize` within 5–50, `FeedbackStyle` of `IMMEDIATE` or `NEUTRAL`, and reasonable defaults for all other fields per §4.4 |
+| Attachment file | `00000001-0000-0000-0000-000000000004` | Any binary file (e.g., a small PNG or PDF) accessible via `GET /attachments/00000001-0000-0000-0000-000000000004` |
+| Question entity | `00000001-0000-0000-0000-000000000002` | Linked to `00000001-0000-0000-0000-000000000003`, type `WRITTEN_ANSWER` or `MULTIPLE_CHOICE` |
+| Material entity | `00000001-0000-0000-0000-000000000003` | Assigned to the well-known test device (§3.1), type `READING` or `WORKSHEET` |
 | Material bundle | (for test device) | At least one material assigned to the test device so `GET /distribution/{deviceId}` returns `200` |
 | Feedback entities | (for test device) | At least one feedback entity with status `READY` linked to a response from the test device, so `GET /feedback/{deviceId}` returns `200` |
 

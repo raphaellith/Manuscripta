@@ -90,7 +90,11 @@ dependencies {
 
 // Exclude integration tests by default; run with -Pintegration
 tasks.withType<Test> {
-    if (!project.hasProperty("integration")) {
+    val runIntegration = project.hasProperty("integration")
+    // Record whether integration tests are included as a task input so
+    // Gradle re-runs when the flag changes (prevents false up-to-date).
+    inputs.property("integration", runIntegration)
+    if (!runIntegration) {
         useJUnit {
             excludeCategories(
                 "com.manuscripta.student.integration.IntegrationTest"

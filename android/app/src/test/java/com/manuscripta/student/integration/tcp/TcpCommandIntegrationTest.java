@@ -120,7 +120,7 @@ public class TcpCommandIntegrationTest {
     @Test
     public void distributeAck_acceptedByServer() throws Exception {
         DistributeAckMessage ack = new DistributeAckMessage(
-                config.getTestDeviceId(), "10000000-0000-0000-0000-000000000010");
+                config.getTestDeviceId(), "00000001-0000-0000-0000-000000000003");
 
         // Should not throw — server silently accepts
         harness.getTcpSocketManager().send(ack);
@@ -143,7 +143,7 @@ public class TcpCommandIntegrationTest {
     @Test
     public void feedbackAck_acceptedByServer() throws Exception {
         FeedbackAckMessage ack = new FeedbackAckMessage(
-                config.getTestDeviceId(), "10000000-0000-0000-0000-000000000040");
+                config.getTestDeviceId(), "00000001-0000-0000-0000-000000000005");
 
         harness.getTcpSocketManager().send(ack);
 

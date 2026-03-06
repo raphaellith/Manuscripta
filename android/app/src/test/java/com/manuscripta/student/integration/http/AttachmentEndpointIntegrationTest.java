@@ -61,22 +61,20 @@ public class AttachmentEndpointIntegrationTest {
                 harness.tearDown();
         }
 
-        /**
-         * Verifies that downloading an attachment with a known ID returns
-         * 200 and a non-empty body with a content-type header.
-         *
-         * <p>
-         * If no attachment is staged on the server this test is
-         * expected to be skipped or to fail informatively.
-         * </p>
-         *
-         * @throws Exception if the network call fails unexpectedly
-         */
-        @Test
-        public void getAttachment_validId_returns200WithContent()
-                        throws Exception {
-                // Use a well-known test attachment ID (must be pre-staged)
-                String testAttachmentId = "10000000-0000-0000-0000-000000000050";
+    /**
+     * Verifies that downloading an attachment with a known ID returns
+     * 200 and a non-empty body with a content-type header.
+     *
+     * <p>If no attachment is staged on the server this test is
+     * expected to be skipped or to fail informatively.</p>
+     *
+     * @throws Exception if the network call fails unexpectedly
+     */
+    @Test
+    public void getAttachment_validId_returns200WithContent()
+            throws Exception {
+        // Use a well-known test attachment ID (must be pre-staged)
+        String testAttachmentId = "00000001-0000-0000-0000-000000000004";
 
                 Response<ResponseBody> response = harness.getApiService()
                                 .getAttachment(testAttachmentId).execute();
@@ -97,14 +95,28 @@ public class AttachmentEndpointIntegrationTest {
         }
 
         /**
-         * Verifies that requesting a nonexistent attachment returns 404.
+         * Verifies that a malformed (non-UUID) attachment ID returns 400.
          *
          * @throws Exception if the network call fails unexpectedly
          */
         @Test
-        public void getAttachment_unknownId_returns404() throws Exception {
+        public void getAttachment_malformedId_returns400() throws Exception {
                 Response<ResponseBody> response = harness.getApiService()
                                 .getAttachment("nonexistent-attachment-id")
+                                .execute();
+
+                assertEquals(400, response.code());
+        }
+
+        /**
+         * Verifies that a valid but nonexistent attachment UUID returns 404.
+         *
+         * @throws Exception if the network call fails unexpectedly
+         */
+        @Test
+        public void getAttachment_nonexistentId_returns404() throws Exception {
+                Response<ResponseBody> response = harness.getApiService()
+                                .getAttachment("ffffffff-ffff-ffff-ffff-ffffffffffff")
                                 .execute();
 
                 assertEquals(404, response.code());

@@ -114,7 +114,7 @@ public class TcpSocketManager {
      * @param mainHandler The handler for dispatching callbacks on the main thread.
      */
     @VisibleForTesting
-    TcpSocketManager(@NonNull TcpMessageEncoder encoder,
+    public TcpSocketManager(@NonNull TcpMessageEncoder encoder,
                      @NonNull TcpMessageDecoder decoder,
                      @NonNull Handler mainHandler) {
         this.encoder = encoder;

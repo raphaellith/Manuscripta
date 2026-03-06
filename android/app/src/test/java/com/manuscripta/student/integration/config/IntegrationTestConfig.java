@@ -33,8 +33,9 @@ public final class IntegrationTestConfig {
     /** Default UDP port per API Contract. */
     private static final int DEFAULT_UDP_PORT = 5913;
 
-    /** Fixed device ID for reproducible tests. */
-    private static final String DEFAULT_DEVICE_ID = "00000000-0000-0000-0000-000000000001";
+    /** Fixed device ID for reproducible tests (valid UUID per API Contract §10.4). */
+    private static final String DEFAULT_DEVICE_ID =
+            "00000001-0000-0000-0000-000000000001";
 
     /** Fixed device name for reproducible tests. */
     private static final String DEFAULT_DEVICE_NAME = "Integration Test Tablet";

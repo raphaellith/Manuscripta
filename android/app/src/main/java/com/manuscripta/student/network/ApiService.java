@@ -41,7 +41,7 @@ public interface ApiService {
      * @param id The unique identifier of the attachment
      * @return Call wrapping ResponseBody containing the binary data
      */
-    @GET("/attachments/{id}")
+    @GET("/api/v1/attachments/{id}")
     Call<ResponseBody> getAttachment(@NonNull @Path("id") String id);
 
     /**
@@ -54,7 +54,7 @@ public interface ApiService {
      * @param deviceId The device ID to fetch distribution bundle for
      * @return Call wrapping the DistributionBundleDto
      */
-    @GET("/distribution/{deviceId}")
+    @GET("/api/v1/distribution/{deviceId}")
     Call<DistributionBundleDto> getDistribution(@NonNull @Path("deviceId") String deviceId);
 
     /**
@@ -67,7 +67,7 @@ public interface ApiService {
      * @param deviceId The device ID to fetch feedback for
      * @return Call wrapping the FeedbackResponse
      */
-    @GET("/feedback/{deviceId}")
+    @GET("/api/v1/feedback/{deviceId}")
     Call<FeedbackResponse> getFeedback(@NonNull @Path("deviceId") String deviceId);
 
     // ========== Configuration Endpoints (Server -> Client) ==========
@@ -82,7 +82,7 @@ public interface ApiService {
      * @param deviceId The device ID to fetch configuration for
      * @return Call wrapping the ConfigResponseDto
      */
-    @GET("/config/{deviceId}")
+    @GET("/api/v1/config/{deviceId}")
     Call<ConfigResponseDto> getConfig(@NonNull @Path("deviceId") String deviceId);
 
     // ========== Pairing Endpoints (Client -> Server) ==========
@@ -95,7 +95,7 @@ public interface ApiService {
      * @param deviceInfo The device information including device ID and name
      * @return Call wrapping Void (expects 201 Created on success)
      */
-    @POST("/pair")
+    @POST("/api/v1/pair")
     Call<Void> registerDevice(@NonNull @Body DeviceInfoDto deviceInfo);
 
     // ========== Response Submission Endpoints (Client -> Server) ==========
@@ -108,7 +108,7 @@ public interface ApiService {
      * @param response The response to submit
      * @return Call wrapping Void (expects 201 Created on success)
      */
-    @POST("/responses")
+    @POST("/api/v1/responses")
     Call<Void> submitResponse(@NonNull @Body ResponseDto response);
 
     /**
@@ -119,6 +119,6 @@ public interface ApiService {
      * @param batchResponse The batch of responses to submit
      * @return Call wrapping Void (expects 201 Created on success)
      */
-    @POST("/responses/batch")
+    @POST("/api/v1/responses/batch")
     Call<Void> submitBatchResponses(@NonNull @Body BatchResponseDto batchResponse);
 }

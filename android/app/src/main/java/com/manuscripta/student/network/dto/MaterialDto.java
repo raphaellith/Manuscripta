@@ -28,8 +28,9 @@ public class MaterialDto {
 
     /**
      * The type of material (e.g., "READING", "WORKSHEET", "POLL").
+     * Per Validation Rules §2A(1)(a), serialised as "MaterialType".
      */
-    @SerializedName("Type")
+    @SerializedName("MaterialType")
     @Nullable
     private String type;
 
