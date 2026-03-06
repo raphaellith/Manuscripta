@@ -32,8 +32,9 @@ type UploadMode = 'none' | 'file' | 'text';
 async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
     // Dynamic import to avoid loading pdfjs-dist unless needed
     const pdfjsLib = await import('pdfjs-dist');
-    // Set the worker source for pdfjs
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    // Set the worker source for pdfjs - use CDN-hosted worker matching installed version
+    const pdfjsVersion = pdfjsLib.version;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
     const pages: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) {
