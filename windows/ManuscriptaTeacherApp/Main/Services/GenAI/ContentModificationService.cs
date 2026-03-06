@@ -1,5 +1,6 @@
 using ChromaDB.Client;
 using Main.Models.Dtos;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -12,17 +13,20 @@ public class ContentModificationService : IContentModificationService
     private readonly OllamaClientService _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
+    private readonly ILogger<ContentModificationService> _logger;
     private const int DefaultTopK = 5;
     private const string ModificationModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
         IEmbeddingService embeddingService,
-        OutputValidationService validationService)
+        OutputValidationService validationService,
+        ILogger<ContentModificationService> logger)
     {
         _ollamaClient = ollamaClient;
         _embeddingService = embeddingService;
         _validationService = validationService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,6 +38,12 @@ public class ContentModificationService : IContentModificationService
         string instruction,
         Guid? unitCollectionId)
     {
+        _logger.LogInformation(
+            "Starting AI content modification. UnitCollectionIdProvided={UnitCollectionIdProvided}, SelectedContentLength={SelectedContentLength}, InstructionLength={InstructionLength}",
+            unitCollectionId.HasValue,
+            selectedContent?.Length ?? 0,
+            instruction?.Length ?? 0);
+
         // Ensure model is ready
         await _ollamaClient.EnsureModelReadyAsync(ModificationModel);
 
@@ -51,10 +61,28 @@ public class ContentModificationService : IContentModificationService
                 null,
                 DefaultTopK
             );
+
+            _logger.LogInformation(
+                "RAG retrieval completed for content modification. UnitCollectionId={UnitCollectionId}, RetrievedChunkCount={RetrievedChunkCount}, TotalRetrievedContextChars={TotalRetrievedContextChars}, TopK={TopK}",
+                unitCollectionId.Value,
+                relevantChunks.Count,
+                relevantChunks.Sum(c => c?.Length ?? 0),
+                DefaultTopK);
+        }
+        else
+        {
+            _logger.LogInformation("Skipping RAG retrieval for content modification because UnitCollectionId was not provided.");
         }
 
         // §3C(2)(b): Construct prompt
         var prompt = GenAIPromptBuilder.BuildModificationPrompt(selectedContent, instruction, relevantChunks);
+
+        var promptContainsInjectedContext = relevantChunks.Count == 0 || relevantChunks.Any(c => !string.IsNullOrEmpty(c) && prompt.Contains(c, StringComparison.Ordinal));
+        _logger.LogInformation(
+            "RAG prompt assembled for content modification. PromptLength={PromptLength}, RetrievedChunkCount={RetrievedChunkCount}, ContextInjectionVerified={ContextInjectionVerified}",
+            prompt.Length,
+            relevantChunks.Count,
+            promptContainsInjectedContext);
 
         // §3C(2)(c): Invoke model
         string modifiedContent;
@@ -70,6 +98,11 @@ public class ContentModificationService : IContentModificationService
 
         // §3C(2)(d): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(modifiedContent, ModificationModel, useFallback: true);
+
+        _logger.LogInformation(
+            "Completed AI content modification. OutputLength={OutputLength}, RetrievedChunkCount={RetrievedChunkCount}",
+            result.Content?.Length ?? 0,
+            relevantChunks.Count);
 
         return result;
     }

@@ -8,6 +8,8 @@ interface IElectronAPI {
     deleteAttachmentFile: (uuid: string, extension: string) => Promise<void>;
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) => Promise<string>;
     savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) => Promise<boolean>;
+    /** Read file contents as ArrayBuffer for source document transcript extraction. Per §4AA(2)(b). */
+    readFileBuffer: (filePath: string) => Promise<ArrayBuffer>;
     /** Listen for backend state changes from main process. Per §2ZA(6)(c)(i). */
     onBackendStateChange: (callback: (state: 'reconnecting' | 'connected') => void) => () => void;
 }

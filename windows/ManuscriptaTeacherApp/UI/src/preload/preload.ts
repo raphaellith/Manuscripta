@@ -68,6 +68,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     savePdfFile: (pdfBytes: Uint8Array, defaultFilename: string) =>
         ipcRenderer.invoke('save-pdf-file', pdfBytes, defaultFilename),
 
+    /**
+     * Read file contents as ArrayBuffer for source document transcript extraction.
+     * Per FrontendWorkflowSpecifications §4AA(2)(b).
+     */
+    readFileBuffer: (filePath: string) =>
+        ipcRenderer.invoke('read-file-buffer', filePath),
+
      /** Listen for backend state changes from main process.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
      * @param callback - Function to call when backend state changes

@@ -10,6 +10,7 @@ using Main.Models.Dtos;
 using Main.Services;
 using Main.Services.GenAI;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -40,11 +41,12 @@ public class MaterialGenerationServiceTests
         };
 
         var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
         embeddingService
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string> { "chunk-a", "chunk-b" });
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
 
         var request = new GenerationRequest
         {
@@ -78,11 +80,12 @@ public class MaterialGenerationServiceTests
         };
 
         var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
         embeddingService
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string> { "chunk-a" });
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
 
         var request = new GenerationRequest
         {
@@ -110,11 +113,12 @@ public class MaterialGenerationServiceTests
 
         var ollama = new FakeOllamaClientService { CanGenerateResult = false };
         var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
         embeddingService
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string>());
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
 
         var result = await service.CanGenerateWithPrimaryModelAsync();
         Assert.False(result);
@@ -129,14 +133,61 @@ public class MaterialGenerationServiceTests
 
         var ollama = new FakeOllamaClientService { ThrowOnCanGenerate = true };
         var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
         embeddingService
             .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
             .ReturnsAsync(new List<string>());
 
-        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService);
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
 
         var result = await service.CanGenerateWithPrimaryModelAsync();
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task GenerateReading_LogsRagPromptInjectionVerification()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService
+        {
+            ThrowOnPrimaryChat = false,
+            PrimaryChatResponse = "primary-output"
+        };
+
+        var embeddingService = new Mock<IEmbeddingService>();
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<string> { "chunk-context-1" });
+
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
+
+        var request = new GenerationRequest
+        {
+            Description = "Generate a reading on climate.",
+            ReadingAge = 12,
+            ActualAge = 12,
+            DurationInMinutes = 20,
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Climate Reading"
+        };
+
+        await service.GenerateReading(request);
+
+        logger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) =>
+                    v.ToString() != null &&
+                    v.ToString()!.Contains("RAG prompt assembled", StringComparison.Ordinal) &&
+                    v.ToString()!.Contains("ContextInjectionVerified=True", StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 
     private sealed class FakeOllamaClientService : OllamaClientService

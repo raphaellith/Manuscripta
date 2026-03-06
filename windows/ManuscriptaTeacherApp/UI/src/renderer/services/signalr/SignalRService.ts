@@ -15,6 +15,8 @@ import type {
     ExternalDeviceType,
     EmailCredentialEntity,
     ConfigurationEntity,
+    SourceDocumentEntity,
+    EmbeddingStatus,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -23,6 +25,7 @@ import type {
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
     InternalCreateFeedbackDto,
+    InternalCreateSourceDocumentDto,
     GenerationRequest,
     GenerationResult,
 } from "../../models";
@@ -855,6 +858,66 @@ class SignalRService {
      */
     public onGenerationCancelled(callback: (generationId: string) => void): () => void {
         return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // Source Document CRUD - NetworkingAPISpec §1(1)(k)
+    // ==========================================
+
+    /**
+     * Creates a new source document.
+     * Per NetworkingAPISpec §1(1)(k)(i) and FrontendWorkflowSpec §4AA(2)(c).
+     */
+    public async createSourceDocument(dto: InternalCreateSourceDocumentDto): Promise<SourceDocumentEntity> {
+        return await this.getConnection().invoke<SourceDocumentEntity>("CreateSourceDocument", dto);
+    }
+
+    /**
+     * Retrieves all source documents.
+     * Per NetworkingAPISpec §1(1)(k)(ii) and FrontendWorkflowSpec §3(1)(a)(v).
+     */
+    public async getAllSourceDocuments(): Promise<SourceDocumentEntity[]> {
+        return await this.getConnection().invoke<SourceDocumentEntity[]>("GetAllSourceDocuments");
+    }
+
+    /**
+     * Updates a source document entity.
+     * Per NetworkingAPISpec §1(1)(k)(iii) and FrontendWorkflowSpec §4AA(3)(a).
+     */
+    public async updateSourceDocument(entity: SourceDocumentEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateSourceDocument", entity);
+    }
+
+    /**
+     * Deletes a source document by ID.
+     * Per NetworkingAPISpec §1(1)(k)(iv) and FrontendWorkflowSpec §4AA(4)(a).
+     */
+    public async deleteSourceDocument(id: string): Promise<void> {
+        await this.getConnection().invoke("DeleteSourceDocument", id);
+    }
+
+    /**
+     * Gets the embedding status of a source document.
+     * Per NetworkingAPISpec §1(1)(i)(v) and FrontendWorkflowSpec §4AA(2)(e).
+     */
+    public async getEmbeddingStatus(sourceDocumentId: string): Promise<EmbeddingStatus> {
+        return await this.getConnection().invoke<EmbeddingStatus>("GetEmbeddingStatus", sourceDocumentId);
+    }
+
+    /**
+     * Retries embedding for a source document with FAILED status.
+     * Per NetworkingAPISpec §1(1)(i)(vii) and FrontendWorkflowSpec §4AA(5)(b).
+     */
+    public async retryEmbedding(sourceDocumentId: string): Promise<void> {
+        await this.getConnection().invoke("RetryEmbedding", sourceDocumentId);
+    }
+
+    /**
+     * Subscribe to embedding failed events.
+     * Per NetworkingAPISpec §2(1)(d)(i) and FrontendWorkflowSpec §4AA(6).
+     */
+    public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
+        return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
     }
 
 }

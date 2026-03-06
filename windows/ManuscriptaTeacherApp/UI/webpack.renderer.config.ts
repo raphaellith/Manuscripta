@@ -15,5 +15,9 @@ export const rendererConfig: Configuration = {
   plugins,
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    fallback: {
+      // mammoth -> jszip references Node.js 'stream'; provide browser polyfill
+      stream: require.resolve('stream-browserify'),
+    },
   },
 };

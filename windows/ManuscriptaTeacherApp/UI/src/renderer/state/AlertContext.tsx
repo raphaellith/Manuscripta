@@ -10,7 +10,7 @@ import type { PairedDeviceEntity, DeviceStatusEntity } from '../models';
 // Alert types for various events
 export interface Alert {
     id: string;
-    type: 'help' | 'disconnection' | 'distribution_failed' | 'control_failed' | 'config_refresh_failed' | 'feedback_failed' | 'success';
+    type: 'help' | 'disconnection' | 'distribution_failed' | 'control_failed' | 'config_refresh_failed' | 'feedback_failed' | 'embedding_failed' | 'success';
     deviceId?: string;
     deviceName?: string;
     message: string;
@@ -132,12 +132,18 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
             addAlert('feedback_failed', payload.deviceId, `Failed to deliver feedback to ${device?.name || 'device'}`);
         });
 
+        // Handler: Embedding failure alerts (per FrontendWorkflowSpec §4AA(6))
+        const unsubEmbeddingFailed = signalRService.onEmbeddingFailed((sourceDocumentId: string, error: string) => {
+            addAlert('embedding_failed', undefined, `Source document indexing failed: ${error}`);
+        });
+
         return () => {
             unsubStatus();
             unsubHandRaised();
             unsubDistributionFailed();
             unsubControlFailed();
             unsubFeedbackFailed();
+            unsubEmbeddingFailed();
         };
     }, [addAlert]);
 

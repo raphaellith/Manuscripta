@@ -52,6 +52,12 @@ interface ElectronAPI {
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) => Promise<string>;
 
     /**
+     * Read file contents as ArrayBuffer for source document transcript extraction.
+     * Per FrontendWorkflowSpecifications §4AA(2)(b).
+     */
+    readFileBuffer: (filePath: string) => Promise<ArrayBuffer>;
+
+    /**
      * Listen for backend state changes from main process.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
      * @param callback - Function to call when backend state changes

@@ -396,5 +396,14 @@ ipcMain.handle('save-pdf-file', async (_event, pdfBytes: Uint8Array, defaultFile
   return true;
 });
 
+// Read file as buffer for source document transcript extraction (per §4AA(2)(b))
+ipcMain.handle('read-file-buffer', async (_event, filePath: string) => {
+  if (!fsSync.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  const data = fsSync.readFileSync(filePath);
+  return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+});
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
