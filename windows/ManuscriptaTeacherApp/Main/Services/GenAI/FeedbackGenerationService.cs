@@ -33,7 +33,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// Tracks the response ID currently being processed for generation.
     /// See GenAISpec.md §3D(4).
     /// </summary>
-    private Guid? _currentlyGeneratingResponseId;
+    private string? _currentlyGeneratingResponseId;
 
     public FeedbackGenerationService(
         OllamaClientService ollamaClient,
@@ -183,7 +183,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 }
             }
 
-            _currentlyGeneratingResponseId = responseId;
+            _currentlyGeneratingResponseId = responseId.ToString();
             try
             {
                 // Generate feedback
@@ -222,7 +222,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// Returns the response ID currently being processed, or null if idle.
     /// See GenAISpec.md §3D(4).
     /// </summary>
-    public Guid? GetCurrentlyGeneratingResponseId() => _currentlyGeneratingResponseId;
+    public string? GetCurrentlyGeneratingResponseId() => _currentlyGeneratingResponseId;
 
     /// <summary>
     /// Generates AI feedback for a student response.
@@ -324,18 +324,17 @@ MARK SCHEME:
 
         // §3D(9)(e)(i): Extract MARK: X from the first line
         var match = System.Text.RegularExpressions.Regex.Match(firstLine, @"^MARK:\s*(\d+)$");
-        if (match.Success && int.TryParse(match.Groups[1].Value, out var mark))
+        if (maxScore.HasValue && match.Success && int.TryParse(match.Groups[1].Value, out var mark))
         {
             // Clamp to valid range [0, MaxScore] per §2F(2)(c)
-            if (maxScore.HasValue)
-                mark = Math.Clamp(mark, 0, maxScore.Value);
+            mark = Math.Clamp(mark, 0, maxScore.Value);
 
             // §3D(9)(e)(ii): Remaining text after the MARK line
             var feedbackText = string.Join('\n', lines.Skip(1)).TrimStart('\n', '\r');
             return (mark, feedbackText);
         }
 
-        // No valid MARK line found — return entire response as text, no marks
+        // No valid MARK line found or no MaxScore — return entire response as text, no marks
         return (null, rawResponse);
     }
 }

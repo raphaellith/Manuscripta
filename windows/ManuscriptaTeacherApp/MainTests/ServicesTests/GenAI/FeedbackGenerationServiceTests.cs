@@ -124,17 +124,17 @@ public class FeedbackGenerationServiceTests
     }
 
     /// <summary>
-    /// Spec coverage: GenAISpec §3D(9)(e).
-    /// When maxScore is null, mark is still extracted but not clamped.
+    /// Spec coverage: GenAISpec §3D(9)(e) and Validation Rules §2F(2)(c).
+    /// When maxScore is null, MARK line is ignored and full text is returned with null marks.
     /// </summary>
     [Fact]
-    public void ParseFeedbackResponse_NoMaxScore_ExtractsMarkUnclamped()
+    public void ParseFeedbackResponse_NoMaxScore_IgnoresMarkLine()
     {
         var (marks, text) = FeedbackGenerationService.ParseFeedbackResponse(
             "MARK: 7\n\nSolid response.", maxScore: null);
 
-        Assert.Equal(7, marks);
-        Assert.Equal("Solid response.", text);
+        Assert.Null(marks);
+        Assert.Equal("MARK: 7\n\nSolid response.", text);
     }
 
     /// <summary>

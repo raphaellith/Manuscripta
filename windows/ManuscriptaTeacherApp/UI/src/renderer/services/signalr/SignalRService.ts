@@ -694,7 +694,7 @@ class SignalRService {
 
     /**
      * Subscribe to feedback generation failure events.
-     * Per NetworkingAPISpec §2(1)(c)(ii).
+     * Per NetworkingAPISpec §2(1)(c)(i).
      */
     public onFeedbackGenerationFailed(callback: (responseId: string, error: string) => void): () => void {
         return this.subscribe("OnFeedbackGenerationFailed", callback as (...args: unknown[]) => void);
@@ -726,7 +726,7 @@ class SignalRService {
 
     /**
      * Returns a list of response IDs currently queued for AI feedback generation.
-     * Per GenAISpec §3D(4).
+     * Per NetworkingAPISpec §1(1)(i)(xi) and GenAISpec §3D(4).
      */
     public async getFeedbackQueueStatus(): Promise<string[]> {
         return await this.getConnection().invoke<string[]>("GetFeedbackQueueStatus");
@@ -734,7 +734,7 @@ class SignalRService {
 
     /**
      * Returns the response ID currently being processed for feedback generation, or null if idle.
-     * Per GenAISpec §3D(4).
+     * Per NetworkingAPISpec §1(1)(i)(xii) and GenAISpec §3D(4).
      */
     public async getCurrentlyGeneratingResponseId(): Promise<string | null> {
         return await this.getConnection().invoke<string | null>("GetCurrentlyGeneratingResponseId");

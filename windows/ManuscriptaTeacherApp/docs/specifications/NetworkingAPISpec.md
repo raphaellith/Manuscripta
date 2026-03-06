@@ -123,6 +123,10 @@ For a description of how these server methods and client handlers are expected t
         (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
 
         (x) `Task<bool> CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `true` if a matching in-progress generation was found and cancellation was requested; returns `false` if the specified generation ID is not found, has already completed, or belongs to a different connection. See GenAISpec §3H(8).
+
+        (xi) `Task<List<Guid>> GetFeedbackQueueStatus()`: Returns a snapshot of all response IDs currently queued for AI feedback generation. See GenAISpec §3D(4).
+
+        (xii) `Task<string?> GetCurrentlyGeneratingResponseId()`: Returns the response ID currently being processed for feedback generation, or null if idle. See GenAISpec §3D(4).
         
     (j) Methods for retrieving responses.
 
