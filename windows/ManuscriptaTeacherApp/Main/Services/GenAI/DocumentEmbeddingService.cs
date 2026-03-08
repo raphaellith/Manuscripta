@@ -283,6 +283,58 @@ public class DocumentEmbeddingService : IEmbeddingService
             // See §2(1) - approximate tokenization
             var sentenceTokens = (int)Math.Ceiling(sentence.Length / 4.0);
 
+            // Handle sentences that exceed the chunk size by splitting them
+            if (sentenceTokens > ChunkSizeTokens)
+            {
+                // First, flush any current chunk
+                if (currentChunk.Count > 0)
+                {
+                    chunks.Add(string.Join(" ", currentChunk));
+                    currentChunk.Clear();
+                    currentTokenCount = 0;
+                }
+
+                // Split the long sentence into smaller pieces at word boundaries
+                var words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var subChunk = new List<string>();
+                var subTokenCount = 0;
+
+                foreach (var word in words)
+                {
+                    var wordTokens = (int)Math.Ceiling(word.Length / 4.0) + 1; // +1 for space
+                    
+                    if (subTokenCount + wordTokens > ChunkSizeTokens && subChunk.Count > 0)
+                    {
+                        chunks.Add(string.Join(" ", subChunk));
+                        
+                        // Create overlap from end of sub-chunk
+                        var overlapWords = new List<string>();
+                        var overlapTokens = 0;
+                        for (int i = subChunk.Count - 1; i >= 0 && overlapTokens < ChunkOverlapTokens; i--)
+                        {
+                            var w = subChunk[i];
+                            overlapTokens += (int)Math.Ceiling(w.Length / 4.0) + 1;
+                            overlapWords.Insert(0, w);
+                        }
+                        
+                        subChunk = overlapWords;
+                        subTokenCount = overlapTokens;
+                    }
+
+                    subChunk.Add(word);
+                    subTokenCount += wordTokens;
+                }
+
+                // Add remaining words as overlap for next chunk
+                if (subChunk.Count > 0)
+                {
+                    currentChunk = subChunk;
+                    currentTokenCount = subTokenCount;
+                }
+                
+                continue;
+            }
+
             if (currentTokenCount + sentenceTokens > ChunkSizeTokens && currentChunk.Count > 0)
             {
                 // §2(1)(a): Create chunk of max 512 tokens
@@ -443,7 +495,10 @@ public class DocumentEmbeddingService : IEmbeddingService
             throw new InvalidOperationException($"Source document {sourceDocumentId} not found");
         }
 
-        if (document.EmbeddingStatus != EmbeddingStatus.FAILED)
+        // Allow retry for FAILED status (expected case) and PENDING status
+        // (documents stuck in PENDING from interrupted indexing attempts)
+        if (document.EmbeddingStatus != EmbeddingStatus.FAILED && 
+            document.EmbeddingStatus != EmbeddingStatus.PENDING)
         {
             throw new InvalidOperationException($"Cannot retry embedding for document with status {document.EmbeddingStatus}");
         }
@@ -476,6 +531,35 @@ public class DocumentEmbeddingService : IEmbeddingService
     {
         try
         {
+            // Handle PENDING documents from interrupted indexing attempts
+            // These should be transitioned to FAILED status since the previous
+            // indexing operation did not complete
+            var pendingDocuments = await _dbContext.SourceDocuments
+                .Where(d => d.EmbeddingStatus == EmbeddingStatus.PENDING)
+                .ToListAsync();
+
+            if (pendingDocuments.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Found {Count} source document(s) with PENDING embedding status from interrupted indexing. " +
+                    "Transitioning to FAILED status.",
+                    pendingDocuments.Count
+                );
+
+                foreach (var doc in pendingDocuments)
+                {
+                    doc.EmbeddingStatus = EmbeddingStatus.FAILED;
+                    _logger.LogWarning(
+                        "Source document {SourceDocumentId} in unit collection {UnitCollectionId} " +
+                        "transitioned from PENDING to FAILED due to interrupted indexing.",
+                        doc.Id,
+                        doc.UnitCollectionId
+                    );
+                }
+
+                await _dbContext.SaveChangesAsync();
+            }
+
             // §3A(8)(a): Identify all SourceDocumentEntity objects with EmbeddingStatus of FAILED
             var failedDocuments = await _dbContext.SourceDocuments
                 .Where(d => d.EmbeddingStatus == EmbeddingStatus.FAILED)

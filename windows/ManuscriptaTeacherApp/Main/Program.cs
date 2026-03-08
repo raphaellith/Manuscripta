@@ -196,6 +196,9 @@ builder.Services.AddSignalR(hubOptions =>
     // Default is 1, which serialises all hub invocations and prevents
     // cancellation from reaching the server while generation is running.
     hubOptions.MaximumParallelInvocationsPerClient = 2;
+    // Increase max message size from 32KB default to 10MB for large source documents
+    // (per FrontendWorkflowSpecifications §4AA source document uploads)
+    hubOptions.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
