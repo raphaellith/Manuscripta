@@ -1702,7 +1702,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                         <h2 className="text-lg font-semibold mb-4">PDF Conversion Settings</h2>
                         <p className="text-xs text-gray-500 mb-4">
-                            Override the global defaults for this material. Select &quot;Default&quot; to use the global setting.
+                            Override the global defaults for this material. Per-device settings on external devices may further override these values. Select &quot;Default&quot; to use the global setting.
                         </p>
 
                         <div className="space-y-4">

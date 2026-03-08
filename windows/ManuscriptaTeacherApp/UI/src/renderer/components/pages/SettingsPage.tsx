@@ -296,6 +296,9 @@ export const SettingsPage: React.FC = () => {
                         <h2 className="text-2xl font-serif text-text-heading mb-6 border-b border-gray-100 pb-4">PDF Export Defaults</h2>
                         {pdfSettings ? (
                             <div className="space-y-6">
+                                <p className="text-sm text-gray-500">
+                                    These are the global defaults. They may be overridden on a per-material basis in the editor, or on a per-device basis for external devices.
+                                </p>
                                 {pdfError && (
                                     <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
                                         {pdfError}

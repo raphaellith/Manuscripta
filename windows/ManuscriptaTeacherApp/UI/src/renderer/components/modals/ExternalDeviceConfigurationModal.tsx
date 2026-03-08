@@ -3,11 +3,10 @@
  * Per FrontendWorkflowSpecifications §5H(2).
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import type {
     ExternalDeviceEntity,
-    PdfExportSettingsEntity,
     LinePatternType,
     LineSpacingPreset,
     FontSizePreset
@@ -51,27 +50,8 @@ export const ExternalDeviceConfigurationModal: React.FC<ExternalDeviceConfigurat
     const [lineSpacingPreset, setLineSpacingPreset] = useState<LineSpacingPreset | null>(device.lineSpacingPreset ?? null);
     const [fontSizePreset, setFontSizePreset] = useState<FontSizePreset | null>(device.fontSizePreset ?? null);
 
-    const [globalDefaults, setGlobalDefaults] = useState<PdfExportSettingsEntity | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Load global defaults so we can show "Default (Ruled)" etc.
-    useEffect(() => {
-        const load = async () => {
-            try {
-                setIsLoading(true);
-                const defaults = await signalRService.getPdfExportSettings();
-                setGlobalDefaults(defaults);
-            } catch (err) {
-                console.error('Failed to load global PDF export settings:', err);
-                setError('Failed to load settings');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        load();
-    }, []);
 
     // Per §5H(2)(c): Save changes via UpdateExternalDevice
     const handleSubmit = async () => {
@@ -94,15 +74,13 @@ export const ExternalDeviceConfigurationModal: React.FC<ExternalDeviceConfigurat
         }
     };
 
-    /** Render a dropdown with a "Default (...)" option per §5H(2)(b). */
+    /** Render a dropdown with a "Default" option per §5H(2)(b). */
     function renderDropdown<T extends string>(
         label: string,
         value: T | null,
         onChange: (v: T | null) => void,
-        options: Record<T, string>,
-        globalDefault: T | undefined
+        options: Record<T, string>
     ) {
-        const defaultLabel = globalDefault ? options[globalDefault] : '...';
         return (
             <div>
                 <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
@@ -117,7 +95,7 @@ export const ExternalDeviceConfigurationModal: React.FC<ExternalDeviceConfigurat
                     className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                 >
                     {/* Per §5H(2)(b)(i): Default option maps to null */}
-                    <option value="">Default ({defaultLabel})</option>
+                    <option value="">Default</option>
                     {/* Per §5H(2)(b)(ii): All enum values */}
                     {(Object.keys(options) as T[]).map((key) => (
                         <option key={key} value={key}>{options[key]}</option>
@@ -134,56 +112,45 @@ export const ExternalDeviceConfigurationModal: React.FC<ExternalDeviceConfigurat
                     PDF Settings: {device.name}
                 </h2>
 
-                {isLoading && (
-                    <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange"></div>
-                    </div>
-                )}
-
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                         {error}
                     </div>
                 )}
 
-                {globalDefaults && !isLoading && (
-                    <div className="space-y-6">
-                        <p className="text-sm text-gray-500">
-                            Override the global PDF export defaults for this device. Select &ldquo;Default&rdquo; to use the global setting.
-                        </p>
+                <div className="space-y-6">
+                    <p className="text-sm text-gray-500">
+                        Per-device settings take the highest priority. When a PDF is generated for this device, these settings override both per-material and global defaults. Select &ldquo;Default&rdquo; to fall back to the per-material setting, or the global default if no per-material setting is set.
+                    </p>
 
-                        {/* Per §5H(2)(b): Three dropdown controls */}
-                        {renderDropdown<LinePatternType>(
-                            'Line Pattern Type',
-                            linePatternType,
-                            setLinePatternType,
-                            LINE_PATTERN_LABELS,
-                            globalDefaults.linePatternType
-                        )}
+                    {/* Per §5H(2)(b): Three dropdown controls */}
+                    {renderDropdown<LinePatternType>(
+                        'Line Pattern Type',
+                        linePatternType,
+                        setLinePatternType,
+                        LINE_PATTERN_LABELS
+                    )}
 
-                        {renderDropdown<LineSpacingPreset>(
-                            'Line Spacing Preset',
-                            lineSpacingPreset,
-                            setLineSpacingPreset,
-                            LINE_SPACING_LABELS,
-                            globalDefaults.lineSpacingPreset
-                        )}
+                    {renderDropdown<LineSpacingPreset>(
+                        'Line Spacing Preset',
+                        lineSpacingPreset,
+                        setLineSpacingPreset,
+                        LINE_SPACING_LABELS
+                    )}
 
-                        {renderDropdown<FontSizePreset>(
-                            'Font Size Preset',
-                            fontSizePreset,
-                            setFontSizePreset,
-                            FONT_SIZE_LABELS,
-                            globalDefaults.fontSizePreset
-                        )}
-                    </div>
-                )}
+                    {renderDropdown<FontSizePreset>(
+                        'Font Size Preset',
+                        fontSizePreset,
+                        setFontSizePreset,
+                        FONT_SIZE_LABELS
+                    )}
+                </div>
 
                 {/* Per §5H(2)(c): Save button */}
                 <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-100">
                     <button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || isLoading || !globalDefaults}
+                        disabled={isSubmitting}
                         className="px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50"
                     >
                         {isSubmitting ? 'Saving...' : 'Save'}

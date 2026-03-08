@@ -440,7 +440,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) modify the reading age and actual age metadata of the material.
 
-    (b1) modify the per-material PDF export settings — line pattern type, line spacing preset, and font size preset. This shall be provided in means of dropdowns, and each dropdown shall —
+    (b1) modify the per-material PDF export settings — line pattern type, line spacing preset, and font size preset. The frontend shall display a description informing the user that these settings override the global defaults for this material, but may in turn be overridden by per-device settings configured on external devices. This shall be provided in means of dropdowns, and each dropdown shall —
 
         (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
 
@@ -597,7 +597,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) the suggested filename shall be the material title with `.pdf` extension, with any invalid filename characters removed.
 
-    [Explanatory Note: The export uses the effective PDF settings resolved from per-material override global default, with no additional prompts. The same settings are used when PDFs are generated as part of deployment to external devices.]
+    [Explanatory Note: The export uses the effective PDF settings resolved per MaterialConversionSpecification §1(5)(h) (device → material → global). The same resolution is applied when PDFs are generated as part of deployment to external devices.]
 
 (2) **Error Handling**
 
@@ -870,10 +870,12 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) shows the per-device PDF export setting overrides currently associated with the selected device, as defined in AdditionalValidationRules §3D(1)(e–g).
 
+    (a1) The modal shall display a description informing the user that per-device settings take the highest priority, overriding both per-material and global default settings when a PDF is generated for this device.
+
     (b) displays three dropdown controls — line pattern type, line spacing preset, and font size preset — each of which shall —
-        (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
+        (i) include a "Default" option that maps to null (i.e., the per-material or global default is used);
         (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`); and
-        (iii) display "Default (...)" when the per-device override is null.
+        (iii) display "Default" when the per-device override is null.
 
     (c) includes a "Save" button to allow users to save the changes made via `Task UpdateExternalDevice(ExternalDeviceEntity entity)`.
 
@@ -1093,6 +1095,8 @@ For a list of all server method and client handlers to be implemented for commun
 (5) **PDF Export Defaults**
 
     (a) On entry of the "Settings" tab, the frontend shall call `GetPdfExportSettings()` to retrieve the current global PDF export defaults.
+
+    (a1) The frontend shall display a description informing the user that these are the global defaults, and that they may be overridden on a per-material basis (in the editor) or on a per-device basis (in the external device configuration modal).
 
     (b) The frontend shall display three dropdown controls:
 
