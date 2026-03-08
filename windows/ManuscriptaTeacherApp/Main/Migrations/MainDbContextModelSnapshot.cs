@@ -154,7 +154,16 @@ namespace Manuscripta.Main.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FontSizePreset")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("LessonId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinePatternType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LineSpacingPreset")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MaterialType")
@@ -184,6 +193,28 @@ namespace Manuscripta.Main.Migrations
                     b.HasIndex("Timestamp");
 
                     b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("Main.Models.Entities.PdfExportSettingsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FontSizePreset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinePatternType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LineSpacingPreset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PdfExportSettings");
                 });
 
             modelBuilder.Entity("Main.Models.Entities.QuestionDataEntity", b =>

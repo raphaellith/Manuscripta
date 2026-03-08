@@ -53,6 +53,12 @@ public class MainDbContext : DbContext
     /// Per PersistenceAndCascadingRules.md §1(1)(j).
     /// </summary>
     public DbSet<EmailCredentialEntity> EmailCredentials { get; set; }
+
+    /// <summary>
+    /// Global default PDF export settings.
+    /// Per PersistenceAndCascadingRules.md §1(1)(k).
+    /// </summary>
+    public DbSet<PdfExportSettingsEntity> PdfExportSettings { get; set; }
     
     // NOTE: ResponseDataEntity and SessionDataEntity are NOT persisted to the database.
     // Per PersistenceAndCascadingRules.md §1(2), they require short-term persistence only.
@@ -107,6 +113,11 @@ public class MainDbContext : DbContext
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.LessonId);
             
+            // Enum-to-string conversions for nullable PDF export settings
+            entity.Property(e => e.LinePatternType).HasConversion<string?>();
+            entity.Property(e => e.LineSpacingPreset).HasConversion<string?>();
+            entity.Property(e => e.FontSizePreset).HasConversion<string?>();
+
             entity.HasOne(m => m.Lesson)
                 .WithMany()
                 .HasForeignKey(m => m.LessonId)
@@ -178,6 +189,16 @@ public class MainDbContext : DbContext
         modelBuilder.Entity<EmailCredentialEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        // Configure PdfExportSettingsEntity
+        // Per PersistenceAndCascadingRules.md §1(1)(k)
+        modelBuilder.Entity<PdfExportSettingsEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LinePatternType).HasConversion<string>();
+            entity.Property(e => e.LineSpacingPreset).HasConversion<string>();
+            entity.Property(e => e.FontSizePreset).HasConversion<string>();
         });
 
         // NOTE: ResponseDataEntity and SessionDataEntity are NOT configured here.
