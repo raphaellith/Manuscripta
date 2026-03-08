@@ -20,6 +20,10 @@ This document defines the requirements for converting `MaterialEntity` objects i
     (b) "Content" refers to the markdown-encoded `Content` field of a material.
     (c) "Attachment" refers to an `AttachmentEntity` object associated with the material.
     (d) "Question" refers to a `QuestionEntity` object associated with the material.
+    (e) "Line Pattern Type" refers to one of the following values: `RULED`, `SQUARE`, `ISOMETRIC`, `NONE`.
+    (f) "Line Spacing Preset" refers to one of the following values: `SMALL` (6mm), `MEDIUM` (8mm), `LARGE` (10mm), `EXTRA_LARGE` (14mm).
+    (g) "Font Size Preset" refers to one of the following values: `SMALL` (10pt), `MEDIUM` (12pt), `LARGE` (14pt), `EXTRA_LARGE` (16pt).
+    (h) "Effective PDF settings" refers to the line pattern type, line spacing preset, and font size preset resolved for a given material, determined by: `material.{Field} ?? globalDefault.{Field}`, where the global default is the `PdfExportSettingsEntity` defined in AdditionalValidationRules §3F.
 
 ## Section 1A — Technical Stack
 
@@ -40,6 +44,19 @@ This document defines the requirements for converting `MaterialEntity` objects i
 (4) For embedded PDF attachments (§3C), the service shall use a PDF manipulation library capable of merging pages.
 
     [Explanatory Note: PdfSharpCore or iText7 may be used for PDF page extraction and insertion.]
+
+
+## Section 2A — Line Pattern Definitions
+
+(1) Line patterns shall be rendered within a rectangular answer area of specified width and height. The following pattern types are defined:
+
+    (a) **RULED**: Horizontal lines spanning the content width, spaced at the effective line spacing interval, rendered as thin gray lines (1pt stroke, `Colors.Grey.Medium`).
+
+    (b) **SQUARE**: Both horizontal and vertical lines spaced at the effective line spacing interval, forming a square grid within the answer area, rendered as thin gray lines.
+
+    (c) **ISOMETRIC**: Lines at 0°, 60°, and 120° spaced at the effective line spacing interval, forming an equilateral triangle grid within the answer area, rendered as thin gray lines.
+
+    (d) **NONE**: Blank space with no lines.
 
 
 ## Section 2 — Page Layout
@@ -74,14 +91,16 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 ### Section 3A — Standard Markdown Elements
 
-(1) **Headers**. Markdown headers (§2(1) of Material Encoding Specification) shall be rendered with the following font sizes:
+(1) **Headers**. Markdown headers (§2(1) of Material Encoding Specification) shall be rendered with font sizes relative to the effective font size:
 
-    (a) Level 1 (`#`): 24pt, bold.
-    (b) Level 2 (`##`): 20pt, bold.
-    (c) Level 3 (`###`): 16pt, bold.
-    (d) Levels 4 and beyond: 14pt, bold.
+    (a) Level 1 (`#`): effective font size + 12pt, bold.
+    (b) Level 2 (`##`): effective font size + 8pt, bold.
+    (c) Level 3 (`###`): effective font size + 4pt, bold.
+    (d) Levels 4 and beyond: effective font size + 2pt, bold.
 
-(2) **Body Text**. Standard paragraph text shall be rendered at 12pt with 1.5 line spacing.
+    [Explanatory Note: At the default MEDIUM preset (12pt), this yields 24/20/16/14pt, matching the previous fixed values.]
+
+(2) **Body Text**. Standard paragraph text shall be rendered at the effective font size with 1.5 line spacing.
 
 (3) **Bold and Italic**. Text formatting (§2(2)–(3) of Material Encoding Specification) shall be preserved in the PDF output.
 
@@ -100,7 +119,7 @@ This document defines the requirements for converting `MaterialEntity` objects i
     (b) Block LaTeX (`$$...$$`) shall be rendered as a centred block element.
     (c) The service shall use a LaTeX rendering engine to convert notation to vector graphics or high-resolution images.
 
-(7) **Code Blocks**. Code blocks (§2(8) of Material Encoding Specification) shall be rendered in a monospace font with a light grey background.
+(7) **Code Blocks**. Code blocks (§2(8) of Material Encoding Specification) shall be rendered in a monospace font with a light gray background.
 
 (8) **Blockquotes**. Blockquotes (§2(9) of Material Encoding Specification) shall be rendered with a left border and indentation.
 
@@ -148,12 +167,16 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 (4) **Written Answer Questions**. For questions where `QuestionType` is `WRITTEN_ANSWER`:
 
-    (a) A set of blank lines shall be rendered below the question text to provide space for handwritten answers.
-    (b) The number of blank lines shall be determined as follows:
-        (i) If `MaxScore` is 1 or 2: 3 blank lines.
-        (ii) If `MaxScore` is 3 to 5: 5 blank lines.
-        (iii) If `MaxScore` is greater than 5: two times the number of blank lines as the maximum score.
+    (a) An answer area shall be rendered below the question text using the effective PDF settings, to provide space for handwritten answers.
+    (b) The height of the answer area shall be determined by a line count multiplied by the effective line spacing preset:
+        (i) If `MaxScore` is 1 or 2: 3 lines.
+        (ii) If `MaxScore` is 3 to 5: 5 lines.
+        (iii) If `MaxScore` is greater than 5: two times the maximum score in lines.
+        (iv) The answer area height shall be: line_count × effective_spacing_mm.
+        (v) The answer area shall span the content width and be filled with the effective line pattern type at the effective spacing.
     (c) The `CorrectAnswer` and `MarkScheme` shall not be rendered in the PDF output.
+
+    [Explanatory Note: For SQUARE and ISOMETRIC patterns, the full rectangular area (content width × computed height) is patterned.]
 
 (5) **Invalid References**. If the referenced `QuestionEntity` cannot be resolved or is not associated with the material, that question shall not be rendered.
 
@@ -161,9 +184,11 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 (1) The PDF conversion functionality shall be exposed through a service class named `MaterialPdfService`.
 
-(2) The service shall provide the following method:
+(2) The service shall provide the following methods:
 
-    (a) `GeneratePdfAsync(Guid materialId)`: Accepts a material ID and returns a byte array containing the PDF document, or throws an exception if the material cannot be found.
+    (a) `GeneratePdfAsync(Guid materialId)`: Accepts a material ID and returns a byte array containing the PDF document, or throws an exception if the material cannot be found. The service shall resolve the effective PDF settings internally by reading the material entity and global defaults from the database.
+
+    (b) `GenerateResponsePdfAsync(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`: Accepts a material ID, device ID, and export options, and returns a byte array containing the Response PDF document as defined in Section 7. The service shall resolve questions, responses, and feedback from their respective repositories. If the material cannot be found, the method shall throw a `KeyNotFoundException`.
 
 (3) The generated PDF shall be returned as a byte array and shall not be persisted by this service.
 
@@ -176,3 +201,52 @@ This document defines the requirements for converting `MaterialEntity` objects i
 (3) Malformed markdown shall be rendered on a best-effort basis, consistent with Material Encoding Specification §1(3).
 
 (4) LaTeX rendering failures shall result in the raw LaTeX source being displayed as plain text.
+
+
+## Section 7 — Response PDF Generation
+
+(1) This section defines the requirements for generating a PDF document that presents a single device's responses to all questions on a given material ("Response PDF").
+
+(2) **Inputs**. The service shall accept the following parameters:
+
+    (a) A `MaterialEntity` identifying the worksheet.
+    (b) A device identifier (`string deviceId`) identifying the responding device.
+    (c) A boolean `includeFeedback` indicating whether feedback shall be rendered.
+    (d) A boolean `includeMarkScheme` indicating whether mark schemes shall be rendered.
+
+(3) **Page Layout**. The Response PDF shall use the same page size, margins, header, and footer as defined in Section 2.
+
+(4) **Title Block**. The first page shall begin with a title block containing:
+
+    (a) The material title, rendered in the same manner as Section 3(1).
+    (b) The device display name, rendered below the material title.
+    (c) The export date, formatted as "Exported on DD MMM YYYY".
+
+(5) **Question and Response Rendering**. Questions shall be rendered in the order they appear in the material content. For each question:
+
+    (a) The question number (auto-incremented), question text, and maximum score shall be rendered as per Section 4(2).
+
+    (b) **Multiple Choice Questions**. For questions where `QuestionType` is `MULTIPLE_CHOICE`:
+
+        (i) Each option shall be rendered on a separate line, prefixed with an option letter (A, B, C, etc.), as per Section 4(3).
+        (ii) The option selected by the device shall be visually indicated (e.g., bold text or a filled marker).
+        (iii) If `includeMarkScheme` is true and the question has a `CorrectAnswer` field, the correct answer shall be highlighted in green.
+        (iv) If no response exists from this device for this question, the text "[No response]" shall be rendered in gray italic.
+
+    (c) **Written Answer Questions**. For questions where `QuestionType` is `WRITTEN_ANSWER`:
+
+        (i) The device's written answer shall be rendered below the question text, in a visually distinct block (e.g., indented or with a left border).
+        (ii) If `includeMarkScheme` is true and the question has a `MarkScheme` field, the mark scheme shall be rendered below the answer, prefixed with "Mark Scheme:".
+        (iii) If `includeMarkScheme` is true and the question has a `CorrectAnswer` field, the correct answer shall be rendered, prefixed with "Correct Answer:", and whether the device's response is correct shall be indicated.
+        (iv) If no response exists from this device for this question, the text "[No response]" shall be rendered in gray italic.
+
+    (d) **Feedback Rendering**. If `includeFeedback` is true and a `FeedbackEntity` exists for the device's response:
+
+        (i) If `Marks` is present, the awarded marks shall be rendered as "Marks: X / Y" where Y is the question's `MaxScore`.
+        (ii) If `Text` is present, the feedback text shall be rendered below the marks, prefixed with "Feedback:".
+        (iii) Feedback shall be rendered in a visually distinct section below the response (e.g., with a light background or border).
+        (iv) Feedback of any status (`PROVISIONAL`, `READY`, `DELIVERED`) shall be included.
+
+(6) **Font Settings**. The Response PDF shall use the effective font size preset resolved for the material, as defined in Section 1(5)(h).
+
+(7) **No Responses**. If no responses exist from the specified device for the specified material, the service shall throw an `InvalidOperationException`.

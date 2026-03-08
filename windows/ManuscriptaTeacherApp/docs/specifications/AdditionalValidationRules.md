@@ -74,6 +74,9 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
+    (c) `LinePatternType` (enum `LinePatternType`, optional). The line pattern for written-answer areas in the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+    (d) `LineSpacingPreset` (enum `LineSpacingPreset`, optional). The line spacing size for written-answer areas. If null, the global default from `PdfExportSettingsEntity` applies.
+    (e) `FontSizePreset` (enum `FontSizePreset`, optional). The body text font size for the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
 
 
 ### Section 2E - Question
@@ -274,3 +277,20 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) The `SmtpPort` specified in Paragraph (1)(c) must be a valid port number (1-65535).
 
     (b) Only one `EmailCredentialEntity` may exist at any time.
+
+
+### Section 3F — PDF Export Settings
+
+(1) PDF export settings are represented by a `PdfExportSettingsEntity` class. This class must contain the following attributes:
+
+    (a) `LinePatternType` (enum `LinePatternType`): The default line pattern for written-answer areas. Default value: `RULED`.
+
+    (b) `LineSpacingPreset` (enum `LineSpacingPreset`): The default line spacing for written-answer areas. Default value: `MEDIUM`.
+
+    (c) `FontSizePreset` (enum `FontSizePreset`): The default body text font size. Default value: `MEDIUM`.
+
+(2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
+
+    (a) All fields in (1) are mandatory.
+
+    (b) Only one `PdfExportSettingsEntity` may exist at any time.
