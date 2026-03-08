@@ -168,11 +168,12 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
 
             setIsUploading(true);
             const filePath = result.filePaths[0];
+            const fileToken = result.fileTokens[0];
             const extension = filePath.split('.').pop()?.toLowerCase() || '';
 
             // Per §4AA(2)(b): Create textual transcript of the document
             let transcript: string;
-            const buffer = await window.electronAPI.readFileBuffer(filePath);
+            const buffer = await window.electronAPI.readFileBuffer(fileToken);
 
             if (extension === 'pdf') {
                 transcript = await extractPdfText(buffer);

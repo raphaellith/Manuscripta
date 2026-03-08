@@ -69,11 +69,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('save-pdf-file', pdfBytes, defaultFilename),
 
     /**
-     * Read file contents as ArrayBuffer for source document transcript extraction.
+     * Read file contents as ArrayBuffer using a secure token from showOpenDialog.
      * Per FrontendWorkflowSpecifications §4AA(2)(b).
      */
-    readFileBuffer: (filePath: string) =>
-        ipcRenderer.invoke('read-file-buffer', filePath),
+    readFileBuffer: (fileToken: string) =>
+        ipcRenderer.invoke('read-file-buffer', fileToken),
 
      /** Listen for backend state changes from main process.
      * Per FrontendWorkflowSpecifications §2ZA(6)(c)(i).
