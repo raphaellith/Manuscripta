@@ -288,8 +288,9 @@ public class MaterialPdfService : IMaterialPdfService
             var optionLetter = optionLetters[i];
             var optionText = mcq.Options[i];
             var isSelected = i == selectedIndex;
-            // §7(5)(b)(iii): highlight correct if includeMarkScheme and correctAnswer exists
+            // §7(5)(b)(iii): identify correct option when mark scheme is enabled
             var isCorrectOption = includeMarkScheme && correctIndex.HasValue && i == correctIndex.Value;
+            var isSelectedWrong = isSelected && includeMarkScheme && correctIndex.HasValue && i != correctIndex.Value;
 
             questionColumn.Item().PaddingLeft(20).Row(row =>
             {
@@ -297,21 +298,32 @@ public class MaterialPdfService : IMaterialPdfService
                 {
                     var span = text.Span($"{optionLetter} ").FontSize(11);
                     if (isSelected) span.Bold();
+                    if (isSelectedWrong) span.FontColor(Colors.Red.Medium);
+                    else if (isSelected && isCorrectOption) span.FontColor(Colors.Green.Medium);
                 });
 
                 row.RelativeItem().Text(text =>
                 {
+                    // §7(5)(b)(ii): selected option text in bold
                     var span = text.Span(optionText).FontSize(11);
-                    if (isSelected)
-                        span.Bold();
-                    if (isCorrectOption)
-                        span.FontColor(Colors.Green.Medium);
-                });
+                    if (isSelected) span.Bold();
+                    if (isSelectedWrong) span.FontColor(Colors.Red.Medium);
+                    else if (isCorrectOption) span.FontColor(Colors.Green.Medium);
 
-                if (isSelected)
-                {
-                    row.ConstantItem(20).AlignCenter().Text("●").FontSize(10).Bold();
-                }
+                    // §7(5)(b)(ii): append [Selected] tag
+                    if (isSelected)
+                    {
+                        var selectedTag = text.Span(" [Selected]").FontSize(11).Bold();
+                        if (isSelectedWrong) selectedTag.FontColor(Colors.Red.Medium);
+                        else if (isCorrectOption) selectedTag.FontColor(Colors.Green.Medium);
+                    }
+
+                    // §7(5)(b)(iii): append [Correct] tag on the correct option
+                    if (isCorrectOption)
+                    {
+                        text.Span(" [Correct]").FontSize(11).Bold().FontColor(Colors.Green.Medium);
+                    }
+                });
             });
         }
     }
