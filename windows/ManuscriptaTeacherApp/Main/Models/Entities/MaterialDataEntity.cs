@@ -56,6 +56,24 @@ public class MaterialDataEntity
     /// </summary>
     public int? ActualAge { get; set; }
 
+    /// <summary>
+    /// Optional line pattern type for written-answer areas.
+    /// Per AdditionalValidationRules.md §2D(2)(c). Null = use global default.
+    /// </summary>
+    public LinePatternType? LinePatternType { get; set; }
+
+    /// <summary>
+    /// Optional line spacing preset for written-answer areas.
+    /// Per AdditionalValidationRules.md §2D(2)(d). Null = use global default.
+    /// </summary>
+    public LineSpacingPreset? LineSpacingPreset { get; set; }
+
+    /// <summary>
+    /// Optional body text font size preset.
+    /// Per AdditionalValidationRules.md §2D(2)(e). Null = use global default.
+    /// </summary>
+    public FontSizePreset? FontSizePreset { get; set; }
+
     // Foreign key navigation
     [ForeignKey("LessonId")]
     internal LessonEntity? Lesson { get; set; }

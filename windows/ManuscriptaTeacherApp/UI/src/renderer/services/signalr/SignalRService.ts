@@ -17,6 +17,7 @@ import type {
     ConfigurationEntity,
     SourceDocumentEntity,
     EmbeddingStatus,
+    PdfExportSettingsEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -361,6 +362,28 @@ class SignalRService {
         // SignalR returns byte[] as base64 string
         const base64 = await this.connection.invoke<string>("GenerateMaterialPdf", materialId);
         // Decode base64 to Uint8Array
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    /**
+     * Generates a response PDF for a specific device's responses to a worksheet.
+     * Per NetworkingAPISpec §1(m)(ii).
+     * @returns Decoded PDF file bytes as a Uint8Array.
+     */
+    public async generateResponsePdf(
+        materialId: string,
+        deviceId: string,
+        includeFeedback: boolean,
+        includeMarkScheme: boolean,
+    ): Promise<Uint8Array> {
+        const base64 = await this.connection.invoke<string>(
+            "GenerateResponsePdf", materialId, deviceId, includeFeedback, includeMarkScheme,
+        );
         const binaryString = atob(base64);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -918,6 +941,25 @@ class SignalRService {
      */
     public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
         return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
+    
+    // ==========================================
+    // PDF Export Settings - NetworkingAPISpec §1(1)(q)
+    // ==========================================
+
+    /**
+     * Retrieves the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(i) and FrontendWorkflowSpecifications §3(1)(b).
+     */
+    public async getPdfExportSettings(): Promise<PdfExportSettingsEntity> {
+        return await this.getConnection().invoke<PdfExportSettingsEntity>("GetPdfExportSettings");
+    }
+
+    /**
+     * Updates the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(ii).
+     */
+    public async updatePdfExportSettings(settings: PdfExportSettingsEntity): Promise<void> {
+        await this.getConnection().invoke("UpdatePdfExportSettings", settings);
     }
 
 }
