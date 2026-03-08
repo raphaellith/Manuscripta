@@ -81,6 +81,7 @@ export const LessonLibraryPage: React.FC = () => {
         getLessonsForUnit,
         getMaterialsForLesson,
         getQuestionsForMaterial,
+        getSourceDocumentsForCollection,
         createUnitCollection,
         deleteUnitCollection,
         createUnit,
@@ -639,12 +640,17 @@ export const LessonLibraryPage: React.FC = () => {
                 const lesson = modal.lesson;
                 const unit = units.find(u => u.id === lesson.unitId);
                 const unitCollectionId = unit?.unitCollectionId;
+                // Per FrontendWorkflowSpec §4B(1)(b): Provide source documents for selection
+                const sourceDocuments = unitCollectionId
+                    ? getSourceDocumentsForCollection(unitCollectionId)
+                    : [];
 
                 return (
                     <CreateMaterialModal
                         lessonId={lesson.id}
                         lessonTitle={lesson.title}
                         unitCollectionId={unitCollectionId}
+                        sourceDocuments={sourceDocuments}
                         onClose={() => setModal({ type: 'none' })}
                         onCreate={(title, materialType) => handleCreateMaterial(lesson.id, title, materialType)}
                         aiDependenciesAvailable={aiDependenciesAvailable}

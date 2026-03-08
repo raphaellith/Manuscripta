@@ -190,6 +190,173 @@ public class MaterialGenerationServiceTests
             Times.AtLeastOnce);
     }
 
+    /// <summary>
+    /// Per FrontendWorkflowSpec §4B(1)(b): Verifies that when SourceDocumentIds are provided
+    /// in the GenerationRequest, they are correctly passed to the embedding service.
+    /// </summary>
+    [Fact]
+    public async Task GenerateReading_WithSourceDocumentIds_PassesIdsToEmbeddingService()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService
+        {
+            ThrowOnPrimaryChat = false,
+            PrimaryChatResponse = "generated-content"
+        };
+
+        var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
+        
+        // Capture the source document IDs passed to the embedding service
+        List<Guid>? capturedSourceDocIds = null;
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(
+                It.IsAny<float[]>(),
+                It.IsAny<Guid>(),
+                It.IsAny<List<Guid>?>(),
+                It.IsAny<int>()))
+            .Callback<float[], Guid, List<Guid>?, int>((_, _, sourceDocIds, _) =>
+            {
+                capturedSourceDocIds = sourceDocIds;
+            })
+            .ReturnsAsync(new List<string> { "chunk-a" });
+
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
+
+        var sourceDoc1 = Guid.NewGuid();
+        var sourceDoc2 = Guid.NewGuid();
+        var request = new GenerationRequest
+        {
+            Description = "Generate a reading on volcanoes.",
+            ReadingAge = 11,
+            ActualAge = 11,
+            DurationInMinutes = 20,
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Volcanoes Reading",
+            SourceDocumentIds = new List<Guid> { sourceDoc1, sourceDoc2 }
+        };
+
+        await service.GenerateReading(request);
+
+        // Verify embedding service was called with the specified source document IDs
+        Assert.NotNull(capturedSourceDocIds);
+        Assert.Equal(2, capturedSourceDocIds!.Count);
+        Assert.Contains(sourceDoc1, capturedSourceDocIds);
+        Assert.Contains(sourceDoc2, capturedSourceDocIds);
+    }
+
+    /// <summary>
+    /// Per FrontendWorkflowSpec §4B(1)(b): Verifies that when no SourceDocumentIds are provided,
+    /// null is passed to the embedding service (meaning all documents will be searched).
+    /// </summary>
+    [Fact]
+    public async Task GenerateReading_WithoutSourceDocumentIds_PassesNullToEmbeddingService()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService
+        {
+            ThrowOnPrimaryChat = false,
+            PrimaryChatResponse = "generated-content"
+        };
+
+        var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
+        
+        // Track whether callback was invoked and capture the sourceDocIds
+        var callbackInvoked = false;
+        List<Guid>? capturedSourceDocIds = new List<Guid>(); // Initialize to non-null to verify it becomes null
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(
+                It.IsAny<float[]>(),
+                It.IsAny<Guid>(),
+                It.IsAny<List<Guid>?>(),
+                It.IsAny<int>()))
+            .Callback<float[], Guid, List<Guid>?, int>((_, _, sourceDocIds, _) =>
+            {
+                callbackInvoked = true;
+                capturedSourceDocIds = sourceDocIds;
+            })
+            .ReturnsAsync(new List<string> { "chunk-a" });
+
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
+
+        var request = new GenerationRequest
+        {
+            Description = "Generate a reading on mountains.",
+            ReadingAge = 10,
+            ActualAge = 10,
+            DurationInMinutes = 15,
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Mountains Reading"
+            // SourceDocumentIds is not provided (null)
+        };
+
+        await service.GenerateReading(request);
+
+        // Verify embedding service was called with null sourceDocIds
+        Assert.True(callbackInvoked);
+        Assert.Null(capturedSourceDocIds);
+    }
+
+    /// <summary>
+    /// Per FrontendWorkflowSpec §4B(1)(b): Verifies that GenerateWorksheet also respects SourceDocumentIds.
+    /// </summary>
+    [Fact]
+    public async Task GenerateWorksheet_WithSourceDocumentIds_PassesIdsToEmbeddingService()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService
+        {
+            ThrowOnPrimaryChat = false,
+            PrimaryChatResponse = "generated-worksheet"
+        };
+
+        var embeddingService = new Mock<IEmbeddingService>();
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
+        
+        List<Guid>? capturedSourceDocIds = null;
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(
+                It.IsAny<float[]>(),
+                It.IsAny<Guid>(),
+                It.IsAny<List<Guid>?>(),
+                It.IsAny<int>()))
+            .Callback<float[], Guid, List<Guid>?, int>((_, _, sourceDocIds, _) =>
+            {
+                capturedSourceDocIds = sourceDocIds;
+            })
+            .ReturnsAsync(new List<string> { "chunk-a" });
+
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
+
+        var sourceDoc = Guid.NewGuid();
+        var request = new GenerationRequest
+        {
+            Description = "Generate a worksheet on ecosystems.",
+            ReadingAge = 12,
+            ActualAge = 12,
+            DurationInMinutes = 30,
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Ecosystems Worksheet",
+            SourceDocumentIds = new List<Guid> { sourceDoc }
+        };
+
+        await service.GenerateWorksheet(request);
+
+        Assert.NotNull(capturedSourceDocIds);
+        Assert.Single(capturedSourceDocIds!);
+        Assert.Contains(sourceDoc, capturedSourceDocIds);
+    }
+
     private sealed class FakeOllamaClientService : OllamaClientService
     {
         public bool ThrowOnPrimaryChat { get; set; }
