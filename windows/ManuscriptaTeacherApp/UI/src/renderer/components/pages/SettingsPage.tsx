@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "../common/Card";
 import signalRService from "../../services/signalr/SignalRService";
-import type { ConfigurationEntity, FeedbackStyle, MascotSelection } from "../../models";
+import type { ConfigurationEntity, MascotSelection, PdfExportSettingsEntity, LinePatternType, LineSpacingPreset, FontSizePreset } from "../../models";
 
 import { EmailCredentialSettings } from "../settings/EmailCredentialSettings";
 import { RuntimeDependencySettings } from "../settings/RuntimeDependencySettings";
@@ -21,17 +21,25 @@ export const SettingsPage: React.FC = () => {
     // Per §7(2): Check if there are paired Android devices
     const [hasPairedAndroidDevices, setHasPairedAndroidDevices] = useState(false);
 
+    // Per §7(5): PDF Export Defaults
+    const [pdfSettings, setPdfSettings] = useState<PdfExportSettingsEntity | null>(null);
+    const [pdfSaving, setPdfSaving] = useState(false);
+    const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
+    const [pdfError, setPdfError] = useState<string | null>(null);
+
     // Per §7(1): On entry, call GetBaseConfiguration()
     // Per §7(2): Also check for paired Android devices
     useEffect(() => {
         const loadBaseConfiguration = async () => {
             try {
                 setIsLoading(true);
-                const [config, androidDevices] = await Promise.all([
+                const [config, androidDevices, pdfExportSettings] = await Promise.all([
                     signalRService.getBaseConfiguration(),
-                    signalRService.getAllPairedDevices()
+                    signalRService.getAllPairedDevices(),
+                    signalRService.getPdfExportSettings()
                 ]);
                 setBaseConfig(config);
+                setPdfSettings(pdfExportSettings);
                 // Per §7(2)(b): prevent modification when there are paired Android devices
                 setHasPairedAndroidDevices(androidDevices.length > 0);
             } catch (err) {
@@ -67,6 +75,31 @@ export const SettingsPage: React.FC = () => {
             setError("Failed to save configuration");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    // Per §7(5): Update a PDF export setting field
+    const updatePdfSetting = (field: 'linePatternType' | 'lineSpacingPreset' | 'fontSizePreset', value: LinePatternType | LineSpacingPreset | FontSizePreset) => {
+        if (!pdfSettings) return;
+        setPdfSettings({ ...pdfSettings, [field]: value });
+        setPdfSuccess(null);
+    };
+
+    const handlePdfSave = async () => {
+        if (!pdfSettings) return;
+
+        setPdfSaving(true);
+        setPdfError(null);
+        setPdfSuccess(null);
+
+        try {
+            await signalRService.updatePdfExportSettings(pdfSettings);
+            setPdfSuccess("PDF export defaults saved successfully");
+        } catch (err) {
+            console.error("Failed to save PDF export settings:", err);
+            setPdfError("Failed to save PDF export settings");
+        } finally {
+            setPdfSaving(false);
         }
     };
 
@@ -254,6 +287,114 @@ export const SettingsPage: React.FC = () => {
                                 </div>
                             </>
                         ) : null}
+                    </Card>
+                </section>
+
+                {/* Per §7(5): PDF Export Defaults */}
+                <section>
+                    <Card className={`p-8 ${SETTINGS_SECTION_MAX_WIDTH}`}>
+                        <h2 className="text-2xl font-serif text-text-heading mb-6 border-b border-gray-100 pb-4">PDF Export Defaults</h2>
+                        {pdfSettings ? (
+                            <div className="space-y-6">
+                                <p className="text-sm text-gray-500">
+                                    These are the global defaults. They may be overridden on a per-material basis in the editor, or on a per-device basis for external devices.
+                                </p>
+                                {pdfError && (
+                                    <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+                                        {pdfError}
+                                    </div>
+                                )}
+
+                                {/* Line Pattern */}
+                                <div>
+                                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                                        Line Pattern
+                                    </label>
+                                    <select
+                                        value={pdfSettings.linePatternType}
+                                        onChange={(e) => updatePdfSetting("linePatternType", e.target.value as LinePatternType)}
+                                        className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                    >
+                                        <option value="RULED">Ruled</option>
+                                        <option value="SQUARE">Square</option>
+                                        <option value="ISOMETRIC">Isometric</option>
+                                        <option value="NONE">None</option>
+                                    </select>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Line pattern used in written answer areas on exported PDFs
+                                    </p>
+                                </div>
+
+                                {/* Line Spacing */}
+                                <div>
+                                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                                        Line Spacing
+                                    </label>
+                                    <select
+                                        value={pdfSettings.lineSpacingPreset}
+                                        onChange={(e) => updatePdfSetting("lineSpacingPreset", e.target.value as LineSpacingPreset)}
+                                        className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                    >
+                                        <option value="SMALL">Small (6mm)</option>
+                                        <option value="MEDIUM">Medium (8mm)</option>
+                                        <option value="LARGE">Large (10mm)</option>
+                                        <option value="EXTRA_LARGE">Extra Large (14mm)</option>
+                                    </select>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Spacing between lines in written answer areas
+                                    </p>
+                                </div>
+
+                                {/* Font Size */}
+                                <div>
+                                    <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                                        Font Size
+                                    </label>
+                                    <select
+                                        value={pdfSettings.fontSizePreset}
+                                        onChange={(e) => updatePdfSetting("fontSizePreset", e.target.value as FontSizePreset)}
+                                        className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                                    >
+                                        <option value="SMALL">Small (10pt)</option>
+                                        <option value="MEDIUM">Medium (12pt)</option>
+                                        <option value="LARGE">Large (14pt)</option>
+                                        <option value="EXTRA_LARGE">Extra Large (16pt)</option>
+                                    </select>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Body text font size in exported PDFs
+                                    </p>
+                                </div>
+
+                                {/* Save Actions */}
+                                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                                    {pdfSuccess && (
+                                        <span className="text-green-600 font-medium flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                            {pdfSuccess}
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handlePdfSave}
+                                        disabled={pdfSaving}
+                                        className="ml-auto px-6 py-2 bg-brand-orange text-white font-serif rounded-lg hover:bg-brand-orange-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {pdfSaving ? (
+                                            <>
+                                                <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-xl">save</span>
+                                                Save PDF Defaults
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-gray-500">Loading PDF export settings...</p>
+                        )}
                     </Card>
                 </section>
 

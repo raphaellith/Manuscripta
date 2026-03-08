@@ -85,6 +85,7 @@ builder.Services.AddSingleton<Main.Services.Repositories.IResponseRepository, Ma
 builder.Services.AddSingleton<Main.Services.Repositories.IFeedbackRepository, Main.Services.Repositories.InMemoryFeedbackRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IPdfExportSettingsRepository, Main.Services.Repositories.EfPdfExportSettingsRepository>();
 
 // Register configuration — two-tier model per ConfigurationManagementSpecification
 // Defaults: long-term persisted (EF Core) per PersistenceAndCascadingRules §1(1)(h)
