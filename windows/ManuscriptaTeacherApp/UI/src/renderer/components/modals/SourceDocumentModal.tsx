@@ -56,14 +56,11 @@ async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
 /**
  * Extracts text from a DOCX file buffer using mammoth.
  * Per §4AA(2)(b): Create textual transcript from uploaded file.
- * NOTE: mammoth is loaded via script tag in index.html and available as window.mammoth
  */
 async function extractDocxText(buffer: ArrayBuffer): Promise<string> {
-    // mammoth is loaded via script tag as a UMD global
-    const mammoth = (window as unknown as { mammoth: { extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }> } }).mammoth;
-    if (!mammoth) {
-        throw new Error('mammoth.js library not loaded');
-    }
+    const mammothModule = await import('mammoth');
+    // mammoth's browser bundle is UMD; webpack may expose it as default or as namespace.
+    const mammoth = mammothModule.default || mammothModule;
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
     return result.value;
 }

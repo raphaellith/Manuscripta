@@ -18,12 +18,13 @@ export const rendererConfig: Configuration = {
     // Prioritize browser entry points
     mainFields: ['browser', 'module', 'main'],
     aliasFields: ['browser'],
+    alias: {
+      // Use mammoth's self-contained browser bundle to avoid Node.js-only
+      // imports (fs, path) that fail in the renderer process.
+      mammoth: require.resolve('mammoth/mammoth.browser.min.js'),
+    },
     fallback: {
       stream: require.resolve('stream-browserify'),
     },
-  },
-  // mammoth is loaded via script tag and available as window.mammoth
-  externals: {
-    mammoth: 'mammoth',
   },
 };
