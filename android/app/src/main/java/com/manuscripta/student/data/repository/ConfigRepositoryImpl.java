@@ -236,7 +236,7 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     public void onMessageReceived(@NonNull TcpMessage message) {
         if (message instanceof RefreshConfigMessage) {
             Log.d(TAG, "Received REFRESH_CONFIG signal");
-            if (refreshCallback != null && deviceId != null) {
+            if (refreshCallback != null) {
                 refreshCallback.onConfigRefreshRequested(deviceId);
             }
         }

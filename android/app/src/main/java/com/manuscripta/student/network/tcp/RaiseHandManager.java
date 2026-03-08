@@ -119,7 +119,7 @@ public class RaiseHandManager implements TcpMessageListener {
             return;
         }
         state.postValue(HandRaiseState.PENDING);
-        sendHandRaised();
+        scheduler.execute(this::sendHandRaised);
         scheduleRetry();
     }
 

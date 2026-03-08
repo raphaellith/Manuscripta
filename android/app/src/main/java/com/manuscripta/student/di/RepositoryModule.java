@@ -221,15 +221,23 @@ public class RepositoryModule {
     @Singleton
     public ConfigRepository provideConfigRepository(SharedPreferences preferences,
                                                     ApiService apiService,
-                                                    TcpSocketManager tcpSocketManager) {
+                                                    TcpSocketManager tcpSocketManager,
+                                                    PairingManager pairingManager) {
         ConfigRepositoryImpl repo = new ConfigRepositoryImpl(
                 preferences, apiService, tcpSocketManager);
         repo.setRefreshCallback(deviceId -> {
-            try {
-                repo.fetchAndStoreConfig(deviceId);
-            } catch (Exception e) {
-                Log.w(TAG, "Config refresh failed: " + e.getMessage());
+            String id = deviceId != null ? deviceId : pairingManager.getDeviceId();
+            if (id == null || id.isEmpty()) {
+                Log.w(TAG, "Config refresh skipped: no device ID");
+                return;
             }
+            new Thread(() -> {
+                try {
+                    repo.fetchAndStoreConfig(id);
+                } catch (Exception e) {
+                    Log.w(TAG, "Config refresh failed: " + e.getMessage());
+                }
+            }, "config-refresh").start();
         });
         return repo;
     }

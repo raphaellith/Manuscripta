@@ -285,18 +285,23 @@ public class PairingManager implements TcpMessageListener {
             capturedDeviceId = deviceId;
         }
 
-        try {
-            PairingRequestMessage request = new PairingRequestMessage(capturedDeviceId);
-            socketManager.send(request);
-            Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + capturedDeviceId);
+        // Send on a background thread to avoid NetworkOnMainThreadException,
+        // since this method is called from onConnectionStateChanged which is
+        // dispatched on the main thread by TcpSocketManager.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                PairingRequestMessage request = new PairingRequestMessage(capturedDeviceId);
+                socketManager.send(request);
+                Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + capturedDeviceId);
 
-            // Start timeout timer
-            startTimeoutTimer();
+                // Start timeout timer
+                startTimeoutTimer();
 
-        } catch (IOException | TcpProtocolException e) {
-            Log.e(TAG, "Failed to send PAIRING_REQUEST: " + e.getMessage());
-            handlePairingFailure("Failed to send pairing request: " + e.getMessage());
-        }
+            } catch (IOException | TcpProtocolException e) {
+                Log.e(TAG, "Failed to send PAIRING_REQUEST: " + e.getMessage());
+                handlePairingFailure("Failed to send pairing request: " + e.getMessage());
+            }
+        });
     }
 
     /**

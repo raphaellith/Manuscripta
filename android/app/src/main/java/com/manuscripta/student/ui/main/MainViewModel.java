@@ -26,6 +26,8 @@ import com.manuscripta.student.utils.ConnectionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
@@ -88,6 +90,9 @@ public class MainViewModel extends ViewModel {
 
     /** Whether the screen is currently locked by the teacher. */
     private final LiveData<Boolean> screenLocked;
+
+    /** Background executor for database operations. */
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Constructor for MainViewModel with Hilt injection.
@@ -264,6 +269,18 @@ public class MainViewModel extends ViewModel {
     }
 
     /**
+     * Sets the current material from a background thread.
+     * Posts the value to the main thread via {@link MediatorLiveData#postValue}.
+     *
+     * @param material The material to set as current
+     */
+    public void setCurrentMaterialAsync(@NonNull Material material) {
+        currentMaterial.postValue(material);
+        loadQuestionsForMaterial(material.getId());
+        activateSessionForMaterial(material.getId());
+    }
+
+    /**
      * Activates the RECEIVED session for the given material, transitioning it
      * to ACTIVE per Session Interaction §5(4). Silently ignores if no session
      * exists in the RECEIVED state (e.g. already active).
@@ -271,13 +288,15 @@ public class MainViewModel extends ViewModel {
      * @param materialId The material ID to activate a session for
      */
     private void activateSessionForMaterial(@NonNull String materialId) {
-        List<Session> sessions = sessionRepository.getSessionsByMaterialId(materialId);
-        for (Session session : sessions) {
-            if (session.getStatus() == SessionStatus.RECEIVED) {
-                sessionRepository.activateSession(session.getId());
-                break;
+        dbExecutor.execute(() -> {
+            List<Session> sessions = sessionRepository.getSessionsByMaterialId(materialId);
+            for (Session session : sessions) {
+                if (session.getStatus() == SessionStatus.RECEIVED) {
+                    sessionRepository.activateSession(session.getId());
+                    break;
+                }
             }
-        }
+        });
     }
 
     /**
@@ -314,11 +333,13 @@ public class MainViewModel extends ViewModel {
      * @param materialId The ID of the material to load
      */
     public void loadMaterial(@NonNull String materialId) {
-        Material material = materialRepository.getMaterialById(materialId);
-        if (material != null) {
-            currentMaterial.setValue(material);
-            loadQuestionsForMaterial(materialId);
-        }
+        dbExecutor.execute(() -> {
+            Material material = materialRepository.getMaterialById(materialId);
+            if (material != null) {
+                currentMaterial.postValue(material);
+                loadQuestionsForMaterial(materialId);
+            }
+        });
     }
 
     /**
@@ -367,11 +388,13 @@ public class MainViewModel extends ViewModel {
      * @param materialId The material ID to load questions for
      */
     private void loadQuestionsForMaterial(@NonNull String materialId) {
-        List<QuestionEntity> entities = questionDao.getByMaterialId(materialId);
-        List<Question> questions = new ArrayList<>();
-        for (QuestionEntity entity : entities) {
-            questions.add(QuestionMapper.toDomain(entity));
-        }
-        currentQuestions.setValue(questions);
+        dbExecutor.execute(() -> {
+            List<QuestionEntity> entities = questionDao.getByMaterialId(materialId);
+            List<Question> questions = new ArrayList<>();
+            for (QuestionEntity entity : entities) {
+                questions.add(QuestionMapper.toDomain(entity));
+            }
+            currentQuestions.postValue(questions);
+        });
     }
 }
