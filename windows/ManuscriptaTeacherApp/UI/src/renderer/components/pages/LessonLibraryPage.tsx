@@ -495,6 +495,7 @@ export const LessonLibraryPage: React.FC = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); deleteUnitCollection(collection.id); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                    aria-label="Delete collection"
                                     title="Delete collection"
                                 >
                                     <TrashIcon />
@@ -527,6 +528,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); deleteUnit(unit.id); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                    aria-label="Delete unit"
                                                     title="Delete unit"
                                                 >
                                                     <TrashIcon />
@@ -559,6 +561,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
                                                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                        aria-label="Delete lesson"
                                                                         title="Delete lesson"
                                                                     >
                                                                         <TrashIcon />
@@ -582,6 +585,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                                                     <button
                                                                                         onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
                                                                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                                        aria-label="Delete material"
                                                                                         title="Delete material"
                                                                                     >
                                                                                         <TrashIcon />

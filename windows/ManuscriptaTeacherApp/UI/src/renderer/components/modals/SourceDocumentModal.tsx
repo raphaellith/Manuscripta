@@ -375,6 +375,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
                                         <button
                                             onClick={() => handleStartEdit(doc)}
                                             className="p-1 text-gray-400 hover:text-brand-orange rounded transition-colors"
+                                            aria-label="Edit transcript"
                                             title="Edit transcript"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -386,6 +387,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
                                     <button
                                         onClick={() => handleDelete(doc.id)}
                                         className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"
+                                        aria-label="Delete source document"
                                         title="Delete"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
