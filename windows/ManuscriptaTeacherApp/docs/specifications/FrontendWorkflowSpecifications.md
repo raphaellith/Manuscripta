@@ -713,6 +713,8 @@ For a list of all server method and client handlers to be implemented for commun
 
 (5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
 
+(5A) For each external device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's PDF export setting overrides in a configuration modal as outlined in s5H(2) of this specification.
+
 
 ## Section 5C — Device Control
 
@@ -863,6 +865,17 @@ For a list of all server method and client handlers to be implemented for commun
     (b) allows the user to modify any value(s) in the selected device's configuration.
     
     (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+
+(2) When the settings button for a displayed external device is pressed, the frontend shall display a configuration modal which —
+
+    (a) shows the per-device PDF export setting overrides currently associated with the selected device, as defined in AdditionalValidationRules §3D(1)(e–g).
+
+    (b) displays three dropdown controls — line pattern type, line spacing preset, and font size preset — each of which shall —
+        (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`); and
+        (iii) display "Default (...)" when the per-device override is null.
+
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateExternalDevice(ExternalDeviceEntity entity)`.
 
 
 

@@ -170,7 +170,7 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task<List<ExternalDeviceEntity>> GetAllExternalDevices()`: Retrieves all paired external devices.
 
-        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID.
+        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID. This includes updating the per-device PDF export setting overrides defined in AdditionalValidationRules §3D(1)(e–g).
 
         (v) `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified external devices by dispatching it through their respective delivery mechanisms. Returns when all deployments are complete or have failed.
 

@@ -253,6 +253,12 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (d) `ConfigurationData` (string): A string storing type-specific configuration data.
 
+    (e) `LinePatternType` (enum `LinePatternType`, optional). The per-device line pattern override for written-answer areas in the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+
+    (f) `LineSpacingPreset` (enum `LineSpacingPreset`, optional). The per-device line spacing override for written-answer areas. If null, the global default from `PdfExportSettingsEntity` applies.
+
+    (g) `FontSizePreset` (enum `FontSizePreset`, optional). The per-device body text font size override for the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+
 (2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
 
     (a) If `Type` is `REMARKABLE`, there must exist a file at `%AppData%\ManuscriptaTeacherApp\rmapi\{DeviceId}.conf` containing valid authentication tokens. [Explanatory Note: The `ConfigurationData` field may be empty or null for this type, as config is stored in the dotfile.]

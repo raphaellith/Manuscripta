@@ -23,7 +23,15 @@ This document defines the requirements for converting `MaterialEntity` objects i
     (e) "Line Pattern Type" refers to one of the following values: `RULED`, `SQUARE`, `ISOMETRIC`, `NONE`.
     (f) "Line Spacing Preset" refers to one of the following values: `SMALL` (6mm), `MEDIUM` (8mm), `LARGE` (10mm), `EXTRA_LARGE` (14mm).
     (g) "Font Size Preset" refers to one of the following values: `SMALL` (10pt), `MEDIUM` (12pt), `LARGE` (14pt), `EXTRA_LARGE` (16pt).
-    (h) "Effective PDF settings" refers to the line pattern type, line spacing preset, and font size preset resolved for a given material, determined by: `material.{Field} ?? globalDefault.{Field}`, where the global default is the `PdfExportSettingsEntity` defined in AdditionalValidationRules §3F.
+    (h) "Effective PDF settings" refers to the line pattern type, line spacing preset, and font size preset resolved for a given material, determined by —
+
+        (i) when a target external device is specified: `device.{Field} ?? material.{Field} ?? globalDefault.{Field}`, where `device` is the `ExternalDeviceEntity` to which the material is being deployed and the per-device override fields are defined in AdditionalValidationRules §3D(1)(e–g); or
+
+        (ii) otherwise: `material.{Field} ?? globalDefault.{Field}`,
+
+        where the global default is the `PdfExportSettingsEntity` defined in AdditionalValidationRules §3F.
+
+        The order of precedence from highest to lowest shall be per-device override, per-material override, global default.
 
 ## Section 1A — Technical Stack
 
@@ -186,7 +194,7 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
 (2) The service shall provide the following methods:
 
-    (a) `GeneratePdfAsync(Guid materialId)`: Accepts a material ID and returns a byte array containing the PDF document, or throws an exception if the material cannot be found. The service shall resolve the effective PDF settings internally by reading the material entity and global defaults from the database.
+    (a) `GeneratePdfAsync(Guid materialId, Guid? targetDeviceId = null)`: Accepts a material ID and an optional target external device ID, and returns a byte array containing the PDF document, or throws an exception if the material cannot be found. The service shall resolve the effective PDF settings internally by reading the material entity, the external device entity (if `targetDeviceId` is provided), and the global defaults from the database, in accordance with §1(5)(h).
 
     (b) `GenerateResponsePdfAsync(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`: Accepts a material ID, device ID, and export options, and returns a byte array containing the Response PDF document as defined in Section 7. The service shall resolve questions, responses, and feedback from their respective repositories. If the material cannot be found, the method shall throw a `KeyNotFoundException`.
 
