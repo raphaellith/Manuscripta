@@ -183,11 +183,20 @@ public class SourceDocumentServiceTests
         _mockSourceDocumentRepo.Setup(r => r.AddAsync(It.IsAny<SourceDocumentEntity>()))
             .Returns(Task.CompletedTask);
 
+        // Signal that fires when the background task calls IndexSourceDocumentByIdAsync
+        var indexingCalled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mockEmbeddingService
+            .Setup(s => s.IndexSourceDocumentByIdAsync(sourceDocument.Id))
+            .Callback(() => indexingCalled.TrySetResult(true))
+            .Returns(Task.CompletedTask);
+
         // Act
         await _service.CreateAsync(sourceDocument);
 
-        // Allow background task to execute
-        await Task.Delay(200);
+        // Await the background task deterministically instead of sleeping
+        var completed = await Task.WhenAny(indexingCalled.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        Assert.True(completed == indexingCalled.Task,
+            "Background indexing was not triggered within the timeout period.");
 
         // Assert - background task should create a new scope and call IndexSourceDocumentByIdAsync
         _mockScopeFactory.Verify(f => f.CreateScope(), Times.Once);
