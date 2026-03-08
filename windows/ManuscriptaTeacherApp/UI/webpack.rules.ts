@@ -10,6 +10,7 @@ export const rules: Required<ModuleOptions>['rules'] = [
   },
   {
     test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
+    exclude: /pdf\.worker/,
     parser: { amd: false },
     use: {
       loader: '@vercel/webpack-asset-relocator-loader',
@@ -17,6 +18,12 @@ export const rules: Required<ModuleOptions>['rules'] = [
         outputAssetBase: 'native_modules',
       },
     },
+  },
+  // Emit the pdfjs worker as a static asset so it can be loaded locally
+  // instead of from a CDN (offline reliability & supply-chain safety).
+  {
+    test: /pdf\.worker\.min\.mjs$/,
+    type: 'asset/resource',
   },
   {
     test: /\.tsx?$/,

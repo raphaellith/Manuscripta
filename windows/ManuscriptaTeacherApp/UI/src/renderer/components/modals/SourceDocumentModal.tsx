@@ -24,6 +24,12 @@ interface SourceDocumentModalProps {
 
 type UploadMode = 'none' | 'file' | 'text';
 
+// Bundle the pdfjs worker locally instead of loading from CDN.
+// This ensures offline reliability and avoids supply-chain risk from
+// executing remotely served code that parses untrusted PDFs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pdfjsWorkerSrc: string = require('pdfjs-dist/build/pdf.worker.min.mjs');
+
 /**
  * Extracts text from a PDF file buffer using pdfjs-dist.
  * Per §4AA(2)(b): Create textual transcript from uploaded file.
@@ -31,9 +37,8 @@ type UploadMode = 'none' | 'file' | 'text';
 async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
     // Dynamic import to avoid loading pdfjs-dist unless needed
     const pdfjsLib = await import('pdfjs-dist');
-    // Set the worker source for pdfjs - use CDN-hosted worker matching installed version
-    const pdfjsVersion = pdfjsLib.version;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
+    // Use the locally bundled worker (emitted as asset/resource by webpack)
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
     const pages: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) {
