@@ -270,8 +270,11 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      * to the server via HTTP POST /responses.
      *
      * <p>Per API Contract §2.4, expects HTTP 201 Created on success.</p>
+     *
+     * <p>Retry logic is not handled here; it is managed transparently by
+     * {@link com.manuscripta.student.network.interceptor.RetryInterceptor}
+     * at the OkHttp interceptor layer.</p>
      */
-    @VisibleForTesting
     static class NetworkSyncEngine implements SyncEngine {
 
         /** Tag for logging. */
