@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import signalRService from '../services/signalr/SignalRService';
-import type { PairedDeviceEntity, DeviceStatusEntity } from '../models';
+import type { PairedDeviceEntity, DeviceStatusEntity, SourceDocumentEntity } from '../models';
 
 // Alert types for various events
 export interface Alert {
@@ -25,6 +25,7 @@ interface AlertContextValue {
     acknowledgeHelp: (deviceId: string) => void;
     acknowledgeAllHelp: () => void;
     setPairedDevices: (devices: PairedDeviceEntity[]) => void;
+    setSourceDocuments: (docs: SourceDocumentEntity[]) => void;
     unacknowledgedHelpCount: number;
 }
 
@@ -49,9 +50,17 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
     // Ref to hold latest devices without triggering re-effects
     const devicesRef = useRef<PairedDeviceEntity[]>([]);
 
+    // Ref to hold latest source documents without triggering re-effects
+    const sourceDocumentsRef = useRef<SourceDocumentEntity[]>([]);
+
     // Update devices ref for name resolution
     const setPairedDevices = useCallback((devices: PairedDeviceEntity[]) => {
         devicesRef.current = devices;
+    }, []);
+
+    // Update source documents ref for document identification in alerts
+    const setSourceDocuments = useCallback((docs: SourceDocumentEntity[]) => {
+        sourceDocumentsRef.current = docs;
     }, []);
 
     // Helper to add alerts - uses ref to avoid dependency cycles
@@ -134,7 +143,11 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
 
         // Handler: Embedding failure alerts (per FrontendWorkflowSpec §4AA(6))
         const unsubEmbeddingFailed = signalRService.onEmbeddingFailed((sourceDocumentId: string, error: string) => {
-            addAlert('embedding_failed', undefined, `Source document indexing failed: ${error}`);
+            const doc = sourceDocumentsRef.current.find(d => d.id === sourceDocumentId);
+            const docLabel = doc
+                ? `"${doc.transcript.substring(0, 50).trim()}${doc.transcript.length > 50 ? '…' : ''}"`
+                : sourceDocumentId.substring(0, 8);
+            addAlert('embedding_failed', undefined, `Source document ${docLabel} indexing failed: ${error}`);
         });
 
         return () => {
@@ -157,6 +170,7 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
         acknowledgeHelp,
         acknowledgeAllHelp,
         setPairedDevices,
+        setSourceDocuments,
         unacknowledgedHelpCount
     };
 
