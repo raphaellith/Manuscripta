@@ -296,7 +296,7 @@ public class MaterialPdfService : IMaterialPdfService
             {
                 row.ConstantItem(30).Text(text =>
                 {
-                    var span = text.Span($"{optionLetter} ").FontSize(11);
+                    var span = text.Span($"{optionLetter} ").FontSize(bodyFontSize);
                     if (isSelected) span.Bold();
                     if (isSelectedWrong) span.FontColor(Colors.Red.Medium);
                     else if (isSelected && isCorrectOption) span.FontColor(Colors.Green.Medium);
@@ -304,24 +304,24 @@ public class MaterialPdfService : IMaterialPdfService
 
                 row.RelativeItem().Text(text =>
                 {
-                    // §7(5)(b)(ii): selected option text in bold
-                    var span = text.Span(optionText).FontSize(11);
+                    // §7(5)(b)(iii): selected option text in bold
+                    var span = text.Span(optionText).FontSize(bodyFontSize);
                     if (isSelected) span.Bold();
                     if (isSelectedWrong) span.FontColor(Colors.Red.Medium);
                     else if (isCorrectOption) span.FontColor(Colors.Green.Medium);
 
-                    // §7(5)(b)(ii): append [Selected] tag
+                    // §7(5)(b)(iii): append [Selected] tag
                     if (isSelected)
                     {
-                        var selectedTag = text.Span(" [Selected]").FontSize(11).Bold();
+                        var selectedTag = text.Span(" [Selected]").FontSize(bodyFontSize).Bold();
                         if (isSelectedWrong) selectedTag.FontColor(Colors.Red.Medium);
                         else if (isCorrectOption) selectedTag.FontColor(Colors.Green.Medium);
                     }
 
-                    // §7(5)(b)(iii): append [Correct] tag on the correct option
+                    // §7(5)(b)(iv): append [Correct] tag on the correct option
                     if (isCorrectOption)
                     {
-                        text.Span(" [Correct]").FontSize(11).Bold().FontColor(Colors.Green.Medium);
+                        text.Span(" [Correct]").FontSize(bodyFontSize).Bold().FontColor(Colors.Green.Medium);
                     }
                 });
             });
@@ -1023,7 +1023,7 @@ public class MaterialPdfService : IMaterialPdfService
             // Render question type-specific content
             if (question.QuestionType == QuestionType.MULTIPLE_CHOICE)
             {
-                RenderMultipleChoiceQuestion(questionColumn, question);
+                RenderMultipleChoiceQuestion(questionColumn, question, effectiveSettings.BodyFontSizePt);
             }
             else
             {
@@ -1036,7 +1036,7 @@ public class MaterialPdfService : IMaterialPdfService
     /// Renders a multiple choice question with options.
     /// Per MaterialConversionSpecification §4(3).
     /// </summary>
-    private static void RenderMultipleChoiceQuestion(ColumnDescriptor questionColumn, QuestionEntity question)
+    private static void RenderMultipleChoiceQuestion(ColumnDescriptor questionColumn, QuestionEntity question, float bodyFontSize)
     {
         // Cast to MCQ entity to access Options
         if (question is not MultipleChoiceQuestionEntity mcq || mcq.Options == null)
@@ -1048,11 +1048,11 @@ public class MaterialPdfService : IMaterialPdfService
             var optionLetter = optionLetters[i];
             var optionText = mcq.Options[i];
             
-            // Checkbox and option per §4(3)(a)-(b)
+            // Checkbox and option per §4(3)(a)-(c)
             questionColumn.Item().PaddingLeft(20).Row(row =>
             {
-                row.ConstantItem(30).Text($"{optionLetter} ").FontSize(11).Bold();
-                row.RelativeItem().Text(optionText).FontSize(11);
+                row.ConstantItem(30).Text($"{optionLetter} ").FontSize(bodyFontSize).Bold();
+                row.RelativeItem().Text(optionText).FontSize(bodyFontSize);
             });
         }
     }

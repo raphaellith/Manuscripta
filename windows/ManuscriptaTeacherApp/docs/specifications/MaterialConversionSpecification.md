@@ -171,7 +171,8 @@ This document defines the requirements for converting `MaterialEntity` objects i
 
     (a) Each option shall be rendered on a separate line, prefixed with an option letter (A, B, C, etc.).
     (b) The options shall be indented relative to the question text.
-    (c) The `CorrectAnswer` shall not be indicated in the PDF output.
+    (c) The option text shall be rendered at the effective font size.
+    (d) The `CorrectAnswer` shall not be indicated in the PDF output.
 
 (4) **Written Answer Questions**. For questions where `QuestionType` is `WRITTEN_ANSWER`:
 
@@ -237,12 +238,13 @@ This document defines the requirements for converting `MaterialEntity` objects i
     (b) **Multiple Choice Questions**. For questions where `QuestionType` is `MULTIPLE_CHOICE`:
 
         (i) Each option shall be rendered on a separate line, prefixed with an option letter (A, B, C, etc.), as per Section 4(3).
-        (ii) The option selected by the device shall be rendered in bold text. The tag `[Selected]` shall be appended in bold after the option text.
-        (iii) If `includeMarkScheme` is true and the question has a `CorrectAnswer` field, the following additional rendering rules shall apply:
+        (ii) The option text shall be rendered at the effective font size.
+        (iii) The option selected by the device shall be rendered in bold text. The tag `[Selected]` shall be appended in bold after the option text.
+        (iv) If `includeMarkScheme` is true and the question has a `CorrectAnswer` field, the following additional rendering rules shall apply:
             1. The correct option shall have the tag `[Correct]` appended in bold green after the option text.
             2. If the selected option is the correct option, the option text, `[Selected]` tag, and `[Correct]` tag shall all be rendered in bold green.
             3. If the selected option is not the correct option, the selected option's text and `[Selected]` tag shall be rendered in bold red.
-        (iv) If no response exists from this device for this question, the text "[No response]" shall be rendered in gray italic.
+        (v) If no response exists from this device for this question, the text "[No response]" shall be rendered in gray italic.
 
     (c) **Written Answer Questions**. For questions where `QuestionType` is `WRITTEN_ANSWER`:
 
