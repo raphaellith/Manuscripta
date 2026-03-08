@@ -1106,4 +1106,4 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iii) Font Size Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
 
-    (c) When the user changes any value, the frontend shall call `UpdatePdfExportSettings(entity)` to persist the updated defaults.
+    (c) The frontend shall provide a "Save PDF Defaults" button. When activated, the frontend shall call `UpdatePdfExportSettings(entity)` to persist the updated defaults.

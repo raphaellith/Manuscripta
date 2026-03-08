@@ -1237,7 +1237,7 @@ public class MaterialPdfServiceTests
             {
                 new MultipleChoiceQuestionEntity(questionId, materialId, "Pick one:", new List<string> { "A", "B", "C" }, 1)
             });
-        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new List<ResponseEntity>
             {
                 new MultipleChoiceResponseEntity(responseId, questionId, deviceId, 0)
@@ -1272,7 +1272,7 @@ public class MaterialPdfServiceTests
             {
                 new WrittenAnswerQuestionEntity(questionId, materialId, "Explain:", "correct answer", "Check for key points", 5)
             });
-        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new List<ResponseEntity>
             {
                 new WrittenAnswerResponseEntity(responseId, questionId, deviceId, "Student answer text")
@@ -1308,13 +1308,16 @@ public class MaterialPdfServiceTests
             {
                 new WrittenAnswerQuestionEntity(questionId, materialId, "Explain:", null, null, 5)
             });
-        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new List<ResponseEntity>
             {
                 new WrittenAnswerResponseEntity(responseId, questionId, deviceId, "Student answer")
             });
-        _mockFeedbackRepo.Setup(r => r.GetByResponseIdAsync(responseId))
-            .ReturnsAsync(new FeedbackEntity(feedbackId, responseId, "Good effort", 3));
+        _mockFeedbackRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<FeedbackEntity>
+            {
+                new FeedbackEntity(feedbackId, responseId, "Good effort", 3)
+            });
         _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
             .ReturnsAsync(new List<PairedDeviceEntity>
             {
@@ -1345,7 +1348,7 @@ public class MaterialPdfServiceTests
             {
                 new MultipleChoiceQuestionEntity(questionId, materialId, "Pick:", new List<string> { "X", "Y" }, 0)
             });
-        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
             .ReturnsAsync(new List<ResponseEntity>
             {
                 new MultipleChoiceResponseEntity(responseId, questionId, deviceId, 1)
