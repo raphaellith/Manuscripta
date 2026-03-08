@@ -98,6 +98,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
         createSourceDocument,
         updateSourceDocument,
         deleteSourceDocument,
+        setSourceDocumentEmbeddingStatus,
     } = useAppContext();
 
     const sourceDocuments = getSourceDocumentsForCollection(unitCollectionId);
@@ -128,14 +129,15 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
             try {
                 const status = await signalRService.getEmbeddingStatus(doc.id);
                 if (status !== doc.embeddingStatus) {
-                    // Update the source document in context with the new status
-                    await updateSourceDocument({ ...doc, embeddingStatus: status });
+                    // Update local state only; do not call updateSourceDocument
+                    // to avoid triggering backend re-indexing (§4AA(3))
+                    setSourceDocumentEmbeddingStatus(doc.id, status);
                 }
             } catch {
                 // Silently ignore polling errors
             }
         }
-    }, [sourceDocuments, updateSourceDocument]);
+    }, [sourceDocuments, setSourceDocumentEmbeddingStatus]);
 
     useEffect(() => {
         const hasPending = sourceDocuments.some(sd => sd.embeddingStatus === 'PENDING');

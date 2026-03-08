@@ -12,6 +12,7 @@ import type {
     MaterialEntity,
     QuestionEntity,
     SourceDocumentEntity,
+    EmbeddingStatus,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -63,6 +64,7 @@ interface AppContextValue extends AppState {
     updateSourceDocument: (entity: SourceDocumentEntity) => Promise<void>;
     deleteSourceDocument: (id: string) => Promise<void>;
     getSourceDocumentsForCollection: (collectionId: string) => SourceDocumentEntity[];
+    setSourceDocumentEmbeddingStatus: (id: string, status: EmbeddingStatus) => void;
 
     // AI Generation - NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
@@ -369,6 +371,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         }));
     };
 
+    // Per §4AA(2)(e): Update embedding status locally without triggering backend re-indexing
+    const setSourceDocumentEmbeddingStatus = (id: string, status: EmbeddingStatus): void => {
+        setState(prev => ({
+            ...prev,
+            sourceDocuments: prev.sourceDocuments.map(sd =>
+                sd.id === id ? { ...sd, embeddingStatus: status } : sd
+            ),
+        }));
+    };
+
     // AI Generation methods - Per NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
     const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
@@ -401,6 +413,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         updateSourceDocument,
         deleteSourceDocument,
         getSourceDocumentsForCollection,
+        setSourceDocumentEmbeddingStatus,
         generateReading,
         generateWorksheet,
         cancelGeneration,
