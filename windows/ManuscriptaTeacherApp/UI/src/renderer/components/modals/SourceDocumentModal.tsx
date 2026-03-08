@@ -14,7 +14,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ModalOverlay } from './ModalOverlay';
 import { useAppContext } from '../../state/AppContext';
-import signalRService from '../../services/signalr/SignalRService';
 import type { SourceDocumentEntity, EmbeddingStatus } from '../../models';
 
 interface SourceDocumentModalProps {
@@ -99,6 +98,8 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
         updateSourceDocument,
         deleteSourceDocument,
         setSourceDocumentEmbeddingStatus,
+        getEmbeddingStatus,
+        retryEmbedding,
     } = useAppContext();
 
     const sourceDocuments = getSourceDocumentsForCollection(unitCollectionId);
@@ -127,7 +128,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
 
         for (const doc of pendingDocs) {
             try {
-                const status = await signalRService.getEmbeddingStatus(doc.id);
+                const status = await getEmbeddingStatus(doc.id);
                 if (status !== doc.embeddingStatus) {
                     // Update local state only; do not call updateSourceDocument
                     // to avoid triggering backend re-indexing (§4AA(3))
@@ -137,7 +138,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
                 // Silently ignore polling errors
             }
         }
-    }, [sourceDocuments, setSourceDocumentEmbeddingStatus]);
+    }, [sourceDocuments, getEmbeddingStatus, setSourceDocumentEmbeddingStatus]);
 
     useEffect(() => {
         const hasPending = sourceDocuments.some(sd => sd.embeddingStatus === 'PENDING');
@@ -293,9 +294,7 @@ export const SourceDocumentModal: React.FC<SourceDocumentModalProps> = ({
     const handleRetryEmbedding = async (doc: SourceDocumentEntity) => {
         setActionError(null);
         try {
-            await signalRService.retryEmbedding(doc.id);
-            // Optimistically update status to PENDING
-            await updateSourceDocument({ ...doc, embeddingStatus: 'PENDING' });
+            await retryEmbedding(doc.id);
         } catch (err) {
             console.error('Failed to retry embedding:', err);
             setActionError('Failed to retry indexing. Please try again.');

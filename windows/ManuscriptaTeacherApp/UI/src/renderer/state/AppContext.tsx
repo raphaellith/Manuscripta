@@ -66,6 +66,10 @@ interface AppContextValue extends AppState {
     getSourceDocumentsForCollection: (collectionId: string) => SourceDocumentEntity[];
     setSourceDocumentEmbeddingStatus: (id: string, status: EmbeddingStatus) => void;
 
+    // Per §4AA(2)(e) and §4AA(5)(b): Embedding operations encapsulated per §2B(2)(c)
+    getEmbeddingStatus: (sourceDocumentId: string) => Promise<EmbeddingStatus>;
+    retryEmbedding: (sourceDocumentId: string) => Promise<void>;
+
     // AI Generation - NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
     generateReading: (request: GenerationRequest) => Promise<GenerationResult>;
@@ -381,6 +385,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         }));
     };
 
+    // Per §4AA(2)(e): Poll embedding status via SignalR, encapsulated per §2B(2)(c)
+    const getEmbeddingStatus = async (sourceDocumentId: string): Promise<EmbeddingStatus> => {
+        return await signalRService.getEmbeddingStatus(sourceDocumentId);
+    };
+
+    // Per §4AA(5)(b): Retry embedding via SignalR, encapsulated per §2B(2)(c)
+    const retryEmbedding = async (sourceDocumentId: string): Promise<void> => {
+        await signalRService.retryEmbedding(sourceDocumentId);
+        // Optimistically update status to PENDING
+        setSourceDocumentEmbeddingStatus(sourceDocumentId, 'PENDING');
+    };
+
     // AI Generation methods - Per NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
     const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
@@ -414,6 +430,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         deleteSourceDocument,
         getSourceDocumentsForCollection,
         setSourceDocumentEmbeddingStatus,
+        getEmbeddingStatus,
+        retryEmbedding,
         generateReading,
         generateWorksheet,
         cancelGeneration,
