@@ -182,6 +182,10 @@ public class MainDbContext : DbContext
         {
             entity.HasKey(e => e.DeviceId);
             entity.Property(e => e.Type).HasConversion<string>();
+            // Per AdditionalValidationRules §3D(1)(e-g): nullable per-device PDF export overrides
+            entity.Property(e => e.LinePatternType).HasConversion<string?>();
+            entity.Property(e => e.LineSpacingPreset).HasConversion<string?>();
+            entity.Property(e => e.FontSizePreset).HasConversion<string?>();
         });
 
         // Configure EmailCredentialEntity

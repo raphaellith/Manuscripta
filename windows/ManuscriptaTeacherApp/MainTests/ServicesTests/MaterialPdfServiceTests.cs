@@ -31,6 +31,7 @@ public class MaterialPdfServiceTests
     private readonly Mock<IResponseRepository> _mockResponseRepo;
     private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
     private readonly Mock<IDeviceRegistryService> _mockDeviceRegistryService;
+    private readonly Mock<IExternalDeviceRepository> _mockExternalDeviceRepo;
     private readonly MaterialPdfService _service;
     private readonly Guid _testMaterialId = Guid.NewGuid();
     private readonly Guid _testLessonId = Guid.NewGuid();
@@ -49,6 +50,7 @@ public class MaterialPdfServiceTests
         _mockResponseRepo = new Mock<IResponseRepository>();
         _mockFeedbackRepo = new Mock<IFeedbackRepository>();
         _mockDeviceRegistryService = new Mock<IDeviceRegistryService>();
+        _mockExternalDeviceRepo = new Mock<IExternalDeviceRepository>();
 
         // Default: return RULED / MEDIUM / MEDIUM
         _mockPdfExportSettingsRepo.Setup(r => r.GetAsync())
@@ -63,7 +65,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object);
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object);
     }
 
     #region Constructor Tests
@@ -81,7 +84,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -97,7 +101,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -113,7 +118,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -129,7 +135,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -145,7 +152,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -161,7 +169,8 @@ public class MaterialPdfServiceTests
             null!,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -177,7 +186,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object);
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -1012,7 +1022,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             null!,
             _mockFeedbackRepo.Object,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -1027,7 +1038,8 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             null!,
-            _mockDeviceRegistryService.Object));
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -1042,7 +1054,126 @@ public class MaterialPdfServiceTests
             _mockPdfExportSettingsRepo.Object,
             _mockResponseRepo.Object,
             _mockFeedbackRepo.Object,
+            null!,
+            _mockExternalDeviceRepo.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullExternalDeviceRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
             null!));
+    }
+
+    #endregion
+
+    #region Per-Device Override Resolution Tests
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_AppliesDeviceOverrides()
+    {
+        // Arrange — device has all three overrides; these should take precedence
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.RULED,
+            lineSpacingPreset: LineSpacingPreset.SMALL,
+            fontSizePreset: FontSizePreset.SMALL);
+
+        var device = new ExternalDeviceEntity(deviceId, "Test Device", ExternalDeviceType.REMARKABLE)
+        {
+            LinePatternType = LinePatternType.SQUARE,
+            LineSpacingPreset = LineSpacingPreset.EXTRA_LARGE,
+            FontSizePreset = FontSizePreset.EXTRA_LARGE
+        };
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — PDF generated successfully with device overrides applied
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+        _mockExternalDeviceRepo.Verify(r => r.GetByIdAsync(deviceId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_NullOverrides_FallsBackToMaterial()
+    {
+        // Arrange — device has no overrides; material overrides should apply
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.ISOMETRIC,
+            lineSpacingPreset: LineSpacingPreset.LARGE,
+            fontSizePreset: FontSizePreset.LARGE);
+
+        var device = new ExternalDeviceEntity(deviceId, "Bare Device", ExternalDeviceType.KINDLE);
+        // All override fields remain null
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — fallback to material overrides
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_PartialOverrides_MixesDeviceAndMaterial()
+    {
+        // Arrange — device overrides only LinePatternType; spacing/font fall back to material
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.RULED,
+            lineSpacingPreset: LineSpacingPreset.LARGE,
+            fontSizePreset: FontSizePreset.LARGE);
+
+        var device = new ExternalDeviceEntity(deviceId, "Partial Device", ExternalDeviceType.REMARKABLE)
+        {
+            LinePatternType = LinePatternType.SQUARE
+            // LineSpacingPreset and FontSizePreset remain null → material values
+        };
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — PDF generated with mixed settings
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
     }
 
     #endregion

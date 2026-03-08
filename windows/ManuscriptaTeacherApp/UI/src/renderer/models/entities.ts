@@ -144,6 +144,12 @@ export interface ExternalDeviceEntity {
     name: string;
     type: ExternalDeviceType;
     configurationData?: string;
+    /** Per AdditionalValidationRules §3D(1)(e): per-device line pattern override. */
+    linePatternType?: LinePatternType | null;
+    /** Per AdditionalValidationRules §3D(1)(f): per-device line spacing override. */
+    lineSpacingPreset?: LineSpacingPreset | null;
+    /** Per AdditionalValidationRules §3D(1)(g): per-device font size override. */
+    fontSizePreset?: FontSizePreset | null;
 }
 
 /**

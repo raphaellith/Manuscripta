@@ -11,9 +11,10 @@ public interface IMaterialPdfService
     /// Per MaterialConversionSpecification §5(2)(a).
     /// </summary>
     /// <param name="materialId">The ID of the material to generate a PDF for.</param>
+    /// <param name="targetDeviceId">Optional target external device ID for per-device PDF settings resolution per §1(5)(h).</param>
     /// <returns>A byte array containing the PDF document.</returns>
     /// <exception cref="KeyNotFoundException">Thrown when the material does not exist.</exception>
-    Task<byte[]> GeneratePdfAsync(Guid materialId);
+    Task<byte[]> GeneratePdfAsync(Guid materialId, Guid? targetDeviceId = null);
 
     /// <summary>
     /// Generates a Response PDF for a single device's responses to all questions on a material.

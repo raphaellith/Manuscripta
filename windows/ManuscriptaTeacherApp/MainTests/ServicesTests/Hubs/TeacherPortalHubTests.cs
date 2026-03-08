@@ -813,7 +813,6 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
-            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));

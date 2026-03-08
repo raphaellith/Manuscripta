@@ -32,6 +32,7 @@ public class MaterialPdfService : IMaterialPdfService
     private readonly IResponseRepository _responseRepository;
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly IDeviceRegistryService _deviceRegistryService;
+    private readonly IExternalDeviceRepository _externalDeviceRepository;
 
     public MaterialPdfService(
         IMaterialRepository materialRepository,
@@ -42,7 +43,8 @@ public class MaterialPdfService : IMaterialPdfService
         IPdfExportSettingsRepository pdfExportSettingsRepository,
         IResponseRepository responseRepository,
         IFeedbackRepository feedbackRepository,
-        IDeviceRegistryService deviceRegistryService)
+        IDeviceRegistryService deviceRegistryService,
+        IExternalDeviceRepository externalDeviceRepository)
     {
         _materialRepository = materialRepository ?? throw new ArgumentNullException(nameof(materialRepository));
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
@@ -53,10 +55,11 @@ public class MaterialPdfService : IMaterialPdfService
         _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
         _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
         _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
+        _externalDeviceRepository = externalDeviceRepository ?? throw new ArgumentNullException(nameof(externalDeviceRepository));
     }
 
     /// <inheritdoc/>
-    public async Task<byte[]> GeneratePdfAsync(Guid materialId)
+    public async Task<byte[]> GeneratePdfAsync(Guid materialId, Guid? targetDeviceId = null)
     {
         // Retrieve material
         var material = await _materialRepository.GetByIdAsync(materialId)
@@ -64,10 +67,18 @@ public class MaterialPdfService : IMaterialPdfService
 
         // Resolve effective PDF settings per MaterialConversionSpecification §1(5)(h)
         var globalDefaults = await _pdfExportSettingsRepository.GetAsync();
+
+        // Per §1(5)(h): precedence is device > material > global
+        ExternalDeviceEntity? targetDevice = null;
+        if (targetDeviceId.HasValue)
+        {
+            targetDevice = await _externalDeviceRepository.GetByIdAsync(targetDeviceId.Value);
+        }
+
         var effectiveSettings = new EffectivePdfSettings(
-            LinePatternType: material.LinePatternType ?? globalDefaults.LinePatternType,
-            LineSpacingPreset: material.LineSpacingPreset ?? globalDefaults.LineSpacingPreset,
-            FontSizePreset: material.FontSizePreset ?? globalDefaults.FontSizePreset);
+            LinePatternType: targetDevice?.LinePatternType ?? material.LinePatternType ?? globalDefaults.LinePatternType,
+            LineSpacingPreset: targetDevice?.LineSpacingPreset ?? material.LineSpacingPreset ?? globalDefaults.LineSpacingPreset,
+            FontSizePreset: targetDevice?.FontSizePreset ?? material.FontSizePreset ?? globalDefaults.FontSizePreset);
 
         // Retrieve associated questions and attachments
         var questions = (await _questionRepository.GetByMaterialIdAsync(materialId)).ToList();
