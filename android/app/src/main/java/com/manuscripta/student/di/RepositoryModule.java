@@ -8,6 +8,7 @@ import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.ConfigRepository;
@@ -107,6 +108,18 @@ public class RepositoryModule {
     @Singleton
     public MaterialDao provideMaterialDao(ManuscriptaDatabase database) {
         return database.materialDao();
+    }
+
+    /**
+     * Provides the QuestionDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return QuestionDao instance
+     */
+    @Provides
+    @Singleton
+    public QuestionDao provideQuestionDao(ManuscriptaDatabase database) {
+        return database.questionDao();
     }
 
     /**

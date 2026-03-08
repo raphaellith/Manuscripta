@@ -1,3 +1,49 @@
 <resources>
     <string name="app_name">Manuscripta Student Client</string>
+
+    <!-- Tab titles -->
+    <string name="tab_reading">Reading</string>
+    <string name="tab_quiz">Quiz</string>
+    <string name="tab_worksheet">Worksheet</string>
+
+    <!-- Quiz -->
+    <string name="submit_answer">Submit Answer</string>
+    <string name="back_to_lesson">◄ Back to Lesson</string>
+    <string name="select_answer_prompt">Please select an answer first</string>
+
+    <!-- Worksheet -->
+    <string name="worksheet_title">Worksheet</string>
+    <string name="submit_answers">Submit Answers</string>
+
+    <!-- Feedback -->
+    <string name="feedback_correct">Correct!</string>
+    <string name="feedback_incorrect">Not quite right.</string>
+    <string name="correct_answer_label">The correct answer is:</string>
+    <string name="next_question">Next Question ►</string>
+    <string name="try_again">Try Again</string>
+
+    <!-- AI Assistant -->
+    <string name="ai_how_can_i_help">How can I help?</string>
+    <string name="ai_simplify">Simplify</string>
+    <string name="ai_summarise">Summarise</string>
+    <string name="ai_thinking">Thinking…</string>
+    <string name="ai_close">Close</string>
+
+    <!-- Accessibility -->
+    <string name="read_aloud">Read aloud</string>
+    <string name="open_ai_assistant">Open AI assistant</string>
+
+    <!-- Status -->
+    <string name="loading">Loading…</string>
+    <string name="raise_hand">Raise Hand</string>
+
+    <!-- Feedback icons -->
+    <string name="feedback_icon_correct">✓</string>
+    <string name="feedback_icon_incorrect">✗</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_correct_icon">Correct answer icon</string>
+    <string name="cd_incorrect_icon">Incorrect answer icon</string>
+    <string name="cd_audio_button">Read content aloud</string>
+    <string name="cd_mascot">AI learning assistant</string>
 </resources>

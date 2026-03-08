@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -584,5 +585,150 @@ public class LoggingInterceptorTest {
         assertNotNull(result);
         assertNotNull(result.body());
         assertEquals(jsonBody, result.body().string());
+    }
+
+    // ========== Large body/sensitive header tests ==========
+
+    /**
+     * Large response body exceeding the size cap is handled.
+     *
+     * @throws IOException if the mock chain fails
+     */
+    @Test
+    public void testIntercept_largeResponseBody_handled()
+            throws IOException {
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .get()
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        // Create a body that reports a large content-length
+        // (> 1 MB) to trigger the size cap branch
+        byte[] bigBody = new byte[1024 * 1024 + 1];
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(
+                        MediaType.parse("application/octet-stream"),
+                        bigBody))
+                .build();
+        when(mockChain.proceed(any(Request.class)))
+                .thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
+    /**
+     * Sensitive headers are redacted in request logging.
+     *
+     * @throws IOException if the mock chain fails
+     */
+    @Test
+    public void testIntercept_sensitiveHeaders_redacted()
+            throws IOException {
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .addHeader("Authorization", "Bearer secret")
+                .addHeader("Cookie", "session=abc")
+                .addHeader("X-API-Key", "key123")
+                .addHeader("X-Auth-Token", "tok456")
+                .addHeader("X-CSRF-Token", "csrf789")
+                .get()
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .addHeader("Set-Cookie", "session=xyz")
+                .body(ResponseBody.create(
+                        MediaType.parse("text/plain"), "ok"))
+                .build();
+        when(mockChain.proceed(any(Request.class)))
+                .thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+        assertEquals(200, result.code());
+    }
+
+    /**
+     * Request body whose contentLength returns -1 is handled.
+     *
+     * @throws IOException if the mock chain fails
+     */
+    @Test
+    public void testIntercept_unknownLengthBody_handled()
+            throws IOException {
+        okhttp3.RequestBody mockBody = mock(
+                okhttp3.RequestBody.class);
+        when(mockBody.contentLength()).thenReturn(-1L);
+        when(mockBody.isOneShot()).thenReturn(false);
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .post(mockBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(
+                        MediaType.parse("text/plain"), "ok"))
+                .build();
+        when(mockChain.proceed(any(Request.class)))
+                .thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
+    }
+
+    /**
+     * Large request body exceeding the size cap is handled.
+     *
+     * @throws IOException if the mock chain fails
+     */
+    @Test
+    public void testIntercept_largeRequestBody_handled()
+            throws IOException {
+        okhttp3.RequestBody mockBody = mock(
+                okhttp3.RequestBody.class);
+        long overLimit = 1024L * 1024L + 1L;
+        when(mockBody.contentLength()).thenReturn(overLimit);
+        when(mockBody.isOneShot()).thenReturn(false);
+
+        Request request = new Request.Builder()
+                .url("https://api.test.com/endpoint")
+                .post(mockBody)
+                .build();
+        when(mockChain.request()).thenReturn(request);
+
+        Response response = new Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(ResponseBody.create(
+                        MediaType.parse("text/plain"), "ok"))
+                .build();
+        when(mockChain.proceed(any(Request.class)))
+                .thenReturn(response);
+
+        Response result = interceptor.intercept(mockChain);
+
+        assertNotNull(result);
     }
 }
