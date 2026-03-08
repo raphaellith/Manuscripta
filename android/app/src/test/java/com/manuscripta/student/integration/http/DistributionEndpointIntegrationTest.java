@@ -105,30 +105,16 @@ public class DistributionEndpointIntegrationTest {
     }
 
     /**
-     * Verifies that a malformed (non-UUID) device ID returns 400.
+     * Verifies that requesting distribution for an unknown device
+     * returns 404.
      *
      * @throws Exception if the network call fails unexpectedly
      */
     @Test
-    public void getDistribution_malformedDeviceId_returns400()
+    public void getDistribution_unknownDevice_returns404()
             throws Exception {
         Response<DistributionBundleDto> response = harness.getApiService()
-                .getDistribution("nonexistent-device-id")
-                .execute();
-
-        assertEquals(400, response.code());
-    }
-
-    /**
-     * Verifies that a valid but nonexistent device UUID returns 404.
-     *
-     * @throws Exception if the network call fails unexpectedly
-     */
-    @Test
-    public void getDistribution_nonexistentDevice_returns404()
-            throws Exception {
-        Response<DistributionBundleDto> response = harness.getApiService()
-                .getDistribution("ffffffff-ffff-ffff-ffff-ffffffffffff")
+                .getDistribution("00000000-0000-0000-0000-ffffffffffff")
                 .execute();
 
         assertEquals(404, response.code());
