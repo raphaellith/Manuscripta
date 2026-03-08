@@ -1,5 +1,6 @@
 package com.manuscripta.student.ui.main;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -18,11 +19,19 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.ui.feedback.FeedbackFragment;
 import com.manuscripta.student.ui.quiz.QuizFragment;
+import com.manuscripta.student.ui.quiz.QuizViewModel;
 import com.manuscripta.student.ui.reading.ReadingFragment;
 import com.manuscripta.student.ui.worksheet.WorksheetFragment;
+import com.manuscripta.student.ui.worksheet.WorksheetViewModel;
+import com.manuscripta.student.network.tcp.RaiseHandManager;
+import com.manuscripta.student.network.tcp.PairingManager;
+import com.manuscripta.student.network.tcp.PairingState;
+import com.manuscripta.student.ui.pairing.PairingActivity;
 import com.manuscripta.student.utils.TextToSpeechManager;
 
 import java.util.List;
+
+import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 
@@ -49,6 +58,12 @@ public class MainActivity extends AppCompatActivity {
     /** ViewModel for the main activity. */
     private MainViewModel viewModel;
 
+    /** ViewModel for quiz response submission. */
+    private QuizViewModel quizViewModel;
+
+    /** ViewModel for worksheet response submission. */
+    private WorksheetViewModel worksheetViewModel;
+
     /** Text-to-speech service manager. */
     private TextToSpeechManager ttsManager;
 
@@ -59,6 +74,17 @@ public class MainActivity extends AppCompatActivity {
     /** The currently active tab index. */
     private int activeTab = TAB_READING;
 
+    /** Whether the pairing state observer has fired at least once. */
+    private boolean observerInitialised;
+
+    /** Manager for the raise-hand lifecycle, injected by Hilt. */
+    @Inject
+    RaiseHandManager raiseHandManager;
+
+    /** Manager for the pairing lifecycle, injected by Hilt. */
+    @Inject
+    PairingManager pairingManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +92,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        quizViewModel = new ViewModelProvider(this).get(QuizViewModel.class);
+        worksheetViewModel = new ViewModelProvider(this).get(WorksheetViewModel.class);
 
         ttsManager = new TextToSpeechManager();
         ttsManager.init(this);
@@ -87,6 +115,18 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         ttsManager.shutdown();
         binding = null;
+    }
+
+    /**
+     * Navigates back to the PairingActivity and finishes this activity.
+     * Called when the device is unpaired by the server.
+     */
+    private void navigateToPairing() {
+        Intent intent = new Intent(this, PairingActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
     /**
@@ -227,6 +267,7 @@ public class MainActivity extends AppCompatActivity {
             public void onAnswerSubmitted(@NonNull Question question,
                                           @NonNull String answer,
                                           boolean isCorrect) {
+                quizViewModel.saveQuizResponse(question, answer);
                 if (isCorrect) {
                     showCorrectFeedback(question.getCorrectAnswer());
                 } else {
@@ -246,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
     private WorksheetFragment createWorksheetFragment() {
         WorksheetFragment worksheet = WorksheetFragment.newInstance();
         worksheet.setSubmitListener(answers -> {
-            // TODO: Persist answers via repository in full integration
+            worksheetViewModel.submitAllAnswers(answers);
         });
         return worksheet;
     }
@@ -280,6 +321,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Updates the raise-hand button text to reflect the current state.
+     *
+     * @param handRaiseState The current hand-raise state
+     */
+    private void updateRaiseHandButton(
+            @NonNull RaiseHandManager.HandRaiseState handRaiseState) {
+        if (binding == null) {
+            return;
+        }
+        switch (handRaiseState) {
+            case PENDING:
+                binding.raiseHandButton.setText(R.string.hand_raised_pending);
+                break;
+            case ACKNOWLEDGED:
+                binding.raiseHandButton.setText(R.string.hand_acknowledged);
+                break;
+            case IDLE:
+            default:
+                binding.raiseHandButton.setText(R.string.raise_hand);
+                break;
+        }
+    }
+
+    /**
      * Sets up listeners on footer views: mascot, audio button, and AI panel.
      */
     private void wireFooterViews() {
@@ -291,6 +356,9 @@ public class MainActivity extends AppCompatActivity {
         );
         binding.aiResponsePanel.setOnCloseListener(
             () -> viewModel.clearAiTask()
+        );
+        binding.raiseHandButton.setOnClickListener(
+            v -> raiseHandManager.toggle()
         );
     }
 
@@ -331,6 +399,20 @@ public class MainActivity extends AppCompatActivity {
             if (taskName != null && response != null) {
                 binding.aiResponsePanel.showContent(taskName, response);
             }
+        });
+        viewModel.getScreenLocked().observe(this, locked -> {
+            if (binding == null) {
+                return;
+            }
+            binding.lockOverlay.setVisibility(
+                    Boolean.TRUE.equals(locked) ? View.VISIBLE : View.GONE);
+        });
+        raiseHandManager.getState().observe(this, this::updateRaiseHandButton);
+        pairingManager.getPairingState().observe(this, pairingState -> {
+            if (pairingState == PairingState.NOT_PAIRED && observerInitialised) {
+                navigateToPairing();
+            }
+            observerInitialised = true;
         });
     }
 

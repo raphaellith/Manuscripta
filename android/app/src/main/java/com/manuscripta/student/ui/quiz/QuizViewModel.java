@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.utils.UiState;
 
 import java.util.ArrayList;
@@ -29,6 +30,9 @@ public class QuizViewModel extends ViewModel {
     /** Repository for persisting responses. */
     private final ResponseRepository responseRepository;
 
+    /** Manager providing the paired device ID. */
+    private final PairingManager pairingManager;
+
     /** The UI state for the current question. */
     private final MutableLiveData<UiState<Question>> currentQuestion =
             new MutableLiveData<>(UiState.loading());
@@ -43,17 +47,17 @@ public class QuizViewModel extends ViewModel {
     /** The currently selected answer option index, or -1 if none selected. */
     private final MutableLiveData<Integer> selectedAnswer = new MutableLiveData<>(-1);
 
-    /** The device ID for submitting responses. */
-    private String deviceId = "";
-
     /**
      * Constructor for QuizViewModel with Hilt injection.
      *
      * @param responseRepository The response repository for persisting answers
+     * @param pairingManager     The pairing manager providing the device ID
      */
     @Inject
-    public QuizViewModel(@NonNull ResponseRepository responseRepository) {
+    public QuizViewModel(@NonNull ResponseRepository responseRepository,
+                         @NonNull PairingManager pairingManager) {
         this.responseRepository = responseRepository;
+        this.pairingManager = pairingManager;
     }
 
     /**
@@ -97,12 +101,14 @@ public class QuizViewModel extends ViewModel {
     }
 
     /**
-     * Sets the device ID for response submission.
+     * Gets the device ID from the pairing manager.
      *
-     * @param deviceId The device identifier
+     * @return The device identifier, or an empty string if not paired
      */
-    public void setDeviceId(@NonNull String deviceId) {
-        this.deviceId = deviceId;
+    @NonNull
+    String getDeviceId() {
+        String id = pairingManager.getDeviceId();
+        return id != null ? id : "";
     }
 
     /**
@@ -138,6 +144,19 @@ public class QuizViewModel extends ViewModel {
     }
 
     /**
+     * Saves a quiz response for a given question and answer.
+     * Creates a Response domain object and persists it via the repository
+     * without relying on internal question state.
+     *
+     * @param question The question being answered
+     * @param answer   The answer text to save
+     */
+    public void saveQuizResponse(@NonNull Question question, @NonNull String answer) {
+        Response response = Response.create(question.getId(), answer, getDeviceId());
+        responseRepository.saveResponse(response);
+    }
+
+    /**
      * Submits the currently selected answer for the current question.
      * Creates a Response domain object and saves it via the repository.
      *
@@ -154,7 +173,7 @@ public class QuizViewModel extends ViewModel {
         Question question = state.getData();
         boolean isCorrect = answer.equals(question.getCorrectAnswer());
 
-        Response response = Response.create(question.getId(), answer, deviceId);
+        Response response = Response.create(question.getId(), answer, getDeviceId());
         responseRepository.saveResponse(response);
 
         return isCorrect;

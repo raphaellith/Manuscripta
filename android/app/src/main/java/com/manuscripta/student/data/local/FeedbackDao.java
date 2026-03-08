@@ -1,5 +1,6 @@
 package com.manuscripta.student.data.local;
 
+import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -24,6 +25,15 @@ public interface FeedbackDao {
      */
     @Query("SELECT * FROM feedback")
     List<FeedbackEntity> getAll();
+
+    /**
+     * Get all feedback as observable LiveData.
+     * Automatically emits new values when the feedback table changes.
+     *
+     * @return LiveData wrapping the list of all feedback
+     */
+    @Query("SELECT * FROM feedback")
+    LiveData<List<FeedbackEntity>> getAllLive();
 
     /**
      * Get a feedback by its unique identifier.

@@ -1,6 +1,7 @@
 package com.manuscripta.student.data.repository;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
 
 import com.manuscripta.student.domain.model.Configuration;
 
@@ -50,6 +51,16 @@ public interface ConfigRepository {
      */
     @NonNull
     Configuration getConfig();
+
+    /**
+     * Gets the current configuration as observable LiveData.
+     * The LiveData emits updates whenever the configuration changes
+     * (e.g., after a REFRESH_CONFIG fetch completes).
+     *
+     * @return LiveData containing the current configuration, never null
+     */
+    @NonNull
+    LiveData<Configuration> getConfigLiveData();
 
     /**
      * Clears the stored configuration, resetting to defaults.

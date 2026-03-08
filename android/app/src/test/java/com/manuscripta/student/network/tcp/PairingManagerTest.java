@@ -299,4 +299,83 @@ public class PairingManagerTest {
     public void getDeviceId_returnsNullInitially() {
         assertNull(pairingManager.getDeviceId());
     }
+
+    // ========== Server info tests ==========
+
+    @Test
+    public void getServerHost_returnsNullInitially() {
+        assertNull(pairingManager.getServerHost());
+    }
+
+    @Test
+    public void getServerHost_returnsHostAfterPairingStarted() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+
+        assertEquals(TEST_HOST, pairingManager.getServerHost());
+    }
+
+    @Test
+    public void getServerHttpPort_returnsZeroInitially() {
+        assertEquals(0, pairingManager.getServerHttpPort());
+    }
+
+    @Test
+    public void setServerHttpPort_storesPort() {
+        pairingManager.setServerHttpPort(5911);
+
+        assertEquals(5911, pairingManager.getServerHttpPort());
+    }
+
+    // ========== resetPairingData tests ==========
+
+    @Test
+    public void resetPairingData_clearsDeviceId() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
+        pairingManager.onMessageReceived(new PairingAckMessage());
+
+        pairingManager.resetPairingData();
+
+        assertNull(pairingManager.getDeviceId());
+    }
+
+    @Test
+    public void resetPairingData_clearsServerHost() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+
+        pairingManager.resetPairingData();
+
+        assertNull(pairingManager.getServerHost());
+    }
+
+    @Test
+    public void resetPairingData_clearsServerHttpPort() {
+        pairingManager.setServerHttpPort(5911);
+
+        pairingManager.resetPairingData();
+
+        assertEquals(0, pairingManager.getServerHttpPort());
+    }
+
+    @Test
+    public void resetPairingData_setsStateToNotPaired() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
+        pairingManager.onMessageReceived(new PairingAckMessage());
+        assertEquals(PairingState.PAIRED, pairingManager.getCurrentState());
+
+        pairingManager.resetPairingData();
+
+        assertEquals(PairingState.NOT_PAIRED, pairingManager.getCurrentState());
+    }
+
+    @Test
+    public void resetPairingData_stopsPairingInProgress() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        assertTrue(pairingManager.isPairingInProgress());
+
+        pairingManager.resetPairingData();
+
+        assertFalse(pairingManager.isPairingInProgress());
+    }
 }

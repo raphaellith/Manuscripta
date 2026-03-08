@@ -2,18 +2,26 @@ package com.manuscripta.student.ui.main;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
 
 import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.QuestionType;
+import com.manuscripta.student.data.model.SessionStatus;
 import com.manuscripta.student.data.repository.ConfigRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.MaterialRepository;
+import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.domain.mapper.QuestionMapper;
 import com.manuscripta.student.domain.model.Configuration;
+import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.domain.model.Session;
 import com.manuscripta.student.utils.ConnectionManager;
 
 import java.util.ArrayList;
@@ -51,14 +59,23 @@ public class MainViewModel extends ViewModel {
     /** Manager for connection state. */
     private final ConnectionManager connectionManager;
 
+    /** Repository for session lifecycle management. */
+    private final SessionRepository sessionRepository;
+
+    /** Repository for device status (lock state). */
+    private final DeviceStatusRepository deviceStatusRepository;
+
+    /** Repository for feedback. */
+    private final FeedbackRepository feedbackRepository;
+
     /** The currently distributed material. */
-    private final MutableLiveData<Material> currentMaterial = new MutableLiveData<>();
+    private final MediatorLiveData<Material> currentMaterial = new MediatorLiveData<>();
 
     /** The questions for the current material. */
     private final MutableLiveData<List<Question>> currentQuestions = new MutableLiveData<>();
 
-    /** The tablet configuration. */
-    private final MutableLiveData<Configuration> configuration = new MutableLiveData<>();
+    /** The tablet configuration (observes repository for refresh updates). */
+    private final MediatorLiveData<Configuration> configuration = new MediatorLiveData<>();
 
     /** The current active tab index. */
     private final MutableLiveData<Integer> activeTab = new MutableLiveData<>(TAB_READING);
@@ -69,6 +86,9 @@ public class MainViewModel extends ViewModel {
     /** The AI response content (null when loading or inactive). */
     private final MutableLiveData<String> aiResponse = new MutableLiveData<>();
 
+    /** Whether the screen is currently locked by the teacher. */
+    private final LiveData<Boolean> screenLocked;
+
     /**
      * Constructor for MainViewModel with Hilt injection.
      *
@@ -76,18 +96,60 @@ public class MainViewModel extends ViewModel {
      * @param questionDao        The question DAO for accessing questions
      * @param configRepository   The configuration repository
      * @param connectionManager  The connection manager
+     * @param sessionRepository  The session repository for lifecycle management
+     * @param deviceStatusRepository  The device status repository for lock state
+     * @param feedbackRepository The feedback repository for teacher feedback
      */
     @Inject
     public MainViewModel(@NonNull MaterialRepository materialRepository,
                          @NonNull QuestionDao questionDao,
                          @NonNull ConfigRepository configRepository,
-                         @NonNull ConnectionManager connectionManager) {
+                         @NonNull ConnectionManager connectionManager,
+                         @NonNull SessionRepository sessionRepository,
+                         @NonNull DeviceStatusRepository deviceStatusRepository,
+                         @NonNull FeedbackRepository feedbackRepository) {
         this.materialRepository = materialRepository;
         this.questionDao = questionDao;
         this.configRepository = configRepository;
         this.connectionManager = connectionManager;
+        this.sessionRepository = sessionRepository;
+        this.deviceStatusRepository = deviceStatusRepository;
+        this.feedbackRepository = feedbackRepository;
 
         configuration.setValue(configRepository.getConfig());
+
+        // Observe config changes pushed by server via REFRESH_CONFIG
+        configuration.addSource(configRepository.getConfigLiveData(), config -> {
+            if (config != null) {
+                configuration.setValue(config);
+            }
+        });
+
+        screenLocked = Transformations.map(
+                deviceStatusRepository.getDeviceStatusLiveData(),
+                status -> status != null
+                        && status.getStatus()
+                        == com.manuscripta.student.data.model.DeviceStatus.LOCKED
+        );
+
+        // Observe materials from the repository to auto-select when distribution arrives
+        currentMaterial.addSource(materialRepository.getMaterialsLiveData(), materials -> {
+            if (materials != null && !materials.isEmpty()) {
+                Material existing = currentMaterial.getValue();
+                if (existing == null) {
+                    // No material selected yet — auto-select the first one
+                    setCurrentMaterial(materials.get(0));
+                } else {
+                    // Refresh the current material if it was updated in the new distribution
+                    for (Material m : materials) {
+                        if (m.getId().equals(existing.getId())) {
+                            currentMaterial.setValue(m);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -128,6 +190,27 @@ public class MainViewModel extends ViewModel {
     @NonNull
     public LiveData<Boolean> getConnectionState() {
         return connectionManager.getConnectionState();
+    }
+
+    /**
+     * Gets the observable screen lock state LiveData.
+     *
+     * @return LiveData that is true when the screen is locked by the teacher
+     */
+    @NonNull
+    public LiveData<Boolean> getScreenLocked() {
+        return screenLocked;
+    }
+
+    /**
+     * Gets the observable feedback LiveData.
+     * Emits updates whenever teacher feedback is fetched and stored.
+     *
+     * @return LiveData containing the list of all feedback
+     */
+    @NonNull
+    public LiveData<List<Feedback>> getFeedbackLiveData() {
+        return feedbackRepository.getFeedbackLiveData();
     }
 
     /**
@@ -177,6 +260,24 @@ public class MainViewModel extends ViewModel {
     public void setCurrentMaterial(@NonNull Material material) {
         currentMaterial.setValue(material);
         loadQuestionsForMaterial(material.getId());
+        activateSessionForMaterial(material.getId());
+    }
+
+    /**
+     * Activates the RECEIVED session for the given material, transitioning it
+     * to ACTIVE per Session Interaction §5(4). Silently ignores if no session
+     * exists in the RECEIVED state (e.g. already active).
+     *
+     * @param materialId The material ID to activate a session for
+     */
+    private void activateSessionForMaterial(@NonNull String materialId) {
+        List<Session> sessions = sessionRepository.getSessionsByMaterialId(materialId);
+        for (Session session : sessions) {
+            if (session.getStatus() == SessionStatus.RECEIVED) {
+                sessionRepository.activateSession(session.getId());
+                break;
+            }
+        }
     }
 
     /**

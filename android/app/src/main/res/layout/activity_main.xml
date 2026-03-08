@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="@dimen/padding_screen"
     tools:context=".ui.main.MainActivity">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="@dimen/padding_screen">
 
     <!-- Tab bar -->
     <LinearLayout
@@ -95,6 +99,14 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1" />
 
+            <!-- Raise hand button (centre) -->
+            <Button
+                android:id="@+id/raiseHandButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|bottom"
+                android:text="@string/raise_hand" />
+
             <!-- Audio button (right side) -->
             <com.manuscripta.student.ui.view.AudioButtonView
                 android:id="@+id/audioButton"
@@ -107,3 +119,35 @@
     </FrameLayout>
 
 </LinearLayout>
+
+<!-- Lock overlay (hidden by default) -->
+<LinearLayout
+    android:id="@+id/lockOverlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#CC000000"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/screen_locked"
+        android:textColor="@android:color/white"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/screen_locked_message"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
+
+</LinearLayout>
+
+</FrameLayout>

@@ -154,6 +154,7 @@ public class RepositoryModule {
      * @param apiService         The ApiService instance
      * @param tcpSocketManager   The TcpSocketManager instance
      * @param ackRetrySender     The AckRetrySender instance
+     * @param sessionRepository  The SessionRepository instance
      * @return MaterialRepository instance
      */
     @Provides
@@ -162,9 +163,10 @@ public class RepositoryModule {
                                                         FileStorageManager fileStorageManager,
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager,
-                                                        AckRetrySender ackRetrySender) {
+                                                        AckRetrySender ackRetrySender,
+                                                        SessionRepository sessionRepository) {
         return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
-                tcpSocketManager, ackRetrySender);
+                tcpSocketManager, ackRetrySender, sessionRepository);
     }
 
     /**
@@ -220,7 +222,16 @@ public class RepositoryModule {
     public ConfigRepository provideConfigRepository(SharedPreferences preferences,
                                                     ApiService apiService,
                                                     TcpSocketManager tcpSocketManager) {
-        return new ConfigRepositoryImpl(preferences, apiService, tcpSocketManager);
+        ConfigRepositoryImpl repo = new ConfigRepositoryImpl(
+                preferences, apiService, tcpSocketManager);
+        repo.setRefreshCallback(deviceId -> {
+            try {
+                repo.fetchAndStoreConfig(deviceId);
+            } catch (Exception e) {
+                Log.w(TAG, "Config refresh failed: " + e.getMessage());
+            }
+        });
+        return repo;
     }
 
     /**
@@ -248,13 +259,16 @@ public class RepositoryModule {
     }
 
     /**
-     * Provides the HeartbeatManager wired with material, feedback, and status callbacks.
+     * Provides the HeartbeatManager wired with material, feedback, status,
+     * and unpair callbacks.
      *
      * @param tcpSocketManager       The TcpSocketManager instance
      * @param pairingManager         The PairingManager instance
      * @param materialRepository     The MaterialRepository instance
      * @param feedbackRepository     The FeedbackRepository instance
      * @param deviceStatusRepository The DeviceStatusRepository instance
+     * @param sessionRepository      The SessionRepository instance
+     * @param configRepository       The ConfigRepository instance
      * @return HeartbeatManager instance
      */
     @Provides
@@ -264,7 +278,9 @@ public class RepositoryModule {
             PairingManager pairingManager,
             MaterialRepository materialRepository,
             FeedbackRepository feedbackRepository,
-            DeviceStatusRepository deviceStatusRepository) {
+            DeviceStatusRepository deviceStatusRepository,
+            SessionRepository sessionRepository,
+            ConfigRepository configRepository) {
 
         HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
 
@@ -296,6 +312,43 @@ public class RepositoryModule {
                     Log.e(TAG, "Feedback fetch failed", e);
                 }
             }
+        });
+
+        hm.setLockStateCallback(new HeartbeatManager.LockStateCallback() {
+            @Override
+            public void onLocked() {
+                String deviceId = pairingManager.getDeviceId();
+                if (deviceId != null && !deviceId.trim().isEmpty()) {
+                    deviceStatusRepository.setLocked(deviceId);
+                }
+            }
+
+            @Override
+            public void onUnlocked() {
+                String deviceId = pairingManager.getDeviceId();
+                if (deviceId != null && !deviceId.trim().isEmpty()) {
+                    deviceStatusRepository.setOnTask(deviceId, null);
+                }
+            }
+        });
+
+        hm.setUnpairCallback(() -> {
+            Log.d(TAG, "Unpair received — clearing local data");
+            try {
+                sessionRepository.cancelSession();
+            } catch (IllegalStateException e) {
+                Log.d(TAG, "No active session to cancel");
+            }
+            sessionRepository.deleteAllSessions();
+            materialRepository.deleteAllMaterials();
+            feedbackRepository.deleteAllFeedback();
+            configRepository.clearConfig();
+            String deviceId = pairingManager.getDeviceId();
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                deviceStatusRepository.clearDeviceStatus(deviceId);
+            }
+            tcpSocketManager.disconnect();
+            pairingManager.resetPairingData();
         });
 
         // Start heartbeat if already connected (avoids missing the CONNECTED event)

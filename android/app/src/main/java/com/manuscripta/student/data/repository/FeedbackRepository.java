@@ -1,5 +1,8 @@
 package com.manuscripta.student.data.repository;
 
+import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+
 import com.manuscripta.student.domain.model.Feedback;
 
 import java.util.List;
@@ -26,6 +29,15 @@ public interface FeedbackRepository {
      * @return The feedback for that response, or null if not found
      */
     Feedback getFeedbackForResponse(String responseId);
+
+    /**
+     * Gets all feedback as observable LiveData.
+     * The LiveData emits updates whenever feedback is inserted, updated, or deleted.
+     *
+     * @return LiveData wrapping the list of all feedback, never null
+     */
+    @NonNull
+    LiveData<List<Feedback>> getFeedbackLiveData();
 
     /**
      * Gets all feedback from local storage.

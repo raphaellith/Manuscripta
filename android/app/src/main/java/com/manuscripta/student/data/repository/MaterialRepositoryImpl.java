@@ -69,6 +69,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** Handles retry logic for sending ACK messages over TCP. */
     private final AckRetrySender ackRetrySender;
 
+    /** Repository for managing learning sessions. */
+    private final SessionRepository sessionRepository;
+
     /** Executor for running sync operations on a background thread. */
     private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
@@ -101,6 +104,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * @param apiService         The API service for network operations
      * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
      * @param ackRetrySender     The retry sender for ACK messages
+     * @param sessionRepository  The session repository for creating sessions per material
      * @throws IllegalArgumentException if any dependency is null
      */
     @Inject
@@ -108,7 +112,8 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                                   @NonNull FileStorageManager fileStorageManager,
                                   @NonNull ApiService apiService,
                                   @NonNull TcpSocketManager tcpSocketManager,
-                                  @NonNull AckRetrySender ackRetrySender) {
+                                  @NonNull AckRetrySender ackRetrySender,
+                                  @NonNull SessionRepository sessionRepository) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
         }
@@ -124,11 +129,15 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         if (ackRetrySender == null) {
             throw new IllegalArgumentException("AckRetrySender cannot be null");
         }
+        if (sessionRepository == null) {
+            throw new IllegalArgumentException("SessionRepository cannot be null");
+        }
         this.materialDao = materialDao;
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
         this.ackRetrySender = ackRetrySender;
+        this.sessionRepository = sessionRepository;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
         // Initialize LiveData with existing materials from database on a background thread.
@@ -318,6 +327,16 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                         ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
                     } else {
                         Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: " + dto.getId());
+                    }
+
+                    // Per Session Interaction §3(3), create a session in RECEIVED state
+                    // for each material received in the distribution bundle.
+                    try {
+                        sessionRepository.startSession(dto.getId(), deviceId);
+                        Log.d(TAG, "Created session for material: " + dto.getId());
+                    } catch (Exception se) {
+                        Log.e(TAG, "Failed to create session for material: "
+                                + dto.getId() + " — " + se.getMessage());
                     }
                 } catch (IllegalArgumentException e) {
                     Log.e(TAG, "Invalid material data: " + e.getMessage());

@@ -18,6 +18,8 @@ import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
 import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
 
 import org.junit.After;
 import org.junit.Before;
@@ -321,6 +323,84 @@ public class HeartbeatManagerTest {
         heartbeatManager.onMessageReceived(new ReturnFeedbackMessage());
     }
 
+    // ========== LOCK_SCREEN / UNLOCK_SCREEN handling tests ==========
+
+    @Test
+    public void onMessageReceived_lockScreen_callsOnLocked() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        heartbeatManager.setLockStateCallback(new HeartbeatManager.LockStateCallback() {
+            @Override
+            public void onLocked() {
+                latch.countDown();
+            }
+
+            @Override
+            public void onUnlocked() {
+            }
+        });
+
+        heartbeatManager.onMessageReceived(new LockScreenMessage());
+
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void onMessageReceived_unlockScreen_callsOnUnlocked() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        heartbeatManager.setLockStateCallback(new HeartbeatManager.LockStateCallback() {
+            @Override
+            public void onLocked() {
+            }
+
+            @Override
+            public void onUnlocked() {
+                latch.countDown();
+            }
+        });
+
+        heartbeatManager.onMessageReceived(new UnlockScreenMessage());
+
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void onMessageReceived_lockScreen_handlesNullCallback() {
+        heartbeatManager.setLockStateCallback(null);
+
+        // Should not throw
+        heartbeatManager.onMessageReceived(new LockScreenMessage());
+    }
+
+    @Test
+    public void onMessageReceived_unlockScreen_handlesNullCallback() {
+        heartbeatManager.setLockStateCallback(null);
+
+        // Should not throw
+        heartbeatManager.onMessageReceived(new UnlockScreenMessage());
+    }
+
+    @Test
+    public void onMessageReceived_lockScreen_doesNotCallMaterialCallback() throws Exception {
+        AtomicBoolean materialCalled = new AtomicBoolean(false);
+        CountDownLatch lockLatch = new CountDownLatch(1);
+        heartbeatManager.setMaterialCallback(() -> materialCalled.set(true));
+        heartbeatManager.setLockStateCallback(new HeartbeatManager.LockStateCallback() {
+            @Override
+            public void onLocked() {
+                lockLatch.countDown();
+            }
+
+            @Override
+            public void onUnlocked() {
+            }
+        });
+
+        heartbeatManager.onMessageReceived(new LockScreenMessage());
+
+        assertTrue(lockLatch.await(2, TimeUnit.SECONDS));
+        assertFalse(materialCalled.get());
+    }
+
     // ========== Connection state handling tests ==========
 
     @Test
@@ -455,5 +535,25 @@ public class HeartbeatManagerTest {
     @Test
     public void getConfig_returnsNonNull() {
         assertNotNull(heartbeatManager.getConfig());
+    }
+
+    // ========== Unpair callback tests ==========
+
+    @Test
+    public void onUnpairMessage_callsUnpairCallback() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        heartbeatManager.setUnpairCallback(latch::countDown);
+
+        heartbeatManager.onMessageReceived(new UnpairMessage());
+
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void onUnpairMessage_nullCallback_doesNotThrow() {
+        heartbeatManager.setUnpairCallback(null);
+
+        heartbeatManager.onMessageReceived(new UnpairMessage());
+        // No exception expected
     }
 }

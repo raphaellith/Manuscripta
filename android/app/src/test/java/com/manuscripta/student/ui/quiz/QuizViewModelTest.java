@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
@@ -16,6 +17,7 @@ import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.utils.UiState;
 
 import org.junit.Before;
@@ -40,13 +42,16 @@ public class QuizViewModelTest {
     @Mock
     private ResponseRepository mockResponseRepository;
 
+    @Mock
+    private PairingManager mockPairingManager;
+
     private QuizViewModel viewModel;
 
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        viewModel = new QuizViewModel(mockResponseRepository);
-        viewModel.setDeviceId("test-device");
+        when(mockPairingManager.getDeviceId()).thenReturn("test-device");
+        viewModel = new QuizViewModel(mockResponseRepository, mockPairingManager);
     }
 
     @Test
@@ -252,6 +257,32 @@ public class QuizViewModelTest {
         viewModel.setQuestions(createTestQuestions(2));
 
         assertEquals(Integer.valueOf(0), viewModel.getCurrentQuestionIndex().getValue());
+    }
+
+    @Test
+    public void testSaveQuizResponsePersistsViaRepository() {
+        Question question = new Question("q-99", "mat-1", "Question?",
+                QuestionType.MULTIPLE_CHOICE, "[\"A\",\"B\"]", "A");
+
+        viewModel.saveQuizResponse(question, "B");
+
+        ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(mockResponseRepository).saveResponse(captor.capture());
+        Response saved = captor.getValue();
+        assertEquals("q-99", saved.getQuestionId());
+        assertEquals("B", saved.getAnswer());
+        assertEquals("test-device", saved.getDeviceId());
+    }
+
+    @Test
+    public void testSaveQuizResponseDoesNotDependOnInternalState() {
+        // Verify saveQuizResponse works even without setQuestions being called
+        Question question = new Question("q-77", "mat-1", "Q?",
+                QuestionType.MULTIPLE_CHOICE, "[\"X\",\"Y\"]", "X");
+
+        viewModel.saveQuizResponse(question, "Y");
+
+        verify(mockResponseRepository, times(1)).saveResponse(any(Response.class));
     }
 
     private List<Question> createTestQuestions(int count) {

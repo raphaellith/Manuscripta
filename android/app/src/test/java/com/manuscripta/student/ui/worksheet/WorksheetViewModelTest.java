@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
@@ -13,6 +14,7 @@ import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.utils.UiState;
 
 import org.junit.Before;
@@ -39,13 +41,16 @@ public class WorksheetViewModelTest {
     @Mock
     private ResponseRepository mockResponseRepository;
 
+    @Mock
+    private PairingManager mockPairingManager;
+
     private WorksheetViewModel viewModel;
 
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        viewModel = new WorksheetViewModel(mockResponseRepository);
-        viewModel.setDeviceId("test-device");
+        when(mockPairingManager.getDeviceId()).thenReturn("test-device");
+        viewModel = new WorksheetViewModel(mockResponseRepository, mockPairingManager);
     }
 
     @Test

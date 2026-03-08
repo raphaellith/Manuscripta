@@ -36,6 +36,9 @@
     <!-- Status -->
     <string name="loading">Loading…</string>
     <string name="raise_hand">Raise Hand</string>
+    <string name="lower_hand">Lower Hand</string>
+    <string name="hand_raised_pending">Hand Raised…</string>
+    <string name="hand_acknowledged">Help Requested</string>
 
     <!-- Feedback icons -->
     <string name="feedback_icon_correct">✓</string>
@@ -46,4 +49,20 @@
     <string name="cd_incorrect_icon">Incorrect answer icon</string>
     <string name="cd_audio_button">Read content aloud</string>
     <string name="cd_mascot">AI learning assistant</string>
+
+    <!-- Pairing -->
+    <string name="pairing_title">Manuscripta</string>
+    <string name="pairing_name_hint">Enter your name</string>
+    <string name="pairing_tap_to_begin">Tap \'Pair\' to connect to the teacher server</string>
+    <string name="pairing_pair_button">Pair</string>
+    <string name="pairing_retry_button">Retry</string>
+    <string name="pairing_discovering">Searching for teacher server\u2026</string>
+    <string name="pairing_tcp_connecting">Connecting to server\u2026</string>
+    <string name="pairing_http_registering">Registering device\u2026</string>
+    <string name="pairing_success">Paired successfully</string>
+    <string name="pairing_cancelled">Pairing cancelled</string>
+
+    <!-- Lock screen -->
+    <string name="screen_locked">Screen Locked</string>
+    <string name="screen_locked_message">Your teacher has locked this device</string>
 </resources>

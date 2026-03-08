@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel;
 import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.domain.model.Response;
+import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.utils.UiState;
 
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class WorksheetViewModel extends ViewModel {
     /** Repository for persisting responses. */
     private final ResponseRepository responseRepository;
 
+    /** Manager providing the paired device ID. */
+    private final PairingManager pairingManager;
+
     /** The UI state for the worksheet questions. */
     private final MutableLiveData<UiState<List<Question>>> worksheetQuestions =
             new MutableLiveData<>(UiState.loading());
@@ -37,17 +41,17 @@ public class WorksheetViewModel extends ViewModel {
     /** Maps question IDs to student answers. */
     private final Map<String, String> answers = new LinkedHashMap<>();
 
-    /** The device ID for submitting responses. */
-    private String deviceId = "";
-
     /**
      * Constructor for WorksheetViewModel with Hilt injection.
      *
      * @param responseRepository The response repository for persisting answers
+     * @param pairingManager     The pairing manager providing the device ID
      */
     @Inject
-    public WorksheetViewModel(@NonNull ResponseRepository responseRepository) {
+    public WorksheetViewModel(@NonNull ResponseRepository responseRepository,
+                              @NonNull PairingManager pairingManager) {
         this.responseRepository = responseRepository;
+        this.pairingManager = pairingManager;
     }
 
     /**
@@ -61,12 +65,14 @@ public class WorksheetViewModel extends ViewModel {
     }
 
     /**
-     * Sets the device ID for response submission.
+     * Gets the device ID from the pairing manager.
      *
-     * @param deviceId The device identifier
+     * @return The device identifier, or an empty string if not paired
      */
-    public void setDeviceId(@NonNull String deviceId) {
-        this.deviceId = deviceId;
+    @NonNull
+    String getDeviceId() {
+        String id = pairingManager.getDeviceId();
+        return id != null ? id : "";
     }
 
     /**
@@ -129,7 +135,7 @@ public class WorksheetViewModel extends ViewModel {
             String questionId = entry.getKey();
             String answer = entry.getValue();
             if (answer != null && !answer.trim().isEmpty()) {
-                Response response = Response.create(questionId, answer, deviceId);
+                Response response = Response.create(questionId, answer, getDeviceId());
                 responseRepository.saveResponse(response);
                 count++;
             }

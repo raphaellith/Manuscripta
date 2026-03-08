@@ -3,6 +3,7 @@ package com.manuscripta.student.di;
 import com.manuscripta.student.BuildConfig;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
+import com.manuscripta.student.network.interceptor.BaseUrlInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
 import com.manuscripta.student.network.interceptor.RetryInterceptor;
@@ -27,9 +28,11 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class NetworkModule {
 
     /**
-     * Base URL for the Manuscripta API.
+     * Placeholder base URL for Retrofit initialisation.
+     * The actual server URL is dynamically resolved by {@link BaseUrlInterceptor}
+     * using the server IP and HTTP port discovered during pairing.
      */
-    private static final String BASE_URL = "https://api.manuscripta.example.com/";
+    private static final String PLACEHOLDER_BASE_URL = "http://localhost/";
 
     /**
      * Provides OkHttpClient with custom interceptors for retry, authentication,
@@ -52,8 +55,18 @@ public class NetworkModule {
     public OkHttpClient provideOkHttpClient(ConnectionManager connectionManager,
                                              PairingManager pairingManager) {
         AuthInterceptor.DeviceIdProvider deviceIdProvider = pairingManager::getDeviceId;
+        BaseUrlInterceptor.ServerInfoProvider serverInfoProvider =
+                new BaseUrlInterceptor.ServerInfoProvider() {
+                    @Override public String getServerHost() {
+                        return pairingManager.getServerHost();
+                    }
+                    @Override public int getServerHttpPort() {
+                        return pairingManager.getServerHttpPort();
+                    }
+                };
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .addInterceptor(new BaseUrlInterceptor(serverInfoProvider))
                 .addInterceptor(new RetryInterceptor(connectionManager))
                 .addInterceptor(new AuthInterceptor(deviceIdProvider));
 
@@ -79,7 +92,7 @@ public class NetworkModule {
     @Singleton
     public Retrofit provideRetrofit(OkHttpClient okHttpClient) {
         return new Retrofit.Builder()
-                .baseUrl(BASE_URL)
+                .baseUrl(PLACEHOLDER_BASE_URL)
                 .client(okHttpClient)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();

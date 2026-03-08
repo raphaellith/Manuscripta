@@ -3,6 +3,7 @@ package com.manuscripta.student.di;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -10,12 +11,15 @@ import static org.mockito.Mockito.when;
 
 import android.content.Context;
 
+import androidx.lifecycle.MutableLiveData;
+
 import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
+import com.manuscripta.student.data.repository.ConfigRepository;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
 import com.manuscripta.student.data.repository.DeviceStatusRepositoryImpl;
 import com.manuscripta.student.data.repository.FeedbackRepository;
@@ -32,7 +36,10 @@ import com.manuscripta.student.network.tcp.HeartbeatManager;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
 import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
 import com.manuscripta.student.utils.FileStorageManager;
 
 import org.junit.Before;
@@ -58,6 +65,8 @@ public class RepositoryModuleTest {
     private DeviceStatusRepository mockDeviceStatusRepository;
     private FeedbackRepository mockFeedbackRepository;
     private MaterialRepository mockMaterialRepository;
+    private SessionRepository mockSessionRepository;
+    private ConfigRepository mockConfigRepository;
 
     @Before
     public void setUp() {
@@ -67,6 +76,8 @@ public class RepositoryModuleTest {
         mockResponseDao = mock(ResponseDao.class);
         mockDeviceStatusDao = mock(DeviceStatusDao.class);
         mockFeedbackDao = mock(FeedbackDao.class);
+        when(mockFeedbackDao.getAllLive())
+                .thenReturn(new MutableLiveData<>(java.util.Collections.emptyList()));
         mockMaterialDao = mock(MaterialDao.class);
         mockFileStorageManager = mock(FileStorageManager.class);
         mockApiService = mock(ApiService.class);
@@ -76,6 +87,8 @@ public class RepositoryModuleTest {
         mockDeviceStatusRepository = mock(DeviceStatusRepository.class);
         mockFeedbackRepository = mock(FeedbackRepository.class);
         mockMaterialRepository = mock(MaterialRepository.class);
+        mockSessionRepository = mock(SessionRepository.class);
+        mockConfigRepository = mock(ConfigRepository.class);
     }
 
     @Test
@@ -148,7 +161,7 @@ public class RepositoryModuleTest {
 
         MaterialRepository result = repositoryModule.provideMaterialRepository(
                 mockMaterialDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockAckRetrySender);
+                mockTcpSocketManager, mockAckRetrySender, mockSessionRepository);
 
         assertNotNull(result);
         assertTrue(result instanceof MaterialRepositoryImpl);
@@ -196,7 +209,8 @@ public class RepositoryModuleTest {
         HeartbeatManager result = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         try {
             assertNotNull(result);
@@ -213,7 +227,8 @@ public class RepositoryModuleTest {
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         try {
             hm.onMessageReceived(new DistributeMaterialMessage());
@@ -232,7 +247,8 @@ public class RepositoryModuleTest {
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         try {
             hm.onMessageReceived(new ReturnFeedbackMessage());
@@ -252,7 +268,8 @@ public class RepositoryModuleTest {
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         // Trigger a heartbeat by starting and waiting for the first scheduled send
         try {
@@ -271,7 +288,8 @@ public class RepositoryModuleTest {
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         try {
             hm.onMessageReceived(new DistributeMaterialMessage());
@@ -294,7 +312,8 @@ public class RepositoryModuleTest {
         HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
                 mockTcpSocketManager, mockPairingManager,
                 mockMaterialRepository, mockFeedbackRepository,
-                mockDeviceStatusRepository);
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
 
         try {
             hm.onMessageReceived(new DistributeMaterialMessage());
@@ -304,6 +323,156 @@ public class RepositoryModuleTest {
                     .syncMaterials(anyString());
             verify(mockFeedbackRepository, org.mockito.Mockito.never())
                     .fetchAndStoreFeedback(anyString());
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_lockCallback_setsLocked()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            hm.onMessageReceived(new LockScreenMessage());
+
+            verify(mockDeviceStatusRepository, timeout(2000))
+                    .setLocked("device-1");
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_unlockCallback_setsOnTask()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            hm.onMessageReceived(new UnlockScreenMessage());
+
+            verify(mockDeviceStatusRepository, timeout(2000))
+                    .setOnTask("device-1", null);
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_unpairCallback_clearsAllData()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            hm.onMessageReceived(new UnpairMessage());
+
+            verify(mockSessionRepository, timeout(2000))
+                    .deleteAllSessions();
+            verify(mockMaterialRepository, timeout(2000))
+                    .deleteAllMaterials();
+            verify(mockFeedbackRepository, timeout(2000))
+                    .deleteAllFeedback();
+            verify(mockConfigRepository, timeout(2000))
+                    .clearConfig();
+            verify(mockDeviceStatusRepository, timeout(2000))
+                    .clearDeviceStatus("device-1");
+            verify(mockTcpSocketManager, timeout(2000))
+                    .disconnect();
+            verify(mockPairingManager, timeout(2000))
+                    .resetPairingData();
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_unpairCallback_handlesNoActiveSession()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+        doThrow(new IllegalStateException("No active session"))
+                .when(mockSessionRepository).cancelSession();
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            hm.onMessageReceived(new UnpairMessage());
+
+            // Should still proceed with cleanup despite cancelSession failing
+            verify(mockSessionRepository, timeout(2000))
+                    .deleteAllSessions();
+            verify(mockPairingManager, timeout(2000))
+                    .resetPairingData();
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_materialCallback_handlesException()
+            throws InterruptedException {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+        doThrow(new RuntimeException("sync failed"))
+                .when(mockMaterialRepository).syncMaterials("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            // Should not throw — exception is caught internally
+            hm.onMessageReceived(new DistributeMaterialMessage());
+
+            verify(mockMaterialRepository, timeout(2000))
+                    .syncMaterials("device-1");
+        } finally {
+            hm.destroy();
+        }
+    }
+
+    @Test
+    public void testProvideHeartbeatManager_feedbackCallback_handlesException()
+            throws Exception {
+        when(mockPairingManager.getDeviceId()).thenReturn("device-1");
+        doThrow(new RuntimeException("fetch failed"))
+                .when(mockFeedbackRepository)
+                .fetchAndStoreFeedback("device-1");
+
+        HeartbeatManager hm = repositoryModule.provideHeartbeatManager(
+                mockTcpSocketManager, mockPairingManager,
+                mockMaterialRepository, mockFeedbackRepository,
+                mockDeviceStatusRepository, mockSessionRepository,
+                mockConfigRepository);
+
+        try {
+            // Should not throw — exception is caught internally
+            hm.onMessageReceived(new ReturnFeedbackMessage());
+
+            verify(mockFeedbackRepository, timeout(2000))
+                    .fetchAndStoreFeedback("device-1");
         } finally {
             hm.destroy();
         }

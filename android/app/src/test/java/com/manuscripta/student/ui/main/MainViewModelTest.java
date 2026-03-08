@@ -16,12 +16,20 @@ import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.data.model.QuestionType;
+import com.manuscripta.student.data.model.DeviceStatus;
 import com.manuscripta.student.data.repository.ConfigRepository;
+import com.manuscripta.student.data.repository.DeviceStatusRepository;
+import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.MaterialRepository;
+import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.utils.ConnectionManager;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -53,17 +61,42 @@ public class MainViewModelTest {
     @Mock
     private ConnectionManager mockConnectionManager;
 
+    @Mock
+    private SessionRepository mockSessionRepository;
+
+    @Mock
+    private DeviceStatusRepository mockDeviceStatusRepository;
+
+    @Mock
+    private FeedbackRepository mockFeedbackRepository;
+
+    private MutableLiveData<List<Material>> materialsLiveData;
+    private MutableLiveData<com.manuscripta.student.domain.model.DeviceStatus> deviceStatusLiveData;
+    private MutableLiveData<Configuration> configLiveData;
+
     private MainViewModel viewModel;
 
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        materialsLiveData = new MutableLiveData<>(Collections.emptyList());
+        deviceStatusLiveData = new MutableLiveData<>();
+        configLiveData = new MutableLiveData<>(Configuration.createDefault());
         when(mockConfigRepository.getConfig()).thenReturn(Configuration.createDefault());
         when(mockConnectionManager.getConnectionState())
                 .thenReturn(new MutableLiveData<>(true));
+        when(mockMaterialRepository.getMaterialsLiveData()).thenReturn(materialsLiveData);
+        when(mockSessionRepository.getSessionsByMaterialId(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(Collections.emptyList());
+        when(mockDeviceStatusRepository.getDeviceStatusLiveData()).thenReturn(deviceStatusLiveData);
+        when(mockConfigRepository.getConfigLiveData()).thenReturn(configLiveData);
+        when(mockFeedbackRepository.getFeedbackLiveData())
+                .thenReturn(new MutableLiveData<>(Collections.emptyList()));
         viewModel = new MainViewModel(
                 mockMaterialRepository, mockQuestionDao,
-                mockConfigRepository, mockConnectionManager);
+                mockConfigRepository, mockConnectionManager,
+                mockSessionRepository, mockDeviceStatusRepository,
+                mockFeedbackRepository);
     }
 
     @Test
@@ -110,6 +143,19 @@ public class MainViewModelTest {
         assertNotNull(result);
         assertEquals(20, result.getTextSize());
         assertTrue(result.isTtsEnabled());
+    }
+
+    @Test
+    public void testConfigAutoRefreshesWhenLiveDataUpdates() {
+        viewModel.getConfiguration().observeForever(c -> { });
+
+        Configuration pushed = new Configuration(
+                24, FeedbackStyle.NEUTRAL, false, true, false, MascotSelection.MASCOT2);
+        configLiveData.setValue(pushed);
+
+        Configuration result = viewModel.getConfiguration().getValue();
+        assertNotNull(result);
+        assertEquals(24, result.getTextSize());
     }
 
     @Test
@@ -275,6 +321,85 @@ public class MainViewModelTest {
         viewModel.requestContentTransformation("Summarise");
 
         assertEquals("Summarise", viewModel.getAiTaskName().getValue());
+    }
+
+    // ========== Lock screen state ==========
+
+    @Test
+    public void testScreenLockedIsTrueWhenDeviceStatusLocked() {
+        viewModel.getScreenLocked().observeForever(v -> { });
+        deviceStatusLiveData.setValue(
+                com.manuscripta.student.domain.model.DeviceStatus.create(
+                        "dev-1", DeviceStatus.LOCKED, 50, null, null));
+
+        assertEquals(Boolean.TRUE, viewModel.getScreenLocked().getValue());
+    }
+
+    @Test
+    public void testScreenLockedIsFalseWhenDeviceStatusOnTask() {
+        viewModel.getScreenLocked().observeForever(v -> { });
+        deviceStatusLiveData.setValue(
+                com.manuscripta.student.domain.model.DeviceStatus.create(
+                        "dev-1", DeviceStatus.ON_TASK, 50, null, null));
+
+        assertEquals(Boolean.FALSE, viewModel.getScreenLocked().getValue());
+    }
+
+    @Test
+    public void testScreenLockedIsFalseWhenNoStatus() {
+        viewModel.getScreenLocked().observeForever(v -> { });
+        deviceStatusLiveData.setValue(null);
+
+        assertEquals(Boolean.FALSE, viewModel.getScreenLocked().getValue());
+    }
+
+    // ========== Material distribution auto-selection ==========
+
+    @Test
+    public void testAutoSelectsFirstMaterial_whenNoneSelected() {
+        Material mat = createTestMaterial("mat-auto", "Auto Title");
+        when(mockQuestionDao.getByMaterialId("mat-auto"))
+                .thenReturn(Collections.emptyList());
+        viewModel.getCurrentMaterial().observeForever(m -> { });
+
+        materialsLiveData.setValue(Arrays.asList(mat));
+
+        Material result = viewModel.getCurrentMaterial().getValue();
+        assertNotNull(result);
+        assertEquals("mat-auto", result.getId());
+    }
+
+    @Test
+    public void testDoesNotOverrideExistingMaterial() {
+        Material existing = createTestMaterial("mat-1", "Existing");
+        when(mockQuestionDao.getByMaterialId("mat-1"))
+                .thenReturn(Collections.emptyList());
+        viewModel.getCurrentMaterial().observeForever(m -> { });
+        viewModel.setCurrentMaterial(existing);
+
+        Material newMat = createTestMaterial("mat-2", "New");
+        materialsLiveData.setValue(Arrays.asList(newMat));
+
+        Material result = viewModel.getCurrentMaterial().getValue();
+        assertNotNull(result);
+        assertEquals("mat-1", result.getId());
+    }
+
+    @Test
+    public void testRefreshesCurrentMaterialFromNewDistribution() {
+        Material original = createTestMaterial("mat-1", "Original");
+        when(mockQuestionDao.getByMaterialId("mat-1"))
+                .thenReturn(Collections.emptyList());
+        viewModel.getCurrentMaterial().observeForever(m -> { });
+        viewModel.setCurrentMaterial(original);
+
+        Material updated = new Material("mat-1", MaterialType.READING,
+                "Updated Title", "New content", "{}", "[]", System.currentTimeMillis());
+        materialsLiveData.setValue(Arrays.asList(updated));
+
+        Material result = viewModel.getCurrentMaterial().getValue();
+        assertNotNull(result);
+        assertEquals("Updated Title", result.getTitle());
     }
 
     private Material createTestMaterial(String id, String title) {
