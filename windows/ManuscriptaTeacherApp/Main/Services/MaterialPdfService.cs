@@ -72,7 +72,8 @@ public class MaterialPdfService : IMaterialPdfService
         ExternalDeviceEntity? targetDevice = null;
         if (targetDeviceId.HasValue)
         {
-            targetDevice = await _externalDeviceRepository.GetByIdAsync(targetDeviceId.Value);
+            targetDevice = await _externalDeviceRepository.GetByIdAsync(targetDeviceId.Value)
+                ?? throw new KeyNotFoundException($"External device with ID {targetDeviceId.Value} not found.");
         }
 
         var effectiveSettings = new EffectivePdfSettings(
@@ -128,12 +129,11 @@ public class MaterialPdfService : IMaterialPdfService
         var orderedQuestionIds = ExtractQuestionIdsFromContent(material.Content ?? string.Empty);
 
         // Collect responses for this device per §7(2)(b)
-        var allResponses = new List<ResponseEntity>();
-        foreach (var question in questions)
-        {
-            var questionResponses = await _responseRepository.GetByQuestionIdAsync(question.Id);
-            allResponses.AddRange(questionResponses.Where(r => r.DeviceId == deviceGuid));
-        }
+        // Load all responses once to avoid N+1 queries per question
+        var questionIds = new HashSet<Guid>(questions.Select(q => q.Id));
+        var allResponses = (await _responseRepository.GetAllAsync())
+            .Where(r => r.DeviceId == deviceGuid && questionIds.Contains(r.QuestionId))
+            .ToList();
 
         // §7(7): throw if no responses exist from this device
         if (allResponses.Count == 0)
@@ -142,15 +142,15 @@ public class MaterialPdfService : IMaterialPdfService
         var responseLookup = allResponses.ToDictionary(r => r.QuestionId, r => r);
 
         // Load feedback per response if needed per §7(5)(d)
+        // Preload all feedback at once to avoid per-response N+1 lookups
         var feedbackLookup = new Dictionary<Guid, FeedbackEntity>();
         if (includeFeedback)
         {
-            foreach (var response in allResponses)
-            {
-                var feedback = await _feedbackRepository.GetByResponseIdAsync(response.Id);
-                if (feedback != null)
-                    feedbackLookup[response.Id] = feedback;
-            }
+            var responseIds = new HashSet<Guid>(allResponses.Select(r => r.Id));
+            var allFeedback = await _feedbackRepository.GetAllAsync();
+            feedbackLookup = allFeedback
+                .Where(f => responseIds.Contains(f.ResponseId))
+                .ToDictionary(f => f.ResponseId, f => f);
         }
 
         // Resolve device display name per §7(4)(b)
@@ -1156,18 +1156,16 @@ public class MaterialPdfService : IMaterialPdfService
         {
             case LinePatternType.RULED:
                 // §2A(1)(a): Horizontal lines at effective spacing
-                for (float y = 0; y <= areaHeight; y += spacingPt)
-                {
-                    canvas.DrawLine(0, y, areaWidth, y, paint);
-                }
+                // Use global coordinates to keep grid continuous across vertically stacked chunks
+                if (spacingPt > 0f)
+                    DrawHorizontalGridLines(canvas, areaWidth, areaHeight, spacingPt, verticalOffsetPt, paint);
                 break;
 
             case LinePatternType.SQUARE:
                 // §2A(1)(b): Horizontal + vertical lines forming a grid
-                for (float y = 0; y <= areaHeight; y += spacingPt)
-                {
-                    canvas.DrawLine(0, y, areaWidth, y, paint);
-                }
+                // Use global coordinates for horizontal lines to keep grid continuous across chunks
+                if (spacingPt > 0f)
+                    DrawHorizontalGridLines(canvas, areaWidth, areaHeight, spacingPt, verticalOffsetPt, paint);
                 for (float x = 0; x <= areaWidth; x += spacingPt)
                 {
                     canvas.DrawLine(x, 0, x, areaHeight, paint);
@@ -1212,6 +1210,30 @@ public class MaterialPdfService : IMaterialPdfService
             case LinePatternType.NONE:
                 // §2A(1)(d): Blank space, no lines drawn
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Draws horizontal grid lines across the canvas using global coordinates, so lines
+    /// remain seamlessly continuous across vertically stacked answer-area chunks.
+    /// Per MaterialConversionSpecification §2A(1)(a-b).
+    /// </summary>
+    private static void DrawHorizontalGridLines(
+        SKCanvas canvas, float areaWidth, float areaHeight,
+        float spacingPt, float verticalOffsetPt, SKPaint paint)
+    {
+        float firstLineGlobalY = MathF.Floor(verticalOffsetPt / spacingPt) * spacingPt;
+        if (firstLineGlobalY < verticalOffsetPt)
+            firstLineGlobalY += spacingPt;
+
+        for (float globalY = firstLineGlobalY; globalY <= verticalOffsetPt + areaHeight; globalY += spacingPt)
+        {
+            // Skip the top boundary line on non-first chunks: the previous chunk already drew it
+            if (globalY == verticalOffsetPt && verticalOffsetPt > 0f)
+                continue;
+
+            float localY = globalY - verticalOffsetPt;
+            canvas.DrawLine(0, localY, areaWidth, localY, paint);
         }
     }
 }

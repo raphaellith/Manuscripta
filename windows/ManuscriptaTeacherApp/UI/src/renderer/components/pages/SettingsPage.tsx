@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "../common/Card";
 import signalRService from "../../services/signalr/SignalRService";
-import type { ConfigurationEntity, FeedbackStyle, MascotSelection, PdfExportSettingsEntity, LinePatternType, LineSpacingPreset, FontSizePreset } from "../../models";
+import type { ConfigurationEntity, MascotSelection, PdfExportSettingsEntity, LinePatternType, LineSpacingPreset, FontSizePreset } from "../../models";
 
 import { EmailCredentialSettings } from "../settings/EmailCredentialSettings";
 import { RuntimeDependencySettings } from "../settings/RuntimeDependencySettings";
@@ -79,7 +79,7 @@ export const SettingsPage: React.FC = () => {
     };
 
     // Per §7(5): Update a PDF export setting field
-    const updatePdfSetting = (field: keyof PdfExportSettingsEntity, value: string) => {
+    const updatePdfSetting = (field: 'linePatternType' | 'lineSpacingPreset' | 'fontSizePreset', value: LinePatternType | LineSpacingPreset | FontSizePreset) => {
         if (!pdfSettings) return;
         setPdfSettings({ ...pdfSettings, [field]: value });
         setPdfSuccess(null);
@@ -312,7 +312,7 @@ export const SettingsPage: React.FC = () => {
                                     </label>
                                     <select
                                         value={pdfSettings.linePatternType}
-                                        onChange={(e) => updatePdfSetting("linePatternType", e.target.value)}
+                                        onChange={(e) => updatePdfSetting("linePatternType", e.target.value as LinePatternType)}
                                         className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                                     >
                                         <option value="RULED">Ruled</option>
@@ -332,7 +332,7 @@ export const SettingsPage: React.FC = () => {
                                     </label>
                                     <select
                                         value={pdfSettings.lineSpacingPreset}
-                                        onChange={(e) => updatePdfSetting("lineSpacingPreset", e.target.value)}
+                                        onChange={(e) => updatePdfSetting("lineSpacingPreset", e.target.value as LineSpacingPreset)}
                                         className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                                     >
                                         <option value="SMALL">Small (6mm)</option>
@@ -352,7 +352,7 @@ export const SettingsPage: React.FC = () => {
                                     </label>
                                     <select
                                         value={pdfSettings.fontSizePreset}
-                                        onChange={(e) => updatePdfSetting("fontSizePreset", e.target.value)}
+                                        onChange={(e) => updatePdfSetting("fontSizePreset", e.target.value as FontSizePreset)}
                                         className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                                     >
                                         <option value="SMALL">Small (10pt)</option>
