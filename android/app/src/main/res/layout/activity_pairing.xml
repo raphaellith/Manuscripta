@@ -27,10 +27,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/fraunces_bold"
             android:text="@string/pairing_title"
             android:textColor="@color/eink_black"
-            android:textSize="24sp" />
+            android:textSize="24sp"
+            android:fontFamily="@font/fraunces_medium" />
 
     </LinearLayout>
 

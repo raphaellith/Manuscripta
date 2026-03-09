@@ -14,6 +14,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DeviceInfoDto;
 import com.manuscripta.student.network.tcp.PairingCallback;
@@ -53,6 +54,9 @@ public class PairingViewModelTest {
     private ApiService mockApiService;
 
     @Mock
+    private ManuscriptaDatabase mockDatabase;
+
+    @Mock
     private Call<Void> mockCall;
 
     private PairingViewModel viewModel;
@@ -73,7 +77,8 @@ public class PairingViewModelTest {
                 new MutableLiveData<>(PairingState.NOT_PAIRED);
         when(mockPairingManager.getPairingState()).thenReturn(pairingState);
 
-        viewModel = new PairingViewModel(mockDiscoveryManager, mockPairingManager, mockApiService);
+        viewModel = new PairingViewModel(mockDiscoveryManager, mockPairingManager,
+                mockApiService, mockDatabase);
 
         // Capture the callbacks set by the ViewModel
         ArgumentCaptor<PairingCallback> callbackCaptor =

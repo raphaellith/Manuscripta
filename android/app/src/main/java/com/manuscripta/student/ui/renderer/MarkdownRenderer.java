@@ -87,7 +87,11 @@ public class MarkdownRenderer {
 
     /** The Markwon instance for standard markdown rendering. */
     @NonNull
-    private final Markwon markwon;
+    private Markwon markwon;
+
+    /** Context used to rebuild the Markwon instance on scale changes. */
+    @Nullable
+    private Context markwonContext;
 
     /** Renderer for embedded question blocks. */
     @NonNull
@@ -126,18 +130,34 @@ public class MarkdownRenderer {
             @Nullable AttachmentImageLoader attachmentImageLoader,
             @Nullable FileStorageManager fileStorageManager
     ) {
-        this.markwon = Markwon.builder(context)
-                .usePlugin(TablePlugin.create(context))
-                .usePlugin(HtmlPlugin.create())
-                .usePlugin(MarkwonInlineParserPlugin.create())
-                .usePlugin(JLatexMathPlugin.create(
-                        LATEX_TEXT_SIZE,
-                        builder -> builder.inlinesEnabled(true)))
-                .build();
+        this.markwonContext = context;
+        this.markwon = buildMarkwon(
+                context, LATEX_TEXT_SIZE);
         this.questionBlockRenderer = questionBlockRenderer;
         this.attachmentImageLoader = attachmentImageLoader;
         this.fileStorageManager = fileStorageManager;
         this.executor = Executors.newSingleThreadExecutor();
+    }
+
+    /**
+     * Builds a Markwon instance with the given LaTeX text size.
+     *
+     * @param context      Android context
+     * @param latexTextSize LaTeX rendering text size in sp
+     * @return the configured Markwon instance
+     */
+    @NonNull
+    private static Markwon buildMarkwon(
+            @NonNull Context context,
+            float latexTextSize) {
+        return Markwon.builder(context)
+                .usePlugin(TablePlugin.create(context))
+                .usePlugin(HtmlPlugin.create())
+                .usePlugin(MarkwonInlineParserPlugin.create())
+                .usePlugin(JLatexMathPlugin.create(
+                        latexTextSize,
+                        builder -> builder.inlinesEnabled(true)))
+                .build();
     }
 
     /**
@@ -174,6 +194,11 @@ public class MarkdownRenderer {
      */
     public void setTextScaleFactor(float scaleFactor) {
         this.textScaleFactor = scaleFactor;
+        if (markwonContext != null) {
+            this.markwon = buildMarkwon(
+                    markwonContext,
+                    LATEX_TEXT_SIZE * scaleFactor);
+        }
     }
 
     /**

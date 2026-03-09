@@ -10,6 +10,7 @@
         <item name="android:windowBackground">@color/eink_cream</item>
         <item name="android:textColorPrimary">@color/eink_black</item>
         <item name="android:textColorSecondary">@color/eink_dark</item>
+        <item name="android:fontFamily">@font/ibm_plex_sans</item>
     </style>
 
 </resources>

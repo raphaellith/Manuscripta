@@ -29,6 +29,7 @@
             android:textColor="@color/eink_black"
             android:textSize="28sp"
             android:textStyle="bold"
+            android:fontFamily="@font/fraunces_medium"
             android:clickable="true"
             android:focusable="true" />
 

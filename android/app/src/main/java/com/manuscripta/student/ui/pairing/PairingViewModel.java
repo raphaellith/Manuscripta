@@ -9,6 +9,7 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DeviceInfoDto;
 import com.manuscripta.student.network.tcp.PairingCallback;
@@ -20,6 +21,7 @@ import com.manuscripta.student.network.udp.OnServerDiscoveredListener;
 import com.manuscripta.student.network.udp.UdpDiscoveryManager;
 
 import java.util.UUID;
+import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
@@ -50,6 +52,9 @@ public class PairingViewModel extends ViewModel {
 
     /** The Retrofit API service for HTTP registration. */
     private final ApiService apiService;
+
+    /** The Room database, cleared on each new pairing. */
+    private final ManuscriptaDatabase database;
 
     /** Overall pairing phase exposed to the UI. */
     private final MutableLiveData<PairingPhase> pairingPhase =
@@ -107,14 +112,17 @@ public class PairingViewModel extends ViewModel {
      * @param discoveryManager The UDP discovery manager
      * @param pairingManager   The TCP pairing manager
      * @param apiService       The Retrofit API service
+     * @param database         The Room database to clear on pairing
      */
     @Inject
     public PairingViewModel(@NonNull UdpDiscoveryManager discoveryManager,
                             @NonNull PairingManager pairingManager,
-                            @NonNull ApiService apiService) {
+                            @NonNull ApiService apiService,
+                            @NonNull ManuscriptaDatabase database) {
         this.discoveryManager = discoveryManager;
         this.pairingManager = pairingManager;
         this.apiService = apiService;
+        this.database = database;
 
         pairingManager.setPairingCallback(pairingCallback);
         discoveryManager.addListener(discoveryListener);
@@ -307,7 +315,11 @@ public class PairingViewModel extends ViewModel {
      * Called when HTTP registration succeeds. Pairing is now complete.
      */
     private void handleHttpRegistrationSuccess() {
-        Log.i(TAG, "HTTP registration successful — pairing complete");
+        Log.i(TAG, "HTTP registration successful — clearing local database");
+        Executors.newSingleThreadExecutor().execute(() -> {
+            database.clearAllTables();
+            Log.i(TAG, "Local database cleared");
+        });
 
         pairingPhase.postValue(PairingPhase.PAIRED);
         statusMessage.postValue("Paired successfully");
