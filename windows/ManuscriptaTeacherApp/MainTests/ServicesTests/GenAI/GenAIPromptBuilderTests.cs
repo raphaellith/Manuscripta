@@ -119,7 +119,7 @@ public class GenAIPromptBuilderTests
 
         Assert.Contains("MARKDOWN SYNTAX:", prompt);
         Assert.Contains("H1 to H3 headers", prompt);
-        Assert.Contains("!!! center", prompt);
+        Assert.Contains("Blockquotes:", prompt);
     }
 
     /// <summary>
