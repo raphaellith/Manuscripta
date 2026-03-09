@@ -368,6 +368,48 @@ public class MarkdownRendererParseTest {
     }
 
     @Test
+    public void parseSegments_imageInHeading_parsedAsImageEmbed() {
+        String content =
+                "# ![loss_curves](/attachments/abc-123)";
+        List<ContentSegment> segments =
+                renderer.parseSegments(content);
+
+        assertEquals(1, segments.size());
+        assertEquals(ContentSegment.Type.IMAGE_EMBED,
+                segments.get(0).getType());
+        assertEquals("abc-123",
+                segments.get(0).getContent());
+    }
+
+    @Test
+    public void parseSegments_imageInH2Heading_parsedAsImageEmbed() {
+        String content =
+                "## ![diagram](/attachments/def-456)";
+        List<ContentSegment> segments =
+                renderer.parseSegments(content);
+
+        assertEquals(1, segments.size());
+        assertEquals(ContentSegment.Type.IMAGE_EMBED,
+                segments.get(0).getType());
+        assertEquals("def-456",
+                segments.get(0).getContent());
+    }
+
+    @Test
+    public void parseSegments_imageInBlockquote_parsedAsImageEmbed() {
+        String content =
+                "> ![chart](/attachments/ghi-789)";
+        List<ContentSegment> segments =
+                renderer.parseSegments(content);
+
+        assertEquals(1, segments.size());
+        assertEquals(ContentSegment.Type.IMAGE_EMBED,
+                segments.get(0).getType());
+        assertEquals("ghi-789",
+                segments.get(0).getContent());
+    }
+
+    @Test
     public void parseSegments_unknownAdmonitionType_skipped() {
         // Only pdf, center, question are recognised
         String content = "!!! unknown id=\"x\"";
@@ -401,5 +443,71 @@ public class MarkdownRendererParseTest {
                 segments.get(2).getType());
         assertEquals("Block two.",
                 segments.get(2).getContent());
+    }
+
+    // ============ convertInlineLatex tests ============
+
+    @Test
+    public void convertInlineLatex_singleDollar_convertedToDouble() {
+        String input = "The formula is $E = mc^2$ here.";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals(
+                "The formula is $$E = mc^2$$ here.",
+                result);
+    }
+
+    @Test
+    public void convertInlineLatex_doubleDollar_unchanged() {
+        String input = "Block: $$E = mc^2$$";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals("Block: $$E = mc^2$$", result);
+    }
+
+    @Test
+    public void convertInlineLatex_multipleInline_allConverted() {
+        String input = "Both $a^2$ and $b^2$ here.";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals(
+                "Both $$a^2$$ and $$b^2$$ here.",
+                result);
+    }
+
+    @Test
+    public void convertInlineLatex_noLatex_unchanged() {
+        String input = "Just plain text.";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals("Just plain text.", result);
+    }
+
+    @Test
+    public void convertInlineLatex_complexFormula_converted() {
+        String input =
+                "Solve $x = \\frac{-b}{2a}$ for x.";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals(
+                "Solve $$x = \\frac{-b}{2a}$$ for x.",
+                result);
+    }
+
+    @Test
+    public void convertInlineLatex_blockOnSeparateLines_unchanged() {
+        String input = "Text\n$$\nE = mc^2\n$$\nMore text";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals(input, result);
+    }
+
+    @Test
+    public void convertInlineLatex_emptyString_returnsEmpty() {
+        assertEquals("", renderer.convertInlineLatex(""));
+    }
+
+    @Test
+    public void convertInlineLatex_mixedInlineAndBlock_onlyInlineConverted() {
+        String input =
+                "Inline $a$ and block $$b + c$$";
+        String result = renderer.convertInlineLatex(input);
+        assertEquals(
+                "Inline $$a$$ and block $$b + c$$",
+                result);
     }
 }

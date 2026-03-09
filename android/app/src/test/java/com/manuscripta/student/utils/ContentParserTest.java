@@ -330,4 +330,87 @@ public class ContentParserTest {
 
         assertTrue("Partial UUIDs should not be matched", attachmentIds.isEmpty());
     }
+
+    // --- PDF admonition pattern tests ---
+
+    @Test
+    public void testExtractPdfAdmonitionReference() {
+        String content = "!!! pdf id=\"" + UUID_1 + "\"";
+
+        List<String> attachmentIds = ContentParser.extractAttachmentReferences(content);
+
+        assertNotNull(attachmentIds);
+        assertEquals(1, attachmentIds.size());
+        assertEquals(UUID_1, attachmentIds.get(0));
+    }
+
+    @Test
+    public void testExtractMultiplePdfAdmonitionReferences() {
+        String content = "!!! pdf id=\"" + UUID_1 + "\"\nSome text\n!!! pdf id=\"" + UUID_2 + "\"";
+
+        List<String> attachmentIds = ContentParser.extractAttachmentReferences(content);
+
+        assertNotNull(attachmentIds);
+        assertEquals(2, attachmentIds.size());
+        assertEquals(UUID_1, attachmentIds.get(0));
+        assertEquals(UUID_2, attachmentIds.get(1));
+    }
+
+    @Test
+    public void testExtractMixedAttachmentAndPdfReferences() {
+        String content = "![image](/attachments/" + UUID_1 + ")\n!!! pdf id=\"" + UUID_2 + "\"";
+
+        List<String> attachmentIds = ContentParser.extractAttachmentReferences(content);
+
+        assertNotNull(attachmentIds);
+        assertEquals(2, attachmentIds.size());
+        assertEquals(UUID_1, attachmentIds.get(0));
+        assertEquals(UUID_2, attachmentIds.get(1));
+    }
+
+    @Test
+    public void testHasAttachmentReferencesWithPdfAdmonition() {
+        String content = "!!! pdf id=\"" + UUID_1 + "\"";
+
+        assertTrue(ContentParser.hasAttachmentReferences(content));
+    }
+
+    @Test
+    public void testCountAttachmentReferencesIncludesPdfAdmonitions() {
+        String content = "/attachments/" + UUID_1 + "\n!!! pdf id=\"" + UUID_2 + "\"";
+
+        assertEquals(2, ContentParser.countAttachmentReferences(content));
+    }
+
+    @Test
+    public void testExtractDistinctIncludesPdfAdmonitions() {
+        String content = "/attachments/" + UUID_1 + "\n!!! pdf id=\"" + UUID_2
+                + "\"\n!!! pdf id=\"" + UUID_1 + "\"";
+
+        List<String> distinctIds = ContentParser.extractDistinctAttachmentReferences(content);
+
+        assertEquals(2, distinctIds.size());
+        assertTrue(distinctIds.contains(UUID_1));
+        assertTrue(distinctIds.contains(UUID_2));
+    }
+
+    @Test
+    public void testPdfAdmonitionWithInvalidUuidNotMatched() {
+        String content = "!!! pdf id=\"not-a-uuid\"";
+
+        List<String> attachmentIds = ContentParser.extractAttachmentReferences(content);
+
+        assertTrue(attachmentIds.isEmpty());
+    }
+
+    @Test
+    public void testPdfAdmonitionWithUppercaseUuid() {
+        String uppercaseUuid = "550E8400-E29B-41D4-A716-446655440000";
+        String content = "!!! pdf id=\"" + uppercaseUuid + "\"";
+
+        List<String> attachmentIds = ContentParser.extractAttachmentReferences(content);
+
+        assertEquals(1, attachmentIds.size());
+        assertEquals(uppercaseUuid, attachmentIds.get(0));
+    }
 }

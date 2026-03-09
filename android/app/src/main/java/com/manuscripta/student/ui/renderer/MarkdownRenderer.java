@@ -65,12 +65,21 @@ public class MarkdownRenderer {
             Pattern.compile("id=\"([^\"]+)\"");
 
     /**
-     * Pattern matching standalone attachment image lines.
+     * Pattern matching inline LaTeX delimited by single dollar
+     * signs per Material Encoding §2(7)(a). Converts to the
+     * double-dollar syntax that Markwon JLatexMathPlugin expects.
+     */
+    private static final Pattern INLINE_LATEX_PATTERN =
+            Pattern.compile("(?<!\\$)\\$(?!\\$)(.+?)(?<!\\$)\\$(?!\\$)");
+
+    /**
+     * Pattern matching attachment image lines, including those
+     * wrapped in heading or blockquote markers.
      * Captures group 1 = alt text, group 2 = attachment id.
      */
     private static final Pattern IMAGE_PATTERN =
             Pattern.compile(
-                    "^\\s*!\\[([^\\]]*)\\]"
+                    "^[\\s#>]*!\\[([^\\]]*)\\]"
                             + "\\(/attachments/([^)]+)\\)\\s*$");
 
     /** The Markwon instance for standard markdown rendering. */
@@ -170,7 +179,15 @@ public class MarkdownRenderer {
             @NonNull Map<String, Question> questions) {
         parent.removeAllViews();
 
+        Log.d(TAG, "render: materialId=" + materialId
+                + " contentLen=" + content.length()
+                + " imageLoader="
+                + (attachmentImageLoader != null)
+                + " fsm=" + (fileStorageManager != null));
+
         List<ContentSegment> segments = parseSegments(content);
+        Log.d(TAG, "render: parsed " + segments.size()
+                + " segments");
         Context context = parent.getContext();
 
         for (ContentSegment segment : segments) {
@@ -197,6 +214,9 @@ public class MarkdownRenderer {
             @NonNull ContentSegment segment,
             @NonNull String materialId,
             @NonNull Map<String, Question> questions) {
+        Log.d(TAG, "renderSegment: type="
+                + segment.getType()
+                + " content=" + segment.getContent());
         switch (segment.getType()) {
             case MARKDOWN:
                 return renderMarkdown(
@@ -233,8 +253,23 @@ public class MarkdownRenderer {
             @NonNull Context context,
             @NonNull String markdown) {
         TextView textView = new TextView(context);
-        markwon.setMarkdown(textView, markdown.trim());
+        String processed = convertInlineLatex(markdown.trim());
+        markwon.setMarkdown(textView, processed);
         return textView;
+    }
+
+    /**
+     * Converts single-dollar inline LaTeX ({@code $...$}) to
+     * double-dollar syntax ({@code $$...$$}) that the Markwon
+     * JLatexMathPlugin requires, per Material Encoding §2(7)(a).
+     *
+     * @param text the markdown text to process
+     * @return the text with inline LaTeX delimiters converted
+     */
+    @NonNull
+    String convertInlineLatex(@NonNull String text) {
+        return INLINE_LATEX_PATTERN.matcher(text)
+                .replaceAll("\\$\\$$1\\$\\$");
     }
 
     /**
@@ -254,7 +289,8 @@ public class MarkdownRenderer {
 
         TextView textView = new TextView(context);
         textView.setGravity(Gravity.CENTER);
-        markwon.setMarkdown(textView, content.trim());
+        String processed = convertInlineLatex(content.trim());
+        markwon.setMarkdown(textView, processed);
         wrapper.addView(textView);
 
         return wrapper;
@@ -299,6 +335,9 @@ public class MarkdownRenderer {
             @NonNull Context context,
             @NonNull String attachmentId,
             @NonNull String materialId) {
+        Log.d(TAG, "renderPdfEmbed: attachment="
+                + attachmentId + " material=" + materialId
+                + " fsm=" + (fileStorageManager != null));
         if (fileStorageManager == null) {
             return createPlaceholder(
                     context,
@@ -318,6 +357,12 @@ public class MarkdownRenderer {
         executor.execute(() -> {
             File pdfFile = fileStorageManager.getAttachmentFile(
                     materialId, attachmentId);
+            Log.d(TAG, "renderPdfEmbed: file="
+                    + (pdfFile != null
+                            ? pdfFile.getAbsolutePath()
+                            : "null")
+                    + " exists="
+                    + (pdfFile != null && pdfFile.exists()));
             if (pdfFile == null || !pdfFile.exists()) {
                 container.post(() -> {
                     container.removeAllViews();
@@ -408,6 +453,10 @@ public class MarkdownRenderer {
             @NonNull Context context,
             @NonNull String attachmentId,
             @NonNull String materialId) {
+        Log.d(TAG, "renderImageEmbed: attachment="
+                + attachmentId + " material=" + materialId
+                + " loader="
+                + (attachmentImageLoader != null));
         ImageView imageView = new ImageView(context);
         imageView.setAdjustViewBounds(true);
         imageView.setLayoutParams(new ViewGroup.LayoutParams(
@@ -417,6 +466,9 @@ public class MarkdownRenderer {
         if (attachmentImageLoader != null) {
             attachmentImageLoader.loadImage(
                     attachmentId, materialId, imageView);
+        } else {
+            Log.w(TAG, "No image loader — image will not"
+                    + " render for " + attachmentId);
         }
 
         return imageView;

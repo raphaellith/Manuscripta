@@ -232,6 +232,36 @@ public class MarkdownRendererTest {
     }
 
     @Test
+    public void testParseSegments_imageInHeading_parsedAsImage() {
+        String content =
+                "# ![alt](/attachments/img-head)";
+        List<ContentSegment> segments =
+                renderer.parseSegments(content);
+
+        assertEquals(1, segments.size());
+        assertEquals(
+                ContentSegment.Type.IMAGE_EMBED,
+                segments.get(0).getType());
+        assertEquals("img-head",
+                segments.get(0).getContent());
+    }
+
+    @Test
+    public void testParseSegments_imageInBlockquote_parsedAsImage() {
+        String content =
+                "> ![alt](/attachments/img-bq)";
+        List<ContentSegment> segments =
+                renderer.parseSegments(content);
+
+        assertEquals(1, segments.size());
+        assertEquals(
+                ContentSegment.Type.IMAGE_EMBED,
+                segments.get(0).getType());
+        assertEquals("img-bq",
+                segments.get(0).getContent());
+    }
+
+    @Test
     public void testParseSegments_multipleAdmonitions() {
         String content = "# Title\n"
                 + "!!! question id=\"q1\"\n"

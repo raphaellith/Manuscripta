@@ -2,6 +2,7 @@ package com.manuscripta.student.ui.renderer;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -27,6 +28,9 @@ import retrofit2.Response;
  * Encoding §3.</p>
  */
 public class AttachmentImageLoader {
+
+    /** Tag for logging. */
+    private static final String TAG = "AttachmentImageLoader";
 
     /** The API service for downloading attachments. */
     @NonNull
@@ -85,12 +89,21 @@ public class AttachmentImageLoader {
             @NonNull String attachmentId,
             @NonNull String materialId,
             @NonNull ImageView imageView) {
+        Log.d(TAG, "loadImage called: attachment="
+                + attachmentId + " material=" + materialId);
         executor.execute(() -> {
             Bitmap bitmap = loadBitmap(
                     attachmentId, materialId);
             if (bitmap != null) {
+                Log.d(TAG, "Loaded bitmap "
+                        + bitmap.getWidth() + "x"
+                        + bitmap.getHeight()
+                        + " for " + attachmentId);
                 imageView.post(
                         () -> imageView.setImageBitmap(bitmap));
+            } else {
+                Log.w(TAG, "Failed to load bitmap for "
+                        + attachmentId);
             }
         });
     }
@@ -127,6 +140,11 @@ public class AttachmentImageLoader {
             @NonNull String materialId) {
         File file = fileStorageManager.getAttachmentFile(
                 materialId, attachmentId);
+        Log.d(TAG, "loadFromCache: file="
+                + (file != null ? file.getAbsolutePath()
+                        : "null")
+                + " exists="
+                + (file != null && file.exists()));
         if (file != null && file.exists()) {
             return decodeBitmapFromFile(
                     file.getAbsolutePath());
@@ -146,19 +164,27 @@ public class AttachmentImageLoader {
             @NonNull String attachmentId,
             @NonNull String materialId) {
         try {
+            Log.d(TAG, "loadFromNetwork: fetching "
+                    + attachmentId);
             Response<ResponseBody> response =
                     apiService.getAttachment(attachmentId)
                             .execute();
+            Log.d(TAG, "loadFromNetwork: HTTP "
+                    + response.code()
+                    + " body=" + (response.body() != null));
             if (response.isSuccessful()
                     && response.body() != null) {
                 byte[] bytes = response.body().bytes();
+                Log.d(TAG, "loadFromNetwork: got "
+                        + bytes.length + " bytes");
                 fileStorageManager.saveAttachment(
                         materialId, attachmentId,
                         "img", bytes);
                 return decodeBitmapFromBytes(bytes);
             }
         } catch (IOException e) {
-            // Network failure — return null per §3(3)
+            Log.e(TAG, "loadFromNetwork failed: "
+                    + e.getMessage(), e);
         }
         return null;
     }
