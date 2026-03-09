@@ -92,22 +92,31 @@ public class OllamaClientService : IDependencyService
     /// </summary>
     public virtual async Task<float[]> GenerateEmbeddingAsync(string text, string model = "nomic-embed-text")
     {
+        // Ollama API uses /api/embed endpoint with 'input' parameter
         var request = new
         {
             model = model,
-            prompt = text
+            input = text
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/embeddings", request);
-        response.EnsureSuccessStatusCode();
+        var response = await _httpClient.PostAsJsonAsync("/api/embed", request);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Ollama embedding request failed with status {response.StatusCode}: {errorContent}");
+        }
 
         var content = await response.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(content);
         
-        if (doc.RootElement.TryGetProperty("embedding", out var embedding))
+        // /api/embed returns { embeddings: [[...]] } for single input
+        if (doc.RootElement.TryGetProperty("embeddings", out var embeddingsArray) &&
+            embeddingsArray.GetArrayLength() > 0)
         {
+            var firstEmbedding = embeddingsArray[0];
             var embeddings = new List<float>();
-            foreach (var value in embedding.EnumerateArray())
+            foreach (var value in firstEmbedding.EnumerateArray())
             {
                 embeddings.Add(value.GetSingle());
             }

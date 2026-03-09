@@ -15,6 +15,9 @@ import type {
     ExternalDeviceType,
     EmailCredentialEntity,
     ConfigurationEntity,
+    SourceDocumentEntity,
+    EmbeddingStatus,
+    PdfExportSettingsEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -23,6 +26,7 @@ import type {
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
     InternalCreateFeedbackDto,
+    InternalCreateSourceDocumentDto,
     GenerationRequest,
     GenerationResult,
 } from "../../models";
@@ -358,6 +362,28 @@ class SignalRService {
         // SignalR returns byte[] as base64 string
         const base64 = await this.connection.invoke<string>("GenerateMaterialPdf", materialId);
         // Decode base64 to Uint8Array
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    /**
+     * Generates a response PDF for a specific device's responses to a worksheet.
+     * Per NetworkingAPISpec §1(m)(ii).
+     * @returns Decoded PDF file bytes as a Uint8Array.
+     */
+    public async generateResponsePdf(
+        materialId: string,
+        deviceId: string,
+        includeFeedback: boolean,
+        includeMarkScheme: boolean,
+    ): Promise<Uint8Array> {
+        const base64 = await this.connection.invoke<string>(
+            "GenerateResponsePdf", materialId, deviceId, includeFeedback, includeMarkScheme,
+        );
         const binaryString = atob(base64);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -869,6 +895,85 @@ class SignalRService {
      */
     public onGenerationCancelled(callback: (generationId: string) => void): () => void {
         return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // Source Document CRUD - NetworkingAPISpec §1(1)(k)
+    // ==========================================
+
+    /**
+     * Creates a new source document.
+     * Per NetworkingAPISpec §1(1)(k)(i) and FrontendWorkflowSpec §4AA(2)(c).
+     */
+    public async createSourceDocument(dto: InternalCreateSourceDocumentDto): Promise<SourceDocumentEntity> {
+        return await this.getConnection().invoke<SourceDocumentEntity>("CreateSourceDocument", dto);
+    }
+
+    /**
+     * Retrieves all source documents.
+     * Per NetworkingAPISpec §1(1)(k)(ii) and FrontendWorkflowSpec §3(1)(a)(v).
+     */
+    public async getAllSourceDocuments(): Promise<SourceDocumentEntity[]> {
+        return await this.getConnection().invoke<SourceDocumentEntity[]>("GetAllSourceDocuments");
+    }
+
+    /**
+     * Updates a source document entity.
+     * Per NetworkingAPISpec §1(1)(k)(iii) and FrontendWorkflowSpec §4AA(3)(a).
+     */
+    public async updateSourceDocument(entity: SourceDocumentEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateSourceDocument", entity);
+    }
+
+    /**
+     * Deletes a source document by ID.
+     * Per NetworkingAPISpec §1(1)(k)(iv) and FrontendWorkflowSpec §4AA(4)(a).
+     */
+    public async deleteSourceDocument(id: string): Promise<void> {
+        await this.getConnection().invoke("DeleteSourceDocument", id);
+    }
+
+    /**
+     * Gets the embedding status of a source document.
+     * Per NetworkingAPISpec §1(1)(i)(v) and FrontendWorkflowSpec §4AA(2)(e).
+     */
+    public async getEmbeddingStatus(sourceDocumentId: string): Promise<EmbeddingStatus> {
+        return await this.getConnection().invoke<EmbeddingStatus>("GetEmbeddingStatus", sourceDocumentId);
+    }
+
+    /**
+     * Retries embedding for a source document with FAILED status.
+     * Per NetworkingAPISpec §1(1)(i)(vii) and FrontendWorkflowSpec §4AA(5)(b).
+     */
+    public async retryEmbedding(sourceDocumentId: string): Promise<void> {
+        await this.getConnection().invoke("RetryEmbedding", sourceDocumentId);
+    }
+
+    /**
+     * Subscribe to embedding failed events.
+     * Per NetworkingAPISpec §2(1)(d)(i) and FrontendWorkflowSpec §4AA(6).
+     */
+    public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
+        return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
+    
+    // ==========================================
+    // PDF Export Settings - NetworkingAPISpec §1(1)(q)
+    // ==========================================
+
+    /**
+     * Retrieves the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(i) and FrontendWorkflowSpecifications §3(1)(b).
+     */
+    public async getPdfExportSettings(): Promise<PdfExportSettingsEntity> {
+        return await this.getConnection().invoke<PdfExportSettingsEntity>("GetPdfExportSettings");
+    }
+
+    /**
+     * Updates the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(ii).
+     */
+    public async updatePdfExportSettings(settings: PdfExportSettingsEntity): Promise<void> {
+        await this.getConnection().invoke("UpdatePdfExportSettings", settings);
     }
 
 }

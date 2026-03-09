@@ -20,6 +20,7 @@ import { RenameDeviceModal } from '../modals/RenameDeviceModal';
 import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { ExternalDevicePairingModal } from '../modals/ExternalDevicePairingModal';
 import { DeviceConfigurationModal } from '../modals/DeviceConfigurationModal';
+import { ExternalDeviceConfigurationModal } from '../modals/ExternalDeviceConfigurationModal';
 import { MissingEmailCredentialsModal } from '../modals/MissingEmailCredentialsModal';
 
 // Icons
@@ -138,6 +139,7 @@ export const ClassroomPage: React.FC = () => {
     const [isExternalPairingModalOpen, setIsExternalPairingModalOpen] = useState(false);
     const [configDeviceId, setConfigDeviceId] = useState<string | null>(null);
     const [configDeviceName, setConfigDeviceName] = useState<string>('');
+    const [extConfigDevice, setExtConfigDevice] = useState<ExternalDeviceEntity | null>(null);
     const [isMissingEmailModalOpen, setIsMissingEmailModalOpen] = useState(false);
 
     // Deployment state - per device progress
@@ -563,6 +565,15 @@ export const ClassroomPage: React.FC = () => {
                 />
             )}
 
+            {/* External Device Configuration Modal — per §5H(2) */}
+            {extConfigDevice && (
+                <ExternalDeviceConfigurationModal
+                    device={extConfigDevice}
+                    onClose={() => setExtConfigDevice(null)}
+                    onSaved={() => { setExtConfigDevice(null); refreshDeviceGrid(); }}
+                />
+            )}
+
             {/* Note: Alert UI (toasts, banners) is now rendered globally by GlobalAlerts component */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -849,8 +860,18 @@ export const ClassroomPage: React.FC = () => {
                                     {device.type === 'REMARKABLE' ? 'reMarkable' : 'Kindle'}
                                 </span>
 
-                                {/* Per ConfigurationManagementSpecification §1(1): configurations only for Android devices */}
-                                {/* No settings button for reMarkable devices */}
+                                {/* §5B(5A): Settings button for external device PDF export overrides */}
+                                <button
+                                    className="absolute bottom-2 right-2 p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-sm border border-gray-200 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExtConfigDevice(device);
+                                    }}
+                                    title="PDF Export Settings"
+                                    aria-label="External device PDF export settings"
+                                >
+                                    <SettingsIcon />
+                                </button>
                             </div>
                         );
                     })}

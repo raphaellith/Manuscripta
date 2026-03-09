@@ -34,8 +34,104 @@ namespace Main.Services.RuntimeDependencies
         /// <summary>
         /// Checks if the Nomic Embed Text model is available by querying Ollama's API.
         /// Per GenAISpec.md §1E(3)(a).
+        /// If Ollama daemon is not running but is installed, starts it first
+        /// per GenAISpec.md §1A(4).
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
+        {
+            // Ensure Ollama daemon is running before querying for models
+            if (!await EnsureOllamaRunningAsync())
+            {
+                return false;
+            }
+
+            return await QueryModelAvailabilityAsync();
+        }
+
+        /// <summary>
+        /// Ensures Ollama daemon is running, starting it if necessary.
+        /// </summary>
+        private async Task<bool> EnsureOllamaRunningAsync()
+        {
+            // First check if Ollama API is already reachable
+            try
+            {
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Daemon not running
+            }
+
+            // Check if Ollama executable exists
+            var ollamaDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ManuscriptaTeacherApp",
+                "bin",
+                "ollama"
+            );
+            var ollamaExe = Path.Combine(ollamaDir, "ollama.exe");
+
+            if (!File.Exists(ollamaExe))
+            {
+                _logger.LogInformation("Ollama executable not found at {Path}", ollamaExe);
+                return false;
+            }
+
+            // Start Ollama daemon
+            _logger.LogInformation("Starting Ollama daemon for model availability check");
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = ollamaExe,
+                    Arguments = "serve",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null)
+                {
+                    return false;
+                }
+
+                // Wait for daemon to start
+                for (int i = 0; i < 30; i++)
+                {
+                    await Task.Delay(500);
+                    try
+                    {
+                        var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // Daemon not ready yet
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to start Ollama daemon");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Queries Ollama API to check if the Nomic Embed Text model is available.
+        /// </summary>
+        private async Task<bool> QueryModelAvailabilityAsync()
         {
             try
             {

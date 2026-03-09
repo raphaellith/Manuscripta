@@ -174,7 +174,7 @@ public class ExternalDeviceDeploymentServiceTests
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test Material", "Content"));
-        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId, deviceId))
             .ReturnsAsync(pdfBytes);
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
             .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Test Device", ExternalDeviceType.REMARKABLE));
@@ -184,8 +184,8 @@ public class ExternalDeviceDeploymentServiceTests
 
         await _service.DeployAsync(materialId, new List<Guid> { deviceId });
 
-        // Verify PDF generation was called exactly once
-        _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId), Times.Once);
+        // Verify PDF generation was called exactly once with device ID
+        _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId, deviceId), Times.Once);
         // Verify RMAPI was called
         _mockRmapiService.Verify(s => s.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         // Verify Email was not called
@@ -201,15 +201,15 @@ public class ExternalDeviceDeploymentServiceTests
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test Material", "Content"));
-        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId, deviceId))
             .ReturnsAsync(pdfBytes);
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
             .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });
         
         await _service.DeployAsync(materialId, new List<Guid> { deviceId });
 
-        // Verify PDF generation was called exactly once
-        _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId), Times.Once);
+        // Verify PDF generation was called exactly once with device ID
+        _mockPdfService.Verify(s => s.GeneratePdfAsync(materialId, deviceId), Times.Once);
         // Verify RMAPI was not called
         _mockRmapiService.Verify(s => s.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         // Verify Email was called
@@ -224,7 +224,7 @@ public class ExternalDeviceDeploymentServiceTests
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test", "Content"));
-        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId, deviceId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
             .ReturnsAsync((ExternalDeviceEntity?)null);
@@ -244,7 +244,7 @@ public class ExternalDeviceDeploymentServiceTests
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test", "Content"));
-        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId, deviceId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
             .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Device", ExternalDeviceType.REMARKABLE));
@@ -267,7 +267,7 @@ public class ExternalDeviceDeploymentServiceTests
 
         _mockMaterialRepository.Setup(r => r.GetByIdAsync(materialId))
             .ReturnsAsync(new WorksheetMaterialEntity(materialId, Guid.NewGuid(), "Test", "Content"));
-        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId))
+        _mockPdfService.Setup(s => s.GeneratePdfAsync(materialId, deviceId))
             .ReturnsAsync(new byte[] { 0x25 });
         _mockDeviceRepository.Setup(r => r.GetByIdAsync(deviceId))
             .ReturnsAsync(new ExternalDeviceEntity(deviceId, "Kindle Device", ExternalDeviceType.KINDLE) { ConfigurationData = "test@kindle.com" });

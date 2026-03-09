@@ -69,6 +69,12 @@ export interface InternalCreateFeedbackDto {
     marks: number | null;
 }
 
+// Per NetworkingAPISpec §1(1)(k) - Source Document
+export interface InternalCreateSourceDocumentDto {
+    unitCollectionId: string;
+    transcript: string;
+}
+
 // Per AdditionalValidationRules §3AB - Generation Request
 export interface GenerationRequest {
     description: string;           // Teacher's description of desired content

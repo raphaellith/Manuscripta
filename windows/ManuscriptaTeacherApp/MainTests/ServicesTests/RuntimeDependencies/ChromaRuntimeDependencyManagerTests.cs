@@ -61,8 +61,10 @@ public class ChromaRuntimeDependencyManagerTests
 	}
 
 	[Fact]
-	public async Task CheckDependencyAvailabilityAsync_ReturnsFalse_WhenChromaApiUnhealthy()
+	public async Task CheckDependencyAvailabilityAsync_ReturnsTrue_WhenChromaApiUnhealthy_ButExecutableExists()
 	{
+		// Per GenAISpec.md §1B(3)(a): availability is determined solely by `chroma --version`.
+		// API health is irrelevant for availability — the dependency is installed even if the server isn't running.
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var (executablePath, tempDirectory) = CreateFakeChromaExecutable();
 
@@ -70,7 +72,7 @@ public class ChromaRuntimeDependencyManagerTests
 		{
 			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath, chromaApiHealthy: false);
 			var result = await manager.CheckDependencyAvailabilityAsync();
-			Assert.False(result);
+			Assert.True(result);
 		}
 		finally
 		{
