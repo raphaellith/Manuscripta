@@ -1,6 +1,7 @@
 package com.manuscripta.student.ui.main;
 
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -11,6 +12,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -216,6 +218,15 @@ public class MainActivity extends AppCompatActivity {
      */
     private void setupMaterialDropdown() {
         binding.materialDropdown.setOnClickListener(v -> showMaterialDropdown());
+        try {
+            Typeface fraunces = ResourcesCompat.getFont(
+                    this, R.font.fraunces_medium);
+            if (fraunces != null) {
+                binding.materialDropdown.setTypeface(fraunces);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Fraunces font not available");
+        }
     }
 
     /**

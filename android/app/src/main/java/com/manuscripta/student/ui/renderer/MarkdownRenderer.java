@@ -278,11 +278,7 @@ public class MarkdownRenderer {
         textView.setTextSize(
                 TypedValue.COMPLEX_UNIT_SP,
                 BASE_BODY_SP * textScaleFactor);
-        Typeface bodyFont = ResourcesCompat.getFont(
-                context, R.font.ibm_plex_sans);
-        if (bodyFont != null) {
-            textView.setTypeface(bodyFont);
-        }
+        applyBodyFont(context, textView);
         String processed = convertInlineLatex(markdown.trim());
         markwon.setMarkdown(textView, processed);
         return textView;
@@ -322,16 +318,34 @@ public class MarkdownRenderer {
         textView.setTextSize(
                 TypedValue.COMPLEX_UNIT_SP,
                 BASE_BODY_SP * textScaleFactor);
-        Typeface bodyFont = ResourcesCompat.getFont(
-                context, R.font.ibm_plex_sans);
-        if (bodyFont != null) {
-            textView.setTypeface(bodyFont);
-        }
+        applyBodyFont(context, textView);
         String processed = convertInlineLatex(content.trim());
         markwon.setMarkdown(textView, processed);
         wrapper.addView(textView);
 
         return wrapper;
+    }
+
+    /**
+     * Attempts to apply the IBM Plex Sans font to a TextView.
+     * Falls back silently if the font is not available (e.g. on
+     * devices without Google Play Services).
+     *
+     * @param context  Android context
+     * @param textView the TextView to style
+     */
+    private void applyBodyFont(
+            @NonNull Context context,
+            @NonNull TextView textView) {
+        try {
+            Typeface bodyFont = ResourcesCompat.getFont(
+                    context, R.font.ibm_plex_sans);
+            if (bodyFont != null) {
+                textView.setTypeface(bodyFont);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Body font not available, using default");
+        }
     }
 
     /**

@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_option_default"
-    android:fontFamily="@font/ibm_plex_sans"
     android:gravity="center_vertical"
     android:minHeight="70dp"
     android:textColor="@color/eink_black"

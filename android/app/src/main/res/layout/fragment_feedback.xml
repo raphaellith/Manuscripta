@@ -23,7 +23,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/spacing_section"
         android:layout_marginBottom="@dimen/spacing_section"
-        android:fontFamily="@font/fraunces_semibold"
         android:textColor="@color/eink_black"
         android:textSize="@dimen/text_feedback_title"
         android:textStyle="bold"
