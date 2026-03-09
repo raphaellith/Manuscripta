@@ -55,8 +55,8 @@ public class MarkdownRenderer {
     /** Tag for logging. */
     private static final String TAG = "MarkdownRenderer";
 
-    /** Default text size for LaTeX rendering (sp). */
-    private static final float LATEX_TEXT_SIZE = 18f;
+    /** Default text size for LaTeX rendering (sp), matching body text. */
+    private static final float LATEX_TEXT_SIZE = 30f;
 
     /** Pattern matching admonition marker lines. */
     private static final Pattern ADMONITION_PATTERN =

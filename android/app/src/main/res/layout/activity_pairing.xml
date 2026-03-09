@@ -10,16 +10,16 @@
 
     <!-- Title -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:orientation="horizontal">
 
         <ImageView
             android:layout_width="wrap_content"
-            android:layout_height="37dp"
-            android:layout_marginEnd="12dp"
+            android:layout_height="64dp"
+            android:layout_marginEnd="16dp"
             android:adjustViewBounds="true"
             android:contentDescription="@string/pairing_title"
             android:src="@drawable/quill_logo" />
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:text="@string/pairing_title"
             android:textColor="@color/eink_black"
-            android:textSize="24sp"
+            android:textSize="48sp"
             android:fontFamily="@font/fraunces_medium" />
 
     </LinearLayout>

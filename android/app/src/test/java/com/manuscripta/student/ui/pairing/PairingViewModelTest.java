@@ -235,7 +235,7 @@ public class PairingViewModelTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void onHttpSuccess_setsPhaseToPaired() {
+    public void onHttpSuccess_setsPhaseToPaired() throws InterruptedException {
         viewModel.startPairing("Test Student");
         when(mockApiService.registerDevice(any())).thenReturn(mockCall);
         DiscoveryMessage server = new DiscoveryMessage("192.168.1.100", 5911, 5912);
@@ -249,7 +249,11 @@ public class PairingViewModelTest {
         callbackCaptor.getValue().onResponse(mockCall, Response.success(null));
 
         assertEquals(PairingPhase.PAIRED, viewModel.getPairingPhase().getValue());
+
+        // pairingComplete is posted after clearAllTables on a background thread
+        Thread.sleep(500);
         assertTrue(Boolean.TRUE.equals(viewModel.getPairingComplete().getValue()));
+        verify(mockDatabase).clearAllTables();
     }
 
     // ========== Error handling ==========

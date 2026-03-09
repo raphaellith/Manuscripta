@@ -316,14 +316,14 @@ public class PairingViewModel extends ViewModel {
      */
     private void handleHttpRegistrationSuccess() {
         Log.i(TAG, "HTTP registration successful — clearing local database");
-        Executors.newSingleThreadExecutor().execute(() -> {
-            database.clearAllTables();
-            Log.i(TAG, "Local database cleared");
-        });
-
         pairingPhase.postValue(PairingPhase.PAIRED);
         statusMessage.postValue("Paired successfully");
-        pairingComplete.postValue(true);
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            database.clearAllTables();
+            Log.i(TAG, "Local database cleared \u2014 navigating");
+            pairingComplete.postValue(true);
+        });
     }
 
     /**

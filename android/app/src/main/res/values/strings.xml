@@ -9,6 +9,7 @@
     <!-- Material selector -->
     <string name="materials_menu">Materials ▼</string>
     <string name="no_materials">No materials received</string>
+    <string name="no_materials_deployed">No materials deployed</string>
     <string name="answer_submitted">Answer submitted</string>
 
     <!-- Quiz -->

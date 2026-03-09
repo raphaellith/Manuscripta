@@ -473,13 +473,16 @@ public class MainActivity extends AppCompatActivity {
     private void observeViewModel() {
         viewModel.getAllMaterials().observe(this, materials -> {
             allMaterials.clear();
-            if (materials != null) {
+            if (materials != null && !materials.isEmpty()) {
                 allMaterials.addAll(materials);
                 if (materials.size() > lastKnownMaterialCount
                         && lastKnownMaterialCount > 0) {
                     showMaterialReceivedNotification();
                 }
                 lastKnownMaterialCount = materials.size();
+            } else if (binding != null) {
+                binding.materialDropdown.setText(
+                        R.string.no_materials_deployed);
             }
         });
         viewModel.getCurrentMaterial().observe(this, material -> {
