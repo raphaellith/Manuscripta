@@ -23,6 +23,8 @@ import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
 import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
+import { StreamingGenerationView } from './StreamingGenerationView';
+import { BubbleMenu } from '@tiptap/react';
 import 'katex/dist/katex.min.css';
 
 interface EditorModalProps {
@@ -171,6 +173,18 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     // Guard to prevent concurrent orphan removal executions
     const isRemovingOrphansRef = useRef(false);
+
+    // AI Assistant state
+    const [isAiGenerating, setIsAiGenerating] = useState(false);
+    const [aiSelectedContent, setAiSelectedContent] = useState('');
+    const [aiOriginalContent, setAiOriginalContent] = useState('');
+    const [aiGenerationId, setAiGenerationId] = useState<string | null>(null);
+    const [aiInstructionRaw, setAiInstructionRaw] = useState('');
+    const [showAiInput, setShowAiInput] = useState(false);
+    const [aiContentTokens, setAiContentTokens] = useState('');
+    const [aiThinkingTokens, setAiThinkingTokens] = useState('');
+
+
 
     // Convert stored markdown to HTML for editor
     const initialContent = markdownToHtml(material.content || '');
@@ -405,6 +419,91 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         const html = editor.getHTML();
         return htmlToMarkdown(html);
     }, [editor]);
+
+    const handleAiInstructionSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const instruction = aiInstructionRaw.trim();
+        if (!instruction || !editor || isAiGenerating) return;
+
+        setShowAiInput(false);
+        setAiInstructionRaw('');
+        
+        const selectionRange = editor.state.selection;
+        
+        // Store the originally selected content in case of cancellation
+        const originalText = editor.state.doc.textBetween(selectionRange.from, selectionRange.to, '\n\n');
+        setAiOriginalContent(originalText);
+        setAiSelectedContent(originalText);
+        
+        setIsAiGenerating(true);
+        setAiGenerationId(null);
+        
+        try {
+            const result = await signalRService.modifyContent(originalText, instruction, undefined);
+            
+            // Success! The server returns the final complete text
+            if (editor) {
+                editor.chain().focus().insertContent(markdownToHtml(result.content)).run();
+                setIsAiGenerating(false);
+                setAiGenerationId(null);
+                setAiContentTokens('');
+                setAiThinkingTokens('');
+            }
+        } catch (error) {
+            console.error('Failed to invoke AI assistant:', error);
+            setIsAiGenerating(false);
+            setAiContentTokens('');
+            setAiThinkingTokens('');
+            // Optional: User cancellation shouldn't popup an alert.
+        }
+    };
+
+    const handleCancelModification = async () => {
+        if (aiGenerationId) {
+            try {
+                await signalRService.cancelGeneration(aiGenerationId);
+                setIsAiGenerating(false);
+                setAiGenerationId(null);
+                setAiContentTokens('');
+                setAiThinkingTokens('');
+            } catch (err) {
+                console.error('Failed to cancel generation:', err);
+            }
+        }
+    };
+
+    useEffect(() => {
+        const handleGenStarted = (id: string) => {
+            setAiGenerationId(id);
+        };
+        const handleGenProgress = (token: string, isThinking: boolean, done: boolean) => {
+            if (isAiGenerating) {
+                if (isThinking) {
+                    setAiThinkingTokens(prev => prev + token);
+                } else {
+                    setAiContentTokens(prev => prev + token);
+                }
+            }
+        };
+        const handleGenCancelled = (id: string) => {
+            if (isAiGenerating && id === aiGenerationId) {
+                setIsAiGenerating(false);
+                setAiGenerationId(null);
+                setAiContentTokens('');
+                setAiThinkingTokens('');
+            }
+        };
+
+        const offStarted = signalRService.onGenerationStarted(handleGenStarted);
+        const offProgress = signalRService.onGenerationProgress(handleGenProgress);
+        const offCancelled = signalRService.onGenerationCancelled(handleGenCancelled);
+        
+        return () => {
+            offStarted();
+            offProgress();
+            offCancelled();
+        };
+    }, [isAiGenerating, aiGenerationId]);
 
     // Convert external images (blob:/http:/https:/data:) to attachments per §4C(4)(d)
     // Called before save to ensure all pasted/dropped images are properly stored
@@ -1495,6 +1594,78 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     />
                 </div>
             </div>
+
+            {/* AI Assistant Bubble Menu */}
+            {editor && (
+                <BubbleMenu
+                    editor={editor}
+                    tippyOptions={{ duration: 100 }}
+                    shouldShow={({ editor, from, to }) => {
+                        return from !== to && !editor.isActive('image') && !editor.isActive('pdfEmbed') && material.materialType !== 'POLL' && !isAiGenerating;
+                    }}
+                >
+                    <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-1 flex items-center gap-1">
+                        {!showAiInput ? (
+                            <button
+                                onClick={() => setShowAiInput(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-orange hover:bg-orange-50 rounded"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                AI Modify
+                            </button>
+                        ) : (
+                            <form onSubmit={handleAiInstructionSubmit} className="flex items-center gap-2 px-2 py-1">
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    value={aiInstructionRaw}
+                                    onChange={(e) => setAiInstructionRaw(e.target.value)}
+                                    placeholder="e.g. Make it simpler..."
+                                    className="text-sm px-2 py-1 border border-brand-orange rounded outline-none focus:ring-1 focus:ring-brand-orange w-48"
+                                />
+                                <button type="submit" className="text-white bg-brand-orange hover:bg-orange-600 px-2 py-1 rounded text-sm font-medium">
+                                    Go
+                                </button>
+                                <button type="button" onClick={() => setShowAiInput(false)} className="text-gray-500 hover:text-gray-700 font-bold px-1">
+                                    ×
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </BubbleMenu>
+            )}
+
+            {/* Streaming overlay when generating */}
+            {isAiGenerating && (
+                <div className="absolute inset-x-8 bottom-8 flex justify-center pointer-events-none z-50">
+                    <div className="bg-white rounded-lg shadow-2xl border border-gray-200 pointer-events-auto max-h-[80vh] overflow-hidden flex flex-col w-full max-w-4xl max-w-screen-md relative">
+                        {aiGenerationId && (
+                            <button
+                                onClick={handleCancelModification}
+                                className="absolute top-2 right-2 px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-sm font-medium z-10"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                        <h3 className="px-4 py-3 bg-brand-orange text-white font-medium flex items-center gap-2">
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            AI Assistant is modifying your selected content...
+                        </h3>
+                        <div className="p-4 overflow-y-auto max-h-[60vh]">
+                            <StreamingGenerationView 
+                                isVisible={true} 
+                                thinkingTokens={aiThinkingTokens} 
+                                contentTokens={aiContentTokens} 
+                                isComplete={false} 
+                                onCancel={handleCancelModification}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Editor styles */}
             <style>{`

@@ -346,7 +346,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) Upon receiving a modification request, the backend shall —
 
-    (a) if `unitCollectionId` is provided, retrieve relevant chunks as specified in §2(4) using the `instruction` as the query.
+    (a) if `unitCollectionId` is provided, retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. 
+    
+    [Explanatory Note: Searching by the instruction alone (e.g. "make this longer") often fails to retrieve semantically meaningful context. Including the `selectedContent` ensures semantic retrieval targets the actual subject matter. For example, the combined query could be formatted as `$"[{instruction}] {selectedContent}"`.]
 
     (b) construct a prompt containing —
 

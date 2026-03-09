@@ -1370,14 +1370,48 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
     {
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
         try
         {
-            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId);
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, async chunk =>
+            {
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to modify content: {ex.Message}", ex);
+        }
+        finally
+        {
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
         }
     }
 

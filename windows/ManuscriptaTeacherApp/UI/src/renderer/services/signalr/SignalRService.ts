@@ -371,6 +371,18 @@ class SignalRService {
     // ==========================================
 
     /**
+     * Modifies selected material content using AI.
+     * Per GenAISpec §3C.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param selectedContent The text selected by the user.
+     * @param instruction The instruction for modification.
+     * @param unitCollectionId Optional unit collection context.
+     */
+    public async modifyContent(selectedContent: string, instruction: string, unitCollectionId?: string): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("ModifyContent", selectedContent, instruction, unitCollectionId);
+    }
+
+    /**
      * Generates reading material content using AI.
      * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
      * The server generates a unique generation ID and sends it via OnGenerationStarted.
@@ -399,6 +411,8 @@ class SignalRService {
     public async cancelGeneration(generationId: string): Promise<boolean> {
         return await this.getConnection().invoke<boolean>("CancelGeneration", generationId);
     }
+
+
 
     // ==========================================
     // Question CRUD - NetworkingAPISpec §1(1)(d1)

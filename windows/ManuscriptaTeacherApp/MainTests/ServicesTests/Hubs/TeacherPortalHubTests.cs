@@ -2884,7 +2884,7 @@ public class TeacherPortalHubTests
 
     private sealed class StubContentModificationService : IContentModificationService
     {
-        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
