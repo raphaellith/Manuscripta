@@ -24,7 +24,8 @@ import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto, PdfEx
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
 import { StreamingGenerationView } from './StreamingGenerationView';
-import { BubbleMenu } from '@tiptap/react';
+// eslint-disable-next-line import/no-unresolved
+import { BubbleMenu } from '@tiptap/react/menus';
 import 'katex/dist/katex.min.css';
 
 interface EditorModalProps {
@@ -1626,7 +1627,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             {editor && (
                 <BubbleMenu
                     editor={editor}
-                    tippyOptions={{ duration: 100 }}
+                    options={{}}
                     shouldShow={({ editor, from, to }) => {
                         return from !== to && !editor.isActive('image') && !editor.isActive('pdfEmbed') && material.materialType !== 'POLL' && !isAiGenerating;
                     }}
