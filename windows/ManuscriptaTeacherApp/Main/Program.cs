@@ -63,11 +63,18 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
 
 builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
-builder.Services.AddHttpClient();
+// Register a named "ChromaDB" HttpClient with a URL rewrite handler that translates
+// ChromaDB.Client v1 API URLs (query-parameter-based tenant/database) into v2 API
+// URLs (path-based routing) expected by the Chroma Rust CLI server.
+// See GenAISpec.md §1B, §2(3)(a1).
+builder.Services.AddTransient<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient("ChromaDB")
+    .AddHttpMessageHandler<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient(); // default HttpClient for non-Chroma use
 builder.Services.AddSingleton<ChromaClient>(sp =>
 {
     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient();
+    var httpClient = httpClientFactory.CreateClient("ChromaDB");
     return new ChromaClient(new ChromaConfigurationOptions(uri: chromaServerUri), httpClient);
 });
 
@@ -190,6 +197,9 @@ builder.Services.AddSignalR(hubOptions =>
     // Default is 1, which serialises all hub invocations and prevents
     // cancellation from reaching the server while generation is running.
     hubOptions.MaximumParallelInvocationsPerClient = 2;
+    // Increase max message size from 32KB default to 10MB for large source documents
+    // (per FrontendWorkflowSpecifications §4AA source document uploads)
+    hubOptions.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()

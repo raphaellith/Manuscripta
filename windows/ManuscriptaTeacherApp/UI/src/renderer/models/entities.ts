@@ -192,6 +192,23 @@ export interface ConfigurationEntity {
 }
 
 // ==========================================
+// Source Document Entities - FrontendWorkflowSpec §4AA
+// ==========================================
+
+/**
+ * Embedding status per AdditionalValidationRules §3A(1)(c).
+ */
+export type EmbeddingStatus = 'PENDING' | 'INDEXED' | 'FAILED';
+
+/**
+ * Source document entity per AdditionalValidationRules §3A(1).
+ * Represents a source document imported into a unit collection.
+ */
+export interface SourceDocumentEntity {
+    id: string;
+    unitCollectionId: string;
+    transcript: string;
+    embeddingStatus?: EmbeddingStatus;
 // PDF Export Settings - FrontendWorkflowSpec §7(5)
 // ==========================================
 

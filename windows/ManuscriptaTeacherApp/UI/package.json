@@ -66,11 +66,14 @@
     "@types/turndown": "^5.0.6",
     "electron-squirrel-startup": "^1.0.1",
     "katex": "^0.16.27",
+    "mammoth": "^1.11.0",
     "marked": "^17.0.1",
+    "pdfjs-dist": "^5.5.207",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-pdf": "^10.3.0",
     "recharts": "^3.3.0",
+    "stream-browserify": "^3.0.0",
     "turndown": "^7.2.2"
   }
 }

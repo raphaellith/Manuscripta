@@ -320,7 +320,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall prompt the user to either select a file (e.g., PDF, DOCX) or enter plain text.
 
-    (b) the frontend shall extract or prompt for a textual transcript of the document, if a file has been uploaded.
+    (b) the frontend shall create a textual transcript of the document, if a file has been uploaded.
 
     (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
 

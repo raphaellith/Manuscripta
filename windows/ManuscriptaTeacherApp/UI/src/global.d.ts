@@ -15,8 +15,9 @@ interface ElectronAPI {
 
     /**
      * Show file picker dialog.
+     * Returns file tokens for secure access via readFileBuffer.
      */
-    showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<Electron.OpenDialogReturnValue>;
+    showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<{ canceled: boolean; filePaths: string[]; fileTokens: string[] }>;
 
     /**
      * Save attachment file to AppData directory.
@@ -50,6 +51,12 @@ interface ElectronAPI {
      * @returns Destination path
      */
     saveAttachmentFromBase64: (base64Data: string, uuid: string, extension: string) => Promise<string>;
+
+    /**
+     * Read file contents as ArrayBuffer using a secure token from showOpenDialog.
+     * Per FrontendWorkflowSpecifications §4AA(2)(b).
+     */
+    readFileBuffer: (fileToken: string) => Promise<ArrayBuffer>;
 
     /**
      * Listen for backend state changes from main process.

@@ -1,5 +1,6 @@
 using System.Text;
 using Main.Models.Dtos;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -12,6 +13,7 @@ public class MaterialGenerationService : IMaterialGenerationService
     private readonly OllamaClientService _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
+    private readonly ILogger<MaterialGenerationService> _logger;
     private const int DefaultTopK = 5;
     private const string PrimaryModel = "qwen3:8b";
     private const string FallbackModel = "granite4";
@@ -19,11 +21,13 @@ public class MaterialGenerationService : IMaterialGenerationService
     public MaterialGenerationService(
         OllamaClientService ollamaClient,
         IEmbeddingService embeddingService,
-        OutputValidationService validationService)
+        OutputValidationService validationService,
+        ILogger<MaterialGenerationService> logger)
     {
         _ollamaClient = ollamaClient;
         _embeddingService = embeddingService;
         _validationService = validationService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -50,6 +54,12 @@ public class MaterialGenerationService : IMaterialGenerationService
     /// </summary>
     private async Task<GenerationResult> GenerateMaterialAsync(GenerationRequest request, string materialType, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation(
+            "Starting RAG material generation for {MaterialType}. UnitCollectionId={UnitCollectionId}, SourceDocumentFilterCount={SourceDocumentFilterCount}",
+            materialType,
+            request.UnitCollectionId,
+            request.SourceDocumentIds?.Count ?? 0);
+
         // Determine which model to use
         string modelToUse = PrimaryModel;
         bool useFallback = false;
@@ -78,6 +88,15 @@ public class MaterialGenerationService : IMaterialGenerationService
             DefaultTopK
         );
 
+        var retrievedChunkCount = relevantChunks.Count;
+        var retrievedContextChars = relevantChunks.Sum(c => c?.Length ?? 0);
+        _logger.LogInformation(
+            "RAG retrieval completed for {MaterialType}. RetrievedChunkCount={RetrievedChunkCount}, TotalRetrievedContextChars={TotalRetrievedContextChars}, TopK={TopK}",
+            materialType,
+            retrievedChunkCount,
+            retrievedContextChars,
+            DefaultTopK);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         // §3B(3)(c): Construct prompt
@@ -90,6 +109,14 @@ public class MaterialGenerationService : IMaterialGenerationService
             materialType,
             request.Title
         );
+
+        var promptContainsInjectedContext = retrievedChunkCount == 0 || relevantChunks.Any(c => !string.IsNullOrEmpty(c) && prompt.Contains(c, StringComparison.Ordinal));
+        _logger.LogInformation(
+            "RAG prompt assembled for {MaterialType}. PromptLength={PromptLength}, RetrievedChunkCount={RetrievedChunkCount}, ContextInjectionVerified={ContextInjectionVerified}",
+            materialType,
+            prompt.Length,
+            retrievedChunkCount,
+            promptContainsInjectedContext);
 
         // Await the model readiness check before streaming
         await modelReadyTask;
@@ -141,6 +168,13 @@ public class MaterialGenerationService : IMaterialGenerationService
 
         // §3B(3)(e): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(generatedContent, modelToUse, useFallback);
+
+        _logger.LogInformation(
+            "Completed RAG material generation for {MaterialType}. ModelUsed={ModelUsed}, UsedFallback={UsedFallback}, OutputLength={OutputLength}",
+            materialType,
+            modelToUse,
+            useFallback,
+            result.Content?.Length ?? 0);
 
         // §3B(3)(g): Return result. For worksheets, question-draft markers are processed when the material is created.
         return result;
