@@ -713,13 +713,13 @@ public class MaterialRepositoryImplTest {
     }
 
     /**
-     * When attachment download fails, ACK is NOT sent.
+     * When attachment download fails, ACK is still sent.
      *
      * @throws IOException if mock setup fails
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_attachmentFails_skipsAck()
+    public void testSyncMaterials_attachmentFails_stillSendsAck()
             throws IOException {
         String attId =
                 "660e8400-e29b-41d4-a716-446655440001";
@@ -748,21 +748,20 @@ public class MaterialRepositoryImplTest {
 
         // Material is still saved to DB
         verify(mockDao).insert(any(MaterialEntity.class));
-        // But ACK is not sent
-        verify(mockAckRetrySender, never()).send(
+        // ACK is sent despite attachment failure
+        verify(mockAckRetrySender).send(
                 any(DistributeAckMessage.class),
                 anyString());
     }
 
     /**
-     * When attachment download throws IOException, ACK is not
-     * sent but material is still saved.
+     * When attachment download throws IOException, ACK is still sent.
      *
      * @throws IOException if mock setup fails
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_attachmentIOException_skipsAck()
+    public void testSyncMaterials_attachmentIOException_stillSendsAck()
             throws IOException {
         String attId =
                 "770e8400-e29b-41d4-a716-446655440002";
@@ -788,7 +787,7 @@ public class MaterialRepositoryImplTest {
         repository.syncMaterials(TEST_DEVICE_ID);
 
         verify(mockDao).insert(any(MaterialEntity.class));
-        verify(mockAckRetrySender, never()).send(
+        verify(mockAckRetrySender).send(
                 any(DistributeAckMessage.class),
                 anyString());
     }
