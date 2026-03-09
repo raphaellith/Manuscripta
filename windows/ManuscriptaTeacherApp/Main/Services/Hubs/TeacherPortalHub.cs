@@ -59,6 +59,9 @@ public class TeacherPortalHub : Hub
     // Configuration dependencies - NetworkingAPISpec §1(1)(o)
     private readonly IConfigurationService _configurationService;
 
+    // PDF export settings dependencies - NetworkingAPISpec §1(1)(q)
+    private readonly IPdfExportSettingsRepository _pdfExportSettingsRepository;
+
     private readonly IMaterialGenerationService _materialGenerationService;
     private readonly IContentModificationService _contentModificationService;
     private readonly IEmbeddingStatusService _embeddingStatusService;
@@ -105,6 +108,7 @@ public class TeacherPortalHub : Hub
         IEmailService emailService,
         IRuntimeDependencyRegistry runtimeDependencyRegistry,
         IConfigurationService configurationService,
+        IPdfExportSettingsRepository pdfExportSettingsRepository,
         IMaterialGenerationService materialGenerationService,
         IContentModificationService contentModificationService,
         IEmbeddingStatusService embeddingStatusService,
@@ -151,6 +155,7 @@ public class TeacherPortalHub : Hub
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _pdfExportSettingsRepository = pdfExportSettingsRepository ?? throw new ArgumentNullException(nameof(pdfExportSettingsRepository));
         _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
         _questionExtractionService = questionExtractionService ?? throw new ArgumentNullException(nameof(questionExtractionService));
     }
@@ -331,6 +336,9 @@ public class TeacherPortalHub : Hub
         existing.VocabularyTerms = dto.VocabularyTerms;
         existing.ReadingAge = dto.ReadingAge;
         existing.ActualAge = dto.ActualAge;
+        existing.LinePatternType = dto.LinePatternType;
+        existing.LineSpacingPreset = dto.LineSpacingPreset;
+        existing.FontSizePreset = dto.FontSizePreset;
         existing.Timestamp = DateTime.UtcNow;
 
         await _materialRepository.UpdateAsync(existing);
@@ -570,6 +578,15 @@ public class TeacherPortalHub : Hub
     public async Task<byte[]> GenerateMaterialPdf(Guid materialId)
     {
         return await _materialPdfService.GeneratePdfAsync(materialId);
+    }
+
+    /// <summary>
+    /// Generates a response PDF for a specific device's responses to a worksheet.
+    /// Per NetworkingAPISpec §1(m)(ii).
+    /// </summary>
+    public async Task<byte[]> GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)
+    {
+        return await _materialPdfService.GenerateResponsePdfAsync(materialId, deviceId, includeFeedback, includeMarkScheme);
     }
 
     #endregion
@@ -1652,6 +1669,35 @@ MARK SCHEME:
         {
             throw new HubException($"Failed to retry feedback dispatch: {ex.Message}");
         }
+    }
+
+    #endregion
+
+    #region PDF Export Settings Methods - NetworkingAPISpec §1(1)(q)
+
+    /// <summary>
+    /// Retrieves the global default PDF export settings.
+    /// Per NetworkingAPISpec §1(1)(q)(i).
+    /// </summary>
+    public async Task<PdfExportSettingsEntity> GetPdfExportSettings()
+    {
+        _logger.LogInformation("GetPdfExportSettings called");
+        return await _pdfExportSettingsRepository.GetAsync();
+    }
+
+    /// <summary>
+    /// Updates the global default PDF export settings.
+    /// Per NetworkingAPISpec §1(1)(q)(ii).
+    /// </summary>
+    public async Task UpdatePdfExportSettings(PdfExportSettingsEntity settings)
+    {
+        _logger.LogInformation("UpdatePdfExportSettings called");
+
+        if (settings == null)
+            throw new HubException("PDF export settings cannot be null");
+
+        await _pdfExportSettingsRepository.UpdateAsync(settings);
+        _logger.LogInformation("PDF export settings updated");
     }
 
     #endregion

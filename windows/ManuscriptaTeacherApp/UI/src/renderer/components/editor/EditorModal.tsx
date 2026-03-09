@@ -20,11 +20,12 @@ import Underline from '@tiptap/extension-underline';
 import { InlineLatex, BlockLatex, LatexFormattingGuard, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
-import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
+import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto, PdfExportSettingsEntity, LinePatternType, LineSpacingPreset, FontSizePreset, ValidationWarning } from '../../models';
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
 import { StreamingGenerationView } from './StreamingGenerationView';
-import { BubbleMenu } from '@tiptap/react';
+// eslint-disable-next-line import/no-unresolved
+import { BubbleMenu } from '@tiptap/react/menus';
 import 'katex/dist/katex.min.css';
 
 interface EditorModalProps {
@@ -43,6 +44,7 @@ const ToolbarButton: React.FC<{
     <button
         onClick={onClick}
         disabled={disabled}
+        aria-label={title}
         title={title}
         className={`p-2 rounded transition-colors ${isActive
             ? 'bg-brand-orange text-white'
@@ -145,6 +147,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [title, setTitle] = useState(material.title);
     const [readingAge, setReadingAge] = useState<number | undefined>(material.readingAge);
     const [actualAge, setActualAge] = useState<number | undefined>(material.actualAge);
+    const [linePatternType, setLinePatternType] = useState<LinePatternType | null | undefined>(material.linePatternType);
+    const [lineSpacingPreset, setLineSpacingPreset] = useState<LineSpacingPreset | null | undefined>(material.lineSpacingPreset);
+    const [fontSizePreset, setFontSizePreset] = useState<FontSizePreset | null | undefined>(material.fontSizePreset);
+    const [pdfDefaults, setPdfDefaults] = useState<PdfExportSettingsEntity | null>(null);
+    const [showPdfSettingsModal, setShowPdfSettingsModal] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -183,6 +190,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [showAiInput, setShowAiInput] = useState(false);
     const [aiContentTokens, setAiContentTokens] = useState('');
     const [aiThinkingTokens, setAiThinkingTokens] = useState('');
+    const [aiWarnings, setAiWarnings] = useState<ValidationWarning[]>([]);
+    // Ref to cancel the active modification (set inside handleAiInstructionSubmit)
+    const aiCancelRef = useRef<(() => void) | null>(null);
+    // Ref to track current generation ID synchronously (avoids stale closures in event handlers)
+    const aiGenerationIdRef = useRef<string | null>(null);
 
 
 
@@ -427,17 +439,85 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
         setShowAiInput(false);
         setAiInstructionRaw('');
-        
-        const selectionRange = editor.state.selection;
-        
+
+        // Capture selection range at submit time so the replacement is deterministic
+        // even if the user focus changes during generation (§4C(2)(a)(iii))
+        const { from, to } = editor.state.selection;
+
         // Store the originally selected content in case of cancellation
-        const originalText = editor.state.doc.textBetween(selectionRange.from, selectionRange.to, '\n\n');
+        const originalText = editor.state.doc.textBetween(from, to, '\n\n');
         setAiOriginalContent(originalText);
         setAiSelectedContent(originalText);
-        
+
+        // Per §4B(2)(a2) / §4C(2)(a)(iv): Disable editing during AI generation
+        editor.setEditable(false);
         setIsAiGenerating(true);
         setAiGenerationId(null);
-        
+        aiGenerationIdRef.current = null;
+        setAiWarnings([]);
+
+        // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance)
+        let thinkingBuffer = '';
+        let contentBuffer = '';
+        let flushScheduled = false;
+
+        const flushBufferedTokens = () => {
+            if (!thinkingBuffer && !contentBuffer) {
+                flushScheduled = false;
+                return;
+            }
+            if (thinkingBuffer) {
+                const chunk = thinkingBuffer;
+                thinkingBuffer = '';
+                setAiThinkingTokens(prev => prev + chunk);
+            }
+            if (contentBuffer) {
+                const chunk = contentBuffer;
+                contentBuffer = '';
+                setAiContentTokens(prev => prev + chunk);
+            }
+            flushScheduled = false;
+        };
+
+        // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe before invoking to capture ID
+        const offStarted = signalRService.onGenerationStarted((id: string) => {
+            aiGenerationIdRef.current = id;
+            setAiGenerationId(id);
+        });
+
+        const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean) => {
+            if (isThinking) {
+                thinkingBuffer += token;
+            } else {
+                contentBuffer += token;
+            }
+            if (!flushScheduled) {
+                flushScheduled = true;
+                window.requestAnimationFrame(flushBufferedTokens);
+            }
+            if (done) {
+                flushBufferedTokens();
+            }
+        });
+
+        const offCancelled = signalRService.onGenerationCancelled((cancelledId: string) => {
+            if (cancelledId === aiGenerationIdRef.current) {
+                setIsAiGenerating(false);
+                setAiGenerationId(null);
+                aiGenerationIdRef.current = null;
+                setAiContentTokens('');
+                setAiThinkingTokens('');
+                editor.setEditable(true);
+            }
+        });
+
+        // Store cancel accessor for handleCancelModification
+        aiCancelRef.current = () => {
+            offStarted();
+            offProgress();
+            offCancelled();
+        };
+
         try {
             const result = await signalRService.modifyContent(
                 originalText,
@@ -448,21 +528,44 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 material.readingAge,
                 material.actualAge
             );
-            
-            // Success! The server returns the final complete text
-            if (editor) {
-                editor.chain().focus().insertContent(markdownToHtml(result.content)).run();
-                setIsAiGenerating(false);
-                setAiGenerationId(null);
-                setAiContentTokens('');
-                setAiThinkingTokens('');
-            }
-        } catch (error) {
-            console.error('Failed to invoke AI assistant:', error);
+
+            offStarted();
+            offProgress();
+            offCancelled();
+            aiCancelRef.current = null;
+
+            // Per §4C(2)(a)(iii): Replace the originally selected range deterministically
+            editor
+                .chain()
+                .focus()
+                .insertContentAt({ from, to }, markdownToHtml(result.content))
+                .run();
+
             setIsAiGenerating(false);
+            setAiGenerationId(null);
+            aiGenerationIdRef.current = null;
             setAiContentTokens('');
             setAiThinkingTokens('');
-            // Optional: User cancellation shouldn't popup an alert.
+
+            // Per §4C(7): Surface validation warnings if present
+            if (result.warnings && result.warnings.length > 0) {
+                setAiWarnings(result.warnings);
+            }
+        } catch (error) {
+            offStarted();
+            offProgress();
+            offCancelled();
+            aiCancelRef.current = null;
+
+            console.error('Failed to invoke AI assistant:', error);
+            setIsAiGenerating(false);
+            aiGenerationIdRef.current = null;
+            setAiGenerationId(null);
+            setAiContentTokens('');
+            setAiThinkingTokens('');
+            // User cancellation shouldn't popup an alert.
+        } finally {
+            editor.setEditable(true);
         }
     };
 
@@ -470,48 +573,22 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         if (aiGenerationId) {
             try {
                 await signalRService.cancelGeneration(aiGenerationId);
+                // Unsubscribe streaming handlers
+                if (aiCancelRef.current) {
+                    aiCancelRef.current();
+                    aiCancelRef.current = null;
+                }
                 setIsAiGenerating(false);
                 setAiGenerationId(null);
+                aiGenerationIdRef.current = null;
                 setAiContentTokens('');
                 setAiThinkingTokens('');
+                editor?.setEditable(true);
             } catch (err) {
                 console.error('Failed to cancel generation:', err);
             }
         }
     };
-
-    useEffect(() => {
-        const handleGenStarted = (id: string) => {
-            setAiGenerationId(id);
-        };
-        const handleGenProgress = (token: string, isThinking: boolean, done: boolean) => {
-            if (isAiGenerating) {
-                if (isThinking) {
-                    setAiThinkingTokens(prev => prev + token);
-                } else {
-                    setAiContentTokens(prev => prev + token);
-                }
-            }
-        };
-        const handleGenCancelled = (id: string) => {
-            if (isAiGenerating && id === aiGenerationId) {
-                setIsAiGenerating(false);
-                setAiGenerationId(null);
-                setAiContentTokens('');
-                setAiThinkingTokens('');
-            }
-        };
-
-        const offStarted = signalRService.onGenerationStarted(handleGenStarted);
-        const offProgress = signalRService.onGenerationProgress(handleGenProgress);
-        const offCancelled = signalRService.onGenerationCancelled(handleGenCancelled);
-        
-        return () => {
-            offStarted();
-            offProgress();
-            offCancelled();
-        };
-    }, [isAiGenerating, aiGenerationId]);
 
     // Convert external images (blob:/http:/https:/data:) to attachments per §4C(4)(d)
     // Called before save to ensure all pasted/dropped images are properly stored
@@ -657,6 +734,9 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 content: getMarkdownContent(),
                 readingAge,
                 actualAge,
+                linePatternType: linePatternType ?? null,
+                lineSpacingPreset: lineSpacingPreset ?? null,
+                fontSizePreset: fontSizePreset ?? null,
                 timestamp: new Date().toISOString(),
             });
             setIsDirty(false);
@@ -666,7 +746,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         } finally {
             setIsSaving(false);
         }
-    }, [isDirty, editor, material, title, readingAge, actualAge, updateMaterial, getMarkdownContent, convertExternalImagesToAttachments]);
+    }, [isDirty, editor, material, title, readingAge, actualAge, linePatternType, lineSpacingPreset, fontSizePreset, updateMaterial, getMarkdownContent, convertExternalImagesToAttachments]);
 
     // Setup auto-save
     useEffect(() => {
@@ -682,6 +762,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         };
     }, [isDirty, saveContent]);
+
+    // Load PDF export defaults for "Default (…)" labels per §4C(2)(b1)
+    useEffect(() => {
+        signalRService.getPdfExportSettings().then(setPdfDefaults).catch(console.error);
+    }, []);
 
     // Resolve attachment image paths to data URLs for WYSIWYG display
     // Also handles orphaned attachment entities per §4C(6)
@@ -1345,6 +1430,19 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                             />
                         </div>
 
+                        {/* Per §4C(2)(b1): Per-material PDF export overrides */}
+                        <button
+                            onClick={() => setShowPdfSettingsModal(true)}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1.5"
+                            title="PDF Conversion Settings"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            PDF Settings
+                        </button>
+
                         {/* Save status */}
                         <div className="text-xs text-gray-400 min-w-[100px]">
                             {isSaving ? 'Saving...' : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : isDirty ? 'Unsaved changes' : 'No changes'}
@@ -1607,7 +1705,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             {editor && (
                 <BubbleMenu
                     editor={editor}
-                    tippyOptions={{ duration: 100 }}
+                    options={{}}
                     shouldShow={({ editor, from, to }) => {
                         return from !== to && !editor.isActive('image') && !editor.isActive('pdfEmbed') && material.materialType !== 'POLL' && !isAiGenerating;
                     }}
@@ -1643,34 +1741,47 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 </BubbleMenu>
             )}
 
-            {/* Streaming overlay when generating */}
-            {isAiGenerating && (
-                <div className="absolute inset-x-8 bottom-8 flex justify-center pointer-events-none z-50">
-                    <div className="bg-white rounded-lg shadow-2xl border border-gray-200 pointer-events-auto max-h-[80vh] overflow-hidden flex flex-col w-full max-w-4xl max-w-screen-md relative">
-                        {aiGenerationId && (
-                            <button
-                                onClick={handleCancelModification}
-                                className="absolute top-2 right-2 px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-sm font-medium z-10"
-                            >
-                                Cancel
-                            </button>
-                        )}
-                        <h3 className="px-4 py-3 bg-brand-orange text-white font-medium flex items-center gap-2">
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {/* Per §4C(2)(a)(iv) / §4B(2)(a1): Full-screen streaming overlay during generation */}
+            <StreamingGenerationView
+                isVisible={isAiGenerating}
+                thinkingTokens={aiThinkingTokens}
+                contentTokens={aiContentTokens}
+                isComplete={false}
+                onCancel={handleCancelModification}
+            />
+
+            {/* Per §4C(7): Validation warnings banner after modification completes */}
+            {aiWarnings.length > 0 && (
+                <div className="absolute inset-x-8 bottom-8 z-50 bg-yellow-50 border border-yellow-400 rounded-lg shadow-lg p-4">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                            <svg className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                             </svg>
-                            AI Assistant is modifying your selected content...
-                        </h3>
-                        <div className="p-4 overflow-y-auto max-h-[60vh]">
-                            <StreamingGenerationView 
-                                isVisible={true} 
-                                thinkingTokens={aiThinkingTokens} 
-                                contentTokens={aiContentTokens} 
-                                isComplete={false} 
-                                onCancel={handleCancelModification}
-                            />
+                            <div>
+                                <p className="text-sm font-semibold text-yellow-800">
+                                    AI modification completed with {aiWarnings.length} validation warning{aiWarnings.length > 1 ? 's' : ''} — please review the content.
+                                </p>
+                                <ul className="mt-2 space-y-1">
+                                    {aiWarnings.map((w, i) => (
+                                        <li key={i} className="text-sm text-yellow-700">
+                                            <span className="font-medium">[{w.errorType}]</span>
+                                            {w.lineNumber !== undefined && (
+                                                <span className="ml-1 text-yellow-600">(line {w.lineNumber})</span>
+                                            )}
+                                            <span className="ml-1">{w.description}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
+                        <button
+                            onClick={() => setAiWarnings([])}
+                            className="text-yellow-600 hover:text-yellow-800 text-lg leading-none shrink-0"
+                            aria-label="Dismiss warnings"
+                        >
+                            ×
+                        </button>
                     </div>
                 </div>
             )}
@@ -1848,6 +1959,74 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 onDelete={questionDialog.question?.id ? handleQuestionDelete : undefined}
                 onCancel={() => setQuestionDialog({ isOpen: false })}
             />
+
+            {/* PDF Conversion Settings Modal - per §4C(2)(b1) */}
+            {showPdfSettingsModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h2 className="text-lg font-semibold mb-4">PDF Conversion Settings</h2>
+                        <p className="text-xs text-gray-500 mb-4">
+                            Override the global defaults for this material. Per-device settings on external devices may further override these values. Select &quot;Default&quot; to use the global setting.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Line Pattern</label>
+                                <select
+                                    value={linePatternType ?? ''}
+                                    onChange={(e) => { setLinePatternType(e.target.value ? e.target.value as LinePatternType : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { RULED: 'Ruled', SQUARE: 'Square', ISOMETRIC: 'Isometric', NONE: 'None' }[pdfDefaults.linePatternType] : '...'})</option>
+                                    <option value="RULED">Ruled</option>
+                                    <option value="SQUARE">Square</option>
+                                    <option value="ISOMETRIC">Isometric</option>
+                                    <option value="NONE">None</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Line Spacing</label>
+                                <select
+                                    value={lineSpacingPreset ?? ''}
+                                    onChange={(e) => { setLineSpacingPreset(e.target.value ? e.target.value as LineSpacingPreset : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { SMALL: '6mm', MEDIUM: '8mm', LARGE: '10mm', EXTRA_LARGE: '14mm' }[pdfDefaults.lineSpacingPreset] : '...'})</option>
+                                    <option value="SMALL">Small (6mm)</option>
+                                    <option value="MEDIUM">Medium (8mm)</option>
+                                    <option value="LARGE">Large (10mm)</option>
+                                    <option value="EXTRA_LARGE">Extra Large (14mm)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
+                                <select
+                                    value={fontSizePreset ?? ''}
+                                    onChange={(e) => { setFontSizePreset(e.target.value ? e.target.value as FontSizePreset : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { SMALL: '10pt', MEDIUM: '12pt', LARGE: '14pt', EXTRA_LARGE: '16pt' }[pdfDefaults.fontSizePreset] : '...'})</option>
+                                    <option value="SMALL">Small (10pt)</option>
+                                    <option value="MEDIUM">Medium (12pt)</option>
+                                    <option value="LARGE">Large (14pt)</option>
+                                    <option value="EXTRA_LARGE">Extra Large (16pt)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end mt-6">
+                            <button
+                                onClick={() => setShowPdfSettingsModal(false)}
+                                className="px-4 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 text-sm font-medium"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>,
         document.body
     );

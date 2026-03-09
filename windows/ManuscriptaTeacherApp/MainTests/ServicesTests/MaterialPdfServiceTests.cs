@@ -9,6 +9,7 @@ using Main.Models.Entities;
 using Main.Models.Entities.Materials;
 using Main.Models.Entities.Questions;
 using Main.Models.Enums;
+using Main.Models.Entities.Responses;
 using Main.Services;
 using Main.Services.Latex;
 using Main.Services.Repositories;
@@ -26,6 +27,11 @@ public class MaterialPdfServiceTests
     private readonly Mock<IAttachmentRepository> _mockAttachmentRepo;
     private readonly Mock<IFileService> _mockFileService;
     private readonly Mock<ILatexRenderer> _mockLatexRenderer;
+    private readonly Mock<IPdfExportSettingsRepository> _mockPdfExportSettingsRepo;
+    private readonly Mock<IResponseRepository> _mockResponseRepo;
+    private readonly Mock<IFeedbackRepository> _mockFeedbackRepo;
+    private readonly Mock<IDeviceRegistryService> _mockDeviceRegistryService;
+    private readonly Mock<IExternalDeviceRepository> _mockExternalDeviceRepo;
     private readonly MaterialPdfService _service;
     private readonly Guid _testMaterialId = Guid.NewGuid();
     private readonly Guid _testLessonId = Guid.NewGuid();
@@ -40,13 +46,27 @@ public class MaterialPdfServiceTests
         _mockAttachmentRepo = new Mock<IAttachmentRepository>();
         _mockFileService = new Mock<IFileService>();
         _mockLatexRenderer = new Mock<ILatexRenderer>();
+        _mockPdfExportSettingsRepo = new Mock<IPdfExportSettingsRepository>();
+        _mockResponseRepo = new Mock<IResponseRepository>();
+        _mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        _mockDeviceRegistryService = new Mock<IDeviceRegistryService>();
+        _mockExternalDeviceRepo = new Mock<IExternalDeviceRepository>();
+
+        // Default: return RULED / MEDIUM / MEDIUM
+        _mockPdfExportSettingsRepo.Setup(r => r.GetAsync())
+            .ReturnsAsync(PdfExportSettingsEntity.CreateDefault());
 
         _service = new MaterialPdfService(
             _mockMaterialRepo.Object,
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
             _mockFileService.Object,
-            _mockLatexRenderer.Object);
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object);
     }
 
     #region Constructor Tests
@@ -60,7 +80,12 @@ public class MaterialPdfServiceTests
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
             _mockFileService.Object,
-            _mockLatexRenderer.Object));
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -72,7 +97,12 @@ public class MaterialPdfServiceTests
             null!,
             _mockAttachmentRepo.Object,
             _mockFileService.Object,
-            _mockLatexRenderer.Object));
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -84,7 +114,12 @@ public class MaterialPdfServiceTests
             _mockQuestionRepo.Object,
             null!,
             _mockFileService.Object,
-            _mockLatexRenderer.Object));
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -96,7 +131,12 @@ public class MaterialPdfServiceTests
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
             null!,
-            _mockLatexRenderer.Object));
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -108,7 +148,29 @@ public class MaterialPdfServiceTests
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
             _mockFileService.Object,
-            null!));
+            null!,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullPdfExportSettingsRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            null!,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
     }
 
     [Fact]
@@ -120,7 +182,12 @@ public class MaterialPdfServiceTests
             _mockQuestionRepo.Object,
             _mockAttachmentRepo.Object,
             _mockFileService.Object,
-            _mockLatexRenderer.Object);
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -764,6 +831,539 @@ public class MaterialPdfServiceTests
             0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
             0xAE, 0x42, 0x60, 0x82
         };
+    }
+
+    #endregion
+
+    #region EffectivePdfSettings Tests
+
+    [Theory]
+    [InlineData(FontSizePreset.SMALL, 10f)]
+    [InlineData(FontSizePreset.MEDIUM, 12f)]
+    [InlineData(FontSizePreset.LARGE, 14f)]
+    [InlineData(FontSizePreset.EXTRA_LARGE, 16f)]
+    public void EffectivePdfSettings_BodyFontSizePt_MapsCorrectly(FontSizePreset preset, float expectedPt)
+    {
+        var settings = new EffectivePdfSettings(LinePatternType.RULED, LineSpacingPreset.MEDIUM, preset);
+        Assert.Equal(expectedPt, settings.BodyFontSizePt);
+    }
+
+    [Theory]
+    [InlineData(LineSpacingPreset.SMALL, 6f)]
+    [InlineData(LineSpacingPreset.MEDIUM, 8f)]
+    [InlineData(LineSpacingPreset.LARGE, 10f)]
+    [InlineData(LineSpacingPreset.EXTRA_LARGE, 14f)]
+    public void EffectivePdfSettings_LineSpacingMm_MapsCorrectly(LineSpacingPreset preset, float expectedMm)
+    {
+        var settings = new EffectivePdfSettings(LinePatternType.RULED, preset, FontSizePreset.MEDIUM);
+        Assert.Equal(expectedMm, settings.LineSpacingMm);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_MaterialOverridesGlobalDefaults()
+    {
+        // Arrange - material has per-material overrides
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "Test Worksheet",
+            "Some content",
+            linePatternType: LinePatternType.SQUARE,
+            lineSpacingPreset: LineSpacingPreset.LARGE,
+            fontSizePreset: FontSizePreset.EXTRA_LARGE
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert - PDF generated successfully (overrides applied internally)
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_NullMaterialOverrides_FallsBackToGlobalDefaults()
+    {
+        // Arrange - material has null overrides (should fall back to global RULED/MEDIUM/MEDIUM)
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "Test Worksheet",
+            "Some content"
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        // Verify global defaults were queried
+        _mockPdfExportSettingsRepo.Verify(r => r.GetAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_PartialMaterialOverrides_MixesWithDefaults()
+    {
+        // Arrange - only linePatternType overridden, spacing/font null → use global defaults
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "Test Worksheet",
+            "Some content",
+            linePatternType: LinePatternType.ISOMETRIC
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert - PDF generated successfully
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WrittenQuestion_WithNoneLinePattern_ReturnsValidPdf()
+    {
+        // Arrange - NONE pattern should render blank lines without any line patterns
+        var questionId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId,
+            _testLessonId,
+            "Test Worksheet",
+            $"!!! question id=\"{questionId}\"",
+            linePatternType: LinePatternType.NONE
+        );
+
+        var question = new WrittenAnswerQuestionEntity(
+            questionId, _testMaterialId, "Write here.", null, null, 3
+        );
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId))
+            .ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity> { question });
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_AllLinePatternTypes_ProduceValidPdf()
+    {
+        foreach (var pattern in Enum.GetValues<LinePatternType>())
+        {
+            var questionId = Guid.NewGuid();
+            var matId = Guid.NewGuid();
+            var material = new WorksheetMaterialEntity(
+                matId, _testLessonId, "Test", $"!!! question id=\"{questionId}\"",
+                linePatternType: pattern
+            );
+            var question = new WrittenAnswerQuestionEntity(
+                questionId, matId, "Q?", null, null, 4
+            );
+
+            _mockMaterialRepo.Setup(r => r.GetByIdAsync(matId)).ReturnsAsync(material);
+            _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(matId))
+                .ReturnsAsync(new List<QuestionEntity> { question });
+            _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(matId))
+                .ReturnsAsync(new List<AttachmentEntity>());
+
+            var result = await _service.GeneratePdfAsync(matId);
+
+            Assert.NotNull(result);
+            Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+        }
+    }
+
+    #endregion
+
+    #region Constructor Tests for New Dependencies
+
+    [Fact]
+    public void Constructor_NullResponseRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            null!,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullFeedbackRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            null!,
+            _mockDeviceRegistryService.Object,
+            _mockExternalDeviceRepo.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullDeviceRegistryService_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            null!,
+            _mockExternalDeviceRepo.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullExternalDeviceRepository_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MaterialPdfService(
+            _mockMaterialRepo.Object,
+            _mockQuestionRepo.Object,
+            _mockAttachmentRepo.Object,
+            _mockFileService.Object,
+            _mockLatexRenderer.Object,
+            _mockPdfExportSettingsRepo.Object,
+            _mockResponseRepo.Object,
+            _mockFeedbackRepo.Object,
+            _mockDeviceRegistryService.Object,
+            null!));
+    }
+
+    #endregion
+
+    #region Per-Device Override Resolution Tests
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_AppliesDeviceOverrides()
+    {
+        // Arrange — device has all three overrides; these should take precedence
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.RULED,
+            lineSpacingPreset: LineSpacingPreset.SMALL,
+            fontSizePreset: FontSizePreset.SMALL);
+
+        var device = new ExternalDeviceEntity(deviceId, "Test Device", ExternalDeviceType.REMARKABLE)
+        {
+            LinePatternType = LinePatternType.SQUARE,
+            LineSpacingPreset = LineSpacingPreset.EXTRA_LARGE,
+            FontSizePreset = FontSizePreset.EXTRA_LARGE
+        };
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — PDF generated successfully with device overrides applied
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+        _mockExternalDeviceRepo.Verify(r => r.GetByIdAsync(deviceId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_NullOverrides_FallsBackToMaterial()
+    {
+        // Arrange — device has no overrides; material overrides should apply
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.ISOMETRIC,
+            lineSpacingPreset: LineSpacingPreset.LARGE,
+            fontSizePreset: FontSizePreset.LARGE);
+
+        var device = new ExternalDeviceEntity(deviceId, "Bare Device", ExternalDeviceType.KINDLE);
+        // All override fields remain null
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — fallback to material overrides
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GeneratePdfAsync_WithTargetDevice_PartialOverrides_MixesDeviceAndMaterial()
+    {
+        // Arrange — device overrides only LinePatternType; spacing/font fall back to material
+        var deviceId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            _testMaterialId, _testLessonId, "Test", "Some content",
+            linePatternType: LinePatternType.RULED,
+            lineSpacingPreset: LineSpacingPreset.LARGE,
+            fontSizePreset: FontSizePreset.LARGE);
+
+        var device = new ExternalDeviceEntity(deviceId, "Partial Device", ExternalDeviceType.REMARKABLE)
+        {
+            LinePatternType = LinePatternType.SQUARE
+            // LineSpacingPreset and FontSizePreset remain null → material values
+        };
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(_testMaterialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<QuestionEntity>());
+        _mockAttachmentRepo.Setup(r => r.GetByMaterialIdAsync(_testMaterialId))
+            .ReturnsAsync(new List<AttachmentEntity>());
+        _mockExternalDeviceRepo.Setup(r => r.GetByIdAsync(deviceId)).ReturnsAsync(device);
+
+        // Act
+        var result = await _service.GeneratePdfAsync(_testMaterialId, deviceId);
+
+        // Assert — PDF generated with mixed settings
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    #endregion
+
+    #region GenerateResponsePdfAsync Tests
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_MaterialNotFound_ThrowsKeyNotFoundException()
+    {
+        var materialId = Guid.NewGuid();
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId))
+            .ReturnsAsync((MaterialEntity?)null);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.GenerateResponsePdfAsync(materialId, Guid.NewGuid().ToString(), false, false));
+    }
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_NoResponses_ThrowsInvalidOperationException()
+    {
+        // §7(7): Throws InvalidOperationException when no responses
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            materialId, _testLessonId, "Test Worksheet",
+            $"!!! question id=\"{questionId}\"");
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(new List<QuestionEntity>
+            {
+                new WrittenAnswerQuestionEntity(questionId, materialId, "Q1?", null)
+            });
+        _mockResponseRepo.Setup(r => r.GetByQuestionIdAsync(questionId))
+            .ReturnsAsync(new List<ResponseEntity>());
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>
+            {
+                new PairedDeviceEntity { DeviceId = deviceId, Name = "TestDevice" }
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.GenerateResponsePdfAsync(materialId, deviceId.ToString(), false, false));
+    }
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_WithMcqResponse_ProducesValidPdf()
+    {
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            materialId, _testLessonId, "MCQ Worksheet",
+            $"!!! question id=\"{questionId}\"");
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(new List<QuestionEntity>
+            {
+                new MultipleChoiceQuestionEntity(questionId, materialId, "Pick one:", new List<string> { "A", "B", "C" }, 1)
+            });
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ResponseEntity>
+            {
+                new MultipleChoiceResponseEntity(responseId, questionId, deviceId, 0)
+            });
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>
+            {
+                new PairedDeviceEntity { DeviceId = deviceId, Name = "TestDevice" }
+            });
+
+        var result = await _service.GenerateResponsePdfAsync(materialId, deviceId.ToString(), false, false);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_WithWrittenResponse_ProducesValidPdf()
+    {
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            materialId, _testLessonId, "Written Worksheet",
+            $"!!! question id=\"{questionId}\"");
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(new List<QuestionEntity>
+            {
+                new WrittenAnswerQuestionEntity(questionId, materialId, "Explain:", "correct answer", "Check for key points", 5)
+            });
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ResponseEntity>
+            {
+                new WrittenAnswerResponseEntity(responseId, questionId, deviceId, "Student answer text")
+            });
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>
+            {
+                new PairedDeviceEntity { DeviceId = deviceId, Name = "TestDevice" }
+            });
+
+        var result = await _service.GenerateResponsePdfAsync(materialId, deviceId.ToString(), false, false);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_WithFeedback_ProducesValidPdf()
+    {
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var feedbackId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            materialId, _testLessonId, "Feedback Worksheet",
+            $"!!! question id=\"{questionId}\"");
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(new List<QuestionEntity>
+            {
+                new WrittenAnswerQuestionEntity(questionId, materialId, "Explain:", null, null, 5)
+            });
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ResponseEntity>
+            {
+                new WrittenAnswerResponseEntity(responseId, questionId, deviceId, "Student answer")
+            });
+        _mockFeedbackRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<FeedbackEntity>
+            {
+                new FeedbackEntity(feedbackId, responseId, "Good effort", 3)
+            });
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>
+            {
+                new PairedDeviceEntity { DeviceId = deviceId, Name = "TestDevice" }
+            });
+
+        var result = await _service.GenerateResponsePdfAsync(materialId, deviceId.ToString(), true, false);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
+    }
+
+    [Fact]
+    public async Task GenerateResponsePdfAsync_WithMarkScheme_ProducesValidPdf()
+    {
+        var materialId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var responseId = Guid.NewGuid();
+        var material = new WorksheetMaterialEntity(
+            materialId, _testLessonId, "MarkScheme Worksheet",
+            $"!!! question id=\"{questionId}\"");
+
+        _mockMaterialRepo.Setup(r => r.GetByIdAsync(materialId)).ReturnsAsync(material);
+        _mockQuestionRepo.Setup(r => r.GetByMaterialIdAsync(materialId))
+            .ReturnsAsync(new List<QuestionEntity>
+            {
+                new MultipleChoiceQuestionEntity(questionId, materialId, "Pick:", new List<string> { "X", "Y" }, 0)
+            });
+        _mockResponseRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ResponseEntity>
+            {
+                new MultipleChoiceResponseEntity(responseId, questionId, deviceId, 1)
+            });
+        _mockDeviceRegistryService.Setup(s => s.GetAllAsync())
+            .ReturnsAsync(new List<PairedDeviceEntity>
+            {
+                new PairedDeviceEntity { DeviceId = deviceId, Name = "TestDevice" }
+            });
+
+        var result = await _service.GenerateResponsePdfAsync(materialId, deviceId.ToString(), false, true);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(result.Take(4).ToArray()));
     }
 
     #endregion

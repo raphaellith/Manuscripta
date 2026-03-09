@@ -109,8 +109,7 @@ RESTRAINTS:
 Adapt the material's reading level for students with a reading age of {readingAge} and an actual age of {actualAge}.
 Tailor the material's length so that students can complete the material in approximately {durationInMinutes} minutes.
 Format the material using the Markdown syntax described below.
-Use British English always.
-Avoid American English.
+Use British English always. Avoid American English.
 Include only material content in your response.
 Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.
 

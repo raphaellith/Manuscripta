@@ -28,7 +28,10 @@ public static class MaterialEntityMapper
             VocabularyTerms = entity.VocabularyTerms ?? new System.Text.Json.Nodes.JsonArray(),
             Timestamp = entity.Timestamp,
             ReadingAge = entity.ReadingAge,
-            ActualAge = entity.ActualAge
+            ActualAge = entity.ActualAge,
+            LinePatternType = entity.LinePatternType,
+            LineSpacingPreset = entity.LineSpacingPreset,
+            FontSizePreset = entity.FontSizePreset
         };
     }
 
@@ -51,7 +54,10 @@ public static class MaterialEntityMapper
                 metadata: dataEntity.Metadata,
                 vocabularyTerms: dataEntity.VocabularyTerms,
                 readingAge: dataEntity.ReadingAge,
-                actualAge: dataEntity.ActualAge
+                actualAge: dataEntity.ActualAge,
+                linePatternType: dataEntity.LinePatternType,
+                lineSpacingPreset: dataEntity.LineSpacingPreset,
+                fontSizePreset: dataEntity.FontSizePreset
             ),
             MaterialType.WORKSHEET => new WorksheetMaterialEntity(
                 id: dataEntity.Id,
@@ -62,7 +68,10 @@ public static class MaterialEntityMapper
                 metadata: dataEntity.Metadata,
                 vocabularyTerms: dataEntity.VocabularyTerms,
                 readingAge: dataEntity.ReadingAge,
-                actualAge: dataEntity.ActualAge
+                actualAge: dataEntity.ActualAge,
+                linePatternType: dataEntity.LinePatternType,
+                lineSpacingPreset: dataEntity.LineSpacingPreset,
+                fontSizePreset: dataEntity.FontSizePreset
             ),
             MaterialType.POLL => new PollMaterialEntity(
                 id: dataEntity.Id,
@@ -73,7 +82,10 @@ public static class MaterialEntityMapper
                 metadata: dataEntity.Metadata,
                 vocabularyTerms: dataEntity.VocabularyTerms,
                 readingAge: dataEntity.ReadingAge,
-                actualAge: dataEntity.ActualAge
+                actualAge: dataEntity.ActualAge,
+                linePatternType: dataEntity.LinePatternType,
+                lineSpacingPreset: dataEntity.LineSpacingPreset,
+                fontSizePreset: dataEntity.FontSizePreset
             ),
             _ => throw new InvalidOperationException($"Unknown material type: {dataEntity.MaterialType}")
         };

@@ -23,14 +23,6 @@ public static class MarkdownSyntaxGuide
 - LaTeX: `$inline mode$` or `$$display mode$$`
 - Code blocks: triple backticks with optional language identifier
 - Blockquotes: `> text`
-
-**Custom markers:**
-- Centred text: `!!! center`, with the centred content indented by 4 spaces. For example:
-
-```
-!!! center
-    This text is centred.
-```
 ";
 
         if (includeQuestionSyntax)
@@ -38,7 +30,10 @@ public static class MarkdownSyntaxGuide
             baseGuide += @"
 
 **Questions:**
-Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content.
+Embed questions inline using the following syntax.
+Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist.
+Place questions at natural break points after relevant content.
+Use only plain text without Markdown syntax in question text, options or correct answers.
 
 ```
 !!! question-draft type=""MULTIPLE_CHOICE""

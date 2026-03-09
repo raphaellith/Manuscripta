@@ -52,6 +52,8 @@ For a description of how these server methods and client handlers are expected t
         (iii) `Task UpdateMaterial(MaterialEntity updated)`: Updates a material entity, identified by its UUID.
 
         (iv) `Task DeleteMaterial(Guid id)`: Deletes a Material entity, identified by its UUID.
+
+        [Note: `MaterialEntity` includes optional fields `LinePatternType?`, `LineSpacingPreset?`, and `FontSizePreset?` per AdditionalValidationRules §2D(2)(c–e). When null, the global default from `PdfExportSettingsEntity` applies.]
     
     (d1) CRUD methods for questions.
 
@@ -152,6 +154,8 @@ For a description of how these server methods and client handlers are expected t
 
         (i) `Task<byte[]> GenerateMaterialPdf(Guid materialId)`: Generates a PDF document for the specified material and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification.
 
+        (ii) `Task<byte[]> GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`: Generates a Response PDF for the specified material and device, with optional feedback and mark scheme inclusion, and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification §7.
+
     (nz) Methods for runtime dependency management.
 
         (i) `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)`: Checks whether the runtime dependency with the specified dependencyId is available and functional per Runtime Dependency Management Specification §2(2). Returns `true` if available, `false` otherwise.
@@ -166,7 +170,7 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task<List<ExternalDeviceEntity>> GetAllExternalDevices()`: Retrieves all paired external devices.
 
-        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID.
+        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID. This includes updating the per-device PDF export setting overrides defined in AdditionalValidationRules §3D(1)(e–g).
 
         (v) `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified external devices by dispatching it through their respective delivery mechanisms. Returns when all deployments are complete or have failed.
 
@@ -189,6 +193,12 @@ For a description of how these server methods and client handlers are expected t
         (iii) `Task<ConfigurationEntity> GetDeviceConfiguration(Guid DeviceId)`: Retrieves the configuration used by an Android device, identified by its UUID.
 
         (iv) `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`: Updates the overrides associated with an Android device, identified by its UUID. The overrides are determined by comparing the new device configuration with the base configuration.
+
+    (q) Methods for PDF export settings.
+
+        (i) `Task<PdfExportSettingsEntity> GetPdfExportSettings()`: Retrieves the global default PDF export settings.
+
+        (ii) `Task UpdatePdfExportSettings(PdfExportSettingsEntity settings)`: Updates the global default PDF export settings.
 
 
 ### Section 2 - Frontend handlers

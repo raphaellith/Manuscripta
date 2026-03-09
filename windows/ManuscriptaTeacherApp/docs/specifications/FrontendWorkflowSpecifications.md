@@ -210,6 +210,10 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+    (b) Methods for retrieving global settings.
+
+        (i) `Task<PdfExportSettingsEntity> GetPdfExportSettings()`
+
 
 ## Section 3A - Runtime Dependency Management
 
@@ -316,7 +320,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall prompt the user to either select a file (e.g., PDF, DOCX) or enter plain text.
 
-    (b) the frontend shall extract or prompt for a textual transcript of the document, if a file has been uploaded.
+    (b) the frontend shall create a textual transcript of the document, if a file has been uploaded.
 
     (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
 
@@ -435,6 +439,18 @@ For a list of all server method and client handlers to be implemented for commun
         (v) The streaming generation view for content modification shall not replace the user's existing content until the final `GenerationResult` is received. An interim preview may be shown adjacent to or overlaid on the selected content.
 
     (b) modify the reading age and actual age metadata of the material.
+
+    (b1) modify the per-material PDF export settings — line pattern type, line spacing preset, and font size preset. The frontend shall display a description informing the user that these settings override the global defaults for this material, but may in turn be overridden by per-device settings configured on external devices. This shall be provided in means of dropdowns, and each dropdown shall —
+
+        (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
+
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`);
+
+        (iii) display "Default (...)" when the per-material override is null;
+
+        (iv) when the user selects a specific value, set it as a per-material override; and
+
+        (v) be auto-saved with the existing 1-second debounce mechanism like other material properties.
 
     (c) undo and redo changes to the material.  
 
@@ -581,6 +597,8 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) the suggested filename shall be the material title with `.pdf` extension, with any invalid filename characters removed.
 
+    [Explanatory Note: The export uses the effective PDF settings resolved per MaterialConversionSpecification §1(5)(h) (device → material → global). The same resolution is applied when PDFs are generated as part of deployment to external devices.]
+
 (2) **Error Handling**
 
     If the server method throws an exception, the frontend shall display an error message to the user.
@@ -694,6 +712,8 @@ For a list of all server method and client handlers to be implemented for commun
 
 
 (5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
+
+(5A) For each external device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's PDF export setting overrides in a configuration modal as outlined in s5H(2) of this specification.
 
 
 ## Section 5C — Device Control
@@ -846,6 +866,19 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
 
+(2) When the settings button for a displayed external device is pressed, the frontend shall display a configuration modal which —
+
+    (a) shows the per-device PDF export setting overrides currently associated with the selected device, as defined in AdditionalValidationRules §3D(1)(e–g).
+
+    (a1) The modal shall display a description informing the user that per-device settings take the highest priority, overriding both per-material and global default settings when a PDF is generated for this device.
+
+    (b) displays three dropdown controls — line pattern type, line spacing preset, and font size preset — each of which shall —
+        (i) include a "Default" option that maps to null (i.e., the per-material or global default is used);
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`); and
+        (iii) display "Default" when the per-device override is null.
+
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateExternalDevice(ExternalDeviceEntity entity)`.
+
 
 
 ## Section 6 - Functionalities for the "Responses" tab
@@ -988,6 +1021,41 @@ For a list of all server method and client handlers to be implemented for commun
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
 
+## Section 6B — Response Export PDF
+
+(1) **Export Button**
+
+    When the frontend is displaying device-level responses (§6(5)), the frontend shall provide an "Export to PDF" button.
+
+(2) **Export Options**
+
+    When the export button is activated, the frontend shall display a popover or modal presenting the following options:
+
+    (a) "Include Feedback" — a tickbox, defaulting to unticked.
+
+    (b) "Include Mark Scheme" — a tickbox, defaulting to unticked.
+    
+    (c) A "Download" button to confirm the export.
+
+(3) **Export Invocation**
+
+    When the "Download" button is activated —
+
+    (a) the frontend shall invoke `GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`, as defined in s1(1)(m)(ii) of the Networking API Specification, passing the currently selected material ID, the currently selected device ID, and the toggle values;
+
+    (b) the frontend shall display a loading indicator while awaiting the response;
+
+    (c) upon receipt of the byte array, the frontend shall prompt the user to save the PDF file using the system file save dialogue;
+
+    (d) the suggested filename shall be `{materialTitle} - {deviceDisplayName} Responses.pdf`, with invalid filename characters removed;
+
+    (e) if the server method throws an exception, the frontend shall display an error message to the user.
+
+(4) **Availability**
+
+    The export button shall be available only when both a device and a material are selected and at least one response exists from that device for that material.
+
+
 ## Section 7 - Functionalities for the "Settings" tab
 
 (1) **Device Base Configuration**
@@ -1023,3 +1091,19 @@ For a list of all server method and client handlers to be implemented for commun
     (e) upon failure, display the error message preventing the save operation.
 
 (4) The Settings interface shall also provide a means to view the currently configured `EmailAddress` (retrieved via `GetEmailCredentials()`) and a button to delete the configuration via `DeleteEmailCredentials()`.
+
+(5) **PDF Export Defaults**
+
+    (a) On entry of the "Settings" tab, the frontend shall call `GetPdfExportSettings()` to retrieve the current global PDF export defaults.
+
+    (a1) The frontend shall display a description informing the user that these are the global defaults, and that they may be overridden on a per-material basis (in the editor) or on a per-device basis (in the external device configuration modal).
+
+    (b) The frontend shall display three dropdown controls:
+
+        (i) Line Pattern Type — with options `RULED`, `SQUARE`, `ISOMETRIC`, `NONE`.
+
+        (ii) Line Spacing Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+        (iii) Font Size Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+    (c) The frontend shall provide a "Save PDF Defaults" button. When activated, the frontend shall call `UpdatePdfExportSettings(entity)` to persist the updated defaults.
