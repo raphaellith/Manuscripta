@@ -680,13 +680,8 @@ The following condensed reference shall be included in material generation promp
 - Code blocks: triple backticks with optional language identifier
 - Blockquotes: `> text`
 
-**Custom markers:**
-- Centred text: `!!! center` followed by indented content
-- PDF embed: `!!! pdf id="uuid"` (do not generate; attachments pre-exist)
-- Question embed: `!!! question id="uuid"` (do not generate; use question-draft)
-
 **Questions:**
-Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content.
+Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content. Use only plain text without Markdown syntax in question text, options or correct answers.
 
 ```
 !!! question-draft type="MULTIPLE_CHOICE"

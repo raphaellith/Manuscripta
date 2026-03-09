@@ -11,10 +11,13 @@ import type {
     LessonEntity,
     MaterialEntity,
     QuestionEntity,
+    SourceDocumentEntity,
+    EmbeddingStatus,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
     InternalCreateMaterialDto,
+    InternalCreateSourceDocumentDto,
     GenerationRequest,
     GenerationResult,
 } from '../models';
@@ -35,6 +38,7 @@ interface AppState {
     lessons: LessonEntity[];
     materials: MaterialEntity[];
     questions: QuestionEntity[];
+    sourceDocuments: SourceDocumentEntity[];
 }
 
 interface AppContextValue extends AppState {
@@ -54,6 +58,17 @@ interface AppContextValue extends AppState {
     createMaterial: (dto: InternalCreateMaterialDto) => Promise<MaterialEntity>;
     updateMaterial: (entity: MaterialEntity) => Promise<MaterialEntity>;
     deleteMaterial: (id: string) => Promise<void>;
+
+    // Source Document CRUD - NetworkingAPISpec §1(1)(k) and FrontendWorkflowSpec §4AA
+    createSourceDocument: (dto: InternalCreateSourceDocumentDto) => Promise<SourceDocumentEntity>;
+    updateSourceDocument: (entity: SourceDocumentEntity) => Promise<void>;
+    deleteSourceDocument: (id: string) => Promise<void>;
+    getSourceDocumentsForCollection: (collectionId: string) => SourceDocumentEntity[];
+    setSourceDocumentEmbeddingStatus: (id: string, status: EmbeddingStatus) => void;
+
+    // Per §4AA(2)(e) and §4AA(5)(b): Embedding operations encapsulated per §2B(2)(c)
+    getEmbeddingStatus: (sourceDocumentId: string) => Promise<EmbeddingStatus>;
+    retryEmbedding: (sourceDocumentId: string) => Promise<void>;
 
     // AI Generation - NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
@@ -95,6 +110,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         lessons: [],
         materials: [],
         questions: [],
+        sourceDocuments: [],
     });
 
     const fetchAllData = useCallback(async () => {
@@ -118,6 +134,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             );
             const questions = questionsArrays.flat();
 
+            // Per FrontendWorkflowSpec §3(1)(a)(v): Fetch all source documents
+            const sourceDocuments = await signalRService.getAllSourceDocuments();
+
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -126,6 +145,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 lessons,
                 materials,
                 questions,
+                sourceDocuments,
             }));
         } catch (err) {
             console.error('Failed to fetch data:', err);
@@ -170,6 +190,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         }
     }, []);
 
+    // Per FrontendWorkflowSpec §4AA(6)(b): Update source document status on embedding failure
+    useEffect(() => {
+        const unsubscribe = signalRService.onEmbeddingFailed((sourceDocumentId: string) => {
+            setState(prev => ({
+                ...prev,
+                sourceDocuments: prev.sourceDocuments.map(sd =>
+                    sd.id === sourceDocumentId ? { ...sd, embeddingStatus: 'FAILED' as const } : sd
+                ),
+            }));
+        });
+        return unsubscribe;
+    }, []);
+
     // CRUD operations
     const createUnitCollection = async (dto: InternalCreateUnitCollectionDto) => {
         const created = await signalRService.createUnitCollection(dto);
@@ -191,6 +224,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             ...prev,
             unitCollections: prev.unitCollections.filter(c => c.id !== id),
             units: prev.units.filter(u => u.unitCollectionId !== id),
+            sourceDocuments: prev.sourceDocuments.filter(sd => sd.unitCollectionId !== id),
         }));
     };
 
@@ -314,6 +348,55 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const getQuestionsForMaterial = (materialId: string) =>
         state.questions.filter(q => q.materialId === materialId);
 
+    // Per FrontendWorkflowSpec §4AA: Source document helper
+    const getSourceDocumentsForCollection = (collectionId: string) =>
+        state.sourceDocuments.filter(sd => sd.unitCollectionId === collectionId);
+
+    // Source Document CRUD - Per NetworkingAPISpec §1(1)(k) and FrontendWorkflowSpec §4AA
+    const createSourceDocument = async (dto: InternalCreateSourceDocumentDto): Promise<SourceDocumentEntity> => {
+        const created = await signalRService.createSourceDocument(dto);
+        setState(prev => ({ ...prev, sourceDocuments: [...prev.sourceDocuments, created] }));
+        return created;
+    };
+
+    const updateSourceDocument = async (entity: SourceDocumentEntity): Promise<void> => {
+        await signalRService.updateSourceDocument(entity);
+        setState(prev => ({
+            ...prev,
+            sourceDocuments: prev.sourceDocuments.map(sd => sd.id === entity.id ? entity : sd),
+        }));
+    };
+
+    const deleteSourceDocument = async (id: string): Promise<void> => {
+        await signalRService.deleteSourceDocument(id);
+        setState(prev => ({
+            ...prev,
+            sourceDocuments: prev.sourceDocuments.filter(sd => sd.id !== id),
+        }));
+    };
+
+    // Per §4AA(2)(e): Update embedding status locally without triggering backend re-indexing
+    const setSourceDocumentEmbeddingStatus = (id: string, status: EmbeddingStatus): void => {
+        setState(prev => ({
+            ...prev,
+            sourceDocuments: prev.sourceDocuments.map(sd =>
+                sd.id === id ? { ...sd, embeddingStatus: status } : sd
+            ),
+        }));
+    };
+
+    // Per §4AA(2)(e): Poll embedding status via SignalR, encapsulated per §2B(2)(c)
+    const getEmbeddingStatus = async (sourceDocumentId: string): Promise<EmbeddingStatus> => {
+        return await signalRService.getEmbeddingStatus(sourceDocumentId);
+    };
+
+    // Per §4AA(5)(b): Retry embedding via SignalR, encapsulated per §2B(2)(c)
+    const retryEmbedding = async (sourceDocumentId: string): Promise<void> => {
+        await signalRService.retryEmbedding(sourceDocumentId);
+        // Optimistically update status to PENDING
+        setSourceDocumentEmbeddingStatus(sourceDocumentId, 'PENDING');
+    };
+
     // AI Generation methods - Per NetworkingAPISpec §1(1)(i)(i-ii) and (x)
     // Server generates unique ID and sends via OnGenerationStarted event
     const generateReading = async (request: GenerationRequest): Promise<GenerationResult> => {
@@ -342,6 +425,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         createMaterial,
         updateMaterial,
         deleteMaterial,
+        createSourceDocument,
+        updateSourceDocument,
+        deleteSourceDocument,
+        getSourceDocumentsForCollection,
+        setSourceDocumentEmbeddingStatus,
+        getEmbeddingStatus,
+        retryEmbedding,
         generateReading,
         generateWorksheet,
         cancelGeneration,

@@ -40,6 +40,10 @@ public class EfExternalDeviceRepository : IExternalDeviceRepository
 
         existing.Name = entity.Name;
         existing.ConfigurationData = entity.ConfigurationData;
+        // Per AdditionalValidationRules §3D(1)(e-g): per-device PDF export overrides
+        existing.LinePatternType = entity.LinePatternType;
+        existing.LineSpacingPreset = entity.LineSpacingPreset;
+        existing.FontSizePreset = entity.FontSizePreset;
         // note: type is readonly
         await _context.SaveChangesAsync();
     }

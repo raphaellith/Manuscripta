@@ -7,14 +7,19 @@
  * 2b. If AI: collect generation parameters and invoke AI generation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModalOverlay } from './ModalOverlay';
-import type { MaterialType, GenerationRequest } from '../../models';
+import type { MaterialType, GenerationRequest, SourceDocumentEntity } from '../../models';
 
 interface CreateMaterialModalProps {
     lessonId: string;
     lessonTitle: string;
     unitCollectionId?: string; // Required for AI generation to access source documents
+    /**
+     * Per FrontendWorkflowSpec §4B(1)(b): Source documents belonging to the unit collection.
+     * Used to allow users to select which source documents should be referenced.
+     */
+    sourceDocuments?: SourceDocumentEntity[];
     onClose: () => void;
     onCreate: (title: string, materialType: MaterialType) => Promise<void>;
     onCreateWithAI?: (
@@ -43,6 +48,7 @@ const materialTypes: { value: MaterialType; label: string; color: string }[] = [
 export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     lessonTitle,
     unitCollectionId,
+    sourceDocuments = [],
     onClose,
     onCreate,
     onCreateWithAI,
@@ -62,6 +68,15 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     const [actualAge, setActualAge] = useState<number>(10);
     const [durationInMinutes, setDurationInMinutes] = useState<number>(30);
     const [aiMaterialType, setAiMaterialType] = useState<'READING' | 'WORKSHEET'>('READING');
+    
+    // Per FrontendWorkflowSpec §4B(1)(b): Selected source documents for AI generation.
+    // Defaults to all source documents belonging to the unit collection (empty set means all).
+    const [selectedSourceDocIds, setSelectedSourceDocIds] = useState<Set<string>>(new Set());
+    // Track if user has explicitly made a selection (to differentiate "all" default from explicit empty)
+    const [hasUserSelectedDocs, setHasUserSelectedDocs] = useState(false);
+    
+    // Filter to only show indexed source documents (PENDING or FAILED documents can't be searched)
+    const indexedSourceDocuments = sourceDocuments.filter(doc => doc.embeddingStatus === 'INDEXED');
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -122,6 +137,8 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
         setError(null);
         try {
             // Per FrontendWorkflowSpec §4B(1): Collect generation parameters
+            // Per §4B(1)(b): If no documents are selected, all indexed documents are searched.
+            // Only include sourceDocumentIds if user has explicitly selected specific documents.
             const request: GenerationRequest = {
                 description: aiDescription,
                 readingAge,
@@ -129,7 +146,9 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                 durationInMinutes,
                 unitCollectionId,
                 title: title.trim(),
-                // sourceDocumentIds is optional - if not provided, all indexed documents are searched
+                sourceDocumentIds: hasUserSelectedDocs && selectedSourceDocIds.size > 0
+                    ? Array.from(selectedSourceDocIds)
+                    : undefined,
             };
 
             // Per FrontendWorkflowSpec §4B(2): Pass request to parent handler
@@ -335,6 +354,72 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
                     placeholder="Describe the content you want to generate, including any specific requirements..."
                     rows={4}
                 />
+            </div>
+
+            {/* Per FrontendWorkflowSpec §4B(1)(b): Source document selection */}
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Source Documents
+                    <span className="text-gray-400 font-normal ml-2">(Optional)</span>
+                </label>
+                {indexedSourceDocuments.length > 0 ? (
+                    <>
+                        <div className="text-xs text-gray-500 mb-2">
+                            {hasUserSelectedDocs && selectedSourceDocIds.size > 0
+                                ? `${selectedSourceDocIds.size} of ${indexedSourceDocuments.length} document(s) selected`
+                                : 'All indexed documents will be searched (default)'}
+                        </div>
+                        <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
+                            {indexedSourceDocuments.map(doc => {
+                                const isSelected = selectedSourceDocIds.has(doc.id);
+                                const displayText = doc.transcript.length > 60
+                                    ? doc.transcript.substring(0, 60) + '...'
+                                    : doc.transcript;
+                                return (
+                                    <label
+                                        key={doc.id}
+                                        className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                setHasUserSelectedDocs(true);
+                                                const newSet = new Set(selectedSourceDocIds);
+                                                if (e.target.checked) {
+                                                    newSet.add(doc.id);
+                                                } else {
+                                                    newSet.delete(doc.id);
+                                                }
+                                                setSelectedSourceDocIds(newSet);
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange"
+                                        />
+                                        <span className="text-sm text-text-body truncate">
+                                            {displayText || '(Empty document)'}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        {hasUserSelectedDocs && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedSourceDocIds(new Set());
+                                    setHasUserSelectedDocs(false);
+                                }}
+                                className="text-xs text-brand-orange hover:text-brand-orange-dark mt-1"
+                            >
+                                Reset to all documents
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-sm text-gray-500 italic p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        No indexed source documents available. You can still generate content without source documents.
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

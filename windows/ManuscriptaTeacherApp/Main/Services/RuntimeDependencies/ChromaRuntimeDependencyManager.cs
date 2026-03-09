@@ -64,15 +64,10 @@ namespace Main.Services.RuntimeDependencies
                     return process.ExitCode;
                 });
 
-                if (exitCode != 0)
-                {
-                    return false;
-                }
-
-                // Dependency is considered available only when executable exists and API is reachable.
-                // This avoids false positives where chroma is installed but a non-Chroma service
-                // is bound to localhost:8000.
-                return await CheckChromaApiHealthAsync();
+                // Per GenAISpec.md §1B(3)(a): availability is determined by `chroma --version`.
+                // API health check is not required for availability - Chroma server may not be running
+                // but the dependency is still installed and available.
+                return exitCode == 0;
             }
             catch
             {

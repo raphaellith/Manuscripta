@@ -20,7 +20,7 @@ import Underline from '@tiptap/extension-underline';
 import { InlineLatex, BlockLatex, LatexFormattingGuard, QuestionRef, PdfEmbed, AttachmentImage } from './extensions';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { htmlToMarkdown, markdownToHtml } from '../../utils/markdownConversion';
-import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto } from '../../models';
+import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto, PdfExportSettingsEntity, LinePatternType, LineSpacingPreset, FontSizePreset } from '../../models';
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
 import 'katex/dist/katex.min.css';
@@ -41,6 +41,7 @@ const ToolbarButton: React.FC<{
     <button
         onClick={onClick}
         disabled={disabled}
+        aria-label={title}
         title={title}
         className={`p-2 rounded transition-colors ${isActive
             ? 'bg-brand-orange text-white'
@@ -143,6 +144,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [title, setTitle] = useState(material.title);
     const [readingAge, setReadingAge] = useState<number | undefined>(material.readingAge);
     const [actualAge, setActualAge] = useState<number | undefined>(material.actualAge);
+    const [linePatternType, setLinePatternType] = useState<LinePatternType | null | undefined>(material.linePatternType);
+    const [lineSpacingPreset, setLineSpacingPreset] = useState<LineSpacingPreset | null | undefined>(material.lineSpacingPreset);
+    const [fontSizePreset, setFontSizePreset] = useState<FontSizePreset | null | undefined>(material.fontSizePreset);
+    const [pdfDefaults, setPdfDefaults] = useState<PdfExportSettingsEntity | null>(null);
+    const [showPdfSettingsModal, setShowPdfSettingsModal] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -550,6 +556,9 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 content: getMarkdownContent(),
                 readingAge,
                 actualAge,
+                linePatternType: linePatternType ?? null,
+                lineSpacingPreset: lineSpacingPreset ?? null,
+                fontSizePreset: fontSizePreset ?? null,
                 timestamp: new Date().toISOString(),
             });
             setIsDirty(false);
@@ -559,7 +568,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         } finally {
             setIsSaving(false);
         }
-    }, [isDirty, editor, material, title, readingAge, actualAge, updateMaterial, getMarkdownContent, convertExternalImagesToAttachments]);
+    }, [isDirty, editor, material, title, readingAge, actualAge, linePatternType, lineSpacingPreset, fontSizePreset, updateMaterial, getMarkdownContent, convertExternalImagesToAttachments]);
 
     // Setup auto-save
     useEffect(() => {
@@ -575,6 +584,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
         };
     }, [isDirty, saveContent]);
+
+    // Load PDF export defaults for "Default (…)" labels per §4C(2)(b1)
+    useEffect(() => {
+        signalRService.getPdfExportSettings().then(setPdfDefaults).catch(console.error);
+    }, []);
 
     // Resolve attachment image paths to data URLs for WYSIWYG display
     // Also handles orphaned attachment entities per §4C(6)
@@ -1238,6 +1252,19 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                             />
                         </div>
 
+                        {/* Per §4C(2)(b1): Per-material PDF export overrides */}
+                        <button
+                            onClick={() => setShowPdfSettingsModal(true)}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1.5"
+                            title="PDF Conversion Settings"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            PDF Settings
+                        </button>
+
                         {/* Save status */}
                         <div className="text-xs text-gray-400 min-w-[100px]">
                             {isSaving ? 'Saving...' : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : isDirty ? 'Unsaved changes' : 'No changes'}
@@ -1669,6 +1696,74 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 onDelete={questionDialog.question?.id ? handleQuestionDelete : undefined}
                 onCancel={() => setQuestionDialog({ isOpen: false })}
             />
+
+            {/* PDF Conversion Settings Modal - per §4C(2)(b1) */}
+            {showPdfSettingsModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h2 className="text-lg font-semibold mb-4">PDF Conversion Settings</h2>
+                        <p className="text-xs text-gray-500 mb-4">
+                            Override the global defaults for this material. Per-device settings on external devices may further override these values. Select &quot;Default&quot; to use the global setting.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Line Pattern</label>
+                                <select
+                                    value={linePatternType ?? ''}
+                                    onChange={(e) => { setLinePatternType(e.target.value ? e.target.value as LinePatternType : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { RULED: 'Ruled', SQUARE: 'Square', ISOMETRIC: 'Isometric', NONE: 'None' }[pdfDefaults.linePatternType] : '...'})</option>
+                                    <option value="RULED">Ruled</option>
+                                    <option value="SQUARE">Square</option>
+                                    <option value="ISOMETRIC">Isometric</option>
+                                    <option value="NONE">None</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Line Spacing</label>
+                                <select
+                                    value={lineSpacingPreset ?? ''}
+                                    onChange={(e) => { setLineSpacingPreset(e.target.value ? e.target.value as LineSpacingPreset : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { SMALL: '6mm', MEDIUM: '8mm', LARGE: '10mm', EXTRA_LARGE: '14mm' }[pdfDefaults.lineSpacingPreset] : '...'})</option>
+                                    <option value="SMALL">Small (6mm)</option>
+                                    <option value="MEDIUM">Medium (8mm)</option>
+                                    <option value="LARGE">Large (10mm)</option>
+                                    <option value="EXTRA_LARGE">Extra Large (14mm)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
+                                <select
+                                    value={fontSizePreset ?? ''}
+                                    onChange={(e) => { setFontSizePreset(e.target.value ? e.target.value as FontSizePreset : null); setIsDirty(true); }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange"
+                                >
+                                    <option value="">Default ({pdfDefaults ? { SMALL: '10pt', MEDIUM: '12pt', LARGE: '14pt', EXTRA_LARGE: '16pt' }[pdfDefaults.fontSizePreset] : '...'})</option>
+                                    <option value="SMALL">Small (10pt)</option>
+                                    <option value="MEDIUM">Medium (12pt)</option>
+                                    <option value="LARGE">Large (14pt)</option>
+                                    <option value="EXTRA_LARGE">Extra Large (16pt)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end mt-6">
+                            <button
+                                onClick={() => setShowPdfSettingsModal(false)}
+                                className="px-4 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 text-sm font-medium"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>,
         document.body
     );

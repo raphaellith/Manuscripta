@@ -66,7 +66,7 @@ This document specifies the integration of the application with "external device
 ## Section 4 - Material Deployment to External Devices
 
 (1) To deploy a material to an external device, the application shall —
-    (a) generate a PDF of the material in accordance with the Material Conversion Specification.
+    (a) generate a PDF of the material in accordance with the Material Conversion Specification, passing the target device's identifier so that the effective PDF settings are resolved with the per-device overrides defined in AdditionalValidationRules §3D(1)(e–g).
     (b) name the PDF file using the material title (e.g. `Introduction to Algebra.pdf`).
 
 (2) When deploying to a device of type `REMARKABLE`, the application shall invoke `rmapi` using the device's configuration file to upload the PDF to the `/Manuscripta` folder on the reMarkable cloud. If a file with the same name exists, `rmapi` shall upload the new file with a numerical suffix.

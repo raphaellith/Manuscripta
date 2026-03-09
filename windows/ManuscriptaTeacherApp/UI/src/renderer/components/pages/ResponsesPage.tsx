@@ -306,6 +306,12 @@ export const ResponsesPage: React.FC = () => {
         deviceNames: []
     });
 
+    // Export popover state per §6B
+    const [showExportPopover, setShowExportPopover] = useState(false);
+    const [includeFeedback, setIncludeFeedback] = useState(false);
+    const [includeMarkScheme, setIncludeMarkScheme] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
     // Nested navigation state
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
     const [selectedUnitId, setSelectedUnitId] = useState<string>('');
@@ -561,6 +567,38 @@ export const ResponsesPage: React.FC = () => {
     const lessonsForUnit = useMemo(() => selectedUnitId ? getLessonsForUnit(selectedUnitId) : [], [selectedUnitId, getLessonsForUnit]);
     const materialsForLesson = useMemo(() => selectedLessonId ? getMaterialsForLesson(selectedLessonId).filter(m => materialsWithResponses.some(mwr => mwr.id === m.id)) : [], [selectedLessonId, getMaterialsForLesson, materialsWithResponses]);
 
+    // §6B(4): Export available when device + material selected and device has responses for material
+    const canExportResponses = useMemo(() => {
+        if (viewMode !== 'device' || !selectedDeviceId || !selectedMaterialId) return false;
+        const questionIds = new Set(questionsForMaterial.map(q => q.id));
+        return responses.some(r => r.deviceId === selectedDeviceId && questionIds.has(r.questionId));
+    }, [viewMode, selectedDeviceId, selectedMaterialId, questionsForMaterial, responses]);
+
+    // §6B(3): Export handler
+    const handleExportResponsePdf = useCallback(async () => {
+        if (!selectedMaterialId || !selectedDeviceId) return;
+        setIsExporting(true);
+        try {
+            const pdfBytes = await signalRService.generateResponsePdf(
+                selectedMaterialId, selectedDeviceId, includeFeedback, includeMarkScheme,
+            );
+            // §6B(3)(d): Suggested filename
+            const material = materialsForLesson.find(m => m.id === selectedMaterialId);
+            const device = devices.find(d => d.deviceId === selectedDeviceId);
+            const materialTitle = (material?.title ?? 'Material').replace(/[<>:"/\\|?*]/g, '');
+            const deviceName = (device?.name ?? 'Device').replace(/[<>:"/\\|?*]/g, '');
+            const filename = `${materialTitle} - ${deviceName} Responses.pdf`;
+            await window.electronAPI.savePdfFile(pdfBytes, filename);
+            setShowExportPopover(false);
+        } catch (error) {
+            // §6B(3)(e): Error handling
+            console.error('Failed to export response PDF:', error);
+            addAlert('control_failed', undefined, 'Failed to export response PDF');
+        } finally {
+            setIsExporting(false);
+        }
+    }, [selectedMaterialId, selectedDeviceId, includeFeedback, includeMarkScheme, materialsForLesson, devices, addAlert]);
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -654,6 +692,54 @@ export const ResponsesPage: React.FC = () => {
                     </div>
                 </div>
             </Card>
+
+            {/* §6B: Export to PDF button + popover for device view */}
+            {canExportResponses && (
+                <div className="mb-6 relative inline-block">
+                    <button
+                        onClick={() => setShowExportPopover(prev => !prev)}
+                        className="px-4 py-2 bg-brand-orange text-white rounded-lg font-medium hover:bg-brand-orange-dark transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Export to PDF
+                    </button>
+                    {showExportPopover && (
+                        <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10 w-64">
+                            <h5 className="font-medium text-sm text-text-heading mb-3">Export Options</h5>
+                            <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={includeFeedback}
+                                    onChange={(e) => setIncludeFeedback(e.target.checked)}
+                                    className="rounded border-gray-300 text-brand-orange focus:ring-brand-orange"
+                                />
+                                <span className="text-sm text-text-body">Include Feedback</span>
+                            </label>
+                            <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={includeMarkScheme}
+                                    onChange={(e) => setIncludeMarkScheme(e.target.checked)}
+                                    className="rounded border-gray-300 text-brand-orange focus:ring-brand-orange"
+                                />
+                                <span className="text-sm text-text-body">Include Mark Scheme</span>
+                            </label>
+                            <button
+                                onClick={handleExportResponsePdf}
+                                disabled={isExporting}
+                                className="w-full px-4 py-2 bg-brand-orange text-white rounded-lg font-medium hover:bg-brand-orange-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isExporting ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        Exporting…
+                                    </>
+                                ) : 'Download'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Question Selection for device mode only */}
             {viewMode === 'device' && selectedMaterialId && (
