@@ -20,7 +20,7 @@ public class Configuration {
     public static final int MAX_TEXT_SIZE = 50;
 
     /** Default text size. */
-    public static final int DEFAULT_TEXT_SIZE = 12;
+    public static final int DEFAULT_TEXT_SIZE = 6;
 
     /** Default feedback style. */
     public static final FeedbackStyle DEFAULT_FEEDBACK_STYLE = FeedbackStyle.IMMEDIATE;

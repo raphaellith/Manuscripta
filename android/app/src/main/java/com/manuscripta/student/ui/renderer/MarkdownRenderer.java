@@ -142,20 +142,24 @@ public class MarkdownRenderer {
     /**
      * Builds a Markwon instance with the given LaTeX text size.
      *
-     * @param context      Android context
-     * @param latexTextSize LaTeX rendering text size in sp
+     * @param context        Android context
+     * @param latexTextSizeSp LaTeX rendering text size in sp
      * @return the configured Markwon instance
      */
     @NonNull
     private static Markwon buildMarkwon(
             @NonNull Context context,
-            float latexTextSize) {
+            float latexTextSizeSp) {
+        float latexTextSizePx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                latexTextSizeSp,
+                context.getResources().getDisplayMetrics());
         return Markwon.builder(context)
                 .usePlugin(TablePlugin.create(context))
                 .usePlugin(HtmlPlugin.create())
                 .usePlugin(MarkwonInlineParserPlugin.create())
                 .usePlugin(JLatexMathPlugin.create(
-                        latexTextSize,
+                        latexTextSizePx,
                         builder -> builder.inlinesEnabled(true)))
                 .build();
     }

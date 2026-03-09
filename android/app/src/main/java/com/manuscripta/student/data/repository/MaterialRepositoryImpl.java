@@ -316,14 +316,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                 try {
                     // 3. Parse content for attachment references and download each one.
                     // Done before acquiring the lock to avoid holding it during network I/O.
-                    boolean attachmentsOk = true;
                     List<String> attachmentIds =
                             ContentParser.extractDistinctAttachmentReferences(dto.getContent());
                     for (String attachmentId : attachmentIds) {
                         if (!downloadAttachment(dto.getId(), attachmentId)) {
-                            attachmentsOk = false;
                             Log.w(TAG, "Attachment download failed for material: "
-                                    + dto.getId());
+                                    + dto.getId() + ", attachment: " + attachmentId);
                         }
                     }
 
@@ -334,13 +332,10 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                         Log.d(TAG, "Saved material: " + entity.getId());
                     }
 
-                    // Per API Contract §3.6.2, send one ACK per successfully received material
-                    // (device ID + material ID) immediately after download and save succeed.
-                    if (attachmentsOk) {
-                        ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
-                    } else {
-                        Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: " + dto.getId());
-                    }
+                    // Per API Contract §3.6.2, send one ACK per received material.
+                    // ACK is sent regardless of attachment failures — missing attachments
+                    // are a server-side data integrity issue and retrying will not recover them.
+                    ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
 
                     // Per Session Interaction §3(3), create a session in RECEIVED state
                     // for each material received in the distribution bundle.

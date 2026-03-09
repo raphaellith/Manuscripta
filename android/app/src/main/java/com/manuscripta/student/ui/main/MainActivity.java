@@ -545,7 +545,7 @@ public class MainActivity extends AppCompatActivity {
      * Default configuration text size used as the baseline for
      * computing the scale factor.
      */
-    private static final float DEFAULT_TEXT_SIZE = 12f;
+    private static final float DEFAULT_TEXT_SIZE = 6f;
 
     /**
      * Applies a configuration change to TTS state and footer visibility.
