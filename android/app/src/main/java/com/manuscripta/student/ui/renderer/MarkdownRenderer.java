@@ -6,6 +6,7 @@ import android.graphics.Typeface;
 import android.graphics.pdf.PdfRenderer;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +16,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 
+import com.manuscripta.student.R;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.utils.FileStorageManager;
 
@@ -102,6 +105,9 @@ public class MarkdownRenderer {
     @NonNull
     private final ExecutorService executor;
 
+    /** Scale factor applied to text sizes, derived from config. */
+    private float textScaleFactor = 1.0f;
+
     /**
      * Creates a new MarkdownRenderer with the given context.
      *
@@ -157,6 +163,17 @@ public class MarkdownRenderer {
         this.attachmentImageLoader = attachmentImageLoader;
         this.fileStorageManager = fileStorageManager;
         this.executor = Executors.newSingleThreadExecutor();
+    }
+
+    /**
+     * Sets the text scale factor derived from the configuration
+     * text size. A value of 1.0 uses the default sizes. The body
+     * text size is computed as {@code BASE_BODY_SP * scaleFactor}.
+     *
+     * @param scaleFactor the scale factor (e.g. 1.5 for 50% larger)
+     */
+    public void setTextScaleFactor(float scaleFactor) {
+        this.textScaleFactor = scaleFactor;
     }
 
     /**
@@ -242,6 +259,11 @@ public class MarkdownRenderer {
     }
 
     /**
+     * Base body text size in SP used as the reference for scaling.
+     */
+    private static final float BASE_BODY_SP = 30f;
+
+    /**
      * Renders standard markdown content into a TextView.
      *
      * @param context  Android context
@@ -253,6 +275,14 @@ public class MarkdownRenderer {
             @NonNull Context context,
             @NonNull String markdown) {
         TextView textView = new TextView(context);
+        textView.setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                BASE_BODY_SP * textScaleFactor);
+        Typeface bodyFont = ResourcesCompat.getFont(
+                context, R.font.ibm_plex_sans);
+        if (bodyFont != null) {
+            textView.setTypeface(bodyFont);
+        }
         String processed = convertInlineLatex(markdown.trim());
         markwon.setMarkdown(textView, processed);
         return textView;
@@ -289,6 +319,14 @@ public class MarkdownRenderer {
 
         TextView textView = new TextView(context);
         textView.setGravity(Gravity.CENTER);
+        textView.setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                BASE_BODY_SP * textScaleFactor);
+        Typeface bodyFont = ResourcesCompat.getFont(
+                context, R.font.ibm_plex_sans);
+        if (bodyFont != null) {
+            textView.setTypeface(bodyFont);
+        }
         String processed = convertInlineLatex(content.trim());
         markwon.setMarkdown(textView, processed);
         wrapper.addView(textView);

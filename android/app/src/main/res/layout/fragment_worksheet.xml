@@ -6,18 +6,6 @@
     android:orientation="vertical"
     tools:context=".ui.worksheet.WorksheetFragment">
 
-    <!-- Worksheet heading with bottom border -->
-    <TextView
-        android:id="@+id/textTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/spacing_section"
-        android:paddingBottom="16dp"
-        android:text="@string/worksheet_title"
-        android:background="@drawable/bg_heading_underline"
-        android:textColor="@color/eink_black"
-        android:textSize="@dimen/text_heading" />
-
     <!-- Scrollable worksheet items -->
     <ScrollView
         android:id="@+id/scrollItems"

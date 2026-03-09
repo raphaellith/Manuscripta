@@ -103,7 +103,6 @@ public class WorksheetFragment extends Fragment {
             return;
         }
         binding.textLoading.setVisibility(View.GONE);
-        binding.textTitle.setVisibility(View.VISIBLE);
         binding.scrollItems.setVisibility(View.VISIBLE);
         binding.buttonSubmit.setVisibility(View.VISIBLE);
 
@@ -125,7 +124,6 @@ public class WorksheetFragment extends Fragment {
             return;
         }
         binding.textLoading.setVisibility(View.VISIBLE);
-        binding.textTitle.setVisibility(View.GONE);
         binding.scrollItems.setVisibility(View.GONE);
         binding.buttonSubmit.setVisibility(View.GONE);
     }

@@ -185,6 +185,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         List<ResponseEntity> unsyncedResponses = responseDao.getUnsynced();
 
         if (unsyncedResponses.isEmpty()) {
+            Log.d(TAG, "No unsynced responses to sync");
             if (callback != null) {
                 callback.onSyncComplete(0, 0);
             }
@@ -217,6 +218,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             }
         }
 
+        Log.d(TAG, "Sync complete: " + successCount + " succeeded, " + failureCount + " failed");
         if (callback != null) {
             callback.onSyncComplete(successCount, failureCount);
         }
@@ -313,8 +315,14 @@ public class ResponseRepositoryImpl implements ResponseRepository {
                     Log.d(TAG, "Successfully synced response: " + entity.getId());
                     return true;
                 } else {
+                    String errorBody = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            errorBody = response.errorBody().string();
+                        }
+                    } catch (IOException ignored) { }
                     Log.w(TAG, "Failed to sync response: " + entity.getId()
-                            + " - HTTP " + response.code());
+                            + " - HTTP " + response.code() + " body: " + errorBody);
                     return false;
                 }
             } catch (IOException e) {

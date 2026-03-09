@@ -68,4 +68,7 @@
     <!-- Lock screen -->
     <string name="screen_locked">Screen Locked</string>
     <string name="screen_locked_message">Your teacher has locked this device</string>
+
+    <!-- Notifications -->
+    <string name="material_received">New material received!</string>
 </resources>

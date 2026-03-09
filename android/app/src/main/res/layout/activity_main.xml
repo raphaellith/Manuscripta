@@ -11,23 +11,34 @@
     android:orientation="vertical"
     android:padding="@dimen/padding_screen">
 
-    <!-- Material selector header -->
-    <FrameLayout
+    <!-- Material title header -->
+    <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_marginBottom="8dp">
 
-        <Button
+        <TextView
             android:id="@+id/materialDropdown"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
+            android:gravity="center"
+            android:padding="16dp"
             android:text="@string/materials_menu"
-            android:textAllCaps="false"
-            android:textSize="@dimen/text_tab" />
+            android:textAppearance="@style/TextAppearance.Manuscripta.Heading"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
 
-    </FrameLayout>
+        <View
+            android:id="@+id/separator"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="@color/eink_black" />
+
+    </LinearLayout>
 
     <!-- Fragment container -->
     <FrameLayout

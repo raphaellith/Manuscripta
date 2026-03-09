@@ -43,6 +43,9 @@ public class ReadingFragment extends Fragment {
     @Nullable
     private FileStorageManager fileStorageManager;
 
+    /** Text scale factor from configuration (1.0 = default). */
+    private float textScaleFactor = 1.0f;
+
     /**
      * Creates a new instance of ReadingFragment.
      *
@@ -71,6 +74,30 @@ public class ReadingFragment extends Fragment {
     public void setFileStorageManager(
             @NonNull FileStorageManager manager) {
         this.fileStorageManager = manager;
+    }
+
+    /**
+     * Sets the text scale factor applied to rendered content.
+     * Resets the cached renderer so the next render uses the
+     * updated factor.
+     *
+     * @param scaleFactor the scale factor (1.0 = default)
+     */
+    public void setTextScaleFactor(float scaleFactor) {
+        this.textScaleFactor = scaleFactor;
+        if (markdownRenderer != null) {
+            markdownRenderer.setTextScaleFactor(scaleFactor);
+        }
+    }
+
+    /**
+     * Resets the cached MarkdownRenderer so the next call to
+     * {@link #displayMaterial} creates a fresh instance with
+     * the current dependency references. Called after
+     * re-injecting dependencies following a configuration change.
+     */
+    public void resetRenderer() {
+        this.markdownRenderer = null;
     }
 
     @Nullable
@@ -109,6 +136,7 @@ public class ReadingFragment extends Fragment {
                     new QuestionBlockRenderer(),
                     attachmentImageLoader,
                     fileStorageManager);
+            markdownRenderer.setTextScaleFactor(textScaleFactor);
         }
 
         Map<String, Question> questionMap;

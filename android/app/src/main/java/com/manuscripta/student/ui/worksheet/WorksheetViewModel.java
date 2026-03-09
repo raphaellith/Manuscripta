@@ -1,5 +1,7 @@
 package com.manuscripta.student.ui.worksheet;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -27,6 +29,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
  */
 @HiltViewModel
 public class WorksheetViewModel extends ViewModel {
+
+    /** Tag for logging. */
+    private static final String TAG = "WorksheetViewModel";
 
     /** Repository for persisting responses. */
     private final ResponseRepository responseRepository;
@@ -124,12 +129,16 @@ public class WorksheetViewModel extends ViewModel {
     /**
      * Submits all answers, creating Response objects and saving them.
      * Sets all answers from the provided map before submission.
+     * After saving, triggers a sync to push responses to the server.
      *
      * @param submittedAnswers A map of question ID to answer text
      * @return The number of responses successfully saved
      */
     public int submitAllAnswers(@NonNull Map<String, String> submittedAnswers) {
         answers.putAll(submittedAnswers);
+        if (getDeviceId().isEmpty()) {
+            Log.w(TAG, "submitAllAnswers: device not paired, responses will fail to sync");
+        }
         int count = 0;
         for (Map.Entry<String, String> entry : answers.entrySet()) {
             String questionId = entry.getKey();
@@ -140,6 +149,7 @@ public class WorksheetViewModel extends ViewModel {
                 count++;
             }
         }
+        responseRepository.syncPendingResponses();
         return count;
     }
 

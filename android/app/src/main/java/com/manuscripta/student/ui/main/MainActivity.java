@@ -3,6 +3,7 @@ package com.manuscripta.student.ui.main;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.PopupMenu;
 import android.widget.Toast;
@@ -77,6 +78,9 @@ public class MainActivity extends AppCompatActivity {
     /** Whether the pairing state observer has fired at least once. */
     private boolean observerInitialised;
 
+    /** Tracks the number of known materials for new-material notifications. */
+    private int lastKnownMaterialCount;
+
     /** Manager for the raise-hand lifecycle, injected by Hilt. */
     @Inject
     RaiseHandManager raiseHandManager;
@@ -113,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState != null) {
             currentFragment = getSupportFragmentManager()
                     .findFragmentById(R.id.fragmentContainer);
+            reinjectFragmentDependencies();
         }
     }
 
@@ -327,6 +332,60 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Re-injects dependencies into a fragment recovered from a
+     * configuration change (e.g. orientation rotation). Without
+     * this, setter-injected references such as the image loader
+     * and file storage manager would be null.
+     */
+    private void reinjectFragmentDependencies() {
+        if (currentFragment instanceof ReadingFragment) {
+            ReadingFragment reading = (ReadingFragment) currentFragment;
+            reading.setAttachmentImageLoader(
+                    new AttachmentImageLoader(
+                            apiService, fileStorageManager));
+            reading.setFileStorageManager(fileStorageManager);
+            reading.resetRenderer();
+        } else if (currentFragment instanceof WorksheetFragment) {
+            ((WorksheetFragment) currentFragment)
+                    .setSubmitListener(answers -> {
+                        Log.d(TAG, "Worksheet answers submitted: "
+                                + answers.size());
+                        worksheetViewModel.submitAllAnswers(answers);
+                        Toast.makeText(MainActivity.this,
+                                R.string.answer_submitted,
+                                Toast.LENGTH_SHORT).show();
+                    });
+        } else if (currentFragment instanceof QuizFragment) {
+            ((QuizFragment) currentFragment).setNavigationListener(
+                    new QuizFragment.QuizNavigationListener() {
+                        @Override
+                        public void onBackToLesson() {
+                            returnToCurrentMaterial();
+                        }
+
+                        @Override
+                        public void onAnswerSubmitted(
+                                @NonNull Question question,
+                                @NonNull String answer,
+                                boolean isCorrect) {
+                            quizViewModel.saveQuizResponse(
+                                    question, answer);
+                            Toast.makeText(MainActivity.this,
+                                    R.string.answer_submitted,
+                                    Toast.LENGTH_SHORT).show();
+                            if (isCorrect) {
+                                showCorrectFeedback(
+                                        question.getCorrectAnswer());
+                            } else {
+                                showIncorrectFeedback(
+                                        question.getCorrectAnswer());
+                            }
+                        }
+                    });
+        }
+    }
+
+    /**
      * Replaces the current fragment in the container with the given fragment.
      *
      * @param fragment The fragment to display.
@@ -405,6 +464,11 @@ public class MainActivity extends AppCompatActivity {
             allMaterials.clear();
             if (materials != null) {
                 allMaterials.addAll(materials);
+                if (materials.size() > lastKnownMaterialCount
+                        && lastKnownMaterialCount > 0) {
+                    showMaterialReceivedNotification();
+                }
+                lastKnownMaterialCount = materials.size();
             }
         });
         viewModel.getCurrentMaterial().observe(this, material -> {
@@ -464,6 +528,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Default configuration text size used as the baseline for
+     * computing the scale factor.
+     */
+    private static final float DEFAULT_TEXT_SIZE = 12f;
+
+    /**
      * Applies a configuration change to TTS state and footer visibility.
      *
      * @param config The updated configuration.
@@ -477,6 +547,12 @@ public class MainActivity extends AppCompatActivity {
             config.isTtsEnabled() ? View.VISIBLE : View.GONE
         );
         updateFooterVisibility();
+
+        float scaleFactor = config.getTextSize() / DEFAULT_TEXT_SIZE;
+        if (currentFragment instanceof ReadingFragment) {
+            ((ReadingFragment) currentFragment)
+                    .setTextScaleFactor(scaleFactor);
+        }
     }
 
     /**
@@ -503,6 +579,12 @@ public class MainActivity extends AppCompatActivity {
      */
     private void updateReadingFragment(@Nullable Material material) {
         ReadingFragment reading = (ReadingFragment) currentFragment;
+        Configuration config =
+                viewModel.getConfiguration().getValue();
+        if (config != null) {
+            reading.setTextScaleFactor(
+                    config.getTextSize() / DEFAULT_TEXT_SIZE);
+        }
         if (material != null) {
             java.util.List<com.manuscripta.student.domain.model.Question>
                     questions = viewModel.getCurrentQuestions().getValue();
@@ -567,5 +649,18 @@ public class MainActivity extends AppCompatActivity {
             return ((FeedbackFragment) currentFragment).getTextContent();
         }
         return "";
+    }
+
+    /**
+     * Shows a brief notification at the top of the screen when
+     * new material has been received from the teacher server.
+     */
+    private void showMaterialReceivedNotification() {
+        Toast toast = Toast.makeText(
+                this, R.string.material_received,
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                0, 32);
+        toast.show();
     }
 }

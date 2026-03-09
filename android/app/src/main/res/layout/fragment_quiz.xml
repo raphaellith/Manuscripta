@@ -37,6 +37,7 @@
             android:id="@+id/textQuestion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/fraunces_medium"
             android:textSize="@dimen/text_heading"
             android:textStyle="bold"
             android:textColor="@color/eink_black"

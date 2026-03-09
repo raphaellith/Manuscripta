@@ -1,5 +1,7 @@
 package com.manuscripta.student.ui.quiz;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
@@ -26,6 +28,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
  */
 @HiltViewModel
 public class QuizViewModel extends ViewModel {
+
+    /** Tag for logging. */
+    private static final String TAG = "QuizViewModel";
 
     /** Repository for persisting responses. */
     private final ResponseRepository responseRepository;
@@ -145,20 +150,25 @@ public class QuizViewModel extends ViewModel {
 
     /**
      * Saves a quiz response for a given question and answer.
-     * Creates a Response domain object and persists it via the repository
-     * without relying on internal question state.
+     * Creates a Response domain object, persists it via the repository,
+     * and triggers a sync to push the response to the server.
      *
      * @param question The question being answered
      * @param answer   The answer text to save
      */
     public void saveQuizResponse(@NonNull Question question, @NonNull String answer) {
+        if (getDeviceId().isEmpty()) {
+            Log.w(TAG, "saveQuizResponse: device not paired, response will fail to sync");
+        }
         Response response = Response.create(question.getId(), answer, getDeviceId());
         responseRepository.saveResponse(response);
+        responseRepository.syncPendingResponses();
     }
 
     /**
      * Submits the currently selected answer for the current question.
-     * Creates a Response domain object and saves it via the repository.
+     * Creates a Response domain object, saves it via the repository,
+     * and triggers a sync to push the response to the server.
      *
      * @param answer The answer text to submit
      * @return true if the answer is correct, false otherwise;
@@ -173,8 +183,12 @@ public class QuizViewModel extends ViewModel {
         Question question = state.getData();
         boolean isCorrect = answer.equals(question.getCorrectAnswer());
 
+        if (getDeviceId().isEmpty()) {
+            Log.w(TAG, "submitAnswer: device not paired, response will fail to sync");
+        }
         Response response = Response.create(question.getId(), answer, getDeviceId());
         responseRepository.saveResponse(response);
+        responseRepository.syncPendingResponses();
 
         return isCorrect;
     }
