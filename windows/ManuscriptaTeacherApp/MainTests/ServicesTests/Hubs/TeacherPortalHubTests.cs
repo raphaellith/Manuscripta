@@ -2307,7 +2307,7 @@ public class TeacherPortalHubTests
         hub.Context = mockContext.Object;
 
         // Act & Assert
-        await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null));
+        await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null, "reading", "Title", 10, 12));
 
         mockClientProxy.Verify(
             p => p.SendCoreAsync(
@@ -2393,7 +2393,7 @@ public class TeacherPortalHubTests
         _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(availableManager.Object);
 
         // Act
-        var result = await hub.ModifyContent("selected text", "make it simpler", null);
+        var result = await hub.ModifyContent("selected text", "make it simpler", null, "reading", "Title", 10, 12);
 
         // Assert: result content
         Assert.Equal("Hello world", result.Content);
@@ -2484,7 +2484,7 @@ public class TeacherPortalHubTests
         _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(availableManager.Object);
 
         // Act & Assert: should throw HubException (cancellation)
-        var ex = await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null));
+        var ex = await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null, "reading", "Title", 10, 12));
         Assert.Contains("cancelled", ex.Message, StringComparison.OrdinalIgnoreCase);
 
         // Assert: OnGenerationStarted was sent
@@ -3241,7 +3241,16 @@ public class TeacherPortalHubTests
             _result = result;
         }
 
-        public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
+        public async Task<GenerationResult> ModifyContent(
+            string selectedContent,
+            string instruction,
+            Guid? unitCollectionId,
+            string materialType,
+            string title,
+            int? readingAge,
+            int? actualAge,
+            Func<StreamingGenerationChunk, Task>? onChunk = null,
+            CancellationToken cancellationToken = default)
         {
             if (onChunk != null)
             {
@@ -3261,7 +3270,16 @@ public class TeacherPortalHubTests
     /// </summary>
     private sealed class CancellingContentModificationService : IContentModificationService
     {
-        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
+        public Task<GenerationResult> ModifyContent(
+            string selectedContent,
+            string instruction,
+            Guid? unitCollectionId,
+            string materialType,
+            string title,
+            int? readingAge,
+            int? actualAge,
+            Func<StreamingGenerationChunk, Task>? onChunk = null,
+            CancellationToken cancellationToken = default)
         {
             // Cancel the hub's internal CTS by locating its entry in _activeGenerations via the shared token.
             // This exercises the hub's OperationCanceledException when (cts.Token.IsCancellationRequested) path.
