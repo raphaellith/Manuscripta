@@ -40,15 +40,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class MainViewModel extends ViewModel {
 
-    /** Index constant for the Reading tab. */
-    public static final int TAB_READING = 0;
-
-    /** Index constant for the Quiz tab. */
-    public static final int TAB_QUIZ = 1;
-
-    /** Index constant for the Worksheet tab. */
-    public static final int TAB_WORKSHEET = 2;
-
     /** Repository for materials. */
     private final MaterialRepository materialRepository;
 
@@ -73,14 +64,14 @@ public class MainViewModel extends ViewModel {
     /** The currently distributed material. */
     private final MediatorLiveData<Material> currentMaterial = new MediatorLiveData<>();
 
+    /** Observable list of all distributed materials for the dropdown menu. */
+    private final LiveData<List<Material>> allMaterials;
+
     /** The questions for the current material. */
     private final MutableLiveData<List<Question>> currentQuestions = new MutableLiveData<>();
 
     /** The tablet configuration (observes repository for refresh updates). */
     private final MediatorLiveData<Configuration> configuration = new MediatorLiveData<>();
-
-    /** The current active tab index. */
-    private final MutableLiveData<Integer> activeTab = new MutableLiveData<>(TAB_READING);
 
     /** The current AI task name (null when no task is active). */
     private final MutableLiveData<String> aiTaskName = new MutableLiveData<>();
@@ -120,6 +111,8 @@ public class MainViewModel extends ViewModel {
         this.sessionRepository = sessionRepository;
         this.deviceStatusRepository = deviceStatusRepository;
         this.feedbackRepository = feedbackRepository;
+
+        allMaterials = materialRepository.getMaterialsLiveData();
 
         configuration.setValue(configRepository.getConfig());
 
@@ -165,6 +158,16 @@ public class MainViewModel extends ViewModel {
     @NonNull
     public LiveData<Material> getCurrentMaterial() {
         return currentMaterial;
+    }
+
+    /**
+     * Gets the observable list of all distributed materials.
+     *
+     * @return LiveData containing all materials for the dropdown menu
+     */
+    @NonNull
+    public LiveData<List<Material>> getAllMaterials() {
+        return allMaterials;
     }
 
     /**
@@ -219,16 +222,6 @@ public class MainViewModel extends ViewModel {
     }
 
     /**
-     * Gets the observable active tab LiveData.
-     *
-     * @return LiveData containing the active tab index
-     */
-    @NonNull
-    public LiveData<Integer> getActiveTab() {
-        return activeTab;
-    }
-
-    /**
      * Gets the observable AI task name LiveData.
      *
      * @return LiveData containing the current AI task name, or null if inactive
@@ -246,15 +239,6 @@ public class MainViewModel extends ViewModel {
     @NonNull
     public LiveData<String> getAiResponse() {
         return aiResponse;
-    }
-
-    /**
-     * Sets the active tab index.
-     *
-     * @param tabIndex The tab index to set (TAB_READING, TAB_QUIZ, or TAB_WORKSHEET)
-     */
-    public void setActiveTab(int tabIndex) {
-        activeTab.setValue(tabIndex);
     }
 
     /**

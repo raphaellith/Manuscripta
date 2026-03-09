@@ -32,10 +32,10 @@ public class MainActivityTest {
     public HiltAndroidRule hiltRule = new HiltAndroidRule(this);
 
     /**
-     * Verifies the activity launches and the tab bar is present.
+     * Verifies the activity launches and the material dropdown is present.
      */
     @Test
-    public void activityLaunches_andTabBarExists() {
+    public void activityLaunches_andMaterialDropdownExists() {
         hiltRule.inject();
 
         try (ActivityScenario<MainActivity> scenario =
@@ -44,8 +44,10 @@ public class MainActivityTest {
             scenario.moveToState(Lifecycle.State.CREATED);
 
             scenario.onActivity(activity -> {
-                View tabBar = activity.findViewById(R.id.tabBar);
-                assertNotNull("Tab bar should exist", tabBar);
+                View dropdown = activity.findViewById(
+                        R.id.materialDropdown);
+                assertNotNull("Material dropdown should exist",
+                        dropdown);
             });
         }
     }

@@ -2,8 +2,10 @@ package com.manuscripta.student.ui.main;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
-import android.widget.Button;
+import android.widget.PopupMenu;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,6 +31,7 @@ import com.manuscripta.student.network.tcp.PairingState;
 import com.manuscripta.student.ui.pairing.PairingActivity;
 import com.manuscripta.student.utils.TextToSpeechManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -43,14 +46,8 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
-    /** Index constant for the Reading tab. */
-    static final int TAB_READING = 0;
-
-    /** Index constant for the Quiz tab. */
-    static final int TAB_QUIZ = 1;
-
-    /** Index constant for the Worksheet tab. */
-    static final int TAB_WORKSHEET = 2;
+    /** Tag for logging. */
+    private static final String TAG = "MainActivity";
 
     /** View binding for the main activity layout. */
     private ActivityMainBinding binding;
@@ -71,8 +68,8 @@ public class MainActivity extends AppCompatActivity {
     @Nullable
     private Fragment currentFragment;
 
-    /** The currently active tab index. */
-    private int activeTab = TAB_READING;
+    /** Cached list of all distributed materials for the dropdown. */
+    private final List<Material> allMaterials = new ArrayList<>();
 
     /** Whether the pairing state observer has fired at least once. */
     private boolean observerInitialised;
@@ -98,13 +95,11 @@ public class MainActivity extends AppCompatActivity {
         ttsManager = new TextToSpeechManager();
         ttsManager.init(this);
 
-        setupTabs();
+        setupMaterialDropdown();
         wireFooterViews();
         observeViewModel();
 
-        if (savedInstanceState == null) {
-            selectTab(TAB_READING);
-        } else {
+        if (savedInstanceState != null) {
             currentFragment = getSupportFragmentManager()
                     .findFragmentById(R.id.fragmentContainer);
         }
@@ -130,24 +125,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Selects the given tab, swapping the displayed fragment and updating tab styles.
+     * Selects the given material, switching to the appropriate fragment
+     * based on the material type and loading its data.
      *
-     * @param tabIndex The tab index to select (TAB_READING, TAB_QUIZ, or TAB_WORKSHEET).
+     * @param material The material to display.
      */
-    void selectTab(int tabIndex) {
-        activeTab = tabIndex;
-        updateTabStyles();
-        showFragmentForTab(tabIndex);
+    void selectMaterial(@NonNull Material material) {
+        Log.d(TAG, "Selecting material: " + material.getTitle()
+                + " (" + material.getType() + ")");
+        viewModel.setCurrentMaterial(material);
+        if (binding != null) {
+            binding.materialDropdown.setText(material.getTitle());
+        }
+        showFragmentForMaterial(material);
         updateFooterVisibility();
-    }
-
-    /**
-     * Returns the currently active tab index.
-     *
-     * @return The active tab index.
-     */
-    int getActiveTab() {
-        return activeTab;
     }
 
     /**
@@ -160,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
         fragment.setNavigationListener(new FeedbackFragment.FeedbackNavigationListener() {
             @Override
             public void onNextQuestion() {
-                selectTab(TAB_READING);
+                returnToCurrentMaterial();
             }
 
             @Override
@@ -187,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTryAgain() {
-                selectTab(TAB_QUIZ);
+                returnToCurrentMaterial();
             }
         });
         currentFragment = fragment;
@@ -195,51 +186,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Sets up tab button click listeners.
+     * Returns to the fragment for the currently selected material.
      */
-    private void setupTabs() {
-        binding.tabReading.setOnClickListener(v -> selectTab(TAB_READING));
-        binding.tabQuiz.setOnClickListener(v -> selectTab(TAB_QUIZ));
-        binding.tabWorksheet.setOnClickListener(v -> selectTab(TAB_WORKSHEET));
-    }
-
-    /**
-     * Updates the tab button styles to highlight the active tab.
-     */
-    private void updateTabStyles() {
-        setTabStyle(binding.tabReading, activeTab == TAB_READING);
-        setTabStyle(binding.tabQuiz, activeTab == TAB_QUIZ);
-        setTabStyle(binding.tabWorksheet, activeTab == TAB_WORKSHEET);
-    }
-
-    /**
-     * Applies the active or inactive style to a tab button.
-     *
-     * @param tab      The tab button to style.
-     * @param isActive Whether the tab is currently active.
-     */
-    private void setTabStyle(@NonNull Button tab, boolean isActive) {
-        if (isActive) {
-            tab.setBackgroundResource(R.drawable.bg_tab_active);
-        } else {
-            tab.setBackgroundResource(R.drawable.bg_tab_inactive);
+    private void returnToCurrentMaterial() {
+        Material material = viewModel.getCurrentMaterial().getValue();
+        if (material != null) {
+            showFragmentForMaterial(material);
         }
     }
 
     /**
-     * Shows the appropriate fragment for the given tab index.
-     *
-     * @param tabIndex The tab index to show.
+     * Sets up the material dropdown button click listener.
      */
-    private void showFragmentForTab(int tabIndex) {
+    private void setupMaterialDropdown() {
+        binding.materialDropdown.setOnClickListener(v -> showMaterialDropdown());
+    }
+
+    /**
+     * Shows a popup menu listing all available materials.
+     */
+    private void showMaterialDropdown() {
+        if (allMaterials.isEmpty()) {
+            Toast.makeText(this, R.string.no_materials, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        PopupMenu popup = new PopupMenu(this, binding.materialDropdown);
+        for (int i = 0; i < allMaterials.size(); i++) {
+            popup.getMenu().add(0, i, i, allMaterials.get(i).getTitle());
+        }
+        popup.setOnMenuItemClickListener(item -> {
+            int index = item.getItemId();
+            if (index >= 0 && index < allMaterials.size()) {
+                selectMaterial(allMaterials.get(index));
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    /**
+     * Shows the appropriate fragment for the given material's type.
+     *
+     * @param material The material to display.
+     */
+    private void showFragmentForMaterial(@NonNull Material material) {
         Fragment fragment;
-        switch (tabIndex) {
-            case TAB_QUIZ:
+        switch (material.getType()) {
+            case POLL:
                 fragment = createQuizFragment();
                 break;
-            case TAB_WORKSHEET:
+            case WORKSHEET:
                 fragment = createWorksheetFragment();
                 break;
+            case READING:
             default:
                 fragment = ReadingFragment.newInstance();
                 break;
@@ -260,14 +259,19 @@ public class MainActivity extends AppCompatActivity {
         quiz.setNavigationListener(new QuizFragment.QuizNavigationListener() {
             @Override
             public void onBackToLesson() {
-                selectTab(TAB_READING);
+                returnToCurrentMaterial();
             }
 
             @Override
             public void onAnswerSubmitted(@NonNull Question question,
                                           @NonNull String answer,
                                           boolean isCorrect) {
+                Log.d(TAG, "Quiz answer submitted for question: "
+                        + question.getId() + ", answer: " + answer
+                        + ", correct: " + isCorrect);
                 quizViewModel.saveQuizResponse(question, answer);
+                Toast.makeText(MainActivity.this,
+                        R.string.answer_submitted, Toast.LENGTH_SHORT).show();
                 if (isCorrect) {
                     showCorrectFeedback(question.getCorrectAnswer());
                 } else {
@@ -287,7 +291,10 @@ public class MainActivity extends AppCompatActivity {
     private WorksheetFragment createWorksheetFragment() {
         WorksheetFragment worksheet = WorksheetFragment.newInstance();
         worksheet.setSubmitListener(answers -> {
+            Log.d(TAG, "Worksheet answers submitted: " + answers.size());
             worksheetViewModel.submitAllAnswers(answers);
+            Toast.makeText(MainActivity.this,
+                    R.string.answer_submitted, Toast.LENGTH_SHORT).show();
         });
         return worksheet;
     }
@@ -305,8 +312,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates footer visibility based on the active tab and configuration.
-     * The mascot is only visible on the Reading tab when a mascot is selected.
+     * Updates footer visibility based on the current fragment and configuration.
+     * The mascot is only visible on the Reading fragment when a mascot is selected.
      */
     private void updateFooterVisibility() {
         if (binding == null) {
@@ -315,13 +322,14 @@ public class MainActivity extends AppCompatActivity {
         Configuration config = viewModel.getConfiguration().getValue();
         boolean mascotEnabled = config != null
                 && config.getMascotSelection() != MascotSelection.NONE;
-        int mascotVisibility = (mascotEnabled && activeTab == TAB_READING)
+        boolean isReading = currentFragment instanceof ReadingFragment;
+        int mascotVisibility = (mascotEnabled && isReading)
                 ? View.VISIBLE : View.INVISIBLE;
         binding.mascotView.setVisibility(mascotVisibility);
     }
 
     /**
-     * Updates the raise-hand button text to reflect the current state.
+     * Updates the raise-hand button text and enabled state.
      *
      * @param handRaiseState The current hand-raise state
      */
@@ -331,15 +339,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         switch (handRaiseState) {
-            case PENDING:
-                binding.raiseHandButton.setText(R.string.hand_raised_pending);
-                break;
-            case ACKNOWLEDGED:
-                binding.raiseHandButton.setText(R.string.hand_acknowledged);
+            case COOLDOWN:
+                binding.raiseHandButton.setText(R.string.hand_raised_cooldown);
+                binding.raiseHandButton.setEnabled(false);
                 break;
             case IDLE:
             default:
                 binding.raiseHandButton.setText(R.string.raise_hand);
+                binding.raiseHandButton.setEnabled(true);
                 break;
         }
     }
@@ -358,7 +365,7 @@ public class MainActivity extends AppCompatActivity {
             () -> viewModel.clearAiTask()
         );
         binding.raiseHandButton.setOnClickListener(
-            v -> raiseHandManager.toggle()
+            v -> raiseHandManager.raiseHand()
         );
     }
 
@@ -367,9 +374,22 @@ public class MainActivity extends AppCompatActivity {
      * material, questions, configuration, and AI task state.
      */
     private void observeViewModel() {
+        viewModel.getAllMaterials().observe(this, materials -> {
+            allMaterials.clear();
+            if (materials != null) {
+                allMaterials.addAll(materials);
+            }
+        });
         viewModel.getCurrentMaterial().observe(this, material -> {
             if (material != null) {
-                updateFragmentData();
+                if (binding != null) {
+                    binding.materialDropdown.setText(material.getTitle());
+                }
+                if (currentFragment == null) {
+                    showFragmentForMaterial(material);
+                } else {
+                    updateFragmentData();
+                }
             }
         });
         viewModel.getCurrentQuestions().observe(

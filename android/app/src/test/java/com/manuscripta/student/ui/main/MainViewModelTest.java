@@ -105,23 +105,10 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testInitialActiveTabIsReading() {
-        assertEquals(Integer.valueOf(MainViewModel.TAB_READING),
-                viewModel.getActiveTab().getValue());
-    }
-
-    @Test
-    public void testSetActiveTab() {
-        viewModel.setActiveTab(MainViewModel.TAB_QUIZ);
-        assertEquals(Integer.valueOf(MainViewModel.TAB_QUIZ),
-                viewModel.getActiveTab().getValue());
-    }
-
-    @Test
-    public void testSetActiveTabToWorksheet() {
-        viewModel.setActiveTab(MainViewModel.TAB_WORKSHEET);
-        assertEquals(Integer.valueOf(MainViewModel.TAB_WORKSHEET),
-                viewModel.getActiveTab().getValue());
+    public void testGetAllMaterialsReturnsLiveData() {
+        LiveData<List<Material>> allMaterials = viewModel.getAllMaterials();
+        assertNotNull(allMaterials);
+        assertEquals(Collections.emptyList(), allMaterials.getValue());
     }
 
     @Test
@@ -278,13 +265,6 @@ public class MainViewModelTest {
         LiveData<Boolean> connectionState = viewModel.getConnectionState();
         assertNotNull(connectionState);
         assertEquals(Boolean.TRUE, connectionState.getValue());
-    }
-
-    @Test
-    public void testTabConstants() {
-        assertEquals(0, MainViewModel.TAB_READING);
-        assertEquals(1, MainViewModel.TAB_QUIZ);
-        assertEquals(2, MainViewModel.TAB_WORKSHEET);
     }
 
     @Test

@@ -13,7 +13,6 @@ import com.manuscripta.student.network.tcp.message.HandRaisedMessage;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,8 +25,8 @@ import javax.inject.Singleton;
  * <p>Per Session Interaction §4A:
  * <ol>
  *   <li>Sends TCP HAND_RAISED (0x11) with device ID</li>
- *   <li>Retries every 3 seconds until HAND_ACK (0x06) is received</li>
- *   <li>Exposes observable state: IDLE, PENDING, or ACKNOWLEDGED</li>
+ *   <li>Enters a 3-second cooldown to prevent spamming</li>
+ *   <li>Exposes observable state: IDLE or COOLDOWN</li>
  * </ol>
  */
 @Singleton
@@ -36,8 +35,8 @@ public class RaiseHandManager implements TcpMessageListener {
     /** Tag for logging. */
     private static final String TAG = "RaiseHandManager";
 
-    /** Retry interval in seconds per Session Interaction §4A(3). */
-    static final long RETRY_INTERVAL_SECONDS = 3L;
+    /** Cooldown duration in seconds to prevent spamming. */
+    static final long COOLDOWN_SECONDS = 3L;
 
     /** The TCP socket manager for sending messages. */
     private final TcpSocketManager socketManager;
@@ -45,11 +44,8 @@ public class RaiseHandManager implements TcpMessageListener {
     /** The pairing manager for obtaining the device ID. */
     private final PairingManager pairingManager;
 
-    /** Scheduler for retry logic. */
+    /** Scheduler for cooldown logic. */
     private final ScheduledExecutorService scheduler;
-
-    /** The current retry future, or null if not retrying. */
-    private volatile ScheduledFuture<?> retryFuture;
 
     /** Whether the manager has been destroyed. */
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
@@ -62,12 +58,10 @@ public class RaiseHandManager implements TcpMessageListener {
      * Possible states for the hand-raise lifecycle.
      */
     public enum HandRaiseState {
-        /** No hand raised. */
+        /** No hand raised; button enabled. */
         IDLE,
-        /** Hand raised, awaiting acknowledgement from teacher. */
-        PENDING,
-        /** Teacher acknowledged the raised hand. */
-        ACKNOWLEDGED
+        /** Hand raised; button disabled for cooldown. */
+        COOLDOWN
     }
 
     /**
@@ -88,7 +82,7 @@ public class RaiseHandManager implements TcpMessageListener {
      *
      * @param socketManager  The TCP socket manager for sending messages
      * @param pairingManager The pairing manager providing the device ID
-     * @param scheduler      The scheduler for retry logic
+     * @param scheduler      The scheduler for cooldown logic
      */
     @VisibleForTesting
     RaiseHandManager(@NonNull TcpSocketManager socketManager,
@@ -112,36 +106,23 @@ public class RaiseHandManager implements TcpMessageListener {
 
     /**
      * Raises the student's hand, sending HAND_RAISED via TCP.
-     * Retries every 3 seconds until acknowledged or lowered.
+     * Enters a 3-second cooldown to prevent spamming.
      */
     public void raiseHand() {
         if (destroyed.get()) {
             return;
         }
-        state.postValue(HandRaiseState.PENDING);
-        scheduler.execute(this::sendHandRaised);
-        scheduleRetry();
-    }
-
-    /**
-     * Lowers the student's hand, cancelling any pending retries.
-     */
-    public void lowerHand() {
-        cancelRetry();
-        state.postValue(HandRaiseState.IDLE);
-    }
-
-    /**
-     * Toggles the hand-raise state. If IDLE, raises the hand;
-     * if PENDING or ACKNOWLEDGED, lowers it.
-     */
-    public void toggle() {
         HandRaiseState current = state.getValue();
-        if (current == HandRaiseState.IDLE) {
-            raiseHand();
-        } else {
-            lowerHand();
+        if (current == HandRaiseState.COOLDOWN) {
+            return;
         }
+        state.postValue(HandRaiseState.COOLDOWN);
+        scheduler.execute(this::sendHandRaised);
+        scheduler.schedule(
+                () -> state.postValue(HandRaiseState.IDLE),
+                COOLDOWN_SECONDS,
+                TimeUnit.SECONDS
+        );
     }
 
     /**
@@ -150,7 +131,6 @@ public class RaiseHandManager implements TcpMessageListener {
      */
     public void destroy() {
         destroyed.set(true);
-        cancelRetry();
         scheduler.shutdownNow();
     }
 
@@ -161,8 +141,6 @@ public class RaiseHandManager implements TcpMessageListener {
         }
         if (message instanceof HandAckMessage) {
             Log.d(TAG, "Received HAND_ACK");
-            cancelRetry();
-            state.postValue(HandRaiseState.ACKNOWLEDGED);
         }
     }
 
@@ -190,30 +168,6 @@ public class RaiseHandManager implements TcpMessageListener {
             Log.d(TAG, "Sent HAND_RAISED");
         } catch (IOException | TcpProtocolException e) {
             Log.w(TAG, "Failed to send HAND_RAISED: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Schedules a periodic retry to resend HAND_RAISED.
-     */
-    private void scheduleRetry() {
-        cancelRetry();
-        retryFuture = scheduler.scheduleAtFixedRate(
-                this::sendHandRaised,
-                RETRY_INTERVAL_SECONDS,
-                RETRY_INTERVAL_SECONDS,
-                TimeUnit.SECONDS
-        );
-    }
-
-    /**
-     * Cancels any pending retry.
-     */
-    private void cancelRetry() {
-        ScheduledFuture<?> future = retryFuture;
-        if (future != null) {
-            future.cancel(false);
-            retryFuture = null;
         }
     }
 }
