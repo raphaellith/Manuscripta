@@ -87,9 +87,9 @@ public class ConfigurationEntity
             id: DefaultId,
             textSize: 12,
             feedbackStyle: FeedbackStyle.IMMEDIATE,
-            ttsEnabled: true,
-            aiScaffoldingEnabled: true,
-            summarisationEnabled: true,
-            mascotSelection: MascotSelection.MASCOT1);
+            ttsEnabled: false,
+            aiScaffoldingEnabled: false,
+            summarisationEnabled: false,
+            mascotSelection: MascotSelection.NONE);
     }
 }
