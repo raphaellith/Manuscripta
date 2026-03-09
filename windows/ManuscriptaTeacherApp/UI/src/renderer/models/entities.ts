@@ -209,6 +209,9 @@ export interface SourceDocumentEntity {
     unitCollectionId: string;
     transcript: string;
     embeddingStatus?: EmbeddingStatus;
+}
+
+// ==========================================
 // PDF Export Settings - FrontendWorkflowSpec §7(5)
 // ==========================================
 
