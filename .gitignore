@@ -361,3 +361,5 @@ site/
 *.bak
 *.backup
 *~.nib
+.claude/commands/run-checks.md
+.gitignore
