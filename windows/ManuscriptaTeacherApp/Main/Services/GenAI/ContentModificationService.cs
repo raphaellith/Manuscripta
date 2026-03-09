@@ -14,7 +14,8 @@ public class ContentModificationService : IContentModificationService
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
     private const int DefaultTopK = 5;
-    private const string ModificationModel = "granite4";
+    private const string PrimaryModel = "qwen3:8b";
+    private const string FallbackModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
@@ -34,11 +35,19 @@ public class ContentModificationService : IContentModificationService
         string selectedContent,
         string instruction,
         Guid? unitCollectionId,
+        string materialType,
+        string title,
+        int? readingAge,
+        int? actualAge,
         Func<StreamingGenerationChunk, Task>? onChunk = null,
         CancellationToken cancellationToken = default)
     {
-        // Ensure model is ready
-        await _ollamaClient.EnsureModelReadyAsync(ModificationModel);
+        // Determine which model to use
+        string modelToUse = PrimaryModel;
+        bool useFallback = false;
+
+        // §1(4): Start model readiness check in parallel with RAG preparation
+        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -66,24 +75,59 @@ public class ContentModificationService : IContentModificationService
         cancellationToken.ThrowIfCancellationRequested();
 
         // §3C(2)(b): Construct prompt
-        var prompt = GenAIPromptBuilder.BuildModificationPrompt(selectedContent, instruction, relevantChunks);
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent, instruction, relevantChunks, materialType, title, readingAge, actualAge);
 
+        // Await the model readiness check before streaming
+        await modelReadyTask;
+
+        // §3H(8): Check for cancellation before streaming begins
         cancellationToken.ThrowIfCancellationRequested();
 
         // §3C(2)(c): Invoke model with streaming per §3H(5)
         string modifiedContent;
         try
         {
-            modifiedContent = await InvokeModelStreamingAsync(ModificationModel, prompt, onChunk, cancellationToken);
+            modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
         }
-        catch (HttpRequestException ex) when (ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase))
+        catch (HttpRequestException ex) when (
+            ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+            (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
         {
-            throw new InvalidOperationException(
-                "Insufficient system memory to process this request. Please close other applications and try again.", ex);
+            // §1(6)(a): Fall back when primary model fails during modification due to resource constraints.
+            if (!useFallback)
+            {
+                modelToUse = FallbackModel;
+                useFallback = true;
+                try
+                {
+                    // Unload the primary model to free memory before attempting fallback
+                    await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                    await Task.Delay(500); // Brief delay to allow memory to be released
+
+                    await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                    modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
+                }
+                catch (Exception fallbackEx)
+                {
+                    throw new InvalidOperationException(
+                        $"Both primary (qwen3:8b) and fallback (granite4) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
+                        fallbackEx);
+                }
+            }
+            else
+            {
+                // Already on fallback, so this is a genuine failure
+                throw new InvalidOperationException(
+                    $"The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
+                    ex);
+            }
         }
 
         // §3C(2)(d): Validate and refine
-        var result = await _validationService.ValidateAndRefineAsync(modifiedContent, ModificationModel, useFallback: true);
+        var result = await _validationService.ValidateAndRefineAsync(modifiedContent, modelToUse, useFallback);
 
         return result;
     }

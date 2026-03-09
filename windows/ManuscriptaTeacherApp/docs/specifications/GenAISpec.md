@@ -16,7 +16,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | Purpose | Model | Ollama Name | Rationale |
 |---------|-------|-------------|----------|
 | Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
+| Content modification | Qwen3 8B | `qwen3:8b` | Modification may involve adding questions, restructuring content, or significant rewrites requiring the same instruction-adherence as generation |
 | Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
 | Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
 
@@ -26,7 +26,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation fails during generation due to resource constraints —
+(6) If the primary model (`qwen3:8b`) for material generation or content modification fails during generation due to resource constraints —
 
     (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
@@ -342,7 +342,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (1) When a teacher wishes to modify selected content using the AI assistant, the frontend shall invoke the following server method (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub` —
 
-    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)`
+    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, string materialType, string title, int? readingAge, int? actualAge)`
 
 (2) Upon receiving a modification request, the backend shall —
 
@@ -360,7 +360,15 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
-    (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+        (v) the material title.
+
+        (vi) reading age and actual age constraints, if provided.
+
+        (vii) the material type.
+
+        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
+
+    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
 
@@ -615,7 +623,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
 | `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
 | `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
-| `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
+| `MODIFICATION_MODEL` | `qwen3:8b` | Primary model for AI assistant content modification |
+| `MODIFICATION_FALLBACK_MODEL` | `granite4` | Fallback model for content modification |
 | `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
 
 ---
@@ -647,9 +656,9 @@ sequenceDiagram
     Hub-->>Frontend: generated content
 
     Note over Frontend,Ollama: Content Modification (§3C)
-    Frontend->>Hub: ModifyContent(selection, instruction)
+    Frontend->>Hub: ModifyContent(selection, instruction, metadata)
     Hub->>RAG: Retrieve context (optional)
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: modified content
     Hub-->>Frontend: modified content
 ```

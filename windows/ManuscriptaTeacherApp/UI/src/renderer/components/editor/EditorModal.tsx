@@ -439,7 +439,15 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         setAiGenerationId(null);
         
         try {
-            const result = await signalRService.modifyContent(originalText, instruction, undefined);
+            const result = await signalRService.modifyContent(
+                originalText,
+                instruction,
+                undefined,
+                material.materialType.toLowerCase(),
+                material.title,
+                material.readingAge,
+                material.actualAge
+            );
             
             // Success! The server returns the final complete text
             if (editor) {

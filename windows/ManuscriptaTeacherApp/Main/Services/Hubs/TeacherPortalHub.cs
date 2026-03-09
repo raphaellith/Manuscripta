@@ -1368,9 +1368,9 @@ public class TeacherPortalHub : Hub
     /// Modifies selected content using the AI assistant.
     /// Per NetworkingAPISpec §1(1)(i)(iv) and GenAISpec.md §3C(1)(a).
     /// </summary>
-    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, string materialType, string title, int? readingAge, int? actualAge)
     {
-        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "granite4");
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
 
         if (missing.Count > 0)
         {
@@ -1386,7 +1386,7 @@ public class TeacherPortalHub : Hub
         {
             await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
 
-            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, async chunk =>
+            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, materialType, title, readingAge, actualAge, async chunk =>
             {
                 try
                 {

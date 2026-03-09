@@ -110,7 +110,7 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task<string> GenerateFeedback(Guid questionId, Guid responseId)`: Generates feedback for a student response. See GenAISpec §3D(9).
 
-        (iv) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)`: Modifies selected content based on the instruction. Returns `GenerationResult`. See GenAISpec §3C.
+        (iv) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, string materialType, string title, int? readingAge, int? actualAge)`: Modifies selected content based on the instruction, with material metadata for prompt context. Returns `GenerationResult`. See GenAISpec §3C.
 
         (v) `Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)`: Returns the embedding status of a source document. See GenAISpec §3E.
 

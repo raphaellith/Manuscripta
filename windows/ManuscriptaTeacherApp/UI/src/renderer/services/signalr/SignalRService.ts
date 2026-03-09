@@ -377,9 +377,24 @@ class SignalRService {
      * @param selectedContent The text selected by the user.
      * @param instruction The instruction for modification.
      * @param unitCollectionId Optional unit collection context.
+     * @param materialType The type of material being modified (e.g. 'reading', 'worksheet').
+     * @param title The title of the material being modified.
+     * @param readingAge Optional reading age of the material.
+     * @param actualAge Optional actual age of the material.
      */
-    public async modifyContent(selectedContent: string, instruction: string, unitCollectionId?: string): Promise<GenerationResult> {
-        return await this.getConnection().invoke<GenerationResult>("ModifyContent", selectedContent, instruction, unitCollectionId);
+    public async modifyContent(
+        selectedContent: string,
+        instruction: string,
+        unitCollectionId: string | undefined,
+        materialType: string,
+        title: string,
+        readingAge: number | undefined,
+        actualAge: number | undefined
+    ): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>(
+            "ModifyContent", selectedContent, instruction, unitCollectionId,
+            materialType, title, readingAge ?? null, actualAge ?? null
+        );
     }
 
     /**
