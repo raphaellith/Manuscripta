@@ -1449,16 +1449,10 @@ public class TeacherPortalHub : Hub
     {
         try
         {
-            var prioritized = _feedbackQueueService.PrioritizeResponse(responseId);
-            if (!prioritized)
-            {
-                throw new HubException($"Response {responseId} is not currently queued or is being generated");
-            }
+            // Per §3D(8A)(b): no effect if the response is not currently queued
+            // or is currently being generated — return successfully.
+            _feedbackQueueService.PrioritizeResponse(responseId);
             return Task.CompletedTask;
-        }
-        catch (HubException)
-        {
-            throw;
         }
         catch (Exception ex)
         {

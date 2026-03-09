@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -23,6 +24,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IResponseRepository _responseRepository;
     private readonly IFeedbackRepository _feedbackRepository;
+    private readonly ILogger<FeedbackGenerationService> _logger;
     private const string FeedbackModel = "granite4";
     
     private Task? _processingTask;
@@ -41,7 +43,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         IHubContext<TeacherPortalHub> hubContext,
         IServiceScopeFactory scopeFactory,
         IResponseRepository responseRepository,
-        IFeedbackRepository feedbackRepository)
+        IFeedbackRepository feedbackRepository,
+        ILogger<FeedbackGenerationService> logger)
     {
         _ollamaClient = ollamaClient;
         _queueService = queueService;
@@ -49,6 +52,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         _scopeFactory = scopeFactory;
         _responseRepository = responseRepository;
         _feedbackRepository = feedbackRepository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -138,7 +142,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             catch (Exception ex)
             {
                 // Log error but continue processing
-                Console.Error.WriteLine($"Error in feedback generation queue processing: {ex.Message}");
+                _logger.LogError(ex, "Error in feedback generation queue processing");
             }
         }
     }
@@ -148,15 +152,23 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// </summary>
     private async Task ProcessResponseAsync(Guid responseId, CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var questionRepository = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
-
+        // Set generating ID immediately so the frontend sees this response as
+        // "generating" for the entire duration, not in a limbo state between
+        // dequeue and the actual Ollama call.
+        _currentlyGeneratingResponseId = responseId.ToString();
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var questionRepository = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+
             // Retrieve the response
             var response = await _responseRepository.GetByIdAsync(responseId);
             if (response == null)
             {
+                // §3D(7)(b): Notify frontend — response was dequeued but cannot be found.
+                _logger.LogWarning("Feedback generation: response {ResponseId} not found", responseId);
+                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
+                    $"Response {responseId} not found");
                 return;
             }
 
@@ -164,6 +176,11 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             var question = await questionRepository.GetByIdAsync(response.QuestionId);
             if (question == null)
             {
+                // §3D(7)(b): Notify frontend — question no longer exists.
+                _logger.LogWarning("Feedback generation: question {QuestionId} not found for response {ResponseId}",
+                    response.QuestionId, responseId);
+                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
+                    $"Question {response.QuestionId} not found");
                 return;
             }
 
@@ -183,28 +200,23 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 }
             }
 
-            _currentlyGeneratingResponseId = responseId.ToString();
-            try
-            {
-                // Generate feedback
-                var feedback = await GenerateFeedbackAsync(question, response);
+            // Generate feedback
+            var feedback = await GenerateFeedbackAsync(question, response);
 
-                // Save feedback
-                await _feedbackRepository.AddAsync(feedback);
+            // Save feedback
+            await _feedbackRepository.AddAsync(feedback);
 
-                // Notify frontend of successful generation
-                // Per NetworkingAPISpec §2(1)(c)(iii).
-                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
-            }
-            finally
-            {
-                _currentlyGeneratingResponseId = null;
-            }
+            // Notify frontend of successful generation
+            // Per NetworkingAPISpec §2(1)(c)(iii).
+            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
         }
         catch (Exception ex)
         {
-            // Error handling is done in GenerateFeedbackAsync, but catch any unexpected errors
-            Console.Error.WriteLine($"Unexpected error processing response {responseId}: {ex.Message}");
+            _logger.LogError(ex, "Failed to generate feedback for response {ResponseId}", responseId);
+        }
+        finally
+        {
+            _currentlyGeneratingResponseId = null;
         }
     }
 
@@ -300,13 +312,25 @@ QUESTION:
 {question.QuestionText}
 
 STUDENT'S RESPONSE:
-{response.ResponseText}
+{GetResponseText(response)}
 
 MARK SCHEME:
 {question.MarkScheme}
 
 {maxScoreSection}
 ";
+    }
+
+    /// <summary>
+    /// Extracts the student's answer text from a polymorphic response entity.
+    /// </summary>
+    private static string GetResponseText(ResponseEntity response)
+    {
+        return response switch
+        {
+            WrittenAnswerResponseEntity wa => wa.Answer,
+            _ => response.ResponseText ?? string.Empty
+        };
     }
 
     /// <summary>

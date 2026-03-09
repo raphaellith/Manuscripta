@@ -77,6 +77,8 @@ const FeedbackInput: React.FC<{
     isQueued?: boolean;
     isGenerating?: boolean;
     generationFailed?: boolean;
+    generationError?: string;
+    isEligibleForAi?: boolean;
     onSave: (responseId: string, marks: number | null, text: string | null, existingId?: string) => void;
     onApprove: (feedbackId: string) => void;
     onRetry: (feedbackId: string) => void;
@@ -84,7 +86,7 @@ const FeedbackInput: React.FC<{
     onPrioritise: (responseId: string) => void;
     onRequeue: (responseId: string) => void;
     onRetryGeneration: (responseId: string) => void;
-}> = ({ responseId, feedback, maxScore, hasFailed, isQueued, isGenerating, generationFailed, onSave, onApprove, onRetry, onWriteManually, onPrioritise, onRequeue, onRetryGeneration }) => {
+}> = ({ responseId, feedback, maxScore, hasFailed, isQueued, isGenerating, generationFailed, generationError, isEligibleForAi, onSave, onApprove, onRetry, onWriteManually, onPrioritise, onRequeue, onRetryGeneration }) => {
     const [marks, setMarks] = useState<string>(feedback?.marks?.toString() ?? '');
     const [text, setText] = useState<string>(feedback?.text ?? '');
 
@@ -151,14 +153,20 @@ const FeedbackInput: React.FC<{
         );
     }
 
-    // Per §6A(3): Show generation failure with retry option
-    if (generationFailed && !feedback) {
+    // Per §6A(3): Show generation failure with retry option.
+    // Also handles the "limbo" state: no feedback, not queued/generating,
+    // but eligible for AI — indicates a previous generation failure whose
+    // client-side state was lost (e.g. after frontend restart).
+    if (!feedback && (generationFailed || (isEligibleForAi && !isQueued && !isGenerating))) {
         return (
             <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200 space-y-3">
                 <div className="flex items-center gap-2">
                     <span className="text-red-600">⚠</span>
                     <span className="text-sm text-red-700">AI feedback generation failed</span>
                 </div>
+                {generationError && (
+                    <p className="text-xs text-red-600">{generationError}</p>
+                )}
                 <div className="flex gap-2">
                     <button
                         onClick={() => onRetryGeneration(responseId)}
@@ -262,11 +270,15 @@ export const ResponsesPage: React.FC = () => {
     // Track failed feedback IDs per §6A(6) - for showing indicator near specific responses
     const [failedFeedbackIds, setFailedFeedbackIds] = useState<Set<string>>(new Set());
 
+    // Ref for devices used in event handler closures to avoid stale captures
+    // without adding `devices` to the useEffect dependency array.
+    const devicesRef = useRef<PairedDeviceEntity[]>([]);
+
     // Queue status state per §6A(1)(a) — tracks which responses are queued or generating
     const [queuedResponseIds, setQueuedResponseIds] = useState<Set<string>>(new Set());
     const [generatingResponseId, setGeneratingResponseId] = useState<string | null>(null);
-    // Track responses whose generation failed per §6A(3)
-    const [generationFailedIds, setGenerationFailedIds] = useState<Set<string>>(new Set());
+    // Track responses whose generation failed per §6A(3) — maps response ID to error message
+    const [generationFailedIds, setGenerationFailedIds] = useState<Map<string, string>>(new Map());
     // Confirmation dialog for re-queue per §6A(1A)
     const [requeueConfirm, setRequeueConfirm] = useState<{ isOpen: boolean; responseId: string }>({ isOpen: false, responseId: '' });
 
@@ -295,6 +307,7 @@ export const ResponsesPage: React.FC = () => {
             setResponses(responsesData);
             setFeedbacks(feedbacksData);
             setDevices(devicesData);
+            devicesRef.current = devicesData;
             setQueuedResponseIds(new Set(queueStatusData));
             setGeneratingResponseId(currentGenId);
         } catch (error) {
@@ -315,21 +328,21 @@ export const ResponsesPage: React.FC = () => {
             // Track failed feedback ID for indicator near specific response
             setFailedFeedbackIds(prev => new Set(prev).add(payload.feedbackId));
             // Show alert with device name (not entity IDs - those are internal)
-            const device = devices.find(d => d.deviceId === payload.deviceId);
+            const device = devicesRef.current.find(d => d.deviceId === payload.deviceId);
             addAlert('feedback_failed', undefined, `Feedback delivery failed${device ? ` to ${device.name}` : ''}`);
         });
         // Per §6A(1)(a): Listen for generation success — refresh data and clear queue state
         const unsubGenerated = signalRService.onFeedbackGenerated((_feedbackId: string, responseId: string) => {
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             setGeneratingResponseId(prev => prev === responseId ? null : prev);
-            setGenerationFailedIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
             loadData();
         });
         // Per §6A(3): Track generation failures
-        const unsubGenerationFailed = signalRService.onFeedbackGenerationFailed((responseId: string) => {
+        const unsubGenerationFailed = signalRService.onFeedbackGenerationFailed((responseId: string, error: string) => {
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             setGeneratingResponseId(prev => prev === responseId ? null : prev);
-            setGenerationFailedIds(prev => new Set(prev).add(responseId));
+            setGenerationFailedIds(prev => new Map(prev).set(responseId, error || 'Unknown error'));
         });
         return () => {
             unsubRefresh();
@@ -337,7 +350,7 @@ export const ResponsesPage: React.FC = () => {
             unsubGenerated();
             unsubGenerationFailed();
         };
-    }, [loadData, addAlert, devices]);
+    }, [loadData, addAlert]);
 
     // Derived data - materials with responses per §6(4)(a)
     const materialsWithResponses = useMemo(() => {
@@ -467,7 +480,7 @@ export const ResponsesPage: React.FC = () => {
             await signalRService.removeFromAiGenerationQueue(responseId);
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             setGeneratingResponseId(prev => prev === responseId ? null : prev);
-            setGenerationFailedIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
         } catch (error) {
             console.error('Failed to dequeue response:', error);
             addAlert('control_failed', undefined, 'Failed to remove from generation queue');
@@ -504,7 +517,7 @@ export const ResponsesPage: React.FC = () => {
     // Per §6A(3): Retry failed AI generation
     const handleRetryGeneration = useCallback(async (responseId: string) => {
         try {
-            setGenerationFailedIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
             await signalRService.queueForAiGeneration(responseId);
             setQueuedResponseIds(prev => new Set(prev).add(responseId));
         } catch (error) {
@@ -717,6 +730,8 @@ export const ResponsesPage: React.FC = () => {
                                                             isQueued={queuedResponseIds.has(response.id)}
                                                             isGenerating={generatingResponseId === response.id}
                                                             generationFailed={generationFailedIds.has(response.id)}
+                                                            generationError={generationFailedIds.get(response.id)}
+                                                            isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
                                                             onSave={handleSaveFeedback}
                                                             onApprove={handleApproveFeedback}
                                                             onRetry={handleRetryFeedback}
@@ -907,6 +922,8 @@ export const ResponsesPage: React.FC = () => {
                                                 isQueued={queuedResponseIds.has(response.id)}
                                                 isGenerating={generatingResponseId === response.id}
                                                 generationFailed={generationFailedIds.has(response.id)}
+                                                generationError={generationFailedIds.get(response.id)}
+                                                isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
                                                 onSave={handleSaveFeedback}
                                                 onApprove={handleApproveFeedback}
                                                 onRetry={handleRetryFeedback}
