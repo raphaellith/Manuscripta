@@ -346,7 +346,7 @@ Generate constructive feedback for a student's response to the question given be
 {markInstruction}
 Include a score justification explaining how well the response meets the mark scheme.
 Your mark must strictly adhere to the mark scheme provided and be supported by specific evidence from the student's response.
-If a mark scheme provides a specific mark breakdown, you must show evidence of how each mark is awarded based on the breakdown, and provide the breakdown in your feedback.
+If a mark scheme provides a specific mark breakdown, you must show evidence of how each mark is awarded based on the breakdown, referencing the parts of the mark scheme and the student's response that justify each mark awarded.
 You must be ready to award the full range of marks, including zero and the maximum score, if justified by the response.
 Include specific strengths in the response.
 Where the response could be improved, include suggestions for enhancement.
