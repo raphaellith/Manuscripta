@@ -353,6 +353,7 @@ Where the response could be improved, include suggestions for enhancement.
 Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
 Use British English throughout your response.
 Your feedback should speak directly to the student, using you statements to make it more engaging and personalised.
+You may not use markdown or HTML formatting in your feedback.
 
 QUESTION:
 {question.QuestionText}
