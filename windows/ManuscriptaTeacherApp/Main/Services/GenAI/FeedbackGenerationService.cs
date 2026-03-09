@@ -25,7 +25,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     private readonly IResponseRepository _responseRepository;
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly ILogger<FeedbackGenerationService> _logger;
-    private const string FeedbackModel = "granite4";
+    private const string PrimaryModel = "qwen3:8b";
+    private const string FallbackModel = "granite4";
     
     private Task? _processingTask;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -273,13 +274,33 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         try
         {
             // Ensure model is ready
-            await _ollamaClient.EnsureModelReadyAsync(FeedbackModel);
+            string modelToUse = PrimaryModel;
+            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
             // §3D(9)(b): Construct prompt
             var prompt = ConstructFeedbackPrompt(question, response);
 
-            // §3D(9)(d): Invoke model
-            var rawResponse = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
+            // §3D(9)(d): Invoke model (or granite4 if fallback per §1(6))
+            string rawResponse;
+            try
+            {
+                rawResponse = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            }
+            catch (HttpRequestException ex) when (
+                ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+                ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
+            {
+                // §1(6)(a): Fall back when primary model fails due to resource constraints
+                _logger.LogWarning(ex, "Primary model failed for feedback generation on response {ResponseId}, falling back to {FallbackModel}",
+                    response.Id, FallbackModel);
+                await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                await Task.Delay(500);
+                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                modelToUse = FallbackModel;
+                rawResponse = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            }
 
             // §3D(9)(e): Parse mark and feedback text from model response
             var (marks, feedbackText) = ParseFeedbackResponse(rawResponse, question.MaxScore);
