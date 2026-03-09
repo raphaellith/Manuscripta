@@ -324,10 +324,14 @@ TASK:
 Generate constructive feedback for a student's response to the question given below.
 {markInstruction}
 Include a score justification explaining how well the response meets the mark scheme.
+Your mark must strictly adhere to the mark scheme provided and be supported by specific evidence from the student's response.
+If a mark scheme provides a specific mark breakdown, you must show evidence of how each mark is awarded based on the breakdown, and provide the breakdown in your feedback.
+You must be ready to award the full range of marks, including zero and the maximum score, if justified by the response.
 Include specific strengths in the response.
-Include improvement suggestions for areas that could be enhanced.
+Where the response could be improved, include suggestions for enhancement.
 Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
 Use British English throughout your response.
+Your feedback should speak directly to the student, using you statements to make it more engaging and personalised.
 
 QUESTION:
 {question.QuestionText}
