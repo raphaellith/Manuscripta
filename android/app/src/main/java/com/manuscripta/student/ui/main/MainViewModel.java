@@ -316,7 +316,7 @@ public class MainViewModel extends ViewModel {
     public void requestContentTransformation(@NonNull String taskName) {
         aiTaskName.setValue(taskName);
         aiResponse.setValue(null);
-        // TODO: Call content transformation API when backend is available
+        // This is where we would plug in a content transformation API call
     }
 
     /**

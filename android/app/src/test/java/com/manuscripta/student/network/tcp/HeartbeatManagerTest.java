@@ -404,10 +404,11 @@ public class HeartbeatManagerTest {
     // ========== Connection state handling tests ==========
 
     @Test
-    public void onConnectionStateChanged_startsOnConnected() {
+    public void onConnectionStateChanged_defersStartUntilPaired() {
         heartbeatManager.onConnectionStateChanged(ConnectionState.CONNECTED);
 
-        assertTrue(heartbeatManager.isRunning());
+        // Heartbeat no longer starts on CONNECTED; it waits for PAIRING_ACK
+        assertFalse(heartbeatManager.isRunning());
     }
 
     @Test

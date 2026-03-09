@@ -12,6 +12,14 @@ import androidx.fragment.app.Fragment;
 
 import com.manuscripta.student.databinding.FragmentReadingBinding;
 import com.manuscripta.student.domain.model.Material;
+import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.ui.renderer.MarkdownRenderer;
+import com.manuscripta.student.ui.renderer.QuestionBlockRenderer;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Fragment displaying reading material content.
@@ -21,6 +29,9 @@ public class ReadingFragment extends Fragment {
 
     /** View binding for the reading fragment layout. */
     private FragmentReadingBinding binding;
+
+    /** Renderer for markdown content with admonition support. */
+    private MarkdownRenderer markdownRenderer;
 
     /**
      * Creates a new instance of ReadingFragment.
@@ -49,11 +60,13 @@ public class ReadingFragment extends Fragment {
 
     /**
      * Displays the given material content in the fragment.
-     * Shows the title and renders body content as paragraph TextViews.
+     * Shows the title and renders body content using MarkdownRenderer.
      *
-     * @param material The material to display.
+     * @param material  The material to display.
+     * @param questions The questions associated with this material.
      */
-    public void displayMaterial(@NonNull Material material) {
+    public void displayMaterial(@NonNull Material material,
+                                @NonNull List<Question> questions) {
         if (binding == null) {
             return;
         }
@@ -62,17 +75,28 @@ public class ReadingFragment extends Fragment {
         binding.textTitle.setVisibility(View.VISIBLE);
         binding.textTitle.setText(material.getTitle());
 
-        binding.layoutContent.removeAllViews();
-        String content = material.getContent();
-        if (!content.isEmpty()) {
-            String[] paragraphs = content.split("\n\n");
-            for (String paragraph : paragraphs) {
-                String trimmed = paragraph.trim();
-                if (!trimmed.isEmpty()) {
-                    addParagraph(trimmed);
-                }
+        if (markdownRenderer == null) {
+            markdownRenderer = new MarkdownRenderer(
+                    requireContext(),
+                    new QuestionBlockRenderer(),
+                    null);
+        }
+
+        Map<String, Question> questionMap;
+        if (questions.isEmpty()) {
+            questionMap = Collections.emptyMap();
+        } else {
+            questionMap = new HashMap<>();
+            for (Question q : questions) {
+                questionMap.put(q.getId(), q);
             }
         }
+
+        markdownRenderer.render(
+                binding.layoutContent,
+                material.getContent(),
+                material.getId(),
+                questionMap);
     }
 
     /**
@@ -108,27 +132,5 @@ public class ReadingFragment extends Fragment {
             }
         }
         return sb.toString();
-    }
-
-    /**
-     * Adds a paragraph TextView to the content layout.
-     *
-     * @param text The paragraph text to add.
-     */
-    private void addParagraph(@NonNull String text) {
-        TextView tv = new TextView(requireContext());
-        tv.setText(text);
-        tv.setTextAppearance(
-                com.manuscripta.student.R.style.TextAppearance_Manuscripta_Body);
-        tv.setTextColor(
-                requireContext().getResources().getColor(
-                        com.manuscripta.student.R.color.eink_black, null));
-        tv.setLineSpacing(0, 1.4f);
-
-        int spacing = getResources().getDimensionPixelSize(
-                com.manuscripta.student.R.dimen.spacing_item);
-        tv.setPadding(0, 0, 0, spacing);
-
-        binding.layoutContent.addView(tv);
     }
 }

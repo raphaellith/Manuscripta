@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -183,7 +184,8 @@ public class RaiseHandManagerTest {
     @Test
     public void testHandAckCancelsRetry() throws Exception {
         manager.raiseHand();
-        verify(mockSocketManager, atLeast(1)).send(any(TcpMessage.class));
+        // raiseHand dispatches send on the scheduler; wait for it
+        verify(mockSocketManager, timeout(2000).atLeast(1)).send(any(TcpMessage.class));
 
         manager.onMessageReceived(new HandAckMessage("test-device-id"));
 

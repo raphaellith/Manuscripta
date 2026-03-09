@@ -150,6 +150,7 @@ public class RepositoryModule {
      * Provides the MaterialRepository implementation.
      *
      * @param materialDao        The MaterialDao instance
+     * @param questionDao        The QuestionDao instance
      * @param fileStorageManager The FileStorageManager instance
      * @param apiService         The ApiService instance
      * @param tcpSocketManager   The TcpSocketManager instance
@@ -160,13 +161,14 @@ public class RepositoryModule {
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
+                                                        QuestionDao questionDao,
                                                         FileStorageManager fileStorageManager,
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager,
                                                         AckRetrySender ackRetrySender,
                                                         SessionRepository sessionRepository) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
-                tcpSocketManager, ackRetrySender, sessionRepository);
+        return new MaterialRepositoryImpl(materialDao, questionDao, fileStorageManager,
+                apiService, tcpSocketManager, ackRetrySender, sessionRepository);
     }
 
     /**
@@ -215,6 +217,7 @@ public class RepositoryModule {
      * @param preferences      The SharedPreferences instance
      * @param apiService       The ApiService instance
      * @param tcpSocketManager The TcpSocketManager instance
+     * @param pairingManager   The PairingManager instance
      * @return ConfigRepository instance
      */
     @Provides
@@ -295,6 +298,7 @@ public class RepositoryModule {
         hm.setDeviceStatusProvider(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
+                deviceStatusRepository.initialiseDeviceStatus(deviceId);
                 return deviceStatusRepository.getDeviceStatus(deviceId);
             }
             return null;
@@ -359,10 +363,8 @@ public class RepositoryModule {
             pairingManager.resetPairingData();
         });
 
-        // Start heartbeat if already connected (avoids missing the CONNECTED event)
-        if (tcpSocketManager.isConnected()) {
-            hm.start();
-        }
+        // Heartbeat will start automatically when PAIRING_ACK is received
+        // via HeartbeatManager's TcpMessageListener
 
         return hm;
     }

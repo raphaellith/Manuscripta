@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import com.manuscripta.student.domain.model.DeviceStatus;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
 import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
 import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
 import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
@@ -153,6 +154,8 @@ public class HeartbeatManager implements TcpMessageListener {
     private final AtomicBoolean running = new AtomicBoolean(false);
     /** Whether this manager has been permanently destroyed. */
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    /** Whether pairing has completed (heartbeats deferred until true). */
+    private final AtomicBoolean paired = new AtomicBoolean(false);
     /** Counter for heartbeats sent. */
     private final AtomicLong heartbeatCount = new AtomicLong(0);
     /** Timestamp of the last heartbeat sent. */
@@ -324,6 +327,18 @@ public class HeartbeatManager implements TcpMessageListener {
         if (destroyed.get()) {
             return;
         }
+        if (message instanceof PairingAckMessage) {
+            Log.d(TAG, "Received PAIRING_ACK — marking as paired");
+            paired.set(true);
+            // Start heartbeat now that pairing handshake completed
+            synchronized (lock) {
+                if (config.isEnabled() && !running.get()
+                        && socketManager.isConnected()) {
+                    startInternal();
+                }
+            }
+            return;
+        }
         if (message instanceof DistributeMaterialMessage) {
             Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
             MaterialAvailableCallback callback = this.materialCallback;
@@ -361,13 +376,12 @@ public class HeartbeatManager implements TcpMessageListener {
     public void onConnectionStateChanged(@NonNull ConnectionState state) {
         synchronized (lock) {
             if (state == ConnectionState.CONNECTED) {
-                Log.d(TAG, "Connected - starting heartbeat");
-                if (config.isEnabled() && !running.get()) {
-                    startInternal();
-                }
+                Log.d(TAG, "Connected - deferring heartbeat until paired");
+                // Do NOT start heartbeat here; wait for PAIRING_ACK
             } else if (state == ConnectionState.DISCONNECTED) {
                 Log.d(TAG, "Disconnected - stopping heartbeat");
                 stopInternal();
+                paired.set(false);
             }
         }
     }
@@ -423,10 +437,6 @@ public class HeartbeatManager implements TcpMessageListener {
 
         try {
             String jsonPayload = buildStatusJson();
-            if (jsonPayload == null) {
-                Log.d(TAG, "No device status available, skipping heartbeat");
-                return;
-            }
             StatusUpdateMessage message = new StatusUpdateMessage(jsonPayload);
             socketManager.send(message);
 
@@ -438,6 +448,8 @@ public class HeartbeatManager implements TcpMessageListener {
             Log.e(TAG, "Failed to send heartbeat: " + e.getMessage());
         } catch (TcpProtocolException e) {
             Log.e(TAG, "Protocol error sending heartbeat: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Heartbeat misconfigured: " + e.getMessage());
         }
     }
 
@@ -447,13 +459,17 @@ public class HeartbeatManager implements TcpMessageListener {
      * @return JSON string containing device status, or null if no
      *         valid status is available from the provider.
      */
-    @Nullable
+    @NonNull
     private String buildStatusJson() {
         DeviceStatusProvider provider = this.statusProvider;
-        DeviceStatus status = provider != null ? provider.getDeviceStatus() : null;
-
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "DeviceStatusProvider is null — heartbeat started before provider was set");
+        }
+        DeviceStatus status = provider.getDeviceStatus();
         if (status == null) {
-            return null;
+            throw new IllegalStateException(
+                    "DeviceStatusProvider returned null — device status not initialised");
         }
 
         Map<String, Object> json = new LinkedHashMap<>();

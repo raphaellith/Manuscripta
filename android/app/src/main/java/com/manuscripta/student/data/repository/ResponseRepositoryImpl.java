@@ -90,7 +90,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             throw new IllegalArgumentException("Response cannot be null");
         }
         ResponseEntity entity = ResponseMapper.toEntity(response);
-        responseDao.insert(entity);
+        syncExecutor.execute(() -> responseDao.insert(entity));
     }
 
     @Override

@@ -93,20 +93,32 @@ public class ResponseRepositoryImplTest {
     // ==================== saveResponse Tests ====================
 
     @Test
-    public void testSaveResponse_validResponse_insertsEntity() {
+    public void testSaveResponse_validResponse_insertsEntity() throws InterruptedException {
         Response response = createTestResponse(false);
+        CountDownLatch latch = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            latch.countDown();
+            return null;
+        }).when(mockDao).insert(any(ResponseEntity.class));
 
         repository.saveResponse(response);
 
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
         verify(mockDao).insert(any(ResponseEntity.class));
     }
 
     @Test
-    public void testSaveResponse_alreadySynced_insertsEntity() {
+    public void testSaveResponse_alreadySynced_insertsEntity() throws InterruptedException {
         Response response = createTestResponse(true);
+        CountDownLatch latch = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            latch.countDown();
+            return null;
+        }).when(mockDao).insert(any(ResponseEntity.class));
 
         repository.saveResponse(response);
 
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
         verify(mockDao).insert(any(ResponseEntity.class));
     }
 

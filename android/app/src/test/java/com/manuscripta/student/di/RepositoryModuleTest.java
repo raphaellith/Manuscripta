@@ -17,6 +17,7 @@ import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.ConfigRepository;
@@ -57,6 +58,7 @@ public class RepositoryModuleTest {
     private DeviceStatusDao mockDeviceStatusDao;
     private FeedbackDao mockFeedbackDao;
     private MaterialDao mockMaterialDao;
+    private QuestionDao mockQuestionDao;
     private FileStorageManager mockFileStorageManager;
     private ApiService mockApiService;
     private TcpSocketManager mockTcpSocketManager;
@@ -79,6 +81,7 @@ public class RepositoryModuleTest {
         when(mockFeedbackDao.getAllLive())
                 .thenReturn(new MutableLiveData<>(java.util.Collections.emptyList()));
         mockMaterialDao = mock(MaterialDao.class);
+        mockQuestionDao = mock(QuestionDao.class);
         mockFileStorageManager = mock(FileStorageManager.class);
         mockApiService = mock(ApiService.class);
         mockTcpSocketManager = mock(TcpSocketManager.class);
@@ -160,7 +163,7 @@ public class RepositoryModuleTest {
         when(mockMaterialDao.getAll()).thenReturn(new java.util.ArrayList<>());
 
         MaterialRepository result = repositoryModule.provideMaterialRepository(
-                mockMaterialDao, mockFileStorageManager, mockApiService,
+                mockMaterialDao, mockQuestionDao, mockFileStorageManager, mockApiService,
                 mockTcpSocketManager, mockAckRetrySender, mockSessionRepository);
 
         assertNotNull(result);

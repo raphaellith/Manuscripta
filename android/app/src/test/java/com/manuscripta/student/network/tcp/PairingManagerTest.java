@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,8 +140,9 @@ public class PairingManagerTest {
 
         pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
 
+        // sendPairingRequest dispatches on a background thread; use timeout to wait
         ArgumentCaptor<TcpMessage> captor = ArgumentCaptor.forClass(TcpMessage.class);
-        verify(mockSocketManager).send(captor.capture());
+        verify(mockSocketManager, timeout(2000)).send(captor.capture());
         assertTrue(captor.getValue() instanceof PairingRequestMessage);
         assertEquals(TEST_DEVICE_ID, ((PairingRequestMessage) captor.getValue()).getDeviceId());
     }
@@ -271,6 +273,12 @@ public class PairingManagerTest {
         pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
         pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
 
+        // sendPairingRequest dispatches on a background thread; wait for failure state
+        long deadline = System.currentTimeMillis() + 2000;
+        while (pairingManager.getCurrentState() != PairingState.PAIRING_FAILED
+                && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
         assertEquals(PairingState.PAIRING_FAILED, pairingManager.getCurrentState());
     }
 

@@ -8,13 +8,17 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
+import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.domain.mapper.MaterialMapper;
+import com.manuscripta.student.domain.mapper.QuestionMapper;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.dto.QuestionDto;
 import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
@@ -56,6 +60,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     /** The DAO for material persistence. */
     private final MaterialDao materialDao;
+
+    /** The DAO for question persistence. */
+    private final QuestionDao questionDao;
 
     /** The file storage manager for attachments. */
     private final FileStorageManager fileStorageManager;
@@ -100,6 +107,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * and the DAO read operation has no side effects.</p>
      *
      * @param materialDao        The DAO for material persistence
+     * @param questionDao        The DAO for question persistence
      * @param fileStorageManager The file storage manager for attachments
      * @param apiService         The API service for network operations
      * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
@@ -109,6 +117,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      */
     @Inject
     public MaterialRepositoryImpl(@NonNull MaterialDao materialDao,
+                                  @NonNull QuestionDao questionDao,
                                   @NonNull FileStorageManager fileStorageManager,
                                   @NonNull ApiService apiService,
                                   @NonNull TcpSocketManager tcpSocketManager,
@@ -116,6 +125,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                                   @NonNull SessionRepository sessionRepository) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
+        }
+        if (questionDao == null) {
+            throw new IllegalArgumentException("QuestionDao cannot be null");
         }
         if (fileStorageManager == null) {
             throw new IllegalArgumentException("FileStorageManager cannot be null");
@@ -133,6 +145,7 @@ public class MaterialRepositoryImpl implements MaterialRepository {
             throw new IllegalArgumentException("SessionRepository cannot be null");
         }
         this.materialDao = materialDao;
+        this.questionDao = questionDao;
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
@@ -341,6 +354,24 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                 } catch (IllegalArgumentException e) {
                     Log.e(TAG, "Invalid material data: " + e.getMessage());
                 }
+            }
+
+            // Save questions from the bundle after all materials are persisted
+            // (foreign key constraint requires parent materials to exist first).
+            List<QuestionDto> questionDtos = bundle.getQuestions();
+            if (questionDtos != null && !questionDtos.isEmpty()) {
+                for (QuestionDto questionDto : questionDtos) {
+                    try {
+                        QuestionEntity questionEntity =
+                                QuestionMapper.dtoToEntity(questionDto);
+                        synchronized (lock) {
+                            questionDao.insert(questionEntity);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        Log.e(TAG, "Invalid question data: " + e.getMessage());
+                    }
+                }
+                Log.i(TAG, "Saved " + questionDtos.size() + " questions");
             }
 
             // Refresh LiveData once after all materials are saved to notify observers.

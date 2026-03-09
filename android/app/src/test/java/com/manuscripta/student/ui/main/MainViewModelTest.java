@@ -173,7 +173,7 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testSetCurrentMaterialLoadsQuestions() {
+    public void testSetCurrentMaterialLoadsQuestions() throws InterruptedException {
         Material material = createTestMaterial("mat-1", "Title");
         List<QuestionEntity> entities = Arrays.asList(
                 createQuestionEntity("q-1", "mat-1", QuestionType.MULTIPLE_CHOICE),
@@ -183,6 +183,9 @@ public class MainViewModelTest {
 
         viewModel.setCurrentMaterial(material);
 
+        // loadQuestionsForMaterial runs on a background executor; wait for it
+        Thread.sleep(200);
+
         List<Question> questions = viewModel.getCurrentQuestions().getValue();
         assertNotNull(questions);
         assertEquals(2, questions.size());
@@ -191,13 +194,16 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testLoadMaterialById() {
+    public void testLoadMaterialById() throws InterruptedException {
         Material material = createTestMaterial("mat-2", "Loaded Title");
         when(mockMaterialRepository.getMaterialById("mat-2")).thenReturn(material);
         when(mockQuestionDao.getByMaterialId("mat-2"))
                 .thenReturn(Collections.emptyList());
 
         viewModel.loadMaterial("mat-2");
+
+        // loadMaterial runs on a background executor; wait for it
+        Thread.sleep(200);
 
         Material result = viewModel.getCurrentMaterial().getValue();
         assertNotNull(result);
@@ -214,7 +220,7 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testGetQuizQuestions() {
+    public void testGetQuizQuestions() throws InterruptedException {
         Material material = createTestMaterial("mat-1", "Title");
         List<QuestionEntity> entities = Arrays.asList(
                 createQuestionEntity("q-1", "mat-1", QuestionType.MULTIPLE_CHOICE),
@@ -224,6 +230,9 @@ public class MainViewModelTest {
         when(mockQuestionDao.getByMaterialId("mat-1")).thenReturn(entities);
         viewModel.setCurrentMaterial(material);
 
+        // loadQuestionsForMaterial runs on a background executor; wait for it
+        Thread.sleep(200);
+
         List<Question> quizQuestions = viewModel.getQuizQuestions();
         assertEquals(2, quizQuestions.size());
         assertEquals("q-1", quizQuestions.get(0).getId());
@@ -231,7 +240,7 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testGetWorksheetQuestions() {
+    public void testGetWorksheetQuestions() throws InterruptedException {
         Material material = createTestMaterial("mat-1", "Title");
         List<QuestionEntity> entities = Arrays.asList(
                 createQuestionEntity("q-1", "mat-1", QuestionType.MULTIPLE_CHOICE),
@@ -240,6 +249,9 @@ public class MainViewModelTest {
         );
         when(mockQuestionDao.getByMaterialId("mat-1")).thenReturn(entities);
         viewModel.setCurrentMaterial(material);
+
+        // loadQuestionsForMaterial runs on a background executor; wait for it
+        Thread.sleep(200);
 
         List<Question> worksheetQuestions = viewModel.getWorksheetQuestions();
         assertEquals(2, worksheetQuestions.size());

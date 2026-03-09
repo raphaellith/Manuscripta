@@ -457,7 +457,11 @@ public class MainActivity extends AppCompatActivity {
     private void updateReadingFragment(@Nullable Material material) {
         ReadingFragment reading = (ReadingFragment) currentFragment;
         if (material != null) {
-            reading.displayMaterial(material);
+            java.util.List<com.manuscripta.student.domain.model.Question>
+                    questions = viewModel.getCurrentQuestions().getValue();
+            reading.displayMaterial(material,
+                    questions != null ? questions
+                            : java.util.Collections.emptyList());
         } else {
             reading.showLoading();
         }
