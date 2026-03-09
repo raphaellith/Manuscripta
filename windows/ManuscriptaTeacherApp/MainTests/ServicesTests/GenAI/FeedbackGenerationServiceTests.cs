@@ -2,6 +2,7 @@ using System;
 using Main.Models.Entities.Questions;
 using Main.Services.GenAI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -26,7 +27,8 @@ public class FeedbackGenerationServiceTests
             null!,
             new Mock<IServiceScopeFactory>().Object,
             null!,
-            null!);
+            null!,
+            Mock.Of<ILogger<FeedbackGenerationService>>());
 
         var question = new WrittenAnswerQuestionEntity(
             Guid.NewGuid(),
@@ -51,7 +53,8 @@ public class FeedbackGenerationServiceTests
             null!,
             new Mock<IServiceScopeFactory>().Object,
             null!,
-            null!);
+            null!,
+            Mock.Of<ILogger<FeedbackGenerationService>>());
 
         var question = new WrittenAnswerQuestionEntity(
             Guid.NewGuid(),
@@ -76,7 +79,8 @@ public class FeedbackGenerationServiceTests
             null!,
             new Mock<IServiceScopeFactory>().Object,
             null!,
-            null!);
+            null!,
+            Mock.Of<ILogger<FeedbackGenerationService>>());
 
         Assert.Null(service.GetCurrentlyGeneratingResponseId());
     }
