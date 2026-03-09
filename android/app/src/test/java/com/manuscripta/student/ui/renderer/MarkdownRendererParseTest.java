@@ -33,7 +33,7 @@ public class MarkdownRendererParseTest {
         QuestionBlockRenderer qbr =
                 new QuestionBlockRenderer();
         renderer = new MarkdownRenderer(
-                mockMarkwon, qbr, null);
+                mockMarkwon, qbr, null, null);
     }
 
     // ==================== extractId tests ====================

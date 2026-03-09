@@ -57,10 +57,11 @@ public class MarkdownRendererTest {
         mockImageLoader = mock(AttachmentImageLoader.class);
 
         renderer = new MarkdownRenderer(
-                mockMarkwon, questionBlockRenderer, null);
+                mockMarkwon, questionBlockRenderer,
+                null, null);
         rendererWithImageLoader = new MarkdownRenderer(
                 mockMarkwon, questionBlockRenderer,
-                mockImageLoader);
+                mockImageLoader, null);
     }
 
     // ==================== parseSegments tests ====================
@@ -527,7 +528,8 @@ public class MarkdownRendererTest {
     @Test
     public void testConstructor_withContext_createsInstance() {
         MarkdownRenderer mr = new MarkdownRenderer(
-                context, questionBlockRenderer, null);
+                context, questionBlockRenderer,
+                null, null);
         assertNotNull(mr);
     }
 
@@ -535,7 +537,7 @@ public class MarkdownRendererTest {
     public void testConstructor_withContextAndImageLoader_createsInstance() {
         MarkdownRenderer mr = new MarkdownRenderer(
                 context, questionBlockRenderer,
-                mockImageLoader);
+                mockImageLoader, null);
         assertNotNull(mr);
     }
 }

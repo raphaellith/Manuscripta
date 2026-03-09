@@ -19,16 +19,19 @@ import com.manuscripta.student.databinding.ActivityMainBinding;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.ui.feedback.FeedbackFragment;
 import com.manuscripta.student.ui.quiz.QuizFragment;
 import com.manuscripta.student.ui.quiz.QuizViewModel;
 import com.manuscripta.student.ui.reading.ReadingFragment;
+import com.manuscripta.student.ui.renderer.AttachmentImageLoader;
 import com.manuscripta.student.ui.worksheet.WorksheetFragment;
 import com.manuscripta.student.ui.worksheet.WorksheetViewModel;
 import com.manuscripta.student.network.tcp.RaiseHandManager;
 import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.PairingState;
 import com.manuscripta.student.ui.pairing.PairingActivity;
+import com.manuscripta.student.utils.FileStorageManager;
 import com.manuscripta.student.utils.TextToSpeechManager;
 
 import java.util.ArrayList;
@@ -81,6 +84,14 @@ public class MainActivity extends AppCompatActivity {
     /** Manager for the pairing lifecycle, injected by Hilt. */
     @Inject
     PairingManager pairingManager;
+
+    /** API service for network requests, injected by Hilt. */
+    @Inject
+    ApiService apiService;
+
+    /** File storage manager for attachments, injected by Hilt. */
+    @Inject
+    FileStorageManager fileStorageManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -240,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case READING:
             default:
-                fragment = ReadingFragment.newInstance();
+                fragment = createReadingFragment();
                 break;
         }
         currentFragment = fragment;
@@ -297,6 +308,22 @@ public class MainActivity extends AppCompatActivity {
                     R.string.answer_submitted, Toast.LENGTH_SHORT).show();
         });
         return worksheet;
+    }
+
+    /**
+     * Creates a ReadingFragment with attachment rendering
+     * dependencies wired up.
+     *
+     * @return A configured ReadingFragment instance.
+     */
+    @NonNull
+    private ReadingFragment createReadingFragment() {
+        ReadingFragment reading = ReadingFragment.newInstance();
+        reading.setAttachmentImageLoader(
+                new AttachmentImageLoader(
+                        apiService, fileStorageManager));
+        reading.setFileStorageManager(fileStorageManager);
+        return reading;
     }
 
     /**

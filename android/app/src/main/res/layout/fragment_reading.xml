@@ -6,18 +6,6 @@
     android:orientation="vertical"
     tools:context=".ui.reading.ReadingFragment">
 
-    <!-- Title with bottom border -->
-    <TextView
-        android:id="@+id/textTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/spacing_section"
-        android:paddingBottom="16dp"
-        android:background="@drawable/bg_heading_underline"
-        android:textColor="@color/eink_black"
-        android:textSize="@dimen/text_heading"
-        tools:text="The Battle of Hastings" />
-
     <!-- Scrollable content area -->
     <ScrollView
         android:id="@+id/scrollContent"

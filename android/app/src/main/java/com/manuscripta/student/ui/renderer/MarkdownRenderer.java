@@ -1,7 +1,11 @@
 package com.manuscripta.student.ui.renderer;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
+import android.graphics.pdf.PdfRenderer;
+import android.os.ParcelFileDescriptor;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,17 +17,24 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.utils.FileStorageManager;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.noties.markwon.Markwon;
+import io.noties.markwon.ext.latex.JLatexMathPlugin;
 import io.noties.markwon.ext.tables.TablePlugin;
 import io.noties.markwon.html.HtmlPlugin;
+import io.noties.markwon.inlineparser.MarkwonInlineParserPlugin;
 
 /**
  * Renders markdown content encoded per the Material Encoding
@@ -37,6 +48,12 @@ import io.noties.markwon.html.HtmlPlugin;
  * <p>Spec reference: Material Encoding Specification, Student MAT1.</p>
  */
 public class MarkdownRenderer {
+
+    /** Tag for logging. */
+    private static final String TAG = "MarkdownRenderer";
+
+    /** Default text size for LaTeX rendering (sp). */
+    private static final float LATEX_TEXT_SIZE = 18f;
 
     /** Pattern matching admonition marker lines. */
     private static final Pattern ADMONITION_PATTERN =
@@ -68,6 +85,14 @@ public class MarkdownRenderer {
     @Nullable
     private final AttachmentImageLoader attachmentImageLoader;
 
+    /** File storage manager for PDF attachments (may be null). */
+    @Nullable
+    private final FileStorageManager fileStorageManager;
+
+    /** Background executor for async PDF rendering. */
+    @NonNull
+    private final ExecutorService executor;
+
     /**
      * Creates a new MarkdownRenderer with the given context.
      *
@@ -76,18 +101,28 @@ public class MarkdownRenderer {
      * @param attachmentImageLoader loader for attachment images,
      *                              or null if image loading is
      *                              not required
+     * @param fileStorageManager    file storage manager for PDF
+     *                              attachments, or null if not
+     *                              required
      */
     public MarkdownRenderer(
             @NonNull Context context,
             @NonNull QuestionBlockRenderer questionBlockRenderer,
-            @Nullable AttachmentImageLoader attachmentImageLoader
+            @Nullable AttachmentImageLoader attachmentImageLoader,
+            @Nullable FileStorageManager fileStorageManager
     ) {
         this.markwon = Markwon.builder(context)
                 .usePlugin(TablePlugin.create(context))
                 .usePlugin(HtmlPlugin.create())
+                .usePlugin(MarkwonInlineParserPlugin.create())
+                .usePlugin(JLatexMathPlugin.create(
+                        LATEX_TEXT_SIZE,
+                        builder -> builder.inlinesEnabled(true)))
                 .build();
         this.questionBlockRenderer = questionBlockRenderer;
         this.attachmentImageLoader = attachmentImageLoader;
+        this.fileStorageManager = fileStorageManager;
+        this.executor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -98,15 +133,21 @@ public class MarkdownRenderer {
      * @param questionBlockRenderer renderer for embedded questions
      * @param attachmentImageLoader loader for attachment images,
      *                              or null if not required
+     * @param fileStorageManager    file storage manager for PDF
+     *                              attachments, or null if not
+     *                              required
      */
     MarkdownRenderer(
             @NonNull Markwon markwon,
             @NonNull QuestionBlockRenderer questionBlockRenderer,
-            @Nullable AttachmentImageLoader attachmentImageLoader
+            @Nullable AttachmentImageLoader attachmentImageLoader,
+            @Nullable FileStorageManager fileStorageManager
     ) {
         this.markwon = markwon;
         this.questionBlockRenderer = questionBlockRenderer;
         this.attachmentImageLoader = attachmentImageLoader;
+        this.fileStorageManager = fileStorageManager;
+        this.executor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -169,7 +210,8 @@ public class MarkdownRenderer {
                         questions);
             case PDF_EMBED:
                 return renderPdfEmbed(
-                        context, segment.getContent());
+                        context, segment.getContent(),
+                        materialId);
             case IMAGE_EMBED:
                 return renderImageEmbed(
                         context, segment.getContent(),
@@ -243,17 +285,114 @@ public class MarkdownRenderer {
     /**
      * Renders a PDF embed marker per Material Encoding §4(2).
      *
+     * <p>Loads the PDF file from local storage and renders each
+     * page as a Bitmap in an ImageView. If the file is not
+     * available, shows a placeholder.</p>
+     *
      * @param context      Android context
      * @param attachmentId the PDF attachment UUID
-     * @return a View indicating the PDF attachment
+     * @param materialId   the parent material UUID
+     * @return a View containing the rendered PDF pages
      */
     @NonNull
     private View renderPdfEmbed(
             @NonNull Context context,
-            @NonNull String attachmentId) {
-        return createPlaceholder(
-                context,
-                "PDF document: " + attachmentId);
+            @NonNull String attachmentId,
+            @NonNull String materialId) {
+        if (fileStorageManager == null) {
+            return createPlaceholder(
+                    context,
+                    "PDF document: " + attachmentId);
+        }
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+
+        TextView loading = new TextView(context);
+        loading.setText("Loading PDF\u2026");
+        loading.setTypeface(null, Typeface.ITALIC);
+        int padding = dpToPx(context, 16);
+        loading.setPadding(padding, padding, padding, padding);
+        container.addView(loading);
+
+        executor.execute(() -> {
+            File pdfFile = fileStorageManager.getAttachmentFile(
+                    materialId, attachmentId);
+            if (pdfFile == null || !pdfFile.exists()) {
+                container.post(() -> {
+                    container.removeAllViews();
+                    container.addView(createPlaceholder(
+                            context,
+                            "PDF not available: "
+                                    + attachmentId));
+                });
+                return;
+            }
+
+            List<Bitmap> pages = renderPdfPages(pdfFile);
+            container.post(() -> {
+                container.removeAllViews();
+                if (pages.isEmpty()) {
+                    container.addView(createPlaceholder(
+                            context,
+                            "Unable to render PDF"));
+                    return;
+                }
+                for (Bitmap page : pages) {
+                    ImageView iv = new ImageView(context);
+                    iv.setAdjustViewBounds(true);
+                    iv.setLayoutParams(
+                            new LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams
+                                            .MATCH_PARENT,
+                                    ViewGroup.LayoutParams
+                                            .WRAP_CONTENT));
+                    iv.setImageBitmap(page);
+                    container.addView(iv);
+                }
+            });
+        });
+
+        return container;
+    }
+
+    /**
+     * Renders all pages of a PDF file to bitmaps using
+     * Android's built-in PdfRenderer.
+     *
+     * @param pdfFile the PDF file to render
+     * @return a list of bitmaps, one per page
+     */
+    @NonNull
+    private List<Bitmap> renderPdfPages(@NonNull File pdfFile) {
+        List<Bitmap> pages = new ArrayList<>();
+        try (ParcelFileDescriptor fd =
+                     ParcelFileDescriptor.open(
+                             pdfFile,
+                             ParcelFileDescriptor
+                                     .MODE_READ_ONLY);
+             PdfRenderer renderer = new PdfRenderer(fd)) {
+
+            for (int i = 0; i < renderer.getPageCount(); i++) {
+                try (PdfRenderer.Page page =
+                             renderer.openPage(i)) {
+                    Bitmap bitmap = Bitmap.createBitmap(
+                            page.getWidth() * 2,
+                            page.getHeight() * 2,
+                            Bitmap.Config.ARGB_8888);
+                    bitmap.eraseColor(
+                            android.graphics.Color.WHITE);
+                    page.render(bitmap, null, null,
+                            PdfRenderer.Page
+                                    .RENDER_MODE_FOR_DISPLAY);
+                    pages.add(bitmap);
+                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to render PDF: "
+                    + pdfFile.getName(), e);
+        }
+        return pages;
     }
 
     /**

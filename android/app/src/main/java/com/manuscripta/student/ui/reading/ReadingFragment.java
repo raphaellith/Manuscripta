@@ -13,8 +13,10 @@ import androidx.fragment.app.Fragment;
 import com.manuscripta.student.databinding.FragmentReadingBinding;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.ui.renderer.AttachmentImageLoader;
 import com.manuscripta.student.ui.renderer.MarkdownRenderer;
 import com.manuscripta.student.ui.renderer.QuestionBlockRenderer;
+import com.manuscripta.student.utils.FileStorageManager;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +35,14 @@ public class ReadingFragment extends Fragment {
     /** Renderer for markdown content with admonition support. */
     private MarkdownRenderer markdownRenderer;
 
+    /** Loader for attachment images. */
+    @Nullable
+    private AttachmentImageLoader attachmentImageLoader;
+
+    /** File storage manager for PDF attachments. */
+    @Nullable
+    private FileStorageManager fileStorageManager;
+
     /**
      * Creates a new instance of ReadingFragment.
      *
@@ -41,6 +51,26 @@ public class ReadingFragment extends Fragment {
     @NonNull
     public static ReadingFragment newInstance() {
         return new ReadingFragment();
+    }
+
+    /**
+     * Sets the attachment image loader for rendering embedded images.
+     *
+     * @param loader the attachment image loader
+     */
+    public void setAttachmentImageLoader(
+            @NonNull AttachmentImageLoader loader) {
+        this.attachmentImageLoader = loader;
+    }
+
+    /**
+     * Sets the file storage manager for PDF rendering.
+     *
+     * @param manager the file storage manager
+     */
+    public void setFileStorageManager(
+            @NonNull FileStorageManager manager) {
+        this.fileStorageManager = manager;
     }
 
     @Nullable
@@ -60,7 +90,7 @@ public class ReadingFragment extends Fragment {
 
     /**
      * Displays the given material content in the fragment.
-     * Shows the title and renders body content using MarkdownRenderer.
+     * Renders body content using MarkdownRenderer.
      *
      * @param material  The material to display.
      * @param questions The questions associated with this material.
@@ -72,14 +102,13 @@ public class ReadingFragment extends Fragment {
         }
         binding.textLoading.setVisibility(View.GONE);
         binding.scrollContent.setVisibility(View.VISIBLE);
-        binding.textTitle.setVisibility(View.VISIBLE);
-        binding.textTitle.setText(material.getTitle());
 
         if (markdownRenderer == null) {
             markdownRenderer = new MarkdownRenderer(
                     requireContext(),
                     new QuestionBlockRenderer(),
-                    null);
+                    attachmentImageLoader,
+                    fileStorageManager);
         }
 
         Map<String, Question> questionMap;
@@ -108,7 +137,6 @@ public class ReadingFragment extends Fragment {
         }
         binding.textLoading.setVisibility(View.VISIBLE);
         binding.scrollContent.setVisibility(View.GONE);
-        binding.textTitle.setVisibility(View.GONE);
     }
 
     /**
@@ -122,7 +150,6 @@ public class ReadingFragment extends Fragment {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(binding.textTitle.getText());
         int childCount = binding.layoutContent.getChildCount();
         for (int i = 0; i < childCount; i++) {
             View child = binding.layoutContent.getChildAt(i);
