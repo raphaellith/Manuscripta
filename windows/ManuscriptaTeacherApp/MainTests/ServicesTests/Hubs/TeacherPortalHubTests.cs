@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Moq;
@@ -2233,6 +2234,274 @@ public class TeacherPortalHubTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task ModifyContent_PrecheckFails_NotifiesRuntimeDependencyNotInstalled()
+    {
+        // Arrange: arrange a registry where 'ollama' is reported unavailable
+        var mockManager = new Mock<RuntimeDependencyManagerBase>();
+        mockManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(false);
+
+        _mockRuntimeDependencyRegistry
+            .Setup(r => r.GetManager(It.IsAny<string>()))
+            .Returns((string id) =>
+            {
+                if (id == "ollama")
+                    return mockManager.Object;
+
+                var availableMgr = new Mock<RuntimeDependencyManagerBase>();
+                availableMgr.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+                return availableMgr.Object;
+            });
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            _mockPdfExportSettingsRepository.Object,
+            _materialGenerationService,
+            _contentModificationService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
+
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null));
+
+        mockClientProxy.Verify(
+            p => p.SendCoreAsync(
+                "RuntimeDependencyNotInstalled",
+                It.Is<object[]>(args =>
+                    args.Length == 1 &&
+                    args[0] != null &&
+                    args[0].GetType() == typeof(List<string>) &&
+                    ((List<string>)args[0]).Contains("ollama")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ModifyContent_Success_SendsGenerationStartedAndProgressAndCleansUp()
+    {
+        // Arrange: a content modification service that streams two chunks then returns a result
+        var chunks = new[]
+        {
+            new StreamingGenerationChunk("Hello", false, false),
+            new StreamingGenerationChunk(" world", false, true),
+        };
+        var streamingService = new ChunkingContentModificationService(chunks, new GenerationResult { Content = "Hello world" });
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            _mockPdfExportSettingsRepository.Object,
+            _materialGenerationService,
+            streamingService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
+
+        var sentMessages = new List<(string Method, object[] Args)>();
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object[], CancellationToken>((method, args, _) => sentMessages.Add((method, args)))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
+
+        // Set up all runtime dependencies as available
+        var availableManager = new Mock<RuntimeDependencyManagerBase>();
+        availableManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(availableManager.Object);
+
+        // Act
+        var result = await hub.ModifyContent("selected text", "make it simpler", null);
+
+        // Assert: result content
+        Assert.Equal("Hello world", result.Content);
+
+        // Assert: OnGenerationStarted was sent with a non-empty GUID
+        var startedMsgs = sentMessages.Where(m => m.Method == "OnGenerationStarted").ToList();
+        Assert.Single(startedMsgs);
+        Assert.True(Guid.TryParse((string)startedMsgs[0].Args[0], out _));
+
+        // Assert: OnGenerationProgress was forwarded for each chunk
+        var progressMsgs = sentMessages.Where(m => m.Method == "OnGenerationProgress").ToList();
+        Assert.Equal(2, progressMsgs.Count);
+        Assert.Equal("Hello", progressMsgs[0].Args[0]);
+        Assert.Equal(false, progressMsgs[0].Args[1]);  // isThinking
+        Assert.Equal(false, progressMsgs[0].Args[2]);  // done
+        Assert.Equal(" world", progressMsgs[1].Args[0]);
+        Assert.Equal(true, progressMsgs[1].Args[2]);   // done=true on last chunk
+
+        // Assert: _activeGenerations was cleaned up after completion
+        var activeGenerations = GetActiveGenerations();
+        Assert.False(activeGenerations.ContainsKey(Guid.Parse((string)startedMsgs[0].Args[0])));
+    }
+
+    [Fact]
+    public async Task ModifyContent_Cancelled_SendsGenerationCancelledAndCleansUp()
+    {
+        // Arrange: a content modification service that throws OperationCanceledException on the token
+        var cancellingService = new CancellingContentModificationService();
+
+        var hub = new TeacherPortalHub(
+            _mockUnitCollectionService.Object,
+            _mockUnitService.Object,
+            _mockLessonService.Object,
+            _mockMaterialService.Object,
+            _mockQuestionService.Object,
+            _mockSourceDocumentService.Object,
+            _mockAttachmentService.Object,
+            _mockUnitCollectionRepository.Object,
+            _mockUnitRepository.Object,
+            _mockLessonRepository.Object,
+            _mockMaterialRepository.Object,
+            _mockQuestionRepository.Object,
+            _mockSourceDocumentRepository.Object,
+            _mockAttachmentRepository.Object,
+            _mockUdpBroadcastService.Object,
+            _mockTcpPairingService.Object,
+            _mockDeviceRegistryService.Object,
+            _mockDeviceStatusCacheService.Object,
+            _mockDistributionService.Object,
+            _mockFeedbackRepository.Object,
+            _mockResponseRepository.Object,
+            _mockLogger.Object,
+            _mockMaterialPdfService.Object,
+            _mockRmapiService.Object,
+            _mockExternalDeviceRepository.Object,
+            _mockEmailCredentialRepository.Object,
+            _mockExternalDeviceDeploymentService.Object,
+            _mockEmailService.Object,
+            _mockRuntimeDependencyRegistry.Object,
+            _mockConfigurationService.Object,
+            _mockPdfExportSettingsRepository.Object,
+            _materialGenerationService,
+            cancellingService,
+            _embeddingStatusService,
+            _feedbackQueueService,
+            _mockEmbeddingService.Object,
+            _mockOllamaClientService.Object,
+            _questionExtractionService);
+
+        var sentMessages = new List<(string Method, object[] Args)>();
+        var mockClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object[], CancellationToken>((method, args, _) => sentMessages.Add((method, args)))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubCallerClients>();
+        mockClients.Setup(c => c.Caller).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        var mockContext = new Mock<HubCallerContext>();
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        hub.Context = mockContext.Object;
+
+        // Set up all runtime dependencies as available
+        var availableManager = new Mock<RuntimeDependencyManagerBase>();
+        availableManager.Setup(m => m.CheckDependencyAvailabilityAsync()).ReturnsAsync(true);
+        _mockRuntimeDependencyRegistry.Setup(r => r.GetManager(It.IsAny<string>())).Returns(availableManager.Object);
+
+        // Act & Assert: should throw HubException (cancellation)
+        var ex = await Assert.ThrowsAsync<HubException>(() => hub.ModifyContent("selected text", "make it simpler", null));
+        Assert.Contains("cancelled", ex.Message, StringComparison.OrdinalIgnoreCase);
+
+        // Assert: OnGenerationStarted was sent
+        var startedMsgs = sentMessages.Where(m => m.Method == "OnGenerationStarted").ToList();
+        Assert.Single(startedMsgs);
+        var generationId = (string)startedMsgs[0].Args[0];
+
+        // Assert: OnGenerationCancelled was sent with the matching ID
+        var cancelledMsgs = sentMessages.Where(m => m.Method == "OnGenerationCancelled").ToList();
+        Assert.Single(cancelledMsgs);
+        Assert.Equal(generationId, (string)cancelledMsgs[0].Args[0]);
+
+        // Assert: _activeGenerations was cleaned up
+        var activeGenerations = GetActiveGenerations();
+        Assert.False(activeGenerations.ContainsKey(Guid.Parse(generationId)));
+    }
+
     #endregion
 
     #region Generic Runtime Dependency Tests
@@ -2953,6 +3222,59 @@ public class TeacherPortalHubTests
     {
         public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
         {
+            return Task.FromResult(new GenerationResult { Content = string.Empty });
+        }
+    }
+
+    /// <summary>
+    /// Content modification service that invokes the onChunk callback for each provided chunk,
+    /// then returns the specified result. Used to verify streaming behaviour in hub tests.
+    /// </summary>
+    private sealed class ChunkingContentModificationService : IContentModificationService
+    {
+        private readonly StreamingGenerationChunk[] _chunks;
+        private readonly GenerationResult _result;
+
+        public ChunkingContentModificationService(StreamingGenerationChunk[] chunks, GenerationResult result)
+        {
+            _chunks = chunks;
+            _result = result;
+        }
+
+        public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
+        {
+            if (onChunk != null)
+            {
+                foreach (var chunk in _chunks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await onChunk(chunk);
+                }
+            }
+            return _result;
+        }
+    }
+
+    /// <summary>
+    /// Content modification service that cancels via the provided cancellation token,
+    /// simulating user-initiated cancellation during streaming.
+    /// </summary>
+    private sealed class CancellingContentModificationService : IContentModificationService
+    {
+        public Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, Func<StreamingGenerationChunk, Task>? onChunk = null, CancellationToken cancellationToken = default)
+        {
+            // Cancel the hub's internal CTS by locating its entry in _activeGenerations via the shared token.
+            // This exercises the hub's OperationCanceledException when (cts.Token.IsCancellationRequested) path.
+            foreach (var entry in GetActiveGenerations().Values)
+            {
+                if (entry.Cts.Token == cancellationToken)
+                {
+                    entry.Cts.Cancel();
+                    break;
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(new GenerationResult { Content = string.Empty });
         }
     }
