@@ -941,6 +941,7 @@ class SignalRService {
      */
     public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
         return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
+    }
     
     // ==========================================
     // PDF Export Settings - NetworkingAPISpec §1(1)(q)
