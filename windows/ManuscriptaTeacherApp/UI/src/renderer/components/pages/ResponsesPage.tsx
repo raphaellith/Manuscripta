@@ -97,6 +97,19 @@ const FeedbackInput: React.FC<{
     const debouncedText = useDebounce(text, 1000);
     const lastSavedRef = useRef({ marks: feedback?.marks?.toString() ?? '', text: feedback?.text ?? '' });
 
+    // Refs for values used in the auto-save effect that should NOT trigger
+    // the effect when they change. Only genuine user edits (debounced value
+    // changes) should trigger a save. Without refs, changing feedback?.id or
+    // onSave would fire the effect with stale debounced values, causing a
+    // spurious deletion of just-arrived AI feedback (bothEmpty=true because
+    // debouncedMarks is still '' from before the sync effect updated marks).
+    const feedbackIdRef = useRef(feedback?.id);
+    feedbackIdRef.current = feedback?.id;
+    const onSaveRef = useRef(onSave);
+    onSaveRef.current = onSave;
+    const responseIdRef = useRef(responseId);
+    responseIdRef.current = responseId;
+
     // Sync local state when feedback data arrives or changes (e.g., after AI generation).
     // Keyed on feedback?.id so user edits on the same feedback are not overwritten.
     useEffect(() => {
@@ -107,7 +120,11 @@ const FeedbackInput: React.FC<{
         lastSavedRef.current = { marks: newMarks, text: newText };
     }, [feedback?.id]);
 
-    // Auto-save on debounced change per §6(5)(d)(iv) / §6(6)(e)(iv)
+    // Auto-save on debounced change per §6(5)(d)(iv) / §6(6)(e)(iv).
+    // Dependencies intentionally limited to debouncedMarks/debouncedText so
+    // the effect fires only on genuine user edits. Other values (responseId,
+    // feedback?.id, onSave) are accessed via refs to avoid the stale-debounce
+    // deletion bug described above.
     useEffect(() => {
         const currentMarks = debouncedMarks;
         const currentText = debouncedText;
@@ -115,9 +132,9 @@ const FeedbackInput: React.FC<{
         if (currentMarks !== lastSavedRef.current.marks || currentText !== lastSavedRef.current.text) {
             lastSavedRef.current = { marks: currentMarks, text: currentText };
             const marksNum = currentMarks === '' ? null : parseInt(currentMarks, 10);
-            onSave(responseId, isNaN(marksNum!) ? null : marksNum, currentText || null, feedback?.id);
+            onSaveRef.current(responseIdRef.current, isNaN(marksNum!) ? null : marksNum, currentText || null, feedbackIdRef.current);
         }
-    }, [debouncedMarks, debouncedText, responseId, feedback?.id, onSave]);
+    }, [debouncedMarks, debouncedText]);
 
     // Per §6A(1)(a): Show pending/generating indicator when queued or being generated
     if (isQueued || isGenerating) {
@@ -294,8 +311,15 @@ export const ResponsesPage: React.FC = () => {
     const [selectedUnitId, setSelectedUnitId] = useState<string>('');
     const [selectedLessonId, setSelectedLessonId] = useState<string>('');
 
+    // Guards against concurrent loadData() calls: a later-initiated but
+    // earlier-resolved fetch must not overwrite state set by the most
+    // recent call. Each call captures the counter value at invocation
+    // time and discards its result if a newer call has been initiated.
+    const loadCounterRef = useRef(0);
+
     // Load data
     const loadData = useCallback(async () => {
+        const thisLoad = ++loadCounterRef.current;
         try {
             const [responsesData, feedbacksData, devicesData, queueStatusData, currentGenId] = await Promise.all([
                 signalRService.getAllResponses(),
@@ -304,6 +328,9 @@ export const ResponsesPage: React.FC = () => {
                 signalRService.getFeedbackQueueStatus(),
                 signalRService.getCurrentlyGeneratingResponseId()
             ]);
+            // Discard stale results: a newer loadData() was initiated while
+            // this one was in-flight, so its data is more recent.
+            if (thisLoad !== loadCounterRef.current) return;
             setResponses(responsesData);
             setFeedbacks(feedbacksData);
             setDevices(devicesData);
@@ -311,10 +338,13 @@ export const ResponsesPage: React.FC = () => {
             setQueuedResponseIds(new Set(queueStatusData));
             setGeneratingResponseId(currentGenId);
         } catch (error) {
+            if (thisLoad !== loadCounterRef.current) return;
             console.error('Failed to load responses data:', error);
             addAlert('control_failed', undefined, 'Failed to load responses');
         } finally {
-            setIsLoading(false);
+            if (thisLoad === loadCounterRef.current) {
+                setIsLoading(false);
+            }
         }
     }, [addAlert]);
 

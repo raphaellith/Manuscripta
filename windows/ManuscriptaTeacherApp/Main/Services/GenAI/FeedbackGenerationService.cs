@@ -62,6 +62,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     {
         _cancellationTokenSource = new CancellationTokenSource();
         _processingTask = Task.Run(() => ProcessQueueAsync(_cancellationTokenSource.Token), cancellationToken);
+        _logger.LogInformation("Feedback generation queue processor started");
         return Task.CompletedTask;
     }
 
@@ -123,6 +124,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                     continue;
                 }
 
+                _logger.LogInformation("Dequeued response {ResponseId} for feedback generation", responseId.Value);
+
                 // Ensure only one generation happens at a time (§3D(4))
                 await _processingSemaphore.WaitAsync(cancellationToken);
                 try
@@ -156,6 +159,16 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         // "generating" for the entire duration, not in a limbo state between
         // dequeue and the actual Ollama call.
         _currentlyGeneratingResponseId = responseId.ToString();
+
+        // Track result for post-finally notification.
+        // Notifications are sent AFTER clearing _currentlyGeneratingResponseId
+        // to prevent a race condition: the frontend's loadData() calls
+        // GetCurrentlyGeneratingResponseId() and can read the stale value
+        // if the finally block hasn't executed yet, causing the UI to
+        // permanently show "generating" even though processing completed.
+        Guid? savedFeedbackId = null;
+        string? failureMessage = null;
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -165,10 +178,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             var response = await _responseRepository.GetByIdAsync(responseId);
             if (response == null)
             {
-                // §3D(7)(b): Notify frontend — response was dequeued but cannot be found.
                 _logger.LogWarning("Feedback generation: response {ResponseId} not found", responseId);
-                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
-                    $"Response {responseId} not found");
+                failureMessage = $"Response {responseId} not found";
                 return;
             }
 
@@ -176,11 +187,9 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             var question = await questionRepository.GetByIdAsync(response.QuestionId);
             if (question == null)
             {
-                // §3D(7)(b): Notify frontend — question no longer exists.
                 _logger.LogWarning("Feedback generation: question {QuestionId} not found for response {ResponseId}",
                     response.QuestionId, responseId);
-                await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
-                    $"Question {response.QuestionId} not found");
+                failureMessage = $"Question {response.QuestionId} not found";
                 return;
             }
 
@@ -196,27 +205,44 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 else
                 {
                     // Preserve READY/DELIVERED feedback — do not overwrite finalized assessments
+                    _logger.LogInformation(
+                        "Skipping generation for response {ResponseId}: feedback already in {Status} state",
+                        responseId, existingFeedback.Status);
                     return;
                 }
             }
 
             // Generate feedback
+            _logger.LogInformation("Starting Ollama feedback generation for response {ResponseId}", responseId);
             var feedback = await GenerateFeedbackAsync(question, response);
+            _logger.LogInformation("Ollama feedback generation completed for response {ResponseId}", responseId);
 
             // Save feedback
             await _feedbackRepository.AddAsync(feedback);
-
-            // Notify frontend of successful generation
-            // Per NetworkingAPISpec §2(1)(c)(iii).
-            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
+            savedFeedbackId = feedback.Id;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate feedback for response {ResponseId}", responseId);
+            failureMessage = ex.InnerException?.Message ?? ex.Message;
         }
         finally
         {
             _currentlyGeneratingResponseId = null;
+        }
+
+        // Notify AFTER clearing _currentlyGeneratingResponseId so the
+        // frontend's loadData() → GetCurrentlyGeneratingResponseId() reads null.
+        if (savedFeedbackId.HasValue)
+        {
+            // Per NetworkingAPISpec §2(1)(c)(iii).
+            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", savedFeedbackId.Value, responseId, cancellationToken);
+        }
+        else if (failureMessage != null)
+        {
+            // §3D(7)(b): Notify frontend so the UI can show the error and offer retry.
+            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
+                failureMessage, cancellationToken);
         }
     }
 
@@ -273,11 +299,6 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         }
         catch (Exception ex)
         {
-            // §3D(7): Remove from queue on failure
-            _queueService.RemoveFromQueue(response.Id);
-            
-            // §3D(7)(b): Notify frontend via SignalR OnFeedbackGenerationFailed
-            _ = _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", response.Id, ex.Message);
             throw new InvalidOperationException($"Failed to generate feedback for response {response.Id}", ex);
         }
     }
