@@ -79,6 +79,7 @@ const FeedbackInput: React.FC<{
     generationFailed?: boolean;
     generationError?: string;
     isEligibleForAi?: boolean;
+    isManualMode?: boolean;
     onSave: (responseId: string, marks: number | null, text: string | null, existingId?: string) => void;
     onApprove: (feedbackId: string) => void;
     onRetry: (feedbackId: string) => void;
@@ -86,7 +87,7 @@ const FeedbackInput: React.FC<{
     onPrioritise: (responseId: string) => void;
     onRequeue: (responseId: string) => void;
     onRetryGeneration: (responseId: string) => void;
-}> = ({ responseId, feedback, maxScore, hasFailed, isQueued, isGenerating, generationFailed, generationError, isEligibleForAi, onSave, onApprove, onRetry, onWriteManually, onPrioritise, onRequeue, onRetryGeneration }) => {
+}> = ({ responseId, feedback, maxScore, hasFailed, isQueued, isGenerating, generationFailed, generationError, isEligibleForAi, isManualMode, onSave, onApprove, onRetry, onWriteManually, onPrioritise, onRequeue, onRetryGeneration }) => {
     const [marks, setMarks] = useState<string>(feedback?.marks?.toString() ?? '');
     const [text, setText] = useState<string>(feedback?.text ?? '');
 
@@ -174,7 +175,7 @@ const FeedbackInput: React.FC<{
     // Also handles the "limbo" state: no feedback, not queued/generating,
     // but eligible for AI — indicates a previous generation failure whose
     // client-side state was lost (e.g. after frontend restart).
-    if (!feedback && (generationFailed || (isEligibleForAi && !isQueued && !isGenerating))) {
+    if (!feedback && !isManualMode && (generationFailed || (isEligibleForAi && !isQueued && !isGenerating))) {
         return (
             <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200 space-y-3">
                 <div className="flex items-center gap-2">
@@ -296,6 +297,8 @@ export const ResponsesPage: React.FC = () => {
     const [generatingResponseId, setGeneratingResponseId] = useState<string | null>(null);
     // Track responses whose generation failed per §6A(3) — maps response ID to error message
     const [generationFailedIds, setGenerationFailedIds] = useState<Map<string, string>>(new Map());
+    // Track responses explicitly switched to manual feedback mode by the teacher.
+    const [manualModeResponseIds, setManualModeResponseIds] = useState<Set<string>>(new Set());
     // Confirmation dialog for re-queue per §6A(1A)
     const [requeueConfirm, setRequeueConfirm] = useState<{ isOpen: boolean; responseId: string }>({ isOpen: false, responseId: '' });
 
@@ -354,6 +357,23 @@ export const ResponsesPage: React.FC = () => {
         }
     }, [addAlert]);
 
+    // Keep queue/generation state fresh while the page is open.
+    // Without this periodic sync, the UI can miss the transition from
+    // "queued" to "generating" between loadData calls, which means
+    // Write Manually may remain enabled during active generation.
+    const syncGenerationState = useCallback(async () => {
+        try {
+            const [queueStatusData, currentGenId] = await Promise.all([
+                signalRService.getFeedbackQueueStatus(),
+                signalRService.getCurrentlyGeneratingResponseId()
+            ]);
+            setQueuedResponseIds(new Set(queueStatusData));
+            setGeneratingResponseId(currentGenId);
+        } catch (error) {
+            console.error('Failed to sync generation state:', error);
+        }
+    }, []);
+
     // Initial load and RefreshResponses handler per §6(3)(b)
     useEffect(() => {
         loadData();
@@ -372,6 +392,7 @@ export const ResponsesPage: React.FC = () => {
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             setGeneratingResponseId(prev => prev === responseId ? null : prev);
             setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             loadData();
         });
         // Per §6A(3): Track generation failures
@@ -387,6 +408,16 @@ export const ResponsesPage: React.FC = () => {
             unsubGenerationFailed();
         };
     }, [loadData, addAlert]);
+
+    // Poll queue/generation status so controls follow backend processing
+    // state transitions in near-real-time (e.g., queued -> generating).
+    useEffect(() => {
+        const interval = setInterval(() => {
+            void syncGenerationState();
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [syncGenerationState]);
 
     // Derived data - materials with responses per §6(4)(a)
     const materialsWithResponses = useMemo(() => {
@@ -517,6 +548,7 @@ export const ResponsesPage: React.FC = () => {
             setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             setGeneratingResponseId(prev => prev === responseId ? null : prev);
             setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => new Set(prev).add(responseId));
         } catch (error) {
             console.error('Failed to dequeue response:', error);
             addAlert('control_failed', undefined, 'Failed to remove from generation queue');
@@ -526,6 +558,7 @@ export const ResponsesPage: React.FC = () => {
     // Per §6A(1)(c): Prioritise — move a queued response to the front
     const handlePrioritise = useCallback(async (responseId: string) => {
         try {
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             await signalRService.prioritiseFeedbackGeneration(responseId);
         } catch (error) {
             console.error('Failed to prioritise feedback generation:', error);
@@ -542,6 +575,7 @@ export const ResponsesPage: React.FC = () => {
         const responseId = requeueConfirm.responseId;
         setRequeueConfirm({ isOpen: false, responseId: '' });
         try {
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             await signalRService.queueForAiGeneration(responseId);
             setQueuedResponseIds(prev => new Set(prev).add(responseId));
         } catch (error) {
@@ -554,6 +588,7 @@ export const ResponsesPage: React.FC = () => {
     const handleRetryGeneration = useCallback(async (responseId: string) => {
         try {
             setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
             await signalRService.queueForAiGeneration(responseId);
             setQueuedResponseIds(prev => new Set(prev).add(responseId));
         } catch (error) {
@@ -848,6 +883,7 @@ export const ResponsesPage: React.FC = () => {
                                                             generationFailed={generationFailedIds.has(response.id)}
                                                             generationError={generationFailedIds.get(response.id)}
                                                             isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
+                                                            isManualMode={manualModeResponseIds.has(response.id)}
                                                             onSave={handleSaveFeedback}
                                                             onApprove={handleApproveFeedback}
                                                             onRetry={handleRetryFeedback}
@@ -1040,6 +1076,7 @@ export const ResponsesPage: React.FC = () => {
                                                 generationFailed={generationFailedIds.has(response.id)}
                                                 generationError={generationFailedIds.get(response.id)}
                                                 isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
+                                                isManualMode={manualModeResponseIds.has(response.id)}
                                                 onSave={handleSaveFeedback}
                                                 onApprove={handleApproveFeedback}
                                                 onRetry={handleRetryFeedback}
