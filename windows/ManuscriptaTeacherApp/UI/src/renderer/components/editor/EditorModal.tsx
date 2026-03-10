@@ -24,7 +24,6 @@ import type { MaterialEntity, QuestionEntity, InternalCreateAttachmentDto, PdfEx
 import { useAppContext } from '../../state/AppContext';
 import signalRService from '../../services/signalr/SignalRService';
 import { StreamingGenerationView } from './StreamingGenerationView';
-// eslint-disable-next-line import/no-unresolved
 import { BubbleMenu } from '@tiptap/react/menus';
 import 'katex/dist/katex.min.css';
 
@@ -183,8 +182,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
 
     // AI Assistant state
     const [isAiGenerating, setIsAiGenerating] = useState(false);
-    const [aiSelectedContent, setAiSelectedContent] = useState('');
-    const [aiOriginalContent, setAiOriginalContent] = useState('');
     const [aiGenerationId, setAiGenerationId] = useState<string | null>(null);
     const [aiInstructionRaw, setAiInstructionRaw] = useState('');
     const [showAiInput, setShowAiInput] = useState(false);
@@ -444,10 +441,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         // even if the user focus changes during generation (§4C(2)(a)(iii))
         const { from, to } = editor.state.selection;
 
-        // Store the originally selected content in case of cancellation
         const originalText = editor.state.doc.textBetween(from, to, '\n\n');
-        setAiOriginalContent(originalText);
-        setAiSelectedContent(originalText);
 
         // Per §4B(2)(a2) / §4C(2)(a)(iv): Disable editing during AI generation
         editor.setEditable(false);
@@ -575,23 +569,26 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     };
 
     const handleCancelModification = async () => {
-        if (aiGenerationId) {
-            try {
-                await signalRService.cancelGeneration(aiGenerationId);
-                // Unsubscribe streaming handlers
-                if (aiCancelRef.current) {
-                    aiCancelRef.current();
-                    aiCancelRef.current = null;
-                }
-                setIsAiGenerating(false);
-                setAiGenerationId(null);
-                aiGenerationIdRef.current = null;
-                setAiContentTokens('');
-                setAiThinkingTokens('');
-                editor?.setEditable(true);
-            } catch (err) {
-                console.error('Failed to cancel generation:', err);
+        const idToCancel = aiGenerationIdRef.current ?? aiGenerationId;
+        if (!idToCancel) {
+            return;
+        }
+
+        try {
+            await signalRService.cancelGeneration(idToCancel);
+            // Unsubscribe streaming handlers
+            if (aiCancelRef.current) {
+                aiCancelRef.current();
+                aiCancelRef.current = null;
             }
+            setIsAiGenerating(false);
+            setAiGenerationId(null);
+            aiGenerationIdRef.current = null;
+            setAiContentTokens('');
+            setAiThinkingTokens('');
+            editor?.setEditable(true);
+        } catch (err) {
+            console.error('Failed to cancel generation:', err);
         }
     };
 
@@ -771,6 +768,20 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     // Load PDF export defaults for "Default (…)" labels per §4C(2)(b1)
     useEffect(() => {
         signalRService.getPdfExportSettings().then(setPdfDefaults).catch(console.error);
+    }, []);
+
+    // Cleanup AI streaming subscriptions on unmount to prevent setState on an unmounted component
+    useEffect(() => {
+        return () => {
+            if (aiCancelRef.current) {
+                aiCancelRef.current();
+                aiCancelRef.current = null;
+            }
+            if (aiGenerationIdRef.current) {
+                signalRService.cancelGeneration(aiGenerationIdRef.current).catch(() => {});
+                aiGenerationIdRef.current = null;
+            }
+        };
     }, []);
 
     // Resolve attachment image paths to data URLs for WYSIWYG display
