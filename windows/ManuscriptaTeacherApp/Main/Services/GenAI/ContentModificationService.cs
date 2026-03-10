@@ -16,7 +16,8 @@ public class ContentModificationService : IContentModificationService
     private readonly OutputValidationService _validationService;
     private readonly ILogger<ContentModificationService> _logger;
     private const int DefaultTopK = 5;
-    private const string QuickEditModel = "granite4";
+    private const string PrimaryModel = "qwen3:8b";
+    private const string FallbackModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
@@ -51,11 +52,11 @@ public class ContentModificationService : IContentModificationService
             selectedContent?.Length ?? 0,
             instruction?.Length ?? 0);
 
-        var modelToUse = QuickEditModel;
-        const bool useFallback = false;
+        var modelToUse = PrimaryModel;
+        bool useFallback = false;
 
         // Start model readiness check in parallel with optional RAG preparation.
-        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(QuickEditModel);
+        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -112,7 +113,42 @@ public class ContentModificationService : IContentModificationService
             promptContainsInjectedContext);
 
         string modifiedContent;
-        modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
+        try
+        {
+            modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (
+            ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+            (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
+        {
+            // §1(6)(a): Fall back when primary model fails due to resource constraints.
+            if (!useFallback)
+            {
+                modelToUse = FallbackModel;
+                useFallback = true;
+                try
+                {
+                    await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                    await Task.Delay(500);
+                    await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                    modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
+                }
+                catch (Exception fallbackEx)
+                {
+                    throw new InvalidOperationException(
+                        $"Both primary (qwen3:8b) and fallback (granite4) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
+                        fallbackEx);
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
+                    ex);
+            }
+        }
 
         // §3C(2)(d): Validate and refine
         var result = await _validationService.ValidateAndRefineAsync(modifiedContent, modelToUse, useFallback);

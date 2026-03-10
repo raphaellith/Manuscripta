@@ -13,12 +13,15 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The following models shall be used, with task-specific assignments:
 
-| Purpose | Model | Ollama Name | Rationale |
-|---------|-------|-------------|----------|
-| Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
-| Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
-| Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
+| Purpose | Model | Ollama Name | Role | Rationale |
+|---------|-------|-------------|------|----------|
+| Material generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Content modification | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Feedback generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for mark-scheme evaluation |
+| All generative tasks (fallback) | IBM Granite 4.0 | `granite4` | Fallback | Smaller resource footprint when primary model is unavailable |
+| Embeddings | Nomic Embed Text | `nomic-embed-text` | — | Optimised for retrieval |
+
+[Explanatory Note: Qwen3 8B replaces IBM Granite 4.0 as the primary model for content modification and feedback generation. Granite 4.0 was observed to produce unreliable output when evaluating mark-by-mark mark schemes for written-answer feedback. To maintain consistency and quality across all generative tasks, Qwen3 8B is now the universal primary model, with Granite 4.0 retained solely as a resource-constraint fallback.]
 
 (3) [Deleted.]
 
@@ -26,7 +29,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation fails during generation due to resource constraints —
+(6) If the primary model (`qwen3:8b`) fails during any generative task (material generation, content modification, or feedback generation) due to resource constraints —
 
     (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
@@ -368,7 +371,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
 
-    (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
 
@@ -633,10 +636,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
-| `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
-| `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
-| `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
-| `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
+| `PRIMARY_MODEL` | `qwen3:8b` | Primary model for all generative tasks |
+| `FALLBACK_MODEL` | `granite4` | Fallback model if primary unavailable |
 
 ---
 
