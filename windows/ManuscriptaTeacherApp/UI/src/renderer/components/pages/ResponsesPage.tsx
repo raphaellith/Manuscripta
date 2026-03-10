@@ -74,10 +74,20 @@ const FeedbackInput: React.FC<{
     feedback: FeedbackEntity | undefined;
     maxScore?: number;
     hasFailed?: boolean;
+    isQueued?: boolean;
+    isGenerating?: boolean;
+    generationFailed?: boolean;
+    generationError?: string;
+    isEligibleForAi?: boolean;
+    isManualMode?: boolean;
     onSave: (responseId: string, marks: number | null, text: string | null, existingId?: string) => void;
     onApprove: (feedbackId: string) => void;
     onRetry: (feedbackId: string) => void;
-}> = ({ responseId, feedback, maxScore, hasFailed, onSave, onApprove, onRetry }) => {
+    onWriteManually: (responseId: string) => void;
+    onPrioritise: (responseId: string) => void;
+    onRequeue: (responseId: string) => void;
+    onRetryGeneration: (responseId: string) => void;
+}> = ({ responseId, feedback, maxScore, hasFailed, isQueued, isGenerating, generationFailed, generationError, isEligibleForAi, isManualMode, onSave, onApprove, onRetry, onWriteManually, onPrioritise, onRequeue, onRetryGeneration }) => {
     const [marks, setMarks] = useState<string>(feedback?.marks?.toString() ?? '');
     const [text, setText] = useState<string>(feedback?.text ?? '');
 
@@ -88,7 +98,34 @@ const FeedbackInput: React.FC<{
     const debouncedText = useDebounce(text, 1000);
     const lastSavedRef = useRef({ marks: feedback?.marks?.toString() ?? '', text: feedback?.text ?? '' });
 
-    // Auto-save on debounced change per §6(5)(d)(iv) / §6(6)(e)(iv)
+    // Refs for values used in the auto-save effect that should NOT trigger
+    // the effect when they change. Only genuine user edits (debounced value
+    // changes) should trigger a save. Without refs, changing feedback?.id or
+    // onSave would fire the effect with stale debounced values, causing a
+    // spurious deletion of just-arrived AI feedback (bothEmpty=true because
+    // debouncedMarks is still '' from before the sync effect updated marks).
+    const feedbackIdRef = useRef(feedback?.id);
+    feedbackIdRef.current = feedback?.id;
+    const onSaveRef = useRef(onSave);
+    onSaveRef.current = onSave;
+    const responseIdRef = useRef(responseId);
+    responseIdRef.current = responseId;
+
+    // Sync local state when feedback data arrives or changes (e.g., after AI generation).
+    // Keyed on feedback?.id so user edits on the same feedback are not overwritten.
+    useEffect(() => {
+        const newMarks = feedback?.marks?.toString() ?? '';
+        const newText = feedback?.text ?? '';
+        setMarks(newMarks);
+        setText(newText);
+        lastSavedRef.current = { marks: newMarks, text: newText };
+    }, [feedback?.id]);
+
+    // Auto-save on debounced change per §6(5)(d)(iv) / §6(6)(e)(iv).
+    // Dependencies intentionally limited to debouncedMarks/debouncedText so
+    // the effect fires only on genuine user edits. Other values (responseId,
+    // feedback?.id, onSave) are accessed via refs to avoid the stale-debounce
+    // deletion bug described above.
     useEffect(() => {
         const currentMarks = debouncedMarks;
         const currentText = debouncedText;
@@ -96,9 +133,75 @@ const FeedbackInput: React.FC<{
         if (currentMarks !== lastSavedRef.current.marks || currentText !== lastSavedRef.current.text) {
             lastSavedRef.current = { marks: currentMarks, text: currentText };
             const marksNum = currentMarks === '' ? null : parseInt(currentMarks, 10);
-            onSave(responseId, isNaN(marksNum!) ? null : marksNum, currentText || null, feedback?.id);
+            onSaveRef.current(responseIdRef.current, isNaN(marksNum!) ? null : marksNum, currentText || null, feedbackIdRef.current);
         }
-    }, [debouncedMarks, debouncedText, responseId, feedback?.id, onSave]);
+    }, [debouncedMarks, debouncedText]);
+
+    // Per §6A(1)(a): Show pending/generating indicator when queued or being generated
+    if (isQueued || isGenerating) {
+        return (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                <div className="flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-orange"></div>
+                    <span className="text-sm text-gray-600">
+                        {isGenerating ? 'AI is generating feedback...' : 'Queued for AI feedback generation'}
+                    </span>
+                </div>
+                <div className="flex gap-2">
+                    {/* Per §6A(1)(b): Write Manually — dequeue and allow manual entry (disabled during generation) */}
+                    <button
+                        onClick={() => onWriteManually(responseId)}
+                        disabled={isGenerating}
+                        className={`text-xs bg-white border py-1.5 px-3 rounded transition-colors ${isGenerating ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 hover:border-brand-orange text-gray-700'}`}
+                        title={isGenerating ? 'Cannot cancel in-progress generation' : undefined}
+                    >
+                        Write Manually
+                    </button>
+                    {/* Per §6A(1)(c): Prioritise — move to front of queue */}
+                    {isQueued && !isGenerating && (
+                        <button
+                            onClick={() => onPrioritise(responseId)}
+                            className="text-xs bg-white border border-gray-300 hover:border-brand-orange text-gray-700 py-1.5 px-3 rounded transition-colors"
+                        >
+                            Prioritise
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // Per §6A(3): Show generation failure with retry option.
+    // Also handles the "limbo" state: no feedback, not queued/generating,
+    // but eligible for AI — indicates a previous generation failure whose
+    // client-side state was lost (e.g. after frontend restart).
+    if (!feedback && !isManualMode && (generationFailed || (isEligibleForAi && !isQueued && !isGenerating))) {
+        return (
+            <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200 space-y-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-red-600">⚠</span>
+                    <span className="text-sm text-red-700">AI feedback generation failed</span>
+                </div>
+                {generationError && (
+                    <p className="text-xs text-red-600">{generationError}</p>
+                )}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => onRetryGeneration(responseId)}
+                        className="text-xs bg-white border border-red-300 hover:border-red-500 text-red-700 py-1.5 px-3 rounded transition-colors"
+                    >
+                        Retry Generation
+                    </button>
+                    <button
+                        onClick={() => onWriteManually(responseId)}
+                        className="text-xs bg-white border border-gray-300 hover:border-brand-orange text-gray-700 py-1.5 px-3 rounded transition-colors"
+                    >
+                        Write Manually
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
@@ -144,12 +247,21 @@ const FeedbackInput: React.FC<{
                 />
             </div>
             {feedback && feedback.status === 'PROVISIONAL' && (
-                <button
-                    onClick={() => onApprove(feedback.id)}
-                    className="bg-brand-orange hover:bg-brand-orange-dark text-white text-sm font-medium py-2 px-4 rounded transition-colors"
-                >
-                    Send Feedback
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => onApprove(feedback.id)}
+                        className="bg-brand-orange hover:bg-brand-orange-dark text-white text-sm font-medium py-2 px-4 rounded transition-colors"
+                    >
+                        Send Feedback
+                    </button>
+                    {/* Per §6A(1A): Re-queue for AI generation (overwrites PROVISIONAL) */}
+                    <button
+                        onClick={() => onRequeue(responseId)}
+                        className="bg-white border border-gray-300 hover:border-brand-orange text-gray-700 text-sm font-medium py-2 px-4 rounded transition-colors"
+                    >
+                        Re-generate with AI
+                    </button>
+                </div>
             )}
         </div>
     );
@@ -176,6 +288,20 @@ export const ResponsesPage: React.FC = () => {
     // Track failed feedback IDs per §6A(6) - for showing indicator near specific responses
     const [failedFeedbackIds, setFailedFeedbackIds] = useState<Set<string>>(new Set());
 
+    // Ref for devices used in event handler closures to avoid stale captures
+    // without adding `devices` to the useEffect dependency array.
+    const devicesRef = useRef<PairedDeviceEntity[]>([]);
+
+    // Queue status state per §6A(1)(a) — tracks which responses are queued or generating
+    const [queuedResponseIds, setQueuedResponseIds] = useState<Set<string>>(new Set());
+    const [generatingResponseId, setGeneratingResponseId] = useState<string | null>(null);
+    // Track responses whose generation failed per §6A(3) — maps response ID to error message
+    const [generationFailedIds, setGenerationFailedIds] = useState<Map<string, string>>(new Map());
+    // Track responses explicitly switched to manual feedback mode by the teacher.
+    const [manualModeResponseIds, setManualModeResponseIds] = useState<Set<string>>(new Set());
+    // Confirmation dialog for re-queue per §6A(1A)
+    const [requeueConfirm, setRequeueConfirm] = useState<{ isOpen: boolean; responseId: string }>({ isOpen: false, responseId: '' });
+
     // Popup state per §6(4)(c)(iv)
     const [devicePopup, setDevicePopup] = useState<{ isOpen: boolean; title: string; deviceNames: string[] }>({
         isOpen: false,
@@ -194,24 +320,59 @@ export const ResponsesPage: React.FC = () => {
     const [selectedUnitId, setSelectedUnitId] = useState<string>('');
     const [selectedLessonId, setSelectedLessonId] = useState<string>('');
 
+    // Guards against concurrent loadData() calls: a later-initiated but
+    // earlier-resolved fetch must not overwrite state set by the most
+    // recent call. Each call captures the counter value at invocation
+    // time and discards its result if a newer call has been initiated.
+    const loadCounterRef = useRef(0);
+
     // Load data
     const loadData = useCallback(async () => {
+        const thisLoad = ++loadCounterRef.current;
         try {
-            const [responsesData, feedbacksData, devicesData] = await Promise.all([
+            const [responsesData, feedbacksData, devicesData, queueStatusData, currentGenId] = await Promise.all([
                 signalRService.getAllResponses(),
                 signalRService.getAllFeedbacks(),
-                signalRService.getAllPairedDevices()
+                signalRService.getAllPairedDevices(),
+                signalRService.getFeedbackQueueStatus(),
+                signalRService.getCurrentlyGeneratingResponseId()
             ]);
+            // Discard stale results: a newer loadData() was initiated while
+            // this one was in-flight, so its data is more recent.
+            if (thisLoad !== loadCounterRef.current) return;
             setResponses(responsesData);
             setFeedbacks(feedbacksData);
             setDevices(devicesData);
+            devicesRef.current = devicesData;
+            setQueuedResponseIds(new Set(queueStatusData));
+            setGeneratingResponseId(currentGenId);
         } catch (error) {
+            if (thisLoad !== loadCounterRef.current) return;
             console.error('Failed to load responses data:', error);
             addAlert('control_failed', undefined, 'Failed to load responses');
         } finally {
-            setIsLoading(false);
+            if (thisLoad === loadCounterRef.current) {
+                setIsLoading(false);
+            }
         }
     }, [addAlert]);
+
+    // Keep queue/generation state fresh while the page is open.
+    // Without this periodic sync, the UI can miss the transition from
+    // "queued" to "generating" between loadData calls, which means
+    // Write Manually may remain enabled during active generation.
+    const syncGenerationState = useCallback(async () => {
+        try {
+            const [queueStatusData, currentGenId] = await Promise.all([
+                signalRService.getFeedbackQueueStatus(),
+                signalRService.getCurrentlyGeneratingResponseId()
+            ]);
+            setQueuedResponseIds(new Set(queueStatusData));
+            setGeneratingResponseId(currentGenId);
+        } catch (error) {
+            console.error('Failed to sync generation state:', error);
+        }
+    }, []);
 
     // Initial load and RefreshResponses handler per §6(3)(b)
     useEffect(() => {
@@ -223,14 +384,40 @@ export const ResponsesPage: React.FC = () => {
             // Track failed feedback ID for indicator near specific response
             setFailedFeedbackIds(prev => new Set(prev).add(payload.feedbackId));
             // Show alert with device name (not entity IDs - those are internal)
-            const device = devices.find(d => d.deviceId === payload.deviceId);
+            const device = devicesRef.current.find(d => d.deviceId === payload.deviceId);
             addAlert('feedback_failed', undefined, `Feedback delivery failed${device ? ` to ${device.name}` : ''}`);
+        });
+        // Per §6A(1)(a): Listen for generation success — refresh data and clear queue state
+        const unsubGenerated = signalRService.onFeedbackGenerated((_feedbackId: string, responseId: string) => {
+            setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGeneratingResponseId(prev => prev === responseId ? null : prev);
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            loadData();
+        });
+        // Per §6A(3): Track generation failures
+        const unsubGenerationFailed = signalRService.onFeedbackGenerationFailed((responseId: string, error: string) => {
+            setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGeneratingResponseId(prev => prev === responseId ? null : prev);
+            setGenerationFailedIds(prev => new Map(prev).set(responseId, error || 'Unknown error'));
         });
         return () => {
             unsubRefresh();
             unsubDeliveryFailed();
+            unsubGenerated();
+            unsubGenerationFailed();
         };
-    }, [loadData, addAlert, devices]);
+    }, [loadData, addAlert]);
+
+    // Poll queue/generation status so controls follow backend processing
+    // state transitions in near-real-time (e.g., queued -> generating).
+    useEffect(() => {
+        const interval = setInterval(() => {
+            void syncGenerationState();
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [syncGenerationState]);
 
     // Derived data - materials with responses per §6(4)(a)
     const materialsWithResponses = useMemo(() => {
@@ -351,6 +538,62 @@ export const ResponsesPage: React.FC = () => {
         } catch (error) {
             console.error('Failed to retry feedback dispatch:', error);
             addAlert('control_failed', undefined, 'Failed to retry feedback');
+        }
+    }, [addAlert]);
+
+    // Per §6A(1)(b): Write Manually — dequeue response so teacher can write feedback
+    const handleWriteManually = useCallback(async (responseId: string) => {
+        try {
+            await signalRService.removeFromAiGenerationQueue(responseId);
+            setQueuedResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            setGeneratingResponseId(prev => prev === responseId ? null : prev);
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => new Set(prev).add(responseId));
+        } catch (error) {
+            console.error('Failed to dequeue response:', error);
+            addAlert('control_failed', undefined, 'Failed to remove from generation queue');
+        }
+    }, [addAlert]);
+
+    // Per §6A(1)(c): Prioritise — move a queued response to the front
+    const handlePrioritise = useCallback(async (responseId: string) => {
+        try {
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            await signalRService.prioritiseFeedbackGeneration(responseId);
+        } catch (error) {
+            console.error('Failed to prioritise feedback generation:', error);
+            addAlert('control_failed', undefined, 'Failed to prioritise feedback generation');
+        }
+    }, [addAlert]);
+
+    // Per §6A(1A): Re-queue PROVISIONAL feedback for AI re-generation with confirmation
+    const handleRequeue = useCallback((responseId: string) => {
+        setRequeueConfirm({ isOpen: true, responseId });
+    }, []);
+
+    const handleConfirmRequeue = useCallback(async () => {
+        const responseId = requeueConfirm.responseId;
+        setRequeueConfirm({ isOpen: false, responseId: '' });
+        try {
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            await signalRService.queueForAiGeneration(responseId);
+            setQueuedResponseIds(prev => new Set(prev).add(responseId));
+        } catch (error) {
+            console.error('Failed to re-queue response for generation:', error);
+            addAlert('control_failed', undefined, 'Failed to re-queue for AI generation');
+        }
+    }, [requeueConfirm.responseId, addAlert]);
+
+    // Per §6A(3): Retry failed AI generation
+    const handleRetryGeneration = useCallback(async (responseId: string) => {
+        try {
+            setGenerationFailedIds(prev => { const next = new Map(prev); next.delete(responseId); return next; });
+            setManualModeResponseIds(prev => { const next = new Set(prev); next.delete(responseId); return next; });
+            await signalRService.queueForAiGeneration(responseId);
+            setQueuedResponseIds(prev => new Set(prev).add(responseId));
+        } catch (error) {
+            console.error('Failed to retry feedback generation:', error);
+            addAlert('control_failed', undefined, 'Failed to retry AI generation');
         }
     }, [addAlert]);
 
@@ -635,9 +878,19 @@ export const ResponsesPage: React.FC = () => {
                                                                 const fb = getFeedbackForResponse(response.id);
                                                                 return fb ? failedFeedbackIds.has(fb.id) : false;
                                                             })()}
+                                                            isQueued={queuedResponseIds.has(response.id)}
+                                                            isGenerating={generatingResponseId === response.id}
+                                                            generationFailed={generationFailedIds.has(response.id)}
+                                                            generationError={generationFailedIds.get(response.id)}
+                                                            isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
+                                                            isManualMode={manualModeResponseIds.has(response.id)}
                                                             onSave={handleSaveFeedback}
                                                             onApprove={handleApproveFeedback}
                                                             onRetry={handleRetryFeedback}
+                                                            onWriteManually={handleWriteManually}
+                                                            onPrioritise={handlePrioritise}
+                                                            onRequeue={handleRequeue}
+                                                            onRetryGeneration={handleRetryGeneration}
                                                         />
                                                     )}
                                                 </div>
@@ -818,9 +1071,19 @@ export const ResponsesPage: React.FC = () => {
                                                     const fb = getFeedbackForResponse(response.id);
                                                     return fb ? failedFeedbackIds.has(fb.id) : false;
                                                 })()}
+                                                isQueued={queuedResponseIds.has(response.id)}
+                                                isGenerating={generatingResponseId === response.id}
+                                                generationFailed={generationFailedIds.has(response.id)}
+                                                generationError={generationFailedIds.get(response.id)}
+                                                isEligibleForAi={question.questionType === 'WRITTEN_ANSWER' && !!question.markScheme}
+                                                isManualMode={manualModeResponseIds.has(response.id)}
                                                 onSave={handleSaveFeedback}
                                                 onApprove={handleApproveFeedback}
                                                 onRetry={handleRetryFeedback}
+                                                onWriteManually={handleWriteManually}
+                                                onPrioritise={handlePrioritise}
+                                                onRequeue={handleRequeue}
+                                                onRetryGeneration={handleRetryGeneration}
                                             />
                                         )}
                                     </div>
@@ -868,6 +1131,31 @@ export const ResponsesPage: React.FC = () => {
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 font-medium text-sm transition-colors"
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </ModalOverlay>
+            )}
+            {/* Re-queue confirmation dialog per §6A(1A) */}
+            {requeueConfirm.isOpen && (
+                <ModalOverlay priority="low" onClick={() => setRequeueConfirm({ isOpen: false, responseId: '' })}>
+                    <div className="bg-white rounded-lg p-6 max-w-sm w-full m-4 shadow-xl" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-semibold text-lg text-text-heading mb-3">Re-generate Feedback?</h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                            This will overwrite the current provisional feedback with a new AI-generated version.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setRequeueConfirm({ isOpen: false, responseId: '' })}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 font-medium text-sm transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmRequeue}
+                                className="px-4 py-2 bg-brand-orange text-white rounded hover:bg-brand-orange-dark font-medium text-sm transition-colors"
+                            >
+                                Re-generate
                             </button>
                         </div>
                     </div>

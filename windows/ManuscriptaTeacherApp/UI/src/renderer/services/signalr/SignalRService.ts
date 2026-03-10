@@ -710,6 +710,62 @@ class SignalRService {
         return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 
+    /**
+     * Subscribe to feedback generation success events.
+     * Per NetworkingAPISpec §2(1)(c)(iii).
+     */
+    public onFeedbackGenerated(callback: (feedbackId: string, responseId: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerated", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to feedback generation failure events.
+     * Per NetworkingAPISpec §2(1)(c)(i).
+     */
+    public onFeedbackGenerationFailed(callback: (responseId: string, error: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerationFailed", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Queues a response for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(vi) and GenAISpec §3D(5).
+     */
+    public async queueForAiGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("QueueForAiGeneration", responseId);
+    }
+
+    /**
+     * Removes a response from the AI feedback generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(ix) and GenAISpec §3D(6)(a).
+     */
+    public async removeFromAiGenerationQueue(responseId: string): Promise<void> {
+        await this.getConnection().invoke("RemoveFromAiGenerationQueue", responseId);
+    }
+
+    /**
+     * Moves a queued response to the front of the generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(viii) and GenAISpec §3D(8A).
+     */
+    public async prioritiseFeedbackGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("PrioritiseFeedbackGeneration", responseId);
+    }
+
+    /**
+     * Returns a list of response IDs currently queued for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(xi) and GenAISpec §3D(4).
+     */
+    public async getFeedbackQueueStatus(): Promise<string[]> {
+        return await this.getConnection().invoke<string[]>("GetFeedbackQueueStatus");
+    }
+
+    /**
+     * Returns the response ID currently being processed for feedback generation, or null if idle.
+     * Per NetworkingAPISpec §1(1)(i)(xii) and GenAISpec §3D(4).
+     */
+    public async getCurrentlyGeneratingResponseId(): Promise<string | null> {
+        return await this.getConnection().invoke<string | null>("GetCurrentlyGeneratingResponseId");
+    }
+
     // ==========================================
     // External Device Methods - NetworkingAPISpec §1(1)(n)
     // ==========================================

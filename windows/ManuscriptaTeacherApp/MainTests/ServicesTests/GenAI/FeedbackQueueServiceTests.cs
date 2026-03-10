@@ -262,4 +262,57 @@ public class FeedbackQueueServiceTests
             It.Is<object?[]>(args => MatchesDispatchFailedArgs(args, feedback.Id, deviceId, null)),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(4) (queue status visibility).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void GetQueuedResponseIds_ReturnsAllQueuedItems()
+    {
+        var (hubContext, _) = BuildHubMocks();
+        var tcpService = new Mock<ITcpPairingService>();
+        var responseRepo = new Mock<IResponseRepository>();
+
+        var service = new FeedbackQueueService(hubContext.Object, tcpService.Object, responseRepo.Object);
+        var id1 = Guid.NewGuid();
+        var id2 = Guid.NewGuid();
+        var id3 = Guid.NewGuid();
+
+        service.QueueForAiGeneration(id1);
+        service.QueueForAiGeneration(id2);
+        service.QueueForAiGeneration(id3);
+
+        var result = service.GetQueuedResponseIds();
+
+        Assert.Equal(3, result.Count);
+        Assert.Contains(id1, result);
+        Assert.Contains(id2, result);
+        Assert.Contains(id3, result);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3D(4) (queue status after dequeue).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void GetQueuedResponseIds_ReflectsDequeueAndRemoval()
+    {
+        var (hubContext, _) = BuildHubMocks();
+        var tcpService = new Mock<ITcpPairingService>();
+        var responseRepo = new Mock<IResponseRepository>();
+
+        var service = new FeedbackQueueService(hubContext.Object, tcpService.Object, responseRepo.Object);
+        var id1 = Guid.NewGuid();
+        var id2 = Guid.NewGuid();
+
+        service.QueueForAiGeneration(id1);
+        service.QueueForAiGeneration(id2);
+
+        service.DequeueNext();
+
+        var result = service.GetQueuedResponseIds();
+        Assert.Single(result);
+        Assert.Contains(id2, result);
+    }
 }

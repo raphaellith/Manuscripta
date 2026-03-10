@@ -132,6 +132,15 @@ public class FeedbackQueueService
     }
 
     /// <summary>
+    /// Returns a snapshot of all response IDs currently in the generation queue.
+    /// Used by the hub to expose queue status to the frontend.
+    /// </summary>
+    public List<Guid> GetQueuedResponseIds()
+    {
+        return _generationQueue.ToArray().ToList();
+    }
+
+    /// <summary>
     /// Checks if feedback should be dispatched to the student device.
     /// See GenAISpec.md §3DA(1).
     /// </summary>

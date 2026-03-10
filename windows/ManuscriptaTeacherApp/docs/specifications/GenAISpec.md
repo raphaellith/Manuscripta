@@ -13,12 +13,15 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The following models shall be used, with task-specific assignments:
 
-| Purpose | Model | Ollama Name | Rationale |
-|---------|-------|-------------|----------|
-| Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
-| Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
-| Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
+| Purpose | Model | Ollama Name | Role | Rationale |
+|---------|-------|-------------|------|----------|
+| Material generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Content modification | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Feedback generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for mark-scheme evaluation |
+| All generative tasks (fallback) | IBM Granite 4.0 | `granite4` | Fallback | Smaller resource footprint when primary model is unavailable |
+| Embeddings | Nomic Embed Text | `nomic-embed-text` | — | Optimised for retrieval |
+
+[Explanatory Note: Qwen3 8B replaces IBM Granite 4.0 as the primary model for content modification and feedback generation. Granite 4.0 was observed to produce unreliable output when evaluating mark-by-mark mark schemes for written-answer feedback. To maintain consistency and quality across all generative tasks, Qwen3 8B is now the universal primary model, with Granite 4.0 retained solely as a resource-constraint fallback.]
 
 (3) [Deleted.]
 
@@ -26,11 +29,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation fails during generation due to resource constraints —
+(6) If the primary model (`qwen3:8b`) fails during any generative task (material generation, content modification, or feedback generation) due to resource constraints —
 
     (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
-    (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
+    (b) if a fallback is used for a task that produces Material Encoding output (material generation, content modification), the iterative refinement process specified in §3F shall be applied.
 
 (7) [Deleted.]
 
@@ -358,7 +361,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
-    (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
 
@@ -431,9 +434,17 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) the student's response text.
 
-    (c) invoke `granite4` via Ollama to generate feedback.
+    (c) the prompt shall instruct the model to begin its response with a mark line in the format `MARK: X` where X is an integer between 0 and the maximum score (inclusive), if the question has a `MaxScore`.
 
-    (d) return structured feedback including score justification and improvement suggestions.
+    (d) invoke `qwen3:8b` via Ollama to generate feedback (or `granite4` if fallback per §1(6)).
+
+    (e) parse the model response to extract —
+
+        (i) the numeric mark from the `MARK: X` line, if present. The extracted value shall be stored in the `Marks` field of the `FeedbackEntity`.
+
+        (ii) the remaining text, which shall be stored in the `Text` field of the `FeedbackEntity`.
+
+    (f) return structured feedback including the mark (if applicable), score justification and improvement suggestions.
 
 
 ### Section 3DA — Feedback Approval Workflow
@@ -473,6 +484,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 ### Section 3F — Output Validation Service
 
 (1) After any content generation step in §3B or §3C, the backend shall validate the output against the Material Encoding Specification.
+
+[Explanatory Note: Feedback generation (§3D) does not produce Material Encoding output, therefore §3F validation does not apply to it.]
 
 (2) The validation process shall check for:
 
@@ -611,10 +624,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
-| `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
-| `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
-| `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
-| `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
+| `PRIMARY_MODEL` | `qwen3:8b` | Primary model for all generative tasks |
+| `FALLBACK_MODEL` | `granite4` | Fallback model if primary unavailable |
 
 ---
 
@@ -640,14 +651,14 @@ sequenceDiagram
     Frontend->>Hub: GenerateReading(request)
     Hub->>RAG: Retrieve top-K chunks
     RAG-->>Hub: chunks[]
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: content
     Hub-->>Frontend: generated content
 
     Note over Frontend,Ollama: Content Modification (§3C)
     Frontend->>Hub: ModifyContent(selection, instruction)
     Hub->>RAG: Retrieve context (optional)
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: modified content
     Hub-->>Frontend: modified content
 ```
