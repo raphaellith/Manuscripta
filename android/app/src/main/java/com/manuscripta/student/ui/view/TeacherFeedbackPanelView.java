@@ -29,8 +29,11 @@ public class TeacherFeedbackPanelView extends LinearLayout {
     /** Maximum height as a fraction of parent height. */
     private static final float MAX_HEIGHT_FRACTION = 0.5f;
 
+    /** TextView for the teacher's marks. */
     private TextView marksText;
+    /** TextView for the teacher's feedback text. */
     private TextView feedbackText;
+    /** ScrollView containing the feedback content. */
     private ScrollView scrollView;
 
     public TeacherFeedbackPanelView(@NonNull Context context) {
