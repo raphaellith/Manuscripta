@@ -522,11 +522,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             const result = await signalRService.modifyContent(
                 originalText,
                 instruction,
-                undefined,
                 material.materialType.toLowerCase(),
                 material.title,
                 material.readingAge,
-                material.actualAge
+                material.actualAge,
+                material.id
             );
 
             offStarted();
@@ -540,6 +540,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 .focus()
                 .insertContentAt({ from, to }, markdownToHtml(result.content))
                 .run();
+
+            // If the modification created new questions, populate their data in the editor nodes
+            if (result.createdQuestionIds && result.createdQuestionIds.length > 0) {
+                await loadQuestionData();
+            }
 
             setIsAiGenerating(false);
             setAiGenerationId(null);
@@ -862,61 +867,62 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return () => clearTimeout(timeoutId);
     }, [editor, material.id]);
 
+    // Load question data for questionRef nodes that are missing it.
+    // Extracted as a callback so it can be called on mount and after AI modification.
+    const loadQuestionData = useCallback(async () => {
+        if (!editor) return;
+
+        try {
+            // Fetch all questions for this material
+            const questions = await signalRService.getQuestionsUnderMaterial(material.id);
+            if (questions.length === 0) return;
+
+            // Create a map for quick lookup
+            const questionMap = new Map(questions.map(q => [q.id, q]));
+
+            // Find all questionRef nodes and update them with full data
+            const { doc, tr } = editor.state;
+            let modified = false;
+
+            doc.descendants((node, pos) => {
+                if (node.type.name === 'questionRef') {
+                    const questionId = node.attrs.id;
+                    const questionData = questionMap.get(questionId);
+
+                    if (questionData && !node.attrs.questionText) {
+                        // Update node attrs with full question data
+                        const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
+                        const waq = questionData as { correctAnswer?: string; markScheme?: string };
+
+                        tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            questionText: questionData.questionText,
+                            questionType: questionData.questionType,
+                            options: mcq.options || [],
+                            correctAnswer: mcq.correctAnswerIndex ?? waq.correctAnswer,
+                            markScheme: waq.markScheme,
+                            maxScore: questionData.maxScore || 1,
+                            materialType: material.materialType,
+                        });
+                        modified = true;
+                    }
+                }
+            });
+
+            if (modified) {
+                tr.setMeta('addToHistory', false);
+                editor.view.dispatch(tr);
+            }
+        } catch (err) {
+            console.error('Failed to load question data:', err);
+        }
+    }, [editor, material.id, material.materialType]);
+
     // Load question data for existing question references on mount
     useEffect(() => {
-        const loadQuestionData = async () => {
-            if (!editor) return;
-
-            try {
-                // Fetch all questions for this material
-                const questions = await signalRService.getQuestionsUnderMaterial(material.id);
-                if (questions.length === 0) return;
-
-                // Create a map for quick lookup
-                const questionMap = new Map(questions.map(q => [q.id, q]));
-
-                // Find all questionRef nodes and update them with full data
-                const { doc, tr } = editor.state;
-                let modified = false;
-
-                doc.descendants((node, pos) => {
-                    if (node.type.name === 'questionRef') {
-                        const questionId = node.attrs.id;
-                        const questionData = questionMap.get(questionId);
-
-                        if (questionData && !node.attrs.questionText) {
-                            // Update node attrs with full question data
-                            const mcq = questionData as { options?: string[]; correctAnswerIndex?: number };
-                            const waq = questionData as { correctAnswer?: string; markScheme?: string };
-
-                            tr.setNodeMarkup(pos, undefined, {
-                                ...node.attrs,
-                                questionText: questionData.questionText,
-                                questionType: questionData.questionType,
-                                options: mcq.options || [],
-                                correctAnswer: mcq.correctAnswerIndex ?? waq.correctAnswer,
-                                markScheme: waq.markScheme,
-                                maxScore: questionData.maxScore || 1,
-                                materialType: material.materialType,
-                            });
-                            modified = true;
-                        }
-                    }
-                });
-
-                if (modified) {
-                    tr.setMeta('addToHistory', false);
-                    editor.view.dispatch(tr);
-                }
-            } catch (err) {
-                console.error('Failed to load question data:', err);
-            }
-        };
-
-        // Load after a short delay to ensure editor is ready
         const timeoutId = setTimeout(loadQuestionData, 100);
         return () => clearTimeout(timeoutId);
-    }, [editor, material.id, material.materialType]);
+    }, [loadQuestionData]);
 
     // Orphan removal per §4C(5) - runs on editor enter and exit
     // Delete attachments and questions not referenced in the material content

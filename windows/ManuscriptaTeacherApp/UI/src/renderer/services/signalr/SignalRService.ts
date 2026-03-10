@@ -402,24 +402,24 @@ class SignalRService {
      * The server generates a unique generation ID and sends it via OnGenerationStarted.
      * @param selectedContent The text selected by the user.
      * @param instruction The instruction for modification.
-     * @param unitCollectionId Optional unit collection context.
      * @param materialType The type of material being modified (e.g. 'reading', 'worksheet').
      * @param title The title of the material being modified.
      * @param readingAge Optional reading age of the material.
      * @param actualAge Optional actual age of the material.
+     * @param materialId The ID of the material being modified, for question-draft extraction per GenAISpec §3C(2)(e1) and RAG hierarchy resolution per §3C(2)(a).
      */
     public async modifyContent(
         selectedContent: string,
         instruction: string,
-        unitCollectionId: string | undefined,
         materialType: string,
         title: string,
         readingAge: number | undefined,
-        actualAge: number | undefined
+        actualAge: number | undefined,
+        materialId: string
     ): Promise<GenerationResult> {
         return await this.getConnection().invoke<GenerationResult>(
-            "ModifyContent", selectedContent, instruction, unitCollectionId,
-            materialType, title, readingAge ?? null, actualAge ?? null
+            "ModifyContent", selectedContent, instruction,
+            materialType, title, readingAge ?? null, actualAge ?? null, materialId
         );
     }
 

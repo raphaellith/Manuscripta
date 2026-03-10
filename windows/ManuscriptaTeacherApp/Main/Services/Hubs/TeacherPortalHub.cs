@@ -1395,7 +1395,7 @@ public class TeacherPortalHub : Hub
     /// Modifies selected content using the AI assistant.
     /// Per NetworkingAPISpec §1(1)(i)(iv) and GenAISpec.md §3C(1)(a).
     /// </summary>
-    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, string materialType, string title, int? readingAge, int? actualAge)
+    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)
     {
         var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
 
@@ -1403,6 +1403,22 @@ public class TeacherPortalHub : Hub
         {
             await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
             throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3C(2)(a): Resolve unitCollectionId by traversing Material → Lesson → Unit → UnitCollection.
+        Guid? unitCollectionId = null;
+        var material = await _materialRepository.GetByIdAsync(materialId);
+        if (material != null)
+        {
+            var lesson = await _lessonRepository.GetByIdAsync(material.LessonId);
+            if (lesson != null)
+            {
+                var unit = await _unitRepository.GetByIdAsync(lesson.UnitId);
+                if (unit != null)
+                {
+                    unitCollectionId = unit.UnitCollectionId;
+                }
+            }
         }
 
         var generationId = Guid.NewGuid();
@@ -1413,7 +1429,7 @@ public class TeacherPortalHub : Hub
         {
             await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
 
-            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, materialType, title, readingAge, actualAge, async chunk =>
+            var result = await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, materialType, title, readingAge, actualAge, async chunk =>
             {
                 try
                 {
@@ -1424,6 +1440,25 @@ public class TeacherPortalHub : Hub
                     // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
                 }
             }, cts.Token);
+
+            // §3C(2)(e1): Extract question-draft markers from modified content
+            if (result.Content != null && result.Content.Contains("!!! question-draft"))
+            {
+                var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(result.Content, materialId);
+                result.Content = extractionResult.ModifiedContent;
+                if (extractionResult.CreatedQuestionIds.Count > 0)
+                {
+                    result.CreatedQuestionIds ??= new List<Guid>();
+                    result.CreatedQuestionIds.AddRange(extractionResult.CreatedQuestionIds);
+                }
+                if (extractionResult.Warnings.Count > 0)
+                {
+                    result.Warnings ??= new List<ValidationWarning>();
+                    result.Warnings.AddRange(extractionResult.Warnings);
+                }
+            }
+
+            return result;
         }
         catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
         {

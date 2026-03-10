@@ -430,7 +430,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (i) the frontend shall capture the selected content and the user's instruction.
 
-        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`, passing the material's `materialType`, `title`, `readingAge`, and `actualAge` alongside the selected content, instruction, and unit collection ID.
+        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`, passing the material's `id`, `materialType`, `title`, `readingAge`, and `actualAge` alongside the selected content and instruction.
 
         (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 

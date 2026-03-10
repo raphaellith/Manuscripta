@@ -345,11 +345,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (1) When a teacher wishes to modify selected content using the AI assistant, the frontend shall invoke the following server method (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub` —
 
-    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId, string materialType, string title, int? readingAge, int? actualAge)`
+    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)`
 
 (2) Upon receiving a modification request, the backend shall —
 
-    (a) if `unitCollectionId` is provided, retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. 
+    (a) resolve the `unitCollectionId` by traversing the entity hierarchy from `materialId` (Material → Lesson → Unit → UnitCollection), then retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. If the hierarchy traversal fails (e.g. because an entity has been deleted), the backend shall skip RAG retrieval and proceed without injected context.
     
     [Explanatory Note: Searching by the instruction alone (e.g. "make this longer") often fails to retrieve semantically meaningful context. Including the `selectedContent` ensures semantic retrieval targets the actual subject matter. For example, the combined query could be formatted as `$"[{instruction}] {selectedContent}"`.]
 
