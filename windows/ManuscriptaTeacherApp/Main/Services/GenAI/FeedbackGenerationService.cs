@@ -302,15 +302,18 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 rawResponse = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
             }
 
-            // §3D(9)(e): Parse mark and feedback text from model response
+            // §3D(9)(e): Parse optional mark and feedback text from model output
             var (marks, feedbackText) = ParseFeedbackResponse(rawResponse, question.MaxScore);
 
-            // §3D(9)(e): Create feedback entity with PROVISIONAL status
+            // Strip Markdown syntax from the generated feedback
+            var plainTextFeedback = MarkdownStrippingHelper.StripMarkdownSyntax(feedbackText);
+
+            // §3D(9)(d): Create feedback entity with PROVISIONAL status
             var feedback = new FeedbackEntity
             {
                 Id = Guid.NewGuid(),
                 ResponseId = response.Id,
-                FeedbackText = feedbackText,
+                FeedbackText = plainTextFeedback,
                 Marks = marks,
                 Status = FeedbackStatus.PROVISIONAL,
                 CreatedAt = DateTime.UtcNow
