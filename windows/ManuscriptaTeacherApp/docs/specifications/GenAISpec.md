@@ -16,7 +16,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | Purpose | Model | Ollama Name | Rationale |
 |---------|-------|-------------|----------|
 | Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | Qwen3 8B | `qwen3:8b` | Modification may involve adding questions, restructuring content, or significant rewrites requiring the same instruction-adherence as generation |
+| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
 | Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
 | Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
 
@@ -26,11 +26,11 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation or content modification fails during generation due to resource constraints —
+(6) If the primary model (`qwen3:8b`) for material generation fails during generation due to resource constraints —
 
     (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
-    (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
+    (b) if a fallback is used for a task that produces Material Encoding output (material generation, content modification), the iterative refinement process specified in §3F shall be applied.
 
 (7) [Deleted.]
 
@@ -360,15 +360,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
-        (v) the material title.
-
-        (vi) reading age and actual age constraints, if provided.
-
-        (vii) the material type.
-
-        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
-
-    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+    (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
 
@@ -441,9 +433,17 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) the student's response text.
 
-    (c) invoke `granite4` via Ollama to generate feedback.
+    (c) the prompt shall instruct the model to begin its response with a mark line in the format `MARK: X` where X is an integer between 0 and the maximum score (inclusive), if the question has a `MaxScore`.
 
-    (d) return structured feedback including score justification and improvement suggestions.
+    (d) invoke `qwen3:8b` via Ollama to generate feedback (or `granite4` if fallback per §1(6)).
+
+    (e) parse the model response to extract —
+
+        (i) the numeric mark from the `MARK: X` line, if present. The extracted value shall be stored in the `Marks` field of the `FeedbackEntity`.
+
+        (ii) the remaining text, which shall be stored in the `Text` field of the `FeedbackEntity`.
+
+    (f) return structured feedback including the mark (if applicable), score justification and improvement suggestions.
 
 
 ### Section 3DA — Feedback Approval Workflow
@@ -483,6 +483,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 ### Section 3F — Output Validation Service
 
 (1) After any content generation step in §3B or §3C, the backend shall validate the output against the Material Encoding Specification.
+
+[Explanatory Note: Feedback generation (§3D) does not produce Material Encoding output, therefore §3F validation does not apply to it.]
 
 (2) The validation process shall check for:
 
@@ -623,8 +625,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
 | `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
 | `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
-| `MODIFICATION_MODEL` | `qwen3:8b` | Primary model for AI assistant content modification |
-| `MODIFICATION_FALLBACK_MODEL` | `granite4` | Fallback model for content modification |
+| `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
 | `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
 
 ---
@@ -651,7 +652,7 @@ sequenceDiagram
     Frontend->>Hub: GenerateReading(request)
     Hub->>RAG: Retrieve top-K chunks
     RAG-->>Hub: chunks[]
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: content
     Hub-->>Frontend: generated content
 

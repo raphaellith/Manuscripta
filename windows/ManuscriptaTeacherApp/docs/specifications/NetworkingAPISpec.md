@@ -125,6 +125,10 @@ For a description of how these server methods and client handlers are expected t
         (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
 
         (x) `Task<bool> CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `true` if a matching in-progress generation was found and cancellation was requested; returns `false` if the specified generation ID is not found, has already completed, or belongs to a different connection. See GenAISpec §3H(8).
+
+        (xi) `Task<List<Guid>> GetFeedbackQueueStatus()`: Returns a snapshot of all response IDs currently queued for AI feedback generation. See GenAISpec §3D(4).
+
+        (xii) `Task<string?> GetCurrentlyGeneratingResponseId()`: Returns the response ID currently being processed for feedback generation, or null if idle. See GenAISpec §3D(4).
         
     (j) Methods for retrieving responses.
 
@@ -222,6 +226,8 @@ For a description of how these server methods and client handlers are expected t
         (i) `OnFeedbackGenerationFailed`, with parameters `responseId` (Guid) and `error` (string): Notifies the frontend that AI feedback generation has failed for the specified response. See GenAISpec §3D(7)(b).
 
         (ii) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
+
+        (iii) `OnFeedbackGenerated`, with parameters `feedbackId` (Guid) and `responseId` (Guid): Notifies the frontend that AI feedback generation has succeeded for the specified response. The frontend shall use this as a signal to refresh feedback data. See GenAISpec §3D(8).
 
     (d) Handlers for embedding notifications.
 

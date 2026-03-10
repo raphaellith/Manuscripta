@@ -66,6 +66,7 @@ public class TeacherPortalHubTests
     private readonly IContentModificationService _contentModificationService;
     private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly Mock<IFeedbackGenerationService> _mockFeedbackGenerationService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<OllamaClientService> _mockOllamaClientService;
     private readonly QuestionExtractionService _questionExtractionService;
@@ -115,6 +116,7 @@ public class TeacherPortalHubTests
             _mockHubContext.Object,
             _mockTcpPairingService.Object,
             _mockResponseRepository.Object);
+        _mockFeedbackGenerationService = new Mock<IFeedbackGenerationService>();
         
         _hub = new TeacherPortalHub(
             _mockUnitCollectionService.Object,
@@ -152,6 +154,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService);
@@ -198,6 +201,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -242,6 +246,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -286,6 +291,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -330,6 +336,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -374,6 +381,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -418,6 +426,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -462,6 +471,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -506,6 +516,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -550,6 +561,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -594,6 +606,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -638,6 +651,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -682,6 +696,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -726,6 +741,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -770,6 +786,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -814,6 +831,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+                _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -858,6 +876,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService));
@@ -902,6 +921,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             null!));
@@ -2009,6 +2029,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService);
@@ -2097,6 +2118,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService);
@@ -2192,6 +2214,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService);
@@ -3065,6 +3088,7 @@ public class TeacherPortalHubTests
             _contentModificationService,
             _embeddingStatusService,
             _feedbackQueueService,
+            _mockFeedbackGenerationService.Object,
             _mockEmbeddingService.Object,
             _mockOllamaClientService.Object,
             _questionExtractionService);
