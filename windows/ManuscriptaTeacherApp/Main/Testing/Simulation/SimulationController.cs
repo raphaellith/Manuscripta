@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Main.Data;
 using Main.Models.Enums;
 using Main.Models.Entities;
@@ -359,6 +360,82 @@ public class SimulationController : ControllerBase
         return Ok(new { Message = $"Command {request.Command} sent" });
     }
 
+    // ========================================================================
+    // Convenience Endpoints for Manual Testing
+    // ========================================================================
+
+    /// <summary>
+    /// Lists all paired devices with their IDs and names.
+    /// </summary>
+    [HttpGet("devices")]
+    public async Task<IActionResult> ListDevices()
+    {
+        var devices = await _registryService.GetAllAsync();
+        var result = devices.Select(d => new { d.DeviceId, d.Name });
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Creates a dummy response and feedback for the given device, then triggers
+    /// RETURN_FEEDBACK so the Android client fetches and displays it immediately.
+    /// </summary>
+    [HttpPost("create-and-send-feedback")]
+    public async Task<IActionResult> CreateAndSendFeedback(
+        [FromBody] CreateAndSendFeedbackRequest request)
+    {
+        _logger.LogInformation(
+            "Creating and sending feedback to device {DeviceId}", request.DeviceId);
+
+        using var scope = _serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
+        var responseRepo = scope.ServiceProvider
+            .GetRequiredService<IResponseRepository>();
+        var feedbackRepo = scope.ServiceProvider
+            .GetRequiredService<IFeedbackRepository>();
+
+        // Find any question in the DB to attach the response to
+        var question = await context.Questions.FirstOrDefaultAsync();
+        if (question == null)
+        {
+            return BadRequest(new
+            {
+                error = "No questions exist. Run seed-and-distribute first."
+            });
+        }
+
+        // Create a response for this device
+        var responseId = Guid.NewGuid();
+        var response = new Main.Models.Entities.Responses.WrittenAnswerResponseEntity(
+            responseId,
+            question.Id,
+            request.DeviceId,
+            "Sim response for feedback test",
+            DateTime.UtcNow,
+            true);
+        await responseRepo.AddAsync(response);
+
+        // Create feedback in READY state
+        var feedbackId = Guid.NewGuid();
+        var text = string.IsNullOrWhiteSpace(request.Text) ? "Good work!" : request.Text;
+        var marks = request.Marks ?? 5;
+        var feedback = new FeedbackEntity(feedbackId, responseId, text, marks);
+        feedback.Status = FeedbackStatus.READY;
+        await feedbackRepo.AddAsync(feedback);
+
+        // Trigger RETURN_FEEDBACK TCP signal
+        await _tcpPairingService.SendReturnFeedbackAsync(
+            request.DeviceId.ToString(), new[] { feedbackId });
+
+        return Ok(new
+        {
+            Message = "Feedback created and delivery triggered",
+            FeedbackId = feedbackId,
+            ResponseId = responseId,
+            Text = text,
+            Marks = marks
+        });
+    }
+
     /// <summary>
     /// Stores an attachment file in the attachment directory.
     /// Per IntegrationTestSpecification §5(2)(d).
@@ -438,4 +515,16 @@ public class SendCommandRequest
     /// One of: LOCK_SCREEN, UNLOCK_SCREEN, REFRESH_CONFIG, UNPAIR.
     /// </summary>
     public string Command { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request DTO for create-and-send-feedback endpoint.
+/// </summary>
+public class CreateAndSendFeedbackRequest
+{
+    public Guid DeviceId { get; set; }
+    /// <summary>Optional feedback text. Defaults to "Good work!".</summary>
+    public string? Text { get; set; }
+    /// <summary>Optional marks. Defaults to 5.</summary>
+    public int? Marks { get; set; }
 }

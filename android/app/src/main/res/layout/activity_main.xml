@@ -35,7 +35,7 @@
                 android:textColor="@color/eink_black"
                 android:textSize="28sp"
                 android:textStyle="bold"
-                android:fontFamily="@font/fraunces_medium" />
+                android:fontFamily="@font/fraunces_bold" />
 
             <ImageView
                 android:layout_width="20dp"
@@ -65,6 +65,12 @@
     <!-- AI Response Panel (above footer, hidden by default) -->
     <com.manuscripta.student.ui.view.AiResponsePanelView
         android:id="@+id/aiResponsePanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Teacher Feedback Panel (above footer, hidden by default) -->
+    <com.manuscripta.student.ui.view.TeacherFeedbackPanelView
+        android:id="@+id/teacherFeedbackPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 

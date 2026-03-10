@@ -70,6 +70,10 @@
     <string name="screen_locked">Screen Locked</string>
     <string name="screen_locked_message">Your teacher has locked this device</string>
 
+    <!-- Teacher Feedback -->
+    <string name="teacher_feedback_title">Teacher Feedback</string>
+    <string name="teacher_feedback_marks">Marks: %d</string>
+
     <!-- Notifications -->
     <string name="material_received">New material received!</string>
 </resources>

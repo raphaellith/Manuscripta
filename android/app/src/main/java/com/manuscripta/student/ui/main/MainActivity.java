@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.manuscripta.student.R;
+import com.manuscripta.student.data.model.FeedbackStyle;
 import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.databinding.ActivityMainBinding;
 import com.manuscripta.student.domain.model.Configuration;
@@ -82,6 +83,9 @@ public class MainActivity extends AppCompatActivity {
 
     /** Tracks the number of known materials for new-material notifications. */
     private int lastKnownMaterialCount;
+
+    /** Tracks the number of feedback items already seen by the UI. */
+    private int lastKnownFeedbackCount;
 
     /** Manager for the raise-hand lifecycle, injected by Hilt. */
     @Inject
@@ -220,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         binding.materialDropdown.setOnClickListener(v -> showMaterialDropdown());
         try {
             Typeface fraunces = ResourcesCompat.getFont(
-                    this, R.font.fraunces_medium);
+                    this, R.font.fraunces_bold);
             if (fraunces != null) {
                 binding.materialDropdown.setTypeface(fraunces);
             }
@@ -299,10 +303,19 @@ public class MainActivity extends AppCompatActivity {
                 quizViewModel.saveQuizResponse(question, answer);
                 Toast.makeText(MainActivity.this,
                         R.string.answer_submitted, Toast.LENGTH_SHORT).show();
-                if (isCorrect) {
-                    showCorrectFeedback(question.getCorrectAnswer());
-                } else {
-                    showIncorrectFeedback(question.getCorrectAnswer());
+                Configuration config = viewModel.getConfiguration().getValue();
+                boolean immediate = config == null
+                        || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
+                if (immediate) {
+                    java.util.List<String> opts = QuizFragment.parseOptions(
+                            question.getOptions());
+                    String correctText = QuizFragment.resolveCorrectAnswer(
+                            question.getCorrectAnswer(), opts);
+                    if (isCorrect) {
+                        showCorrectFeedback(correctText);
+                    } else {
+                        showIncorrectFeedback(correctText);
+                    }
                 }
             }
         });
@@ -384,12 +397,24 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(MainActivity.this,
                                     R.string.answer_submitted,
                                     Toast.LENGTH_SHORT).show();
-                            if (isCorrect) {
-                                showCorrectFeedback(
-                                        question.getCorrectAnswer());
-                            } else {
-                                showIncorrectFeedback(
-                                        question.getCorrectAnswer());
+                            Configuration config =
+                                    viewModel.getConfiguration().getValue();
+                            boolean immediate = config == null
+                                    || config.getFeedbackStyle()
+                                    == FeedbackStyle.IMMEDIATE;
+                            if (immediate) {
+                                java.util.List<String> opts =
+                                        QuizFragment.parseOptions(
+                                                question.getOptions());
+                                String correctText =
+                                        QuizFragment.resolveCorrectAnswer(
+                                                question.getCorrectAnswer(),
+                                                opts);
+                                if (isCorrect) {
+                                    showCorrectFeedback(correctText);
+                                } else {
+                                    showIncorrectFeedback(correctText);
+                                }
                             }
                         }
                     });
@@ -538,6 +563,15 @@ public class MainActivity extends AppCompatActivity {
                 navigateToPairing();
             }
             observerInitialised = true;
+        });
+        viewModel.getFeedbackLiveData().observe(this, feedbackList -> {
+            if (binding == null || feedbackList == null) {
+                return;
+            }
+            if (feedbackList.size() > lastKnownFeedbackCount) {
+                binding.teacherFeedbackPanel.showFeedback(feedbackList);
+            }
+            lastKnownFeedbackCount = feedbackList.size();
         });
     }
 

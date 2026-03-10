@@ -198,11 +198,35 @@ public class QuizFragment extends Fragment {
 
         List<String> options = parseOptions(currentQuestion.getOptions());
         String answer = options.get(selected);
-        boolean isCorrect = answer.equals(currentQuestion.getCorrectAnswer());
+        String correctText = resolveCorrectAnswer(currentQuestion.getCorrectAnswer(), options);
+        boolean isCorrect = answer.equals(correctText);
 
         if (navigationListener != null) {
             navigationListener.onAnswerSubmitted(currentQuestion, answer, isCorrect);
         }
+    }
+
+    /**
+     * Resolves the correct answer to its option text.
+     * If the value is a numeric string that is a valid index into the options list,
+     * returns the option text at that index. Otherwise returns the value as-is.
+     *
+     * @param correctAnswer The raw correct answer value from the server.
+     * @param options       The list of option text values for this question.
+     * @return The resolved option text.
+     */
+    @NonNull
+    public static String resolveCorrectAnswer(@NonNull String correctAnswer,
+            @NonNull List<String> options) {
+        try {
+            int index = Integer.parseInt(correctAnswer);
+            if (index >= 0 && index < options.size()) {
+                return options.get(index);
+            }
+        } catch (NumberFormatException e) {
+            // Not a numeric index — use as-is
+        }
+        return correctAnswer;
     }
 
     /**
@@ -212,7 +236,7 @@ public class QuizFragment extends Fragment {
      * @return A list of option strings, or an empty list if parsing fails.
      */
     @NonNull
-    static List<String> parseOptions(@NonNull String json) {
+    public static List<String> parseOptions(@NonNull String json) {
         List<String> result = new ArrayList<>();
         try {
             JSONArray array = new JSONArray(json);

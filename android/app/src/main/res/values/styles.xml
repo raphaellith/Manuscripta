@@ -5,9 +5,9 @@
     <!-- Text Appearances                                              -->
     <!-- ============================================================ -->
 
-    <!-- Fraunces heading: 36sp, medium weight -->
+    <!-- Fraunces heading: 36sp, bold weight (matches Windows .font-serif @ 700) -->
     <style name="TextAppearance.Manuscripta.Heading" parent="TextAppearance.AppCompat">
-        <item name="android:fontFamily">@font/fraunces_medium</item>
+        <item name="android:fontFamily">@font/fraunces_bold</item>
         <item name="android:textSize">36sp</item>
         <item name="android:textColor">@color/eink_black</item>
     </style>
