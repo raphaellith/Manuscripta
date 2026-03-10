@@ -48,8 +48,50 @@ namespace Main.Services.RuntimeDependencies
         /// Per GenAISpec.md §1A(3)(a).
         /// Uses a short timeout (5 seconds) to avoid blocking the frontend if the
         /// daemon is present but unresponsive.
+        /// If the daemon is not running but the executable exists, starts the daemon
+        /// per GenAISpec.md §1A(4).
         /// </summary>
         public override async Task<bool> CheckDependencyAvailabilityAsync()
+        {
+            // First attempt: check if daemon is already running
+            if (await TryCheckOllamaApiAsync())
+            {
+                return true;
+            }
+
+            // Daemon not running - check if executable exists and start it
+            var ollamaDir = Path.Combine(
+                GetAppDataFolder(),
+                "ManuscriptaTeacherApp",
+                "bin",
+                "ollama"
+            );
+            var ollamaExe = Path.Combine(ollamaDir, "ollama.exe");
+
+            if (!File.Exists(ollamaExe))
+            {
+                _logger.LogInformation("Ollama executable not found at {Path}", ollamaExe);
+                return false;
+            }
+
+            // Executable exists but daemon not running - start it
+            _logger.LogInformation("Ollama installed but daemon not running, starting it");
+            try
+            {
+                await StartOllamaDaemonAsync(ollamaDir);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to start Ollama daemon during availability check");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to check if the Ollama API is reachable.
+        /// </summary>
+        private async Task<bool> TryCheckOllamaApiAsync()
         {
             try
             {

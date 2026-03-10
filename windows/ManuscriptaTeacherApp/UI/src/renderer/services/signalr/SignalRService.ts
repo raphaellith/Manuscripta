@@ -15,6 +15,8 @@ import type {
     ExternalDeviceType,
     EmailCredentialEntity,
     ConfigurationEntity,
+    SourceDocumentEntity,
+    EmbeddingStatus,
     PdfExportSettingsEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
@@ -24,6 +26,7 @@ import type {
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
     InternalCreateFeedbackDto,
+    InternalCreateSourceDocumentDto,
     GenerationRequest,
     GenerationResult,
 } from "../../models";
@@ -707,6 +710,62 @@ class SignalRService {
         return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 
+    /**
+     * Subscribe to feedback generation success events.
+     * Per NetworkingAPISpec §2(1)(c)(iii).
+     */
+    public onFeedbackGenerated(callback: (feedbackId: string, responseId: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerated", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to feedback generation failure events.
+     * Per NetworkingAPISpec §2(1)(c)(i).
+     */
+    public onFeedbackGenerationFailed(callback: (responseId: string, error: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerationFailed", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Queues a response for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(vi) and GenAISpec §3D(5).
+     */
+    public async queueForAiGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("QueueForAiGeneration", responseId);
+    }
+
+    /**
+     * Removes a response from the AI feedback generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(ix) and GenAISpec §3D(6)(a).
+     */
+    public async removeFromAiGenerationQueue(responseId: string): Promise<void> {
+        await this.getConnection().invoke("RemoveFromAiGenerationQueue", responseId);
+    }
+
+    /**
+     * Moves a queued response to the front of the generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(viii) and GenAISpec §3D(8A).
+     */
+    public async prioritiseFeedbackGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("PrioritiseFeedbackGeneration", responseId);
+    }
+
+    /**
+     * Returns a list of response IDs currently queued for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(xi) and GenAISpec §3D(4).
+     */
+    public async getFeedbackQueueStatus(): Promise<string[]> {
+        return await this.getConnection().invoke<string[]>("GetFeedbackQueueStatus");
+    }
+
+    /**
+     * Returns the response ID currently being processed for feedback generation, or null if idle.
+     * Per NetworkingAPISpec §1(1)(i)(xii) and GenAISpec §3D(4).
+     */
+    public async getCurrentlyGeneratingResponseId(): Promise<string | null> {
+        return await this.getConnection().invoke<string | null>("GetCurrentlyGeneratingResponseId");
+    }
+
     // ==========================================
     // External Device Methods - NetworkingAPISpec §1(1)(n)
     // ==========================================
@@ -880,6 +939,66 @@ class SignalRService {
         return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
     }
 
+    // ==========================================
+    // Source Document CRUD - NetworkingAPISpec §1(1)(k)
+    // ==========================================
+
+    /**
+     * Creates a new source document.
+     * Per NetworkingAPISpec §1(1)(k)(i) and FrontendWorkflowSpec §4AA(2)(c).
+     */
+    public async createSourceDocument(dto: InternalCreateSourceDocumentDto): Promise<SourceDocumentEntity> {
+        return await this.getConnection().invoke<SourceDocumentEntity>("CreateSourceDocument", dto);
+    }
+
+    /**
+     * Retrieves all source documents.
+     * Per NetworkingAPISpec §1(1)(k)(ii) and FrontendWorkflowSpec §3(1)(a)(v).
+     */
+    public async getAllSourceDocuments(): Promise<SourceDocumentEntity[]> {
+        return await this.getConnection().invoke<SourceDocumentEntity[]>("GetAllSourceDocuments");
+    }
+
+    /**
+     * Updates a source document entity.
+     * Per NetworkingAPISpec §1(1)(k)(iii) and FrontendWorkflowSpec §4AA(3)(a).
+     */
+    public async updateSourceDocument(entity: SourceDocumentEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateSourceDocument", entity);
+    }
+
+    /**
+     * Deletes a source document by ID.
+     * Per NetworkingAPISpec §1(1)(k)(iv) and FrontendWorkflowSpec §4AA(4)(a).
+     */
+    public async deleteSourceDocument(id: string): Promise<void> {
+        await this.getConnection().invoke("DeleteSourceDocument", id);
+    }
+
+    /**
+     * Gets the embedding status of a source document.
+     * Per NetworkingAPISpec §1(1)(i)(v) and FrontendWorkflowSpec §4AA(2)(e).
+     */
+    public async getEmbeddingStatus(sourceDocumentId: string): Promise<EmbeddingStatus> {
+        return await this.getConnection().invoke<EmbeddingStatus>("GetEmbeddingStatus", sourceDocumentId);
+    }
+
+    /**
+     * Retries embedding for a source document with FAILED status.
+     * Per NetworkingAPISpec §1(1)(i)(vii) and FrontendWorkflowSpec §4AA(5)(b).
+     */
+    public async retryEmbedding(sourceDocumentId: string): Promise<void> {
+        await this.getConnection().invoke("RetryEmbedding", sourceDocumentId);
+    }
+
+    /**
+     * Subscribe to embedding failed events.
+     * Per NetworkingAPISpec §2(1)(d)(i) and FrontendWorkflowSpec §4AA(6).
+     */
+    public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
+        return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
+    }
+    
     // ==========================================
     // PDF Export Settings - NetworkingAPISpec §1(1)(q)
     // ==========================================

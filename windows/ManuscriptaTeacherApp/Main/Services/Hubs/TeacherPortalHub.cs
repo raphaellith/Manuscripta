@@ -66,6 +66,7 @@ public class TeacherPortalHub : Hub
     private readonly IContentModificationService _contentModificationService;
     private readonly IEmbeddingStatusService _embeddingStatusService;
     private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly IFeedbackGenerationService _feedbackGenerationService;
     private readonly IEmbeddingService _documentEmbeddingService;
     private readonly OllamaClientService _ollamaClient;
     private readonly QuestionExtractionService _questionExtractionService;
@@ -113,6 +114,7 @@ public class TeacherPortalHub : Hub
         IContentModificationService contentModificationService,
         IEmbeddingStatusService embeddingStatusService,
         FeedbackQueueService feedbackQueueService,
+        IFeedbackGenerationService feedbackGenerationService,
         IEmbeddingService documentEmbeddingService,
         OllamaClientService ollamaClient,
         QuestionExtractionService questionExtractionService)
@@ -137,6 +139,7 @@ public class TeacherPortalHub : Hub
         _contentModificationService = contentModificationService ?? throw new ArgumentNullException(nameof(contentModificationService));
         _embeddingStatusService = embeddingStatusService ?? throw new ArgumentNullException(nameof(embeddingStatusService));
         _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
+        _feedbackGenerationService = feedbackGenerationService ?? throw new ArgumentNullException(nameof(feedbackGenerationService));
         _documentEmbeddingService = documentEmbeddingService ?? throw new ArgumentNullException(nameof(documentEmbeddingService));
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _udpBroadcastService = udpBroadcastService ?? throw new ArgumentNullException(nameof(udpBroadcastService));
@@ -792,6 +795,10 @@ public class TeacherPortalHub : Hub
             // Status defaults to PROVISIONAL in constructor
 
             await _feedbackRepository.AddAsync(entity);
+
+            // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is created
+            _feedbackQueueService.RemoveFromQueue(dto.ResponseId);
+
             _logger.LogInformation("CreateFeedback success: Created Feedback {FeedbackId}", entity.Id);
             return entity;
         }
@@ -828,6 +835,9 @@ public class TeacherPortalHub : Hub
         existing.Marks = entity.Marks;
         existing.Text = entity.Text;
         await _feedbackRepository.UpdateAsync(existing);
+
+        // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is updated
+        _feedbackQueueService.RemoveFromQueue(existing.ResponseId);
     }
 
     /// <summary>
@@ -1456,20 +1466,46 @@ public class TeacherPortalHub : Hub
     {
         try
         {
-            var prioritized = _feedbackQueueService.PrioritizeResponse(responseId);
-            if (!prioritized)
-            {
-                throw new HubException($"Response {responseId} is not currently queued or is being generated");
-            }
+            // Per §3D(8A)(b): no effect if the response is not currently queued
+            // or is currently being generated — return successfully.
+            _feedbackQueueService.PrioritizeResponse(responseId);
             return Task.CompletedTask;
-        }
-        catch (HubException)
-        {
-            throw;
         }
         catch (Exception ex)
         {
             throw new HubException($"Failed to prioritise feedback generation: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the list of response IDs currently queued for AI feedback generation.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<List<Guid>> GetFeedbackQueueStatus()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackQueueService.GetQueuedResponseIds());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get feedback queue status: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the response ID currently being processed for feedback generation, or null if idle.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<string?> GetCurrentlyGeneratingResponseId()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackGenerationService.GetCurrentlyGeneratingResponseId());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get currently generating response ID: {ex.Message}", ex);
         }
     }
 
@@ -1515,11 +1551,10 @@ public class TeacherPortalHub : Hub
                 throw new HubException($"Response {responseId} does not belong to question {questionId}");
             }
 
-            // Generate feedback via the feedback generation service
-            // Note: This returns the entire feedback entity, but spec asks for just the text
+            // Reuse the canonical prompt from FeedbackGenerationService
             var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(
                 "granite4",
-                ConstructFeedbackPrompt(question, response)
+                FeedbackGenerationService.ConstructFeedbackPrompt(question, response)
             );
 
             return feedbackText;
@@ -1532,37 +1567,6 @@ public class TeacherPortalHub : Hub
         {
             throw new HubException($"Failed to generate feedback: {ex.Message}", ex);
         }
-    }
-
-    /// <summary>
-    /// Constructs the feedback generation prompt.
-    /// See GenAISpec.md §3D(9)(b).
-    /// </summary>
-    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
-    {
-        var maxScoreSection = question.MaxScore.HasValue
-            ? $"Maximum Score:\n{question.MaxScore.Value}"
-            : "";
-
-        return $@"
-TASK:
-Generate constructive feedback for a student's response to the question given below.
-Include a score justification explaining how well the response meets the mark scheme.
-Include specific strengths in the response.
-Include improvement suggestions for areas that could be enhanced.
-Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
-
-QUESTION:
-{question.QuestionText}
-
-STUDENT'S RESPONSE:
-{response.ResponseText}
-
-MARK SCHEME:
-{question.MarkScheme}
-
-{maxScoreSection}
-";
     }
 
     #endregion

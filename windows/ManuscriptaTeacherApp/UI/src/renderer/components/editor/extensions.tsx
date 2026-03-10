@@ -41,6 +41,7 @@ const AttachmentImageComponent: React.FC<NodeViewProps> = ({ node, deleteNode })
                 <button
                     onClick={handleDelete}
                     className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    aria-label="Delete image"
                     title="Delete image"
                 >
                     🗑️
@@ -389,6 +390,7 @@ const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => 
                     <button
                         onClick={handleEdit}
                         className="p-1.5 text-gray-500 hover:text-brand-orange hover:bg-orange-100 rounded transition-colors"
+                        aria-label="Edit question"
                         title="Edit question"
                     >
                         ✏️
@@ -397,6 +399,7 @@ const QuestionRefComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => 
                         <button
                             onClick={handleDelete}
                             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            aria-label="Delete question"
                             title="Delete question"
                         >
                             🗑️
@@ -666,6 +669,7 @@ const PdfEmbedComponent: React.FC<NodeViewProps> = ({ node, deleteNode }) => {
                     <button
                         onClick={handleDelete}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        aria-label="Delete PDF"
                         title="Delete PDF"
                     >
                         🗑️

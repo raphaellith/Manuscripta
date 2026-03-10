@@ -41,6 +41,7 @@ const ToolbarButton: React.FC<{
     <button
         onClick={onClick}
         disabled={disabled}
+        aria-label={title}
         title={title}
         className={`p-2 rounded transition-colors ${isActive
             ? 'bg-brand-orange text-white'

@@ -39,7 +39,19 @@ public class EfSourceDocumentRepository : ISourceDocumentRepository
 
     public async Task UpdateAsync(SourceDocumentEntity entity)
     {
-        _ctx.SourceDocuments.Update(entity);
+        var existing = await _ctx.SourceDocuments.FindAsync(entity.Id);
+        if (existing == null)
+        {
+            throw new InvalidOperationException($"SourceDocument with ID {entity.Id} not found.");
+        }
+
+        // Copy only scalar properties to avoid EF tracking conflicts
+        // when the incoming entity carries a populated UnitCollection
+        // navigation property whose key is already tracked.
+        existing.UnitCollectionId = entity.UnitCollectionId;
+        existing.Transcript = entity.Transcript;
+        existing.EmbeddingStatus = entity.EmbeddingStatus;
+
         await _ctx.SaveChangesAsync();
     }
 

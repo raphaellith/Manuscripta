@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using ChromaDB.Client;
 using ChromaDB.Client.Models;
 using Main.Data;
@@ -21,19 +23,20 @@ public class DocumentEmbeddingService : IEmbeddingService
     private readonly ChromaClient _chromaClient;
     private readonly ChromaConfigurationOptions _chromaOptions;
     private readonly IRuntimeDependencyRegistry _runtimeDependencyRegistry;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHubContext<TeacherPortalHub> _hubContext;
     private readonly MainDbContext _dbContext;
     private readonly ILogger<DocumentEmbeddingService> _logger;
     private const int ChunkSizeTokens = 512;
     private const int ChunkOverlapTokens = 64;
     private const int MaxEmbeddingRetries = 3;
+    private bool _tenantDatabaseInitialized;
 
     public DocumentEmbeddingService(
         OllamaClientService ollamaClient,
         ChromaClient chromaClient,
         ChromaConfigurationOptions chromaOptions,
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IHubContext<TeacherPortalHub> hubContext,
         MainDbContext dbContext,
         ILogger<DocumentEmbeddingService> logger,
@@ -42,7 +45,7 @@ public class DocumentEmbeddingService : IEmbeddingService
         _ollamaClient = ollamaClient;
         _chromaClient = chromaClient;
         _chromaOptions = chromaOptions;
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _hubContext = hubContext;
         _dbContext = dbContext;
         _logger = logger;
@@ -71,7 +74,7 @@ public class DocumentEmbeddingService : IEmbeddingService
 
                 // Generate embeddings for each chunk
                 var collection = await GetOrCreateCollectionAsync();
-                var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
+                var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClientFactory.CreateClient("ChromaDB"));
                 
                 var ids = new List<string>();
                 var embeddings = new List<ReadOnlyMemory<float>>();
@@ -133,13 +136,19 @@ public class DocumentEmbeddingService : IEmbeddingService
     /// <summary>
     /// Removes all chunks associated with a document from ChromaDB.
     /// See GenAISpec.md §3A(4)(a) and §3A(5)(b).
+    /// This method is best-effort: if ChromaDB is unavailable (e.g. the
+    /// document was never indexed, or the server is not running), the
+    /// failure is logged but not propagated, so that deletion of the
+    /// source document entity from the database can still succeed.
+    /// When <paramref name="throwOnError"/> is true, exceptions are propagated—
+    /// suitable for re-indexing where we must remove old chunks before adding new ones.
     /// </summary>
-    public async Task RemoveSourceDocumentAsync(Guid sourceDocumentId)
+    public async Task RemoveSourceDocumentAsync(Guid sourceDocumentId, bool throwOnError = false)
     {
         try
         {
             var collection = await GetOrCreateCollectionAsync();
-            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
+            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClientFactory.CreateClient("ChromaDB"));
             
             // Query for all chunks belonging to this document
             var where = ChromaWhereOperator.Equal("SourceDocumentId", sourceDocumentId.ToString());
@@ -158,7 +167,19 @@ public class DocumentEmbeddingService : IEmbeddingService
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to remove source document {sourceDocumentId} from vector store", ex);
+            if (throwOnError)
+            {
+                throw;
+            }
+
+            // Best-effort: if ChromaDB is unavailable the source document
+            // entity has already been (or will be) deleted from the primary
+            // data store, so there is nothing left to clean up once the
+            // vector store comes back online.
+            _logger.LogWarning(ex,
+                "Could not remove source document {SourceDocumentId} from vector store. " +
+                "ChromaDB may be unavailable. Orphaned chunks, if any, will not affect behaviour.",
+                sourceDocumentId);
         }
     }
 
@@ -174,8 +195,15 @@ public class DocumentEmbeddingService : IEmbeddingService
     {
         try
         {
+            _logger.LogInformation(
+                "Executing RAG chunk retrieval. UnitCollectionId={UnitCollectionId}, SourceDocumentFilterCount={SourceDocumentFilterCount}, TopK={TopK}, EmbeddingDimensions={EmbeddingDimensions}",
+                unitCollectionId,
+                sourceDocumentIds?.Count ?? 0,
+                topK,
+                queryEmbedding?.Length ?? 0);
+
             var collection = await GetOrCreateCollectionAsync();
-            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClient);
+            var collectionClient = new ChromaCollectionClient(collection, _chromaOptions, _httpClientFactory.CreateClient("ChromaDB"));
 
             // §2(4)(b)(ii): Filter by UnitCollectionId
             ChromaWhereOperator? where = ChromaWhereOperator.Equal("UnitCollectionId", unitCollectionId.ToString());
@@ -191,19 +219,36 @@ public class DocumentEmbeddingService : IEmbeddingService
             }
 
             // §2(4)(c): Default value of K shall be 5
+            // Include Distances alongside Documents so the library's
+            // CollectionQueryEntryMapper does not throw NRE — it accesses
+            // Distances without a null check. See ChromaV2UrlRewriteHandler.
             var results = await collectionClient.Query(
                 queryEmbeddings: new ReadOnlyMemory<float>(queryEmbedding),
                 nResults: topK,
                 where: where,
-                include: ChromaQueryInclude.Documents
+                include: ChromaQueryInclude.Documents | ChromaQueryInclude.Distances
             );
 
             // Materialize the results to avoid deferred execution issues
             var resultList = results.ToList();
-            return resultList.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
+            var chunks = resultList.Select(r => r.Document).Where(d => d != null).Cast<string>().ToList();
+
+            _logger.LogInformation(
+                "Completed RAG chunk retrieval. UnitCollectionId={UnitCollectionId}, RetrievedChunkCount={RetrievedChunkCount}, TotalRetrievedContextChars={TotalRetrievedContextChars}",
+                unitCollectionId,
+                chunks.Count,
+                chunks.Sum(c => c?.Length ?? 0));
+
+            return chunks;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(
+                ex,
+                "RAG chunk retrieval failed. UnitCollectionId={UnitCollectionId}, SourceDocumentFilterCount={SourceDocumentFilterCount}, TopK={TopK}. Returning empty result.",
+                unitCollectionId,
+                sourceDocumentIds?.Count ?? 0,
+                topK);
             return new List<string>();
         }
     }
@@ -237,6 +282,58 @@ public class DocumentEmbeddingService : IEmbeddingService
             // Rough approximation: 1 token ≈ 4 characters
             // See §2(1) - approximate tokenization
             var sentenceTokens = (int)Math.Ceiling(sentence.Length / 4.0);
+
+            // Handle sentences that exceed the chunk size by splitting them
+            if (sentenceTokens > ChunkSizeTokens)
+            {
+                // First, flush any current chunk
+                if (currentChunk.Count > 0)
+                {
+                    chunks.Add(string.Join(" ", currentChunk));
+                    currentChunk.Clear();
+                    currentTokenCount = 0;
+                }
+
+                // Split the long sentence into smaller pieces at word boundaries
+                var words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var subChunk = new List<string>();
+                var subTokenCount = 0;
+
+                foreach (var word in words)
+                {
+                    var wordTokens = (int)Math.Ceiling(word.Length / 4.0) + 1; // +1 for space
+                    
+                    if (subTokenCount + wordTokens > ChunkSizeTokens && subChunk.Count > 0)
+                    {
+                        chunks.Add(string.Join(" ", subChunk));
+                        
+                        // Create overlap from end of sub-chunk
+                        var overlapWords = new List<string>();
+                        var overlapTokens = 0;
+                        for (int i = subChunk.Count - 1; i >= 0 && overlapTokens < ChunkOverlapTokens; i--)
+                        {
+                            var w = subChunk[i];
+                            overlapTokens += (int)Math.Ceiling(w.Length / 4.0) + 1;
+                            overlapWords.Insert(0, w);
+                        }
+                        
+                        subChunk = overlapWords;
+                        subTokenCount = overlapTokens;
+                    }
+
+                    subChunk.Add(word);
+                    subTokenCount += wordTokens;
+                }
+
+                // Add remaining words as overlap for next chunk
+                if (subChunk.Count > 0)
+                {
+                    currentChunk = subChunk;
+                    currentTokenCount = subTokenCount;
+                }
+                
+                continue;
+            }
 
             if (currentTokenCount + sentenceTokens > ChunkSizeTokens && currentChunk.Count > 0)
             {
@@ -289,7 +386,100 @@ public class DocumentEmbeddingService : IEmbeddingService
                 throw new InvalidOperationException("ChromaDB dependency is not available");
             }
         }
+
+        // The Chroma Rust CLI server does not pre-create the default tenant and
+        // database that the ChromaDB.Client library assumes exist. Creating them
+        // explicitly prevents 404 errors from GetOrCreateCollection.
+        if (!_tenantDatabaseInitialized)
+        {
+            await EnsureTenantAndDatabaseExistAsync();
+            _tenantDatabaseInitialized = true;
+        }
+
         return await _chromaClient.GetOrCreateCollection("source_documents");
+    }
+
+    /// <summary>
+    /// Ensures that the default tenant and database exist in ChromaDB.
+    /// The Chroma Rust CLI server does not automatically create "default_tenant"
+    /// and "default_database", unlike the Python server. Without these, the
+    /// ChromaDB.Client library receives 404 when constructing collection URLs
+    /// under the /tenants/{tenant}/databases/{database}/collections path.
+    /// </summary>
+    private async Task EnsureTenantAndDatabaseExistAsync()
+    {
+        var baseUri = _chromaOptions.Uri.ToString().TrimEnd('/');
+        var tenant = string.IsNullOrEmpty(_chromaOptions.Tenant) ? "default_tenant" : _chromaOptions.Tenant;
+        var database = string.IsNullOrEmpty(_chromaOptions.Database) ? "default_database" : _chromaOptions.Database;
+
+        // Use a dedicated HttpClient for these raw REST calls so that the
+        // ChromaCollectionClient (which sets BaseAddress in its constructor)
+        // always receives a fresh, un-started HttpClient instance.
+        using var httpClient = _httpClientFactory.CreateClient("ChromaDB");
+
+        try
+        {
+            var tenantPayload = new StringContent(
+                JsonSerializer.Serialize(new { name = tenant }),
+                Encoding.UTF8,
+                "application/json");
+            var tenantResponse = await httpClient.PostAsync($"{baseUri}/tenants", tenantPayload);
+
+            // 200 = created, 409 = already exists — both are acceptable
+            if (!tenantResponse.IsSuccessStatusCode &&
+                tenantResponse.StatusCode != System.Net.HttpStatusCode.Conflict)
+            {
+                _logger.LogWarning(
+                    "Unexpected response when creating ChromaDB tenant '{Tenant}': {StatusCode}",
+                    tenant, tenantResponse.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to ensure ChromaDB tenant '{Tenant}' exists", tenant);
+        }
+
+        try
+        {
+            var dbPayload = new StringContent(
+                JsonSerializer.Serialize(new { name = database }),
+                Encoding.UTF8,
+                "application/json");
+            var dbResponse = await httpClient.PostAsync(
+                $"{baseUri}/tenants/{tenant}/databases", dbPayload);
+
+            // 200 = created, 409 = already exists — both are acceptable
+            if (!dbResponse.IsSuccessStatusCode &&
+                dbResponse.StatusCode != System.Net.HttpStatusCode.Conflict)
+            {
+                _logger.LogWarning(
+                    "Unexpected response when creating ChromaDB database '{Database}' under tenant '{Tenant}': {StatusCode}",
+                    database, tenant, dbResponse.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to ensure ChromaDB database '{Database}' exists under tenant '{Tenant}'",
+                database, tenant);
+        }
+    }
+
+    /// <summary>
+    /// Indexes a source document by ID, fetching it from the database.
+    /// Intended for use from background tasks with their own DI scope.
+    /// See GenAISpec.md §3A(1) and §3A(5)(a).
+    /// </summary>
+    public async Task IndexSourceDocumentByIdAsync(Guid sourceDocumentId)
+    {
+        var document = await _dbContext.SourceDocuments.FindAsync(sourceDocumentId);
+
+        if (document == null)
+        {
+            throw new InvalidOperationException($"Source document {sourceDocumentId} not found");
+        }
+
+        await IndexSourceDocumentAsync(document);
     }
 
     /// <summary>
@@ -305,7 +495,10 @@ public class DocumentEmbeddingService : IEmbeddingService
             throw new InvalidOperationException($"Source document {sourceDocumentId} not found");
         }
 
-        if (document.EmbeddingStatus != EmbeddingStatus.FAILED)
+        // Allow retry for FAILED status (expected case) and PENDING status
+        // (documents stuck in PENDING from interrupted indexing attempts)
+        if (document.EmbeddingStatus != EmbeddingStatus.FAILED && 
+            document.EmbeddingStatus != EmbeddingStatus.PENDING)
         {
             throw new InvalidOperationException($"Cannot retry embedding for document with status {document.EmbeddingStatus}");
         }
@@ -321,8 +514,10 @@ public class DocumentEmbeddingService : IEmbeddingService
     /// </summary>
     public async Task ReIndexSourceDocumentAsync(SourceDocumentEntity document)
     {
-        // §3A(3)(a): Remove existing chunks
-        await RemoveSourceDocumentAsync(document.Id);
+        // §3A(3)(a): Remove existing chunks.
+        // Pass throwOnError=true to ensure old chunks are removed before adding new ones.
+        // If removal fails, we must not proceed with re-indexing or we'll create duplicates.
+        await RemoveSourceDocumentAsync(document.Id, throwOnError: true);
         
         // §3A(3)(b): Re-index following the workflow in §3A(2)
         await IndexSourceDocumentAsync(document);
@@ -336,6 +531,35 @@ public class DocumentEmbeddingService : IEmbeddingService
     {
         try
         {
+            // Handle PENDING documents from interrupted indexing attempts
+            // These should be transitioned to FAILED status since the previous
+            // indexing operation did not complete
+            var pendingDocuments = await _dbContext.SourceDocuments
+                .Where(d => d.EmbeddingStatus == EmbeddingStatus.PENDING)
+                .ToListAsync();
+
+            if (pendingDocuments.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Found {Count} source document(s) with PENDING embedding status from interrupted indexing. " +
+                    "Transitioning to FAILED status.",
+                    pendingDocuments.Count
+                );
+
+                foreach (var doc in pendingDocuments)
+                {
+                    doc.EmbeddingStatus = EmbeddingStatus.FAILED;
+                    _logger.LogWarning(
+                        "Source document {SourceDocumentId} in unit collection {UnitCollectionId} " +
+                        "transitioned from PENDING to FAILED due to interrupted indexing.",
+                        doc.Id,
+                        doc.UnitCollectionId
+                    );
+                }
+
+                await _dbContext.SaveChangesAsync();
+            }
+
             // §3A(8)(a): Identify all SourceDocumentEntity objects with EmbeddingStatus of FAILED
             var failedDocuments = await _dbContext.SourceDocuments
                 .Where(d => d.EmbeddingStatus == EmbeddingStatus.FAILED)

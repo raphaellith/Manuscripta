@@ -320,7 +320,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall prompt the user to either select a file (e.g., PDF, DOCX) or enter plain text.
 
-    (b) the frontend shall extract or prompt for a textual transcript of the document, if a file has been uploaded.
+    (b) the frontend shall create a textual transcript of the document, if a file has been uploaded.
 
     (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
 
@@ -982,7 +982,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) if R is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator, and disable edits for that response.
 
-    (b) provide a "Write Manually" option. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created.
+    (b) provide a "Write Manually" option, enabled only when R is queued and not actively generating. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created. The option shall be disabled while R is being generated.
 
     (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
 

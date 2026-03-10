@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -23,11 +24,19 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IResponseRepository _responseRepository;
     private readonly IFeedbackRepository _feedbackRepository;
-    private const string FeedbackModel = "granite4";
+    private readonly ILogger<FeedbackGenerationService> _logger;
+    private const string PrimaryModel = "qwen3:8b";
+    private const string FallbackModel = "granite4";
     
     private Task? _processingTask;
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
+
+    /// <summary>
+    /// Tracks the response ID currently being processed for generation.
+    /// See GenAISpec.md §3D(4).
+    /// </summary>
+    private string? _currentlyGeneratingResponseId;
 
     public FeedbackGenerationService(
         OllamaClientService ollamaClient,
@@ -35,7 +44,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         IHubContext<TeacherPortalHub> hubContext,
         IServiceScopeFactory scopeFactory,
         IResponseRepository responseRepository,
-        IFeedbackRepository feedbackRepository)
+        IFeedbackRepository feedbackRepository,
+        ILogger<FeedbackGenerationService> logger)
     {
         _ollamaClient = ollamaClient;
         _queueService = queueService;
@@ -43,6 +53,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         _scopeFactory = scopeFactory;
         _responseRepository = responseRepository;
         _feedbackRepository = feedbackRepository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -52,6 +63,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     {
         _cancellationTokenSource = new CancellationTokenSource();
         _processingTask = Task.Run(() => ProcessQueueAsync(_cancellationTokenSource.Token), cancellationToken);
+        _logger.LogInformation("Feedback generation queue processor started");
         return Task.CompletedTask;
     }
 
@@ -113,6 +125,8 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                     continue;
                 }
 
+                _logger.LogInformation("Dequeued response {ResponseId} for feedback generation", responseId.Value);
+
                 // Ensure only one generation happens at a time (§3D(4))
                 await _processingSemaphore.WaitAsync(cancellationToken);
                 try
@@ -132,7 +146,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             catch (Exception ex)
             {
                 // Log error but continue processing
-                Console.Error.WriteLine($"Error in feedback generation queue processing: {ex.Message}");
+                _logger.LogError(ex, "Error in feedback generation queue processing");
             }
         }
     }
@@ -142,15 +156,31 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// </summary>
     private async Task ProcessResponseAsync(Guid responseId, CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var questionRepository = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+        // Set generating ID immediately so the frontend sees this response as
+        // "generating" for the entire duration, not in a limbo state between
+        // dequeue and the actual Ollama call.
+        _currentlyGeneratingResponseId = responseId.ToString();
+
+        // Track result for post-finally notification.
+        // Notifications are sent AFTER clearing _currentlyGeneratingResponseId
+        // to prevent a race condition: the frontend's loadData() calls
+        // GetCurrentlyGeneratingResponseId() and can read the stale value
+        // if the finally block hasn't executed yet, causing the UI to
+        // permanently show "generating" even though processing completed.
+        Guid? savedFeedbackId = null;
+        string? failureMessage = null;
 
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var questionRepository = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+
             // Retrieve the response
             var response = await _responseRepository.GetByIdAsync(responseId);
             if (response == null)
             {
+                _logger.LogWarning("Feedback generation: response {ResponseId} not found", responseId);
+                failureMessage = $"Response {responseId} not found";
                 return;
             }
 
@@ -158,29 +188,62 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             var question = await questionRepository.GetByIdAsync(response.QuestionId);
             if (question == null)
             {
+                _logger.LogWarning("Feedback generation: question {QuestionId} not found for response {ResponseId}",
+                    response.QuestionId, responseId);
+                failureMessage = $"Question {response.QuestionId} not found";
                 return;
             }
 
-            // Check if feedback already exists
+            // Check if feedback already exists — per §6A(1A), overwrite PROVISIONAL feedback
             var existingFeedback = await _feedbackRepository.GetByResponseIdAsync(responseId);
             if (existingFeedback != null)
             {
-                return;
+                if (existingFeedback.Status == FeedbackStatus.PROVISIONAL)
+                {
+                    // Delete PROVISIONAL feedback to allow re-generation
+                    await _feedbackRepository.DeleteAsync(existingFeedback.Id);
+                }
+                else
+                {
+                    // Preserve READY/DELIVERED feedback — do not overwrite finalized assessments
+                    _logger.LogInformation(
+                        "Skipping generation for response {ResponseId}: feedback already in {Status} state",
+                        responseId, existingFeedback.Status);
+                    return;
+                }
             }
 
             // Generate feedback
+            _logger.LogInformation("Starting Ollama feedback generation for response {ResponseId}", responseId);
             var feedback = await GenerateFeedbackAsync(question, response);
+            _logger.LogInformation("Ollama feedback generation completed for response {ResponseId}", responseId);
 
             // Save feedback
             await _feedbackRepository.AddAsync(feedback);
-
-            // Notify frontend of successful generation
-            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", feedback.Id, responseId, cancellationToken);
+            savedFeedbackId = feedback.Id;
         }
         catch (Exception ex)
         {
-            // Error handling is done in GenerateFeedbackAsync, but catch any unexpected errors
-            Console.Error.WriteLine($"Unexpected error processing response {responseId}: {ex.Message}");
+            _logger.LogError(ex, "Failed to generate feedback for response {ResponseId}", responseId);
+            failureMessage = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            _currentlyGeneratingResponseId = null;
+        }
+
+        // Notify AFTER clearing _currentlyGeneratingResponseId so the
+        // frontend's loadData() → GetCurrentlyGeneratingResponseId() reads null.
+        if (savedFeedbackId.HasValue)
+        {
+            // Per NetworkingAPISpec §2(1)(c)(iii).
+            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerated", savedFeedbackId.Value, responseId, cancellationToken);
+        }
+        else if (failureMessage != null)
+        {
+            // §3D(7)(b): Notify frontend so the UI can show the error and offer retry.
+            await _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", responseId,
+                failureMessage, cancellationToken);
         }
     }
 
@@ -195,6 +258,12 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     }
 
     /// <summary>
+    /// Returns the response ID currently being processed, or null if idle.
+    /// See GenAISpec.md §3D(4).
+    /// </summary>
+    public string? GetCurrentlyGeneratingResponseId() => _currentlyGeneratingResponseId;
+
+    /// <summary>
     /// Generates AI feedback for a student response.
     /// See GenAISpec.md §3D(9).
     /// </summary>
@@ -205,13 +274,36 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         try
         {
             // Ensure model is ready
-            await _ollamaClient.EnsureModelReadyAsync(FeedbackModel);
+            string modelToUse = PrimaryModel;
+            await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
             // §3D(9)(b): Construct prompt
             var prompt = ConstructFeedbackPrompt(question, response);
 
-            // §3D(9)(c): Invoke model
-            var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
+            // §3D(9)(d): Invoke model (or granite4 if fallback per §1(6))
+            string rawResponse;
+            try
+            {
+                rawResponse = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            }
+            catch (HttpRequestException ex) when (
+                ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+                ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
+            {
+                // §1(6)(a): Fall back when primary model fails due to resource constraints
+                _logger.LogWarning(ex, "Primary model failed for feedback generation on response {ResponseId}, falling back to {FallbackModel}",
+                    response.Id, FallbackModel);
+                await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                await Task.Delay(500);
+                await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                modelToUse = FallbackModel;
+                rawResponse = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            }
+
+            // §3D(9)(e): Parse optional mark and feedback text from model output
+            var (marks, feedbackText) = ParseFeedbackResponse(rawResponse, question.MaxScore);
 
             // Strip Markdown syntax from the generated feedback
             var plainTextFeedback = MarkdownStrippingHelper.StripMarkdownSyntax(feedbackText);
@@ -222,6 +314,7 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
                 Id = Guid.NewGuid(),
                 ResponseId = response.Id,
                 FeedbackText = plainTextFeedback,
+                Marks = marks,
                 Status = FeedbackStatus.PROVISIONAL,
                 CreatedAt = DateTime.UtcNow
             };
@@ -230,11 +323,6 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
         }
         catch (Exception ex)
         {
-            // §3D(7): Remove from queue on failure
-            _queueService.RemoveFromQueue(response.Id);
-            
-            // §3D(7)(b): Notify frontend via SignalR OnFeedbackGenerationFailed
-            _ = _hubContext.Clients.All.SendAsync("OnFeedbackGenerationFailed", response.Id, ex.Message);
             throw new InvalidOperationException($"Failed to generate feedback for response {response.Id}", ex);
         }
     }
@@ -243,31 +331,84 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
     /// Constructs the feedback generation prompt.
     /// See GenAISpec.md §3D(9)(b).
     /// </summary>
-    private string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
+    public static string ConstructFeedbackPrompt(QuestionEntity question, ResponseEntity response)
     {
         // §3D(9)(b)(iii): Include maximum score if present
+        // §3D(9)(c): Instruct the model to output a MARK line if MaxScore is present
         var maxScoreSection = question.MaxScore.HasValue
             ? $"Maximum Score:\n{question.MaxScore.Value}"
+            : "";
+
+        var markInstruction = question.MaxScore.HasValue
+            ? $"Begin your response with a line in the exact format: MARK: X\nwhere X is an integer between 0 and {question.MaxScore.Value} (inclusive) representing the mark you award.\nFollow the MARK line with a blank line, then provide the feedback text."
             : "";
 
         return $@"
 TASK:
 Generate constructive feedback for a student's response to the question given below.
+{markInstruction}
 Include a score justification explaining how well the response meets the mark scheme.
+Your mark must strictly adhere to the mark scheme provided and be supported by specific evidence from the student's response.
+If a mark scheme provides a specific mark breakdown, you must show evidence of how each mark is awarded based on the breakdown, referencing the parts of the mark scheme and the student's response that justify each mark awarded.
+You must be ready to award the full range of marks, including zero and the maximum score, if justified by the response.
 Include specific strengths in the response.
-Include improvement suggestions for areas that could be enhanced.
+Where the response could be improved, include suggestions for enhancement.
 Format the feedback in a clear, constructive manner suitable for the student to understand and learn from.
+Use British English throughout your response.
+Your feedback should speak directly to the student, using you statements to make it more engaging and personalised.
+You may not use markdown or HTML formatting in your feedback.
 
 QUESTION:
 {question.QuestionText}
 
 STUDENT'S RESPONSE:
-{response.ResponseText}
+{GetResponseText(response)}
 
 MARK SCHEME:
 {question.MarkScheme}
 
 {maxScoreSection}
 ";
+    }
+
+    /// <summary>
+    /// Extracts the student's answer text from a polymorphic response entity.
+    /// </summary>
+    private static string GetResponseText(ResponseEntity response)
+    {
+        return response switch
+        {
+            WrittenAnswerResponseEntity wa => wa.Answer,
+            _ => response.ResponseText ?? string.Empty
+        };
+    }
+
+    /// <summary>
+    /// Parses the AI model response to extract a numeric mark and feedback text.
+    /// See GenAISpec.md §3D(9)(e).
+    /// Expected format: first line "MARK: X" followed by feedback text.
+    /// </summary>
+    public static (int? marks, string feedbackText) ParseFeedbackResponse(string rawResponse, int? maxScore)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponse))
+            return (null, rawResponse ?? "");
+
+        var lines = rawResponse.Split('\n');
+        var firstLine = lines[0].Trim();
+
+        // §3D(9)(e)(i): Extract MARK: X from the first line
+        var match = System.Text.RegularExpressions.Regex.Match(firstLine, @"^MARK:\s*(\d+)$");
+        if (maxScore.HasValue && match.Success && int.TryParse(match.Groups[1].Value, out var mark))
+        {
+            // Clamp to valid range [0, MaxScore] per §2F(2)(c)
+            mark = Math.Clamp(mark, 0, maxScore.Value);
+
+            // §3D(9)(e)(ii): Remaining text after the MARK line
+            var feedbackText = string.Join('\n', lines.Skip(1)).TrimStart('\n', '\r');
+            return (mark, feedbackText);
+        }
+
+        // No valid MARK line found or no MaxScore — return entire response as text, no marks
+        return (null, rawResponse);
     }
 }

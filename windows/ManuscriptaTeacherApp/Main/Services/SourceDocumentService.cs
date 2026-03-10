@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Main.Models.Entities;
 using Main.Services.Repositories;
 using Main.Services.GenAI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Main.Services;
@@ -18,17 +19,20 @@ public class SourceDocumentService : ISourceDocumentService
     private readonly ISourceDocumentRepository _repository;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
     private readonly IEmbeddingService _embeddingService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<SourceDocumentService> _logger;
 
     public SourceDocumentService(
         ISourceDocumentRepository repository,
         IUnitCollectionRepository unitCollectionRepository,
         IEmbeddingService embeddingService,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<SourceDocumentService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -38,22 +42,32 @@ public class SourceDocumentService : ISourceDocumentService
             throw new ArgumentNullException(nameof(entity));
 
         await ValidateEntityAsync(entity);
+
+        // §3A(2)(a): Set EmbeddingStatus to PENDING before persisting so that
+        // the entity returned to the frontend has the correct initial status,
+        // enabling the polling mechanism (FrontendWorkflowSpec §4AA(2)(e)).
+        entity.EmbeddingStatus = Models.Enums.EmbeddingStatus.PENDING;
         await _repository.AddAsync(entity);
         
-        // §3A(1): When a SourceDocumentEntity is created, index it for semantic retrieval
-        // This runs asynchronously in the background with error handling
+        // §3A(1): When a SourceDocumentEntity is created, index it for semantic retrieval.
+        // Indexing runs in the background to avoid blocking the hub response.
+        // A new DI scope is created so that the scoped IEmbeddingService and its
+        // DbContext remain valid for the full duration of the background task.
+        var documentId = entity.Id;
         _ = Task.Run(async () =>
         {
             try
             {
-                await _embeddingService.IndexSourceDocumentAsync(entity);
+                using var scope = _serviceScopeFactory.CreateScope();
+                var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+                await embeddingService.IndexSourceDocumentByIdAsync(documentId);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, 
                     "Failed to index source document {SourceDocumentId} for unit collection {UnitCollectionId}. " +
                     "Document created successfully but semantic search will not work until re-indexed.",
-                    entity.Id, entity.UnitCollectionId);
+                    documentId, entity.UnitCollectionId);
             }
         });
         

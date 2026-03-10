@@ -1,5 +1,6 @@
 using ChromaDB.Client;
 using Main.Models.Dtos;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services.GenAI;
 
@@ -12,17 +13,21 @@ public class ContentModificationService : IContentModificationService
     private readonly OllamaClientService _ollamaClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly OutputValidationService _validationService;
+    private readonly ILogger<ContentModificationService> _logger;
     private const int DefaultTopK = 5;
-    private const string ModificationModel = "granite4";
+    private const string PrimaryModel = "qwen3:8b";
+    private const string FallbackModel = "granite4";
 
     public ContentModificationService(
         OllamaClientService ollamaClient,
         IEmbeddingService embeddingService,
-        OutputValidationService validationService)
+        OutputValidationService validationService,
+        ILogger<ContentModificationService> logger)
     {
         _ollamaClient = ollamaClient;
         _embeddingService = embeddingService;
         _validationService = validationService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,8 +39,16 @@ public class ContentModificationService : IContentModificationService
         string instruction,
         Guid? unitCollectionId)
     {
+        _logger.LogInformation(
+            "Starting AI content modification. UnitCollectionIdProvided={UnitCollectionIdProvided}, SelectedContentLength={SelectedContentLength}, InstructionLength={InstructionLength}",
+            unitCollectionId.HasValue,
+            selectedContent?.Length ?? 0,
+            instruction?.Length ?? 0);
+
         // Ensure model is ready
-        await _ollamaClient.EnsureModelReadyAsync(ModificationModel);
+        string modelToUse = PrimaryModel;
+        bool useFallback = false;
+        await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
 
         List<string> relevantChunks = new();
 
@@ -51,25 +64,75 @@ public class ContentModificationService : IContentModificationService
                 null,
                 DefaultTopK
             );
+
+            _logger.LogInformation(
+                "RAG retrieval completed for content modification. UnitCollectionId={UnitCollectionId}, RetrievedChunkCount={RetrievedChunkCount}, TotalRetrievedContextChars={TotalRetrievedContextChars}, TopK={TopK}",
+                unitCollectionId.Value,
+                relevantChunks.Count,
+                relevantChunks.Sum(c => c?.Length ?? 0),
+                DefaultTopK);
+        }
+        else
+        {
+            _logger.LogInformation("Skipping RAG retrieval for content modification because UnitCollectionId was not provided.");
         }
 
         // §3C(2)(b): Construct prompt
         var prompt = GenAIPromptBuilder.BuildModificationPrompt(selectedContent, instruction, relevantChunks);
 
-        // §3C(2)(c): Invoke model
+        var promptContainsInjectedContext = relevantChunks.Count == 0 || relevantChunks.Any(c => !string.IsNullOrEmpty(c) && prompt.Contains(c, StringComparison.Ordinal));
+        _logger.LogInformation(
+            "RAG prompt assembled for content modification. PromptLength={PromptLength}, RetrievedChunkCount={RetrievedChunkCount}, ContextInjectionVerified={ContextInjectionVerified}",
+            prompt.Length,
+            relevantChunks.Count,
+            promptContainsInjectedContext);
+
+        // §3C(2)(c): Invoke model (or granite4 if fallback per §1(6))
         string modifiedContent;
         try
         {
-            modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(ModificationModel, prompt);
+            modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
         }
-        catch (HttpRequestException ex) when (ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase))
+        catch (HttpRequestException ex) when (
+            ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+            ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(
-                "Insufficient system memory to process this request. Please close other applications and try again.", ex);
+            // §1(6)(a): Fall back when primary model fails due to resource constraints
+            if (!useFallback)
+            {
+                modelToUse = FallbackModel;
+                useFallback = true;
+                try
+                {
+                    await _ollamaClient.UnloadModelAsync(PrimaryModel);
+                    await Task.Delay(500);
+                    await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
+                    modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+                }
+                catch (Exception fallbackEx)
+                {
+                    throw new InvalidOperationException(
+                        $"Both primary (qwen3:8b) and fallback (granite4) models exhausted due to insufficient system memory. Please close other applications and try again. Error: {fallbackEx.Message}",
+                        fallbackEx);
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
+                    ex);
+            }
         }
 
         // §3C(2)(d): Validate and refine
-        var result = await _validationService.ValidateAndRefineAsync(modifiedContent, ModificationModel, useFallback: true);
+        var result = await _validationService.ValidateAndRefineAsync(modifiedContent, modelToUse, useFallback);
+
+        _logger.LogInformation(
+            "Completed AI content modification. OutputLength={OutputLength}, RetrievedChunkCount={RetrievedChunkCount}",
+            result.Content?.Length ?? 0,
+            relevantChunks.Count);
 
         return result;
     }

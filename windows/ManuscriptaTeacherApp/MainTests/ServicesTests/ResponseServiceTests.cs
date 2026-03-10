@@ -61,6 +61,7 @@ public class ResponseServiceTests
     private sealed class StubFeedbackGenerationService : IFeedbackGenerationService
     {
         public bool ShouldGenerateFeedback(QuestionEntity question) => false;
+        public string? GetCurrentlyGeneratingResponseId() => null;
     }
 
     [Fact]
