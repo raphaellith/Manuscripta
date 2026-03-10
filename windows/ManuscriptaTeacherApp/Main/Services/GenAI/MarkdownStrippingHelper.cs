@@ -51,12 +51,6 @@ public static class MarkdownStrippingHelper
         // Remove images ![alt](url)
         text = Regex.Replace(text, @"!\[([^\]]*)\]\([^\)]+\)", "$1");
 
-        // Remove unordered list markers (- or * or +)
-        text = Regex.Replace(text, @"^[\s]*[-*+]\s+", "", RegexOptions.Multiline);
-
-        // Remove ordered list markers (1. 2. etc.)
-        text = Regex.Replace(text, @"^[\s]*\d+\.\s+", "", RegexOptions.Multiline);
-
         // Remove blockquotes (>)
         text = Regex.Replace(text, @"^>\s+", "", RegexOptions.Multiline);
 

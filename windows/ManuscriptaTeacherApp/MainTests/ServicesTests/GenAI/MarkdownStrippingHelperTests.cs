@@ -80,31 +80,29 @@ public class MarkdownStrippingHelperTests
     }
 
     /// <summary>
-    /// Tests that unordered list markers are removed.
+    /// Tests that unordered list markers are preserved (no longer stripped).
     /// </summary>
     [Fact]
-    public void StripMarkdownSyntax_UnorderedLists_RemovesMarkers()
+    public void StripMarkdownSyntax_UnorderedLists_PreservesMarkers()
     {
         var input = "- First item\n- Second item\n* Third item";
-        var expected = "First item\nSecond item\nThird item";
 
         var result = MarkdownStrippingHelper.StripMarkdownSyntax(input);
 
-        Assert.Equal(expected, result);
+        Assert.Equal(input, result);
     }
 
     /// <summary>
-    /// Tests that ordered list markers are removed.
+    /// Tests that ordered list markers are preserved (no longer stripped).
     /// </summary>
     [Fact]
-    public void StripMarkdownSyntax_OrderedLists_RemovesNumbers()
+    public void StripMarkdownSyntax_OrderedLists_PreservesNumbers()
     {
         var input = "1. First item\n2. Second item\n3. Third item";
-        var expected = "First item\nSecond item\nThird item";
 
         var result = MarkdownStrippingHelper.StripMarkdownSyntax(input);
 
-        Assert.Equal(expected, result);
+        Assert.Equal(input, result);
     }
 
     /// <summary>
@@ -159,12 +157,12 @@ Your response demonstrates **good understanding** of the topic.
 Your response demonstrates good understanding of the topic.
 
 Strengths:
-Clear explanation of key concepts
-Well-structured argument
+- Clear explanation of key concepts
+- Well-structured argument
 
 Areas for Improvement:
-Add more specific examples
-Improve conclusion
+1. Add more specific examples
+2. Improve conclusion
 
 Overall, a solid effort!";
 
