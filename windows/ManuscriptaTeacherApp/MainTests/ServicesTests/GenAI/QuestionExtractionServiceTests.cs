@@ -317,4 +317,102 @@ public class QuestionExtractionServiceTests
         Assert.Null(waQuestion.MarkScheme);
         Assert.Equal(5, waQuestion.MaxScore);
     }
+
+    /// <summary>
+    /// Verifies that Markdown formatting is stripped from question text, options,
+    /// correct answer, and mark scheme when creating question entities.
+    /// </summary>
+    [Fact]
+    public async Task ExtractAndCreateQuestionsAsync_MultipleChoiceWithMarkdownInFields_StripsMarkdown()
+    {
+        var questionService = new Mock<IQuestionService>();
+        QuestionEntity? createdQuestion = null;
+
+        questionService.Setup(s => s.CreateQuestionAsync(It.IsAny<QuestionEntity>()))
+            .Callback<QuestionEntity>(q => createdQuestion = q)
+            .ReturnsAsync((QuestionEntity q) => q);
+
+        var service = new QuestionExtractionService(questionService.Object);
+        var materialId = Guid.NewGuid();
+
+        var content = "!!! question-draft type=\"MULTIPLE_CHOICE\"\n" +
+                      "    text: \"What is the **main** purpose of `photosynthesis`?\"\n" +
+                      "    options: [\"To *produce* oxygen\", \"To **consume** water\", \"To ~~destroy~~ cells\"]\n" +
+                      "    correct: 0\n" +
+                      "    max_score: 1";
+
+        var result = await service.ExtractAndCreateQuestionsAsync(content, materialId);
+
+        Assert.Single(result.CreatedQuestionIds);
+        Assert.NotNull(createdQuestion);
+
+        var mcQuestion = Assert.IsType<MultipleChoiceQuestionEntity>(createdQuestion);
+        Assert.Equal("What is the main purpose of photosynthesis?", mcQuestion.QuestionText);
+        Assert.Equal("To produce oxygen", mcQuestion.Options[0]);
+        Assert.Equal("To consume water", mcQuestion.Options[1]);
+        Assert.Equal("To destroy cells", mcQuestion.Options[2]);
+    }
+
+    /// <summary>
+    /// Verifies that Markdown formatting is stripped from written answer
+    /// correct_answer and mark_scheme fields.
+    /// </summary>
+    [Fact]
+    public async Task ExtractAndCreateQuestionsAsync_WrittenAnswerWithMarkdownInCorrectAnswer_StripsMarkdown()
+    {
+        var questionService = new Mock<IQuestionService>();
+        QuestionEntity? createdQuestion = null;
+
+        questionService.Setup(s => s.CreateQuestionAsync(It.IsAny<QuestionEntity>()))
+            .Callback<QuestionEntity>(q => createdQuestion = q)
+            .ReturnsAsync((QuestionEntity q) => q);
+
+        var service = new QuestionExtractionService(questionService.Object);
+        var materialId = Guid.NewGuid();
+
+        var content = "!!! question-draft type=\"WRITTEN_ANSWER\"\n" +
+                      "    text: \"Explain **gravity** in *simple* terms\"\n" +
+                      "    correct_answer: \"Gravity is a **force** that attracts objects\"\n" +
+                      "    max_score: 3";
+
+        var result = await service.ExtractAndCreateQuestionsAsync(content, materialId);
+
+        Assert.Single(result.CreatedQuestionIds);
+        Assert.NotNull(createdQuestion);
+
+        var waQuestion = Assert.IsType<WrittenAnswerQuestionEntity>(createdQuestion);
+        Assert.Equal("Explain gravity in simple terms", waQuestion.QuestionText);
+        Assert.Equal("Gravity is a force that attracts objects", waQuestion.CorrectAnswer);
+    }
+
+    /// <summary>
+    /// Verifies that Markdown formatting is stripped from the mark_scheme field.
+    /// </summary>
+    [Fact]
+    public async Task ExtractAndCreateQuestionsAsync_WrittenAnswerWithMarkdownInMarkScheme_StripsMarkdown()
+    {
+        var questionService = new Mock<IQuestionService>();
+        QuestionEntity? createdQuestion = null;
+
+        questionService.Setup(s => s.CreateQuestionAsync(It.IsAny<QuestionEntity>()))
+            .Callback<QuestionEntity>(q => createdQuestion = q)
+            .ReturnsAsync((QuestionEntity q) => q);
+
+        var service = new QuestionExtractionService(questionService.Object);
+        var materialId = Guid.NewGuid();
+
+        var content = "!!! question-draft type=\"WRITTEN_ANSWER\"\n" +
+                      "    text: \"Describe the process of **mitosis**\"\n" +
+                      "    mark_scheme: \"Award **1 mark** for each *correct* stage mentioned\"\n" +
+                      "    max_score: 4";
+
+        var result = await service.ExtractAndCreateQuestionsAsync(content, materialId);
+
+        Assert.Single(result.CreatedQuestionIds);
+        Assert.NotNull(createdQuestion);
+
+        var waQuestion = Assert.IsType<WrittenAnswerQuestionEntity>(createdQuestion);
+        Assert.Equal("Describe the process of mitosis", waQuestion.QuestionText);
+        Assert.Equal("Award 1 mark for each correct stage mentioned", waQuestion.MarkScheme);
+    }
 }

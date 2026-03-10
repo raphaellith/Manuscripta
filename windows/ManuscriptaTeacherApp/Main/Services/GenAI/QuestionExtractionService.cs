@@ -279,6 +279,7 @@ public class QuestionExtractionService
     /// <summary>
     /// Creates a MultipleChoiceQuestionEntity from parsed data.
     /// See GenAISpec.md §3B(4a)(b) and per AdditionalValidationRules §2E(2)(a): MULTIPLE_CHOICE questions must not have MarkScheme.
+    /// Markdown syntax is stripped from question text and options to ensure plain-text output.
     /// </summary>
     private QuestionEntity CreateMultipleChoiceQuestion(Guid questionId, Guid materialId, QuestionData data)
     {
@@ -288,11 +289,16 @@ public class QuestionExtractionService
         if (data.Options == null || data.Options.Count == 0)
             throw new InvalidOperationException("Multiple choice questions must have at least one option");
 
+        // Strip Markdown syntax from LLM-generated text fields
+        var strippedOptions = data.Options
+            .Select(MarkdownStrippingHelper.StripMarkdownSyntax)
+            .ToList();
+
         return new MultipleChoiceQuestionEntity(
             questionId,
             materialId,
-            data.QuestionText!,
-            data.Options,
+            MarkdownStrippingHelper.StripMarkdownSyntax(data.QuestionText!),
+            strippedOptions,
             data.CorrectAnswerIndex,
             data.MaxScore
         );
@@ -301,6 +307,7 @@ public class QuestionExtractionService
     /// <summary>
     /// Creates a WrittenAnswerQuestionEntity from parsed data.
     /// See GenAISpec.md §3B(4a)(b) and per AdditionalValidationRules §2E(2)(b): Cannot have both MarkScheme and CorrectAnswer.
+    /// Markdown syntax is stripped from question text, correct answer, and mark scheme to ensure plain-text output.
     /// </summary>
     private QuestionEntity CreateWrittenAnswerQuestion(Guid questionId, Guid materialId, QuestionData data)
     {
@@ -311,12 +318,20 @@ public class QuestionExtractionService
         if (!string.IsNullOrEmpty(data.MarkScheme) && !string.IsNullOrEmpty(data.CorrectAnswer))
             throw new InvalidOperationException("Cannot have both mark_scheme and correct_answer for a written answer question");
 
+        // Strip Markdown syntax from LLM-generated text fields
+        var strippedCorrectAnswer = data.CorrectAnswer != null
+            ? MarkdownStrippingHelper.StripMarkdownSyntax(data.CorrectAnswer)
+            : null;
+        var strippedMarkScheme = data.MarkScheme != null
+            ? MarkdownStrippingHelper.StripMarkdownSyntax(data.MarkScheme)
+            : null;
+
         return new WrittenAnswerQuestionEntity(
             questionId,
             materialId,
-            data.QuestionText!,
-            data.CorrectAnswer,
-            data.MarkScheme,
+            MarkdownStrippingHelper.StripMarkdownSyntax(data.QuestionText!),
+            strippedCorrectAnswer,
+            strippedMarkScheme,
             data.MaxScore
         );
     }

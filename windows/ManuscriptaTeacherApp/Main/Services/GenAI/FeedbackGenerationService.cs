@@ -213,12 +213,15 @@ public class FeedbackGenerationService : IHostedService, IFeedbackGenerationServ
             // §3D(9)(c): Invoke model
             var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(FeedbackModel, prompt);
 
+            // Strip Markdown syntax from the generated feedback
+            var plainTextFeedback = MarkdownStrippingHelper.StripMarkdownSyntax(feedbackText);
+
             // §3D(9)(d): Create feedback entity with PROVISIONAL status
             var feedback = new FeedbackEntity
             {
                 Id = Guid.NewGuid(),
                 ResponseId = response.Id,
-                FeedbackText = feedbackText,
+                FeedbackText = plainTextFeedback,
                 Status = FeedbackStatus.PROVISIONAL,
                 CreatedAt = DateTime.UtcNow
             };
