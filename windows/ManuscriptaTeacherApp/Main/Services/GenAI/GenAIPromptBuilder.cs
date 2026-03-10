@@ -31,8 +31,8 @@ public static class GenAIPromptBuilder
                          "Avoid American English.\n" +
                          "Include only material content in your response.\n" +
                          "Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.\n" +
-                         "Preserve existing formatting and structure where appropriate.";
-
+                         "Preserve existing formatting and structure where appropriate. \n" +
+                         "Output only the modified content which should be an appropriate replacement for the original content based on the instruction. Do not output the entire material again, only the modified section.";
         if (readingAge.HasValue && actualAge.HasValue)
         {
             restraints += $"\nAdapt the material's reading level for students with a reading age of {readingAge.Value} and an actual age of {actualAge.Value}.";
