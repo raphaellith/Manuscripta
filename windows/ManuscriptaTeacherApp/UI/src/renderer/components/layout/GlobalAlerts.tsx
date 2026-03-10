@@ -34,7 +34,7 @@ const HelpToast: React.FC<HelpToastProps> = ({ alert, onDismiss, onAcknowledge }
             </div>
             <div className="flex-1">
                 <p className="font-sans font-semibold text-text-heading">Help Requested</p>
-                <p className="font-sans text-sm text-gray-600 mt-1">{alert.deviceName || 'Unknown Device'}: {alert.message}</p>
+                <p className="font-sans text-sm text-gray-600 mt-1">{alert.message}</p>
                 <div className="flex gap-2 mt-3">
                     <button
                         onClick={onAcknowledge}
