@@ -101,6 +101,48 @@ public class GenAIPromptBuilderTests
     }
 
     /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(vi) (optional readingAge/actualAge - only readingAge provided).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_OnlyReadingAge_IncludesReadingAgeConstraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Simplify",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: 10,
+            actualAge: null
+        );
+
+        Assert.Contains("reading age of 10", prompt);
+        Assert.DoesNotContain("actual age of", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(vi) (optional readingAge/actualAge - only actualAge provided).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_OnlyActualAge_IncludesActualAgeConstraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Simplify",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: null,
+            actualAge: 12
+        );
+
+        Assert.DoesNotContain("reading age of", prompt);
+        Assert.Contains("actual age of 12", prompt);
+    }
+
+    /// <summary>
     /// Spec coverage: GenAISpec Section 3C(2)(b)(viii) (MarkdownSyntaxGuide used, no hardcoded guide).
     /// See docs/specifications/GenAISpec.md.
     /// </summary>
