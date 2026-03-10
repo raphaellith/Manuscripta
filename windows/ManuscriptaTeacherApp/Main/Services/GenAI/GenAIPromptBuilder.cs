@@ -24,7 +24,8 @@ public static class GenAIPromptBuilder
             ? string.Join("\n\n", relevantChunks)
             : "";
 
-        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: materialType == "worksheet");
+        // §3C(2)(b)(viii): Include question-draft syntax when materialType is WORKSHEET
+        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: string.Equals(materialType, "WORKSHEET", StringComparison.OrdinalIgnoreCase));
 
         var restraints = "Format the modified content using the Markdown syntax described below.\n" +
                          "Use British English always.\n" +

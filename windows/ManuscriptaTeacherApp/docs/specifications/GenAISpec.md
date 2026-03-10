@@ -304,7 +304,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (4) [Deleted.]
 
-(4a) Upon receiving a request to create a material with generated worksheet content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
+(4a) Upon receiving a request to create or update a material with content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
 
     (a) parse each `question-draft` marker to extract:
 
@@ -360,9 +360,19 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
+        (v) the material title.
+
+        (vi) reading age and actual age constraints, if provided.
+
+        (vii) the material type.
+
+        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
+
     (c) invoke `granite4` via Ollama to generate the modified content using streaming mode as specified in §3H. During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
+
+    (e1) if the modified content contains `question-draft` markers, process them in accordance with §3B(4a). The `MaterialId` used for `QuestionEntity` creation shall be the material to which the modified content belongs.
 
     (e) return the `GenerationResult` containing the content and any validation warnings.
 
