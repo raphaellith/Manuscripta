@@ -17,3 +17,10 @@ interface IElectronAPI {
 interface Window {
     electronAPI: IElectronAPI;
 }
+
+declare module '@tiptap/react/menus' {
+    import * as React from 'react';
+
+    export const BubbleMenu: React.ComponentType<Record<string, unknown>>;
+    export const FloatingMenu: React.ComponentType<Record<string, unknown>>;
+}

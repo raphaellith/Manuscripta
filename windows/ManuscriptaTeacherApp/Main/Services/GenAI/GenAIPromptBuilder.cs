@@ -14,37 +14,77 @@ public static class GenAIPromptBuilder
     public static string BuildModificationPrompt(
         string selectedContent,
         string instruction,
-        List<string> relevantChunks)
+        List<string> relevantChunks,
+        string materialType,
+        string title,
+        int? readingAge,
+        int? actualAge)
     {
         var contextSection = relevantChunks.Count > 0
-            ? $"Relevant context from source documents:\n{string.Join("\n\n", relevantChunks)}\n\n"
+            ? string.Join("\n\n", relevantChunks)
             : "";
 
-        return $@"{contextSection}Modify the following content according to the instruction provided.
+        // §3C(2)(b)(viii): Include question-draft syntax when materialType is WORKSHEET
+        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: string.Equals(materialType, "WORKSHEET", StringComparison.OrdinalIgnoreCase));
 
-Original content:
+        var restraints = "Format the modified content using the Markdown syntax described below.\n" +
+                         "Use British English always.\n" +
+                         "Avoid American English.\n" +
+                         "Include only material content in your response.\n" +
+                         "Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.\n" +
+                         "Preserve existing formatting and structure where appropriate.\n" +
+                         "Output only the modified content which should be an appropriate replacement for the original content based on the instruction. Do not output the entire material again, only the modified section.\n" +
+                         "Do not begin the output with the material title.\n" +
+                         "Do not add questions unless the instruction (the INSTRUCTION section) explicitly asks you to add a question. Again, only add questions if the instruction explicitly asks for them. Do not add questions based on your own assumptions about what might be helpful. Only add questions if the instruction explicitly instructs you to do so.";
+        if (readingAge.HasValue || actualAge.HasValue)
+        {
+            if (readingAge.HasValue && actualAge.HasValue)
+            {
+                restraints += $"\nAdapt the material's reading level for students with a reading age of {readingAge.Value} and an actual age of {actualAge.Value}.";
+            }
+            else if (readingAge.HasValue)
+            {
+                restraints += $"\nAdapt the material's reading level for students with a reading age of {readingAge.Value}.";
+            }
+            else
+            {
+                restraints += $"\nAdapt the material's reading level for students with an actual age of {actualAge!.Value}.";
+            }
+        }
+
+        return $@"
+TASK:
+Modify the following {materialType} material content according to the instruction provided.
+
+
+MATERIAL TITLE:
+{title}
+
+
+ORIGINAL CONTENT:
 {selectedContent}
 
-Instruction: {instruction}
 
-Return the modified content following these Markdown syntax requirements:
-- Headers shall use # for Level 1, ## for Level 2, ### for Level 3 (do not exceed Level 3)
-- Text shall be rendered in bold using **text** or __text__ syntax
-- Text shall be rendered in italic using *text* or _text_ syntax
-- Unordered lists shall be specified using - item or * item syntax
-- Ordered lists shall be specified using 1. item syntax
-- Tables use GitHub Flavored Markdown syntax with pipes (|) and dashes (---)
-- Code blocks shall be specified using triple backticks with optional language identifier
-- Blockquotes shall be specified using the > prefix
-- Horizontal rules shall be specified using three or more hyphens on a line
-- LaTeX notation shall be delimited by single dollar signs ($...$) for inline or double dollar signs ($$...$$) for blocks
-- Images shall be embedded using ![alt text](/attachments/{{attachment-uuid}})
-- PDF documents shall be embedded using the pdf marker: !!! pdf id=""{{pdf-attachment-uuid}}""
-- Text shall be centred using the center marker: !!! center
-- Questions shall be referenced using the question marker: !!! question id=""{{question-uuid}}""
-- Preserve existing formatting and structure where appropriate
+INSTRUCTION:
+{instruction}
 
-Modified content:";
+
+RESTRAINTS:
+{restraints}
+
+
+MARKDOWN SYNTAX:
+
+---
+
+{markdownSyntaxGuide}
+
+---
+
+
+SOURCE DOCUMENT CONTEXT:
+{contextSection}
+";
     }
 
     /// <summary>

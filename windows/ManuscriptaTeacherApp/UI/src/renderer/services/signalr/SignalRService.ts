@@ -397,6 +397,33 @@ class SignalRService {
     // ==========================================
 
     /**
+     * Modifies selected material content using AI.
+     * Per GenAISpec §3C.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param selectedContent The text selected by the user.
+     * @param instruction The instruction for modification.
+     * @param materialType The type of material being modified (e.g. 'reading', 'worksheet').
+     * @param title The title of the material being modified.
+     * @param readingAge Optional reading age of the material.
+     * @param actualAge Optional actual age of the material.
+     * @param materialId The ID of the material being modified, for question-draft extraction per GenAISpec §3C(2)(e1) and RAG hierarchy resolution per §3C(2)(a).
+     */
+    public async modifyContent(
+        selectedContent: string,
+        instruction: string,
+        materialType: string,
+        title: string,
+        readingAge: number | undefined,
+        actualAge: number | undefined,
+        materialId: string
+    ): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>(
+            "ModifyContent", selectedContent, instruction,
+            materialType, title, readingAge ?? null, actualAge ?? null, materialId
+        );
+    }
+
+    /**
      * Generates reading material content using AI.
      * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
      * The server generates a unique generation ID and sends it via OnGenerationStarted.
@@ -425,6 +452,8 @@ class SignalRService {
     public async cancelGeneration(generationId: string): Promise<boolean> {
         return await this.getConnection().invoke<boolean>("CancelGeneration", generationId);
     }
+
+
 
     // ==========================================
     // Question CRUD - NetworkingAPISpec §1(1)(d1)

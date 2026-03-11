@@ -16,17 +16,22 @@ public class GenAIPromptBuilderTests
     /// See docs/specifications/GenAISpec.md.
     /// </summary>
     [Fact]
-    public void BuildModificationPrompt_NoContext_DoesNotIncludeContextSection()
+    public void BuildModificationPrompt_NoContext_DoesNotIncludeContextInOutput()
     {
         var prompt = GenAIPromptBuilder.BuildModificationPrompt(
             selectedContent: "Original",
             instruction: "Simplify",
-            relevantChunks: new List<string>()
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Test Title",
+            readingAge: 10,
+            actualAge: 12
         );
 
-        Assert.DoesNotContain("Relevant context from source documents:", prompt);
-        Assert.Contains($"Original content:{Environment.NewLine}Original", prompt);
-        Assert.Contains("Instruction: Simplify", prompt);
+        Assert.Contains("ORIGINAL CONTENT:", prompt);
+        Assert.Contains("Original", prompt);
+        Assert.Contains("INSTRUCTION:", prompt);
+        Assert.Contains("Simplify", prompt);
     }
 
     /// <summary>
@@ -39,12 +44,166 @@ public class GenAIPromptBuilderTests
         var prompt = GenAIPromptBuilder.BuildModificationPrompt(
             selectedContent: "Original",
             instruction: "Simplify",
-            relevantChunks: new List<string> { "Chunk A", "Chunk B" }
+            relevantChunks: new List<string> { "Chunk A", "Chunk B" },
+            materialType: "reading",
+            title: "Test Title",
+            readingAge: 10,
+            actualAge: 12
         );
 
-        Assert.Contains("Relevant context from source documents:", prompt);
         Assert.Contains("Chunk A", prompt);
         Assert.Contains("Chunk B", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(v)-(vii) (material metadata in prompt).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_IncludesTitleAndMaterialType()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Add more detail",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "My Reading Material",
+            readingAge: 8,
+            actualAge: 10
+        );
+
+        Assert.Contains("MATERIAL TITLE:", prompt);
+        Assert.Contains("My Reading Material", prompt);
+        Assert.Contains("reading", prompt);
+        Assert.Contains("reading age of 8", prompt);
+        Assert.Contains("actual age of 10", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(vi) (optional readingAge/actualAge).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_NullAges_OmitsAgeConstraints()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Simplify",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: null,
+            actualAge: null
+        );
+
+        Assert.DoesNotContain("reading age of", prompt);
+        Assert.DoesNotContain("actual age of", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(vi) (optional readingAge/actualAge - only readingAge provided).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_OnlyReadingAge_IncludesReadingAgeConstraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Simplify",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: 10,
+            actualAge: null
+        );
+
+        Assert.Contains("reading age of 10", prompt);
+        Assert.DoesNotContain("actual age of", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(vi) (optional readingAge/actualAge - only actualAge provided).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_OnlyActualAge_IncludesActualAgeConstraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Simplify",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: null,
+            actualAge: 12
+        );
+
+        Assert.DoesNotContain("reading age of", prompt);
+        Assert.Contains("actual age of 12", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(viii) (MarkdownSyntaxGuide used, no hardcoded guide).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_UsesMarkdownSyntaxGuide()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Add detail",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: 10,
+            actualAge: 12
+        );
+
+        Assert.Contains("MARKDOWN SYNTAX:", prompt);
+        Assert.Contains("H1 to H3 headers", prompt);
+        Assert.Contains("Blockquotes:", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(viii) (question-draft syntax for worksheets).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_Worksheet_IncludesQuestionSyntax()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Add a question",
+            relevantChunks: new List<string>(),
+            materialType: "worksheet",
+            title: "My Worksheet",
+            readingAge: 10,
+            actualAge: 12
+        );
+
+        Assert.Contains("question-draft", prompt);
+        Assert.Contains("MULTIPLE_CHOICE", prompt);
+        Assert.Contains("WRITTEN_ANSWER", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3C(2)(b)(viii) (no question-draft for readings).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildModificationPrompt_Reading_ExcludesQuestionSyntax()
+    {
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent: "Some content",
+            instruction: "Add detail",
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Title",
+            readingAge: 10,
+            actualAge: 12
+        );
+
+        Assert.DoesNotContain("question-draft", prompt);
     }
 
     /// <summary>

@@ -1395,16 +1395,85 @@ public class TeacherPortalHub : Hub
     /// Modifies selected content using the AI assistant.
     /// Per NetworkingAPISpec §1(1)(i)(iv) and GenAISpec.md §3C(1)(a).
     /// </summary>
-    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)
+    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)
     {
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3C(2)(a): Resolve unitCollectionId by traversing Material → Lesson → Unit → UnitCollection.
+        Guid? unitCollectionId = null;
+        var material = await _materialRepository.GetByIdAsync(materialId);
+        if (material != null)
+        {
+            var lesson = await _lessonRepository.GetByIdAsync(material.LessonId);
+            if (lesson != null)
+            {
+                var unit = await _unitRepository.GetByIdAsync(lesson.UnitId);
+                if (unit != null)
+                {
+                    unitCollectionId = unit.UnitCollectionId;
+                }
+            }
+        }
+
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
         try
         {
-            return await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId);
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            var result = await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, materialType, title, readingAge, actualAge, async chunk =>
+            {
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+
+            // §3C(2)(e1): Extract question-draft markers from modified content
+            if (result.Content != null && result.Content.Contains("!!! question-draft"))
+            {
+                var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(result.Content, materialId);
+                result.Content = extractionResult.ModifiedContent;
+                if (extractionResult.CreatedQuestionIds.Count > 0)
+                {
+                    result.CreatedQuestionIds ??= new List<Guid>();
+                    result.CreatedQuestionIds.AddRange(extractionResult.CreatedQuestionIds);
+                }
+                if (extractionResult.Warnings.Count > 0)
+                {
+                    result.Warnings ??= new List<ValidationWarning>();
+                    result.Warnings.AddRange(extractionResult.Warnings);
+                }
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw new HubException("Generation was cancelled by user.");
         }
         catch (Exception ex)
         {
             await NotifyMissingAiDependenciesIfApplicable(ex);
             throw new HubException($"Failed to modify content: {ex.Message}", ex);
+        }
+        finally
+        {
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
         }
     }
 

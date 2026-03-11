@@ -307,7 +307,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (4) [Deleted.]
 
-(4a) Upon receiving a request to create a material with generated worksheet content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
+(4a) Upon receiving a request to create or update a material with content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
 
     (a) parse each `question-draft` marker to extract:
 
@@ -345,11 +345,13 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (1) When a teacher wishes to modify selected content using the AI assistant, the frontend shall invoke the following server method (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub` —
 
-    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)`
+    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)`
 
 (2) Upon receiving a modification request, the backend shall —
 
-    (a) if `unitCollectionId` is provided, retrieve relevant chunks as specified in §2(4) using the `instruction` as the query.
+    (a) resolve the `unitCollectionId` by traversing the entity hierarchy from `materialId` (Material → Lesson → Unit → UnitCollection), then retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. If the hierarchy traversal fails (e.g. because an entity has been deleted), the backend shall skip RAG retrieval and proceed without injected context.
+    
+    [Explanatory Note: Searching by the instruction alone (e.g. "make this longer") often fails to retrieve semantically meaningful context. Including the `selectedContent` ensures semantic retrieval targets the actual subject matter. For example, the combined query could be formatted as `$"[{instruction}] {selectedContent}"`.]
 
     (b) construct a prompt containing —
 
@@ -361,9 +363,19 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
+        (v) the material title.
+
+        (vi) reading age and actual age constraints, if provided.
+
+        (vii) the material type.
+
+        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
+
     (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
+
+    (e1) if the modified content contains `question-draft` markers, process them in accordance with §3B(4a). The `MaterialId` used for `QuestionEntity` creation shall be the material to which the modified content belongs.
 
     (e) return the `GenerationResult` containing the content and any validation warnings.
 
@@ -656,7 +668,7 @@ sequenceDiagram
     Hub-->>Frontend: generated content
 
     Note over Frontend,Ollama: Content Modification (§3C)
-    Frontend->>Hub: ModifyContent(selection, instruction)
+    Frontend->>Hub: ModifyContent(selection, instruction, metadata)
     Hub->>RAG: Retrieve context (optional)
     Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: modified content

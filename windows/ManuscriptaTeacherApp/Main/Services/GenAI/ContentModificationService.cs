@@ -1,3 +1,4 @@
+using System.Text;
 using ChromaDB.Client;
 using Main.Models.Dtos;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,13 @@ public class ContentModificationService : IContentModificationService
     public async Task<GenerationResult> ModifyContent(
         string selectedContent,
         string instruction,
-        Guid? unitCollectionId)
+        Guid? unitCollectionId,
+        string materialType,
+        string title,
+        int? readingAge,
+        int? actualAge,
+        Func<StreamingGenerationChunk, Task>? onChunk = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
             "Starting AI content modification. UnitCollectionIdProvided={UnitCollectionIdProvided}, SelectedContentLength={SelectedContentLength}, InstructionLength={InstructionLength}",
@@ -45,10 +52,13 @@ public class ContentModificationService : IContentModificationService
             selectedContent?.Length ?? 0,
             instruction?.Length ?? 0);
 
-        // Ensure model is ready
-        string modelToUse = PrimaryModel;
+        var modelToUse = PrimaryModel;
         bool useFallback = false;
-        await _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
+
+        // Start model readiness check in parallel with optional RAG preparation.
+        var modelReadyTask = _ollamaClient.EnsureModelReadyAsync(PrimaryModel);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         List<string> relevantChunks = new();
 
@@ -57,7 +67,12 @@ public class ContentModificationService : IContentModificationService
         {
             // Ensure embedding model is ready per GenAISpec §2(2)
             await _ollamaClient.EnsureModelReadyAsync("nomic-embed-text");
-            var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(instruction);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var combinedQuery = $"[{instruction}] {selectedContent}";
+            var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(combinedQuery);
+            cancellationToken.ThrowIfCancellationRequested();
+
             relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
                 queryEmbedding,
                 unitCollectionId.Value,
@@ -77,9 +92,19 @@ public class ContentModificationService : IContentModificationService
             _logger.LogInformation("Skipping RAG retrieval for content modification because UnitCollectionId was not provided.");
         }
 
-        // §3C(2)(b): Construct prompt
-        var prompt = GenAIPromptBuilder.BuildModificationPrompt(selectedContent, instruction, relevantChunks);
+        cancellationToken.ThrowIfCancellationRequested();
 
+        // §3C(2)(b): Construct prompt
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            selectedContent, instruction, relevantChunks, materialType, title, readingAge, actualAge);
+
+        // Await the model readiness check before streaming
+        await modelReadyTask;
+
+        // §3H(8): Check for cancellation before streaming begins
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // §3C(2)(c): Invoke model with streaming per §3H(5)
         var promptContainsInjectedContext = relevantChunks.Count == 0 || relevantChunks.Any(c => !string.IsNullOrEmpty(c) && prompt.Contains(c, StringComparison.Ordinal));
         _logger.LogInformation(
             "RAG prompt assembled for content modification. PromptLength={PromptLength}, RetrievedChunkCount={RetrievedChunkCount}, ContextInjectionVerified={ContextInjectionVerified}",
@@ -87,19 +112,18 @@ public class ContentModificationService : IContentModificationService
             relevantChunks.Count,
             promptContainsInjectedContext);
 
-        // §3C(2)(c): Invoke model (or granite4 if fallback per §1(6))
         string modifiedContent;
         try
         {
-            modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+            modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
         }
         catch (HttpRequestException ex) when (
             ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
-            ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
-            ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
-            ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
+            (ex.Message.Contains("500", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("system memory", StringComparison.OrdinalIgnoreCase) ||
+             ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)))
         {
-            // §1(6)(a): Fall back when primary model fails due to resource constraints
+            // §1(6)(a): Fall back when primary model fails due to resource constraints.
             if (!useFallback)
             {
                 modelToUse = FallbackModel;
@@ -109,7 +133,7 @@ public class ContentModificationService : IContentModificationService
                     await _ollamaClient.UnloadModelAsync(PrimaryModel);
                     await Task.Delay(500);
                     await _ollamaClient.EnsureModelReadyAsync(FallbackModel);
-                    modifiedContent = await _ollamaClient.GenerateChatCompletionAsync(modelToUse, prompt);
+                    modifiedContent = await InvokeModelStreamingAsync(modelToUse, prompt, onChunk, cancellationToken);
                 }
                 catch (Exception fallbackEx)
                 {
@@ -121,7 +145,7 @@ public class ContentModificationService : IContentModificationService
             else
             {
                 throw new InvalidOperationException(
-                    "The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
+                    $"The fallback model (granite4) also failed due to insufficient system memory. Please close other applications and try again.",
                     ex);
             }
         }
@@ -137,4 +161,35 @@ public class ContentModificationService : IContentModificationService
         return result;
     }
 
+    /// <summary>
+    /// Invokes the model with streaming and accumulates content.
+    /// Per GenAISpec.md §3H(5) and §3H(8).
+    /// </summary>
+    private async Task<string> InvokeModelStreamingAsync(
+        string model, string prompt, Func<StreamingGenerationChunk, Task>? onChunk, CancellationToken cancellationToken)
+    {
+        // §3H(5)(b): Accumulate content tokens
+        var contentBuilder = new StringBuilder();
+
+        await foreach (var chunk in _ollamaClient.GenerateChatCompletionStreamingAsync(model, prompt, null, cancellationToken))
+        {
+            // §3H(8): Check for cancellation during streaming
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            // §3H(5)(a): Invoke callback for each chunk
+            if (onChunk != null)
+            {
+                await onChunk(chunk);
+            }
+
+            // §3H(5)(b): Only accumulate non-thinking tokens
+            if (!chunk.IsThinking && !string.IsNullOrEmpty(chunk.Token))
+            {
+                contentBuilder.Append(chunk.Token);
+            }
+        }
+
+        // §3H(5)(c): Return accumulated content for validation
+        return contentBuilder.ToString();
+    }
 }
