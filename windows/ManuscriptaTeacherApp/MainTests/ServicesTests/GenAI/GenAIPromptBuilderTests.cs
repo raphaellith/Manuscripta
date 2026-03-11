@@ -230,6 +230,46 @@ public class GenAIPromptBuilderTests
     }
 
     /// <summary>
+    /// Spec coverage: GenAISpec Section 3B(3)(c)(v) (explicit no-questions restraint for non-worksheet materials).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildGenerationPrompt_ReadingMaterial_IncludesNoQuestionsRestraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildGenerationPrompt(
+            description: "A short lesson",
+            readingAge: 10,
+            actualAge: 12,
+            durationInMinutes: 20,
+            relevantChunks: new List<string> { "Context A" },
+            materialType: "reading",
+            title: "Introduction to Science"
+        );
+
+        Assert.Contains("Do not include any questions", prompt);
+    }
+
+    /// <summary>
+    /// Spec coverage: GenAISpec Section 3B(3)(c)(iv)-(v) (no no-questions restraint for worksheets).
+    /// See docs/specifications/GenAISpec.md.
+    /// </summary>
+    [Fact]
+    public void BuildGenerationPrompt_WorksheetMaterial_DoesNotIncludeNoQuestionsRestraint()
+    {
+        var prompt = GenAIPromptBuilder.BuildGenerationPrompt(
+            description: "A short lesson",
+            readingAge: 10,
+            actualAge: 12,
+            durationInMinutes: 20,
+            relevantChunks: new List<string> { "Context A" },
+            materialType: "worksheet",
+            title: "Introduction to Science"
+        );
+
+        Assert.DoesNotContain("Do not include any questions", prompt);
+    }
+
+    /// <summary>
     /// Spec coverage: GenAISpec Section 3B(3)(c)(iv)-(v) (include question-draft syntax for worksheets).
     /// See docs/specifications/GenAISpec.md.
     /// </summary>

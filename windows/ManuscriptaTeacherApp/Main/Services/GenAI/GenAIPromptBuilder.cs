@@ -104,7 +104,11 @@ SOURCE DOCUMENT CONTEXT:
             ? string.Join("\n\n", relevantChunks)
             : "";
 
-        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: materialType == "worksheet");
+        var isWorksheet = materialType == "worksheet";
+        var markdownSyntaxGuide = MarkdownSyntaxGuide.Get(includeQuestionSyntax: isWorksheet);
+        var noQuestionsRestraint = isWorksheet
+            ? ""
+            : "\nDo not include any questions in the material for students.\n";
 
         return $@"
 TASK:
@@ -126,6 +130,7 @@ Format the material using the Markdown syntax described below.
 Use British English always. Avoid American English.
 Include only material content in your response.
 Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.
+{noQuestionsRestraint}
 
 
 MARKDOWN SYNTAX:
