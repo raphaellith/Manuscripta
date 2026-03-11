@@ -32,8 +32,10 @@ public static class GenAIPromptBuilder
                          "Avoid American English.\n" +
                          "Include only material content in your response.\n" +
                          "Never include extraneous text such as prompt restatement, internal thought processes, or notes to the user.\n" +
-                         "Preserve existing formatting and structure where appropriate. \n" +
-                         "Output only the modified content which should be an appropriate replacement for the original content based on the instruction. Do not output the entire material again, only the modified section.";
+                         "Preserve existing formatting and structure where appropriate.\n" +
+                         "Output only the modified content which should be an appropriate replacement for the original content based on the instruction. Do not output the entire material again, only the modified section.\n" +
+                         "Do not begin the output with the material title.\n" +
+                         "Do not add questions unless the instruction (the INSTRUCTION section) explicitly asks you to add a question. Again, only add questions if the instruction explicitly asks for them. Do not add questions based on your own assumptions about what might be helpful. Only add questions if the instruction explicitly instructs you to do so.";
         if (readingAge.HasValue || actualAge.HasValue)
         {
             if (readingAge.HasValue && actualAge.HasValue)
