@@ -3,7 +3,7 @@
  * Per FrontendWorkflowSpecifications §5D(1): "Alerts shall be displayed regardless of the tab the user is currently on."
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAlertContext, Alert } from '../../state/AlertContext';
 
 // Icons
@@ -27,8 +27,8 @@ interface HelpToastProps {
 }
 
 const HelpToast: React.FC<HelpToastProps> = ({ alert, onDismiss, onAcknowledge }) => (
-    <div className="fixed top-32 right-4 z-[60] animate-slide-in">
-        <div className="bg-white rounded-lg shadow-2xl border-l-4 border-brand-orange p-4 flex items-start gap-4 max-w-sm">
+    <div className="fixed top-32 right-4 z-[60] animate-slide-in pointer-events-none">
+        <div className="bg-white rounded-lg shadow-2xl border-l-4 border-brand-orange p-4 flex items-start gap-4 max-w-sm pointer-events-auto">
             <div className="bg-brand-orange-light p-2 rounded-full animate-pulse">
                 <HandRaisedIcon />
             </div>
@@ -61,8 +61,8 @@ interface SuccessToastProps {
 }
 
 const SuccessToast: React.FC<SuccessToastProps> = ({ alert, onDismiss }) => (
-    <div className="fixed top-32 right-4 z-[60] animate-slide-in">
-        <div className="bg-white rounded-lg shadow-2xl border-l-4 border-green-500 p-4 flex items-start gap-4 max-w-sm">
+    <div className="fixed top-44 right-4 z-[60] animate-slide-in pointer-events-none">
+        <div className="bg-white rounded-lg shadow-2xl border-l-4 border-green-500 p-4 flex items-start gap-4 max-w-sm pointer-events-auto">
             <div className="bg-green-100 text-green-600 p-2 rounded-full">
                 <CheckCircleIcon />
             </div>
@@ -97,6 +97,15 @@ export const GlobalAlerts: React.FC = () => {
     const helpAlerts = alerts.filter(a => a.type === 'help');
     const successAlerts = alerts.filter(a => a.type === 'success');
     const errorAlerts = alerts.filter(a => a.type !== 'help' && a.type !== 'success');
+
+    // Auto-dismiss success alerts after 5 seconds
+    useEffect(() => {
+        if (successAlerts.length === 0) return;
+        const timers = successAlerts.map(alert =>
+            setTimeout(() => dismissAlert(alert.id), 5000)
+        );
+        return () => timers.forEach(t => clearTimeout(t));
+    }, [successAlerts, dismissAlert]);
 
     return (
         <>
@@ -136,8 +145,8 @@ export const GlobalAlerts: React.FC = () => {
 
             {/* Persistent help request banner - per §5D(2)(b) */}
             {unacknowledgedHelpCount > 0 && (
-                <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-xl px-4">
-                    <div className="bg-brand-orange-light border border-brand-orange rounded-lg p-4 flex items-center gap-4 shadow-lg animate-pulse-slow">
+                <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-xl px-4 pointer-events-none">
+                    <div className="bg-brand-orange-light border border-brand-orange rounded-lg p-4 flex items-center gap-4 shadow-lg animate-pulse-slow pointer-events-auto">
                         <div className="bg-brand-orange text-white p-2 rounded-full">
                             <HandRaisedIcon />
                         </div>
@@ -158,12 +167,18 @@ export const GlobalAlerts: React.FC = () => {
 
             {/* Error/warning alerts banners - per §5D(3-7) */}
             {errorAlerts.length > 0 && (
-                <div className="fixed top-32 right-4 z-[60] w-96 space-y-2">
+                <div className="fixed top-32 right-4 z-[60] w-96 space-y-2 pointer-events-none">
                     {errorAlerts.slice(0, 3).map(alert => (
-                        <div key={alert.id} className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3 shadow-md">
+                        <div key={alert.id} className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3 shadow-md pointer-events-auto">
                             <span className="text-red-600">⚠️</span>
                             <span className="flex-1 text-sm text-red-800">{alert.message}</span>
-                            <button onClick={() => dismissAlert(alert.id)} className="text-red-600 hover:text-red-800">✕</button>
+                            <button
+                                onClick={() => dismissAlert(alert.id)}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1.5 rounded transition-colors flex-shrink-0 cursor-pointer"
+                                aria-label="Dismiss alert"
+                            >
+                                ✕
+                            </button>
                         </div>
                     ))}
                 </div>
