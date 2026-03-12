@@ -38,13 +38,15 @@ export const EmailCredentialSettings: React.FC = () => {
                 }
             } catch (error) {
                 console.error('Failed to load email credentials:', error);
+                // Only add alert on mount to prevent spam
                 addAlert('control_failed', undefined, 'Failed to load email credentials');
             } finally {
                 setIsLoading(false);
             }
         };
         loadCredentials();
-    }, [addAlert]);
+        // Run only on component mount
+    }, []);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

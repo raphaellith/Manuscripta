@@ -111,7 +111,7 @@ public class ApiPortConfigurationTests : IClassFixture<TestWebApplicationFactory
 
     /// <summary>
     /// Verifies the config endpoint returns proper response.
-    /// Per API Contract.md §2.2: GET /api/v1/config/{deviceId}
+    /// Per API Contract.md §2.2: GET /api/v2/config/{deviceId}
     /// </summary>
     [Fact]
     public async Task ConfigEndpoint_ReturnsOk()

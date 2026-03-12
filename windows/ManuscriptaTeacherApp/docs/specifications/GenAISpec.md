@@ -13,29 +13,146 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The following models shall be used, with task-specific assignments:
 
-| Purpose | Model | Ollama Name | Rationale |
-|---------|-------|-------------|----------|
-| Material generation | Qwen3 8B | `qwen3:8b` | Better instruction adherence for structured output |
-| Content modification | IBM Granite 4.0 | `granite4` | Speed for inline edits |
-| Feedback generation | IBM Granite 4.0 | `granite4` | Less structured output required |
-| Embeddings | Nomic Embed Text | `nomic-embed-text` | Optimised for retrieval |
+| Purpose | Model | Ollama Name | Role | Rationale |
+|---------|-------|-------------|------|----------|
+| Material generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Content modification | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Feedback generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for mark-scheme evaluation |
+| All generative tasks (fallback) | IBM Granite 4.0 | `granite4` | Fallback | Smaller resource footprint when primary model is unavailable |
+| Embeddings | Nomic Embed Text | `nomic-embed-text` | — | Optimised for retrieval |
 
-(3) Ollama is assumed to have been installed silently during the installation of the Windows application.
+[Explanatory Note: Qwen3 8B replaces IBM Granite 4.0 as the primary model for content modification and feedback generation. Granite 4.0 was observed to produce unreliable output when evaluating mark-by-mark mark schemes for written-answer feedback. To maintain consistency and quality across all generative tasks, Qwen3 8B is now the universal primary model, with Granite 4.0 retained solely as a resource-constraint fallback.]
 
-(4) Before invoking any model, the backend shall —
+(3) [Deleted.]
 
-    (a) verify that the required model is locally available via Ollama, and run `ollama pull <model>` if it is missing.
-
-    (b) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
+(4) [Deleted.]
 
 (5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
 
-(6) If the primary model (`qwen3:8b`) for material generation is unavailable or insufficient resources are detected —
+(6) If the primary model (`qwen3:8b`) fails during any generative task (material generation, content modification, or feedback generation) due to resource constraints —
 
-    (a) the backend may fall back to a smaller model (`granite4`).
+    (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
 
-    (b) if a fallback is used, the iterative refinement process specified in §3F shall be applied.
-    
+    (b) if a fallback is used for a task that produces Material Encoding output (material generation, content modification), the iterative refinement process specified in §3F shall be applied.
+
+(7) [Deleted.]
+
+(8) Prior to any operation requiring Ollama, Chroma or any large language model, the application shall verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification and Sections 1A to 1E of this document.
+
+(9) As Ollama, Chroma, large language models are treated as runtime dependencies, the application shall not assume on startup that they have already been installed. They must only be installed upon user consent expressed from the frontend.
+
+
+
+## Section 1A - Ascertaining the availability of Ollama
+
+(1) The `OllamaRuntimeDependencyManager` class shall manage the availability and installation of Ollama by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `OllamaRuntimeDependencyManager` class shall have the unique identifier `"ollama"`.
+
+(3) The `OllamaRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Ollama by calling `http://localhost:11434/api/version`. It shall return true if the HTTP request succeeds with a 200 status code, and false if the request fails.
+
+    (b) `Task DownloadDependencyAsync()` shall download the standalone Windows release from `https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip` and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-windows-amd64.zip`. It shall also ensure that the `ManuscriptaTeacherApp` directory is included in the PATH environmental variable.
+
+    (c) `Task VerifyDownloadAsync()` shall verify the downloaded ZIP file by comparing its SHA256 hash output against the published checksum. The checksum shall be retrieved from `https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt`, in which the checksum precedes the file name `./ollama-windows-amd64.zip`.
+
+    (d) `Task PerformInstallDependencyAsync()` shall extract the ZIP file to `%AppData%\ManuscriptaTeacherApp\bin\ollama\`, delete the ZIP file and start `ollama serve` from the extracted directory.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama\` directory and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
+
+
+(4) Before invoking any model, the backend shall —
+
+    (a) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
+
+
+## Section 1B - Ascertaining the availability of Chroma
+
+(1) The `ChromaRuntimeDependencyManager` class shall manage the availability and installation of Chroma by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `ChromaRuntimeDependencyManager` class shall have the unique identifier `"chroma"`.
+
+(3) The `ChromaRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Chroma by calling `chroma --version`.
+
+    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling `iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))`. The location of the installed executable shall also be added to the PATH environment variable.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Chroma has not published any checksums or other methods for verifying downloads.
+
+    (d) `Task PerformInstallDependencyAsync()` shall configure ChromaDB to use the data directory `%AppData%\ManuscriptaTeacherApp\VectorStore` and start the ChromaDB server in client-server mode as a background process
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall stop the ChromaDB server process if running and return true upon successful termination.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `ChromaClientService`.
+
+
+## Section 1C - Ascertaining the availability of Qwen3 8B Model
+
+(1) The `Qwen3ModelRuntimeDependencyManager` class shall manage the availability and installation of the Qwen3 8B model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `Qwen3ModelRuntimeDependencyManager` class shall have the unique identifier `"qwen3:8b"`.
+
+(3) The `Qwen3ModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the Qwen3 8B model by calling `ollama pull qwen3:8b` via the command line. This operation may take significant time and download several gigabytes of data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Qwen3 8B model by calling `ollama rm qwen3:8b` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the Qwen3 8B model.
+
+
+## Section 1D - Ascertaining the availability of IBM Granite 4.0 Model
+
+(1) The `GraniteModelRuntimeDependencyManager` class shall manage the availability and installation of the IBM Granite 4.0 model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `GraniteModelRuntimeDependencyManager` class shall have the unique identifier `"granite4"`.
+
+(3) The `GraniteModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the IBM Granite 4.0 model by calling `ollama pull granite4` via the command line. This operation may take significant time and download several gigabytes of data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the IBM Granite 4.0 model by calling `ollama rm granite4` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the IBM Granite 4.0 model.
+
+
+## Section 1E - Ascertaining the availability of Nomic Embed Text Model
+
+(1) The `NomicEmbedTextModelRuntimeDependencyManager` class shall manage the availability and installation of the Nomic Embed Text model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `NomicEmbedTextModelRuntimeDependencyManager` class shall have the unique identifier `"nomic-embed-text"`.
+
+(3) The `NomicEmbedTextModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the Nomic Embed Text model by calling `ollama pull nomic-embed-text` via the command line. This operation may take significant time and download data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Nomic Embed Text model by calling `ollama rm nomic-embed-text` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the Nomic Embed Text model.
+
+
 
 ## Section 2 — Document Chunking and Vector Storage
 
@@ -55,7 +172,9 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) When embeddings are stored —
 
-    (a) ChromaDB shall be used in embedded mode.
+    (a) [Deleted.]
+
+    (a1) ChromaDB shall be used in client-server mode.
 
     (b) ChromaDB shall store its data in `%AppData%\ManuscriptaTeacherApp\VectorStore`.
 
@@ -82,7 +201,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 |---------|---------------|
 | §3A | `DocumentEmbeddingService` |
 | §3B | `MaterialGenerationService` |
-| §3B(4) | `QuestionExtractionService` |
+| §3B(4a) | `QuestionExtractionService` |
 | §3C | `ContentModificationService` |
 | §3D | `FeedbackGenerationService` |
 | §3DA | `FeedbackQueueService` |
@@ -178,15 +297,17 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (v) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C.
 
-    (d) invoke `qwen3:8b` via Ollama to generate the content (or `granite4` if fallback per §1(6)).
-
-    (d1) for worksheets, extract and process question drafts as specified in subsection (4).
+    (d) invoke `qwen3:8b` via Ollama to generate the content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (e) validate the generated content and apply refinement as specified in §3F.
 
-    (f) return the `GenerationResult` containing the content, any validation warnings, and created question IDs.
+    (f) [Deleted.]
 
-(4) Upon receiving generated worksheet content containing `question-draft` markers, the backend shall —
+    (g) return the `GenerationResult` containing the content and any validation warnings. For worksheets, the returned content shall contain `question-draft` markers, to be processed when the material is persisted (per §3B(4)).
+
+(4) [Deleted.]
+
+(4a) Upon receiving a request to create or update a material with content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
 
     (a) parse each `question-draft` marker to extract:
 
@@ -224,11 +345,13 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (1) When a teacher wishes to modify selected content using the AI assistant, the frontend shall invoke the following server method (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub` —
 
-    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, Guid? unitCollectionId)`
+    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)`
 
 (2) Upon receiving a modification request, the backend shall —
 
-    (a) if `unitCollectionId` is provided, retrieve relevant chunks as specified in §2(4) using the `instruction` as the query.
+    (a) resolve the `unitCollectionId` by traversing the entity hierarchy from `materialId` (Material → Lesson → Unit → UnitCollection), then retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. If the hierarchy traversal fails (e.g. because an entity has been deleted), the backend shall skip RAG retrieval and proceed without injected context.
+    
+    [Explanatory Note: Searching by the instruction alone (e.g. "make this longer") often fails to retrieve semantically meaningful context. Including the `selectedContent` ensures semantic retrieval targets the actual subject matter. For example, the combined query could be formatted as `$"[{instruction}] {selectedContent}"`.]
 
     (b) construct a prompt containing —
 
@@ -240,9 +363,19 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) instructions to return modified content in Material Encoding Specification format.
 
-    (c) invoke `granite4` via Ollama to generate the modified content.
+        (v) the material title.
+
+        (vi) reading age and actual age constraints, if provided.
+
+        (vii) the material type.
+
+        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
+
+    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
 
     (d) validate the modified content and apply refinement as specified in §3F.
+
+    (e1) if the modified content contains `question-draft` markers, process them in accordance with §3B(4a). The `MaterialId` used for `QuestionEntity` creation shall be the material to which the modified content belongs.
 
     (e) return the `GenerationResult` containing the content and any validation warnings.
 
@@ -313,9 +446,17 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
         (iv) the student's response text.
 
-    (c) invoke `granite4` via Ollama to generate feedback.
+    (c) the prompt shall instruct the model to begin its response with a mark line in the format `MARK: X` where X is an integer between 0 and the maximum score (inclusive), if the question has a `MaxScore`.
 
-    (d) return structured feedback including score justification and improvement suggestions.
+    (d) invoke `qwen3:8b` via Ollama to generate feedback (or `granite4` if fallback per §1(6)).
+
+    (e) parse the model response to extract —
+
+        (i) the numeric mark from the `MARK: X` line, if present. The extracted value shall be stored in the `Marks` field of the `FeedbackEntity`.
+
+        (ii) the remaining text, which shall be stored in the `Text` field of the `FeedbackEntity`.
+
+    (f) return structured feedback including the mark (if applicable), score justification and improvement suggestions.
 
 
 ### Section 3DA — Feedback Approval Workflow
@@ -355,6 +496,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 ### Section 3F — Output Validation Service
 
 (1) After any content generation step in §3B or §3C, the backend shall validate the output against the Material Encoding Specification.
+
+[Explanatory Note: Feedback generation (§3D) does not produce Material Encoding output, therefore §3F validation does not apply to it.]
 
 (2) The validation process shall check for:
 
@@ -425,6 +568,61 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The frontend shall display warnings to the user, allowing them to manually correct issues in the editor modal.
 
+
+### Section 3H — Streaming Generation Output
+
+(1) When the backend generates content via `OllamaClientService`, it shall use Ollama's streaming mode (`"stream": true`) instead of awaiting the full response.
+
+(2) The `OllamaClientService` shall provide a new method —
+
+    (a) `IAsyncEnumerable<StreamingGenerationChunk> GenerateChatCompletionStreamingAsync(string model, string prompt, string? systemPrompt = null)` — which yields individual chunks as they are received from Ollama's streaming API.
+
+(3) A `StreamingGenerationChunk` shall contain —
+
+    (a) `string Token` — the token(s) received in this chunk.
+
+    (b) `bool IsThinking` — `true` if the token is part of the model's chain-of-thought reasoning (i.e., content enclosed within `<think>...</think>` tags emitted by the model), and `false` if the token is part of the final visible content.
+
+    (c) `bool Done` — `true` if this is the final chunk in the stream.
+
+(4) The backend shall parse the model's raw streaming output to distinguish between chain-of-thought and content tokens. Specifically —
+
+    (a) tokens received after a `<think>` tag and before the corresponding `</think>` tag shall be classified as chain-of-thought (`IsThinking = true`).
+
+    (b) all other tokens shall be classified as content (`IsThinking = false`).
+
+    (c) the `<think>` and `</think>` tags themselves shall not be forwarded to the frontend.
+
+(5) During a streaming generation (for `GenerateReading`, `GenerateWorksheet`, or `ModifyContent`), the backend shall —
+
+    (a) forward each `StreamingGenerationChunk` to the calling frontend client via the SignalR client handler `OnGenerationProgress` as defined in NetworkingAPISpec §2(1)(h).
+
+    (b) accumulate the full content output internally for subsequent validation per §3F.
+
+    (c) upon stream completion, perform validation and refinement as specified in §3F. During refinement iterations (if any), the backend shall continue streaming the refined output.
+
+    (d) return the final `GenerationResult` as before, so that the existing method signatures (`GenerateReading`, `GenerateWorksheet`, `ModifyContent`) remain unchanged. The `GenerationResult` return value shall contain the validated, post-processed content.
+
+(6) The existing non-streaming method `GenerateChatCompletionAsync` shall be retained for use cases that do not require streaming (e.g., feedback generation per §3D, embedding status checks, resource-availability probes).
+
+(7) If the SignalR connection is lost during streaming —
+
+    (a) the backend shall continue the generation to completion.
+
+    (b) the final `GenerationResult` shall still be returned upon reconnection if the hub invocation has not timed out.
+
+(8) The backend shall support cancellation of in-progress generation. Specifically —
+
+    (a) the streaming pipeline (`MaterialGenerationService`, `OllamaClientService`) shall accept a `CancellationToken` and honour cancellation requests by terminating the HTTP stream and ceasing chunk forwarding.
+
+    (b) if cancellation occurs during streaming, an `OperationCanceledException` shall be thrown.
+
+(9) Upon cancellation —
+
+    (a) no `GenerationResult` shall be returned to the caller.
+
+    (b) validation and refinement per §3F shall not be performed.
+
 ---
 
 ## Appendix A — Configuration Constants
@@ -438,10 +636,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
-| `PRIMARY_GENERATION_MODEL` | `qwen3:8b` | Primary model for material generation |
-| `FALLBACK_GENERATION_MODEL` | `granite4` | Fallback model if primary unavailable |
-| `QUICK_EDIT_MODEL` | `granite4` | Model for AI assistant edits |
-| `FEEDBACK_MODEL` | `granite4` | Model for feedback generation |
+| `PRIMARY_MODEL` | `qwen3:8b` | Primary model for all generative tasks |
+| `FALLBACK_MODEL` | `granite4` | Fallback model if primary unavailable |
 
 ---
 
@@ -467,14 +663,14 @@ sequenceDiagram
     Frontend->>Hub: GenerateReading(request)
     Hub->>RAG: Retrieve top-K chunks
     RAG-->>Hub: chunks[]
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: content
     Hub-->>Frontend: generated content
 
     Note over Frontend,Ollama: Content Modification (§3C)
-    Frontend->>Hub: ModifyContent(selection, instruction)
+    Frontend->>Hub: ModifyContent(selection, instruction, metadata)
     Hub->>RAG: Retrieve context (optional)
-    Hub->>Ollama: granite4
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
     Ollama-->>Hub: modified content
     Hub-->>Frontend: modified content
 ```
@@ -483,28 +679,24 @@ sequenceDiagram
 
 ## Appendix C — Material Encoding Reference for LLM Prompts
 
-The following condensed reference shall be included in material generation prompts:
+The following condensed reference shall be included in material generation prompts. Only include the "Questions" section in a prompt when generating worksheets.
 
 ---
 
-**Markdown Syntax Supported:**
-- Headers: `#`, `##`, `###` (max H3)
-- Bold: `**text**`, Italic: `*text*`
-- Lists: `- item` or `1. item`
+**Markdown syntax supported:**
+- H1 to H3 headers: `#`, `##`, `###`
+- Avoid using H4 headers.
+- Bold text: `**text**`
+- Italic text: `*text*`
+- Unordered lists: `- item`
+- Ordered lists: `1. item`
 - Tables: `| col | col |` with `|---|---|` separator
-- LaTeX: `$inline$` or `$$block$$`
-- Code blocks: triple backticks with optional language
+- LaTeX: `$inline mode$` or `$$display mode$$`
+- Code blocks: triple backticks with optional language identifier
 - Blockquotes: `> text`
 
-**Custom Markers:**
-- Centred text: `!!! center` followed by indented content
-- PDF embed: `!!! pdf id="uuid"` (do not generate; attachments pre-exist)
-- Question embed: `!!! question id="uuid"` (do not generate; use question-draft)
-
-**Question Drafts (worksheets only):**
-Questions must be one of exactly two types: `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist.
-
-For worksheets, embed questions inline using:
+**Questions:**
+Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content. Use only plain text without Markdown syntax in question text, options or correct answers.
 
 ```
 !!! question-draft type="MULTIPLE_CHOICE"
@@ -526,14 +718,10 @@ For worksheets, embed questions inline using:
     max_score: 4
 ```
 
-**Correct Answers vs Mark Schemes (WRITTEN_ANSWER only):**
-- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Short, factual answers only.
+For questions of type `WRITTEN_ANSWER`, optionally include at most one of the attributes `correct_answer` and `mark_scheme`. Never include both attributes in the same question. If neither attributes are included, the question requires manual marking.
+- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Only include short factual answers.
 - `mark_scheme`: Use for open-ended questions requiring judgement (e.g., "Explain why..."). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
-- Use one or the other, never both. If omitted, the question requires manual marking.
 
-**Multiple Choice:**
-- `correct`: 0-based index of the correct option. If omitted, no auto-marking occurs.
-
-Place questions at natural break points after relevant content.
+For questions of type `MULTIPLE_CHOICE`, optionally include the attribute `correct`, which stores the zero-based index of the correct option. If this attribute is not included, the question will not be auto-marked.
 
 ---

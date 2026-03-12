@@ -207,6 +207,7 @@ public class DistributionControllerTests
 /// - s1A(2): Windows-only fields excluded from Android DTOs
 /// - s1A(3): Polymorphic entities serialised as flat composition-like structures
 /// </summary>
+
 public class DistributionControllerSerialisationTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly TestWebApplicationFactory _factory;

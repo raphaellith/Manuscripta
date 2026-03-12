@@ -16,4 +16,7 @@ public record InternalUpdateMaterialDto(
     string? Metadata = null,
     JsonArray? VocabularyTerms = null,
     int? ReadingAge = null,
-    int? ActualAge = null);
+    int? ActualAge = null,
+    LinePatternType? LinePatternType = null,
+    LineSpacingPreset? LineSpacingPreset = null,
+    FontSizePreset? FontSizePreset = null);

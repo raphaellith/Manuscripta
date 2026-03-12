@@ -210,6 +210,10 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+    (b) Methods for retrieving global settings.
+
+        (i) `Task<PdfExportSettingsEntity> GetPdfExportSettings()`
+
 
 ## Section 3A - Runtime Dependency Management
 
@@ -295,7 +299,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) prompt the user to select the method of creation, through one of the following initial means:
 
-        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method.
+        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method. This option should also make clear that AI-generated materials may contain mistakes and should be reviewed before being deployed to students.
 
         (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll. When the material type selected is poll, the material should be initialised as a material containing one multiple choice question. For any other material type, the material should be initially empty.
     
@@ -316,7 +320,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) the frontend shall prompt the user to either select a file (e.g., PDF, DOCX) or enter plain text.
 
-    (b) the frontend shall extract or prompt for a textual transcript of the document, if a file has been uploaded.
+    (b) the frontend shall create a textual transcript of the document, if a file has been uploaded.
 
     (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
 
@@ -365,11 +369,39 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) An approximate of the time, in minutes, that students would need to complete the material.
 
-    (f) The template the material is based on. [Subject to further specification of the concept of templates]
+    (f) [Deleted.]
 
 (2) Once information in subsection (1) have been collected -
 
     (a) the frontend shall invoke `GenerateReading` (NetworkingAPISpec §1(1)(i)(i)) or `GenerateWorksheet` (NetworkingAPISpec §1(1)(i)(ii)) via `TeacherPortalHub` to generate a draft of the material.
+
+    (a1) Before invoking the generation method, the frontend shall subscribe to the `OnGenerationStarted` handler (NetworkingAPISpec §2(1)(h)(ii)) to receive the server-generated generation ID for cancellation support. Whilst the generation is in progress, the frontend shall also subscribe to the `OnGenerationProgress` handler (NetworkingAPISpec §2(1)(h)(i)) and display a streaming generation view, which shall —
+
+        (i) display chain-of-thought tokens (`isThinking = true`) in a visually distinct manner (e.g., a collapsible "Thinking…" section with muted or italic styling), to give the user evidence that the AI is actively reasoning.
+
+        (ii) display content tokens (`isThinking = false`) progressively, rendering them as they arrive, in a manner consistent with the editor's rendering capabilities. Specifically, the streaming view shall convert accumulated content Markdown to HTML using a streaming-specific conversion function (`markdownToStreamingHtml`) that —
+
+            (A) renders standard Markdown formatting (headings, bold, italic, lists, tables, code blocks, blockquotes, horizontal rules) via the same `marked` library used by the editor;
+
+            (B) renders inline and block LaTeX to KaTeX HTML, consistent with the editor's `InlineLatex` and `BlockLatex` extensions;
+
+            (C) renders `question-draft` markers (GenAISpec Appendix C) as styled preview cards matching the editor's `QuestionRef` visual appearance, with a "Draft" badge, question type tag, question text, multiple-choice options with correct-answer highlighting, and mark-scheme/correct-answer displays for written-answer questions;
+
+            (D) handles incomplete Markdown gracefully during streaming: `marked` shall be invoked tolerantly on each frame, rendering valid syntax and passing through unparsed/partial syntax as text;
+
+            (E) renders `!!! center` blocks, `!!! pdf` embeds, and `!!! question` references as appropriate placeholders.
+
+        (iii) display an animated indicator (e.g., a blinking cursor or pulsing dot) at the end of the streamed content to signal that generation is still in progress.
+
+        (iv) upon receipt of a chunk with `done = true`, remove the animated indicator and transition to the final content display.
+
+        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) with the generation ID received from `OnGenerationStarted`, and close the streaming view without persisting any content.
+
+        (vi) the frontend shall handle `OperationCanceledException` from generation methods gracefully without displaying an error notification.
+
+        (vii) to prevent UI jank from high-frequency token streams, the frontend should buffer incoming tokens and batch state updates using `requestAnimationFrame` or a similar mechanism, rather than updating state on each individual token.
+
+    (a2) The streaming generation view shall not permit editing of the content whilst generation is in progress. Editing shall be enabled only after the final `GenerationResult` is received per paragraph (b).
 
     (b) on receiving the generation result, the frontend shall display the content in the editor modal as specified in Section 4C. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
@@ -398,11 +430,27 @@ For a list of all server method and client handlers to be implemented for commun
 
         (i) the frontend shall capture the selected content and the user's instruction.
 
-        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`.
+        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`, passing the material's `id`, `materialType`, `title`, `readingAge`, and `actualAge` alongside the selected content and instruction.
 
         (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
+        (iv) Whilst the modification is in progress, the frontend shall display a streaming generation view in accordance with §4B(2)(a1), showing the AI's chain-of-thought and the progressively generated replacement content.
+
+        (v) The streaming generation view for content modification shall not replace the user's existing content until the final `GenerationResult` is received. An interim preview may be shown adjacent to or overlaid on the selected content.
+
     (b) modify the reading age and actual age metadata of the material.
+
+    (b1) modify the per-material PDF export settings — line pattern type, line spacing preset, and font size preset. The frontend shall display a description informing the user that these settings override the global defaults for this material, but may in turn be overridden by per-device settings configured on external devices. This shall be provided in means of dropdowns, and each dropdown shall —
+
+        (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
+
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`);
+
+        (iii) display "Default (...)" when the per-material override is null;
+
+        (iv) when the user selects a specific value, set it as a per-material override; and
+
+        (v) be auto-saved with the existing 1-second debounce mechanism like other material properties.
 
     (c) undo and redo changes to the material.  
 
@@ -549,6 +597,8 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) the suggested filename shall be the material title with `.pdf` extension, with any invalid filename characters removed.
 
+    [Explanatory Note: The export uses the effective PDF settings resolved per MaterialConversionSpecification §1(5)(h) (device → material → global). The same resolution is applied when PDFs are generated as part of deployment to external devices.]
+
 (2) **Error Handling**
 
     If the server method throws an exception, the frontend shall display an error message to the user.
@@ -662,6 +712,8 @@ For a list of all server method and client handlers to be implemented for commun
 
 
 (5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
+
+(5A) For each external device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's PDF export setting overrides in a configuration modal as outlined in s5H(2) of this specification.
 
 
 ## Section 5C — Device Control
@@ -814,6 +866,19 @@ For a list of all server method and client handlers to be implemented for commun
     
     (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
 
+(2) When the settings button for a displayed external device is pressed, the frontend shall display a configuration modal which —
+
+    (a) shows the per-device PDF export setting overrides currently associated with the selected device, as defined in AdditionalValidationRules §3D(1)(e–g).
+
+    (a1) The modal shall display a description informing the user that per-device settings take the highest priority, overriding both per-material and global default settings when a PDF is generated for this device.
+
+    (b) displays three dropdown controls — line pattern type, line spacing preset, and font size preset — each of which shall —
+        (i) include a "Default" option that maps to null (i.e., the per-material or global default is used);
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`); and
+        (iii) display "Default" when the per-device override is null.
+
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateExternalDevice(ExternalDeviceEntity entity)`.
+
 
 
 ## Section 6 - Functionalities for the "Responses" tab
@@ -917,7 +982,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) if R is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator, and disable edits for that response.
 
-    (b) provide a "Write Manually" option. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created.
+    (b) provide a "Write Manually" option, enabled only when R is queued and not actively generating. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created. The option shall be disabled while R is being generated.
 
     (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
 
@@ -956,6 +1021,41 @@ For a list of all server method and client handlers to be implemented for commun
     [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
 
 
+## Section 6B — Response Export PDF
+
+(1) **Export Button**
+
+    When the frontend is displaying device-level responses (§6(5)), the frontend shall provide an "Export to PDF" button.
+
+(2) **Export Options**
+
+    When the export button is activated, the frontend shall display a popover or modal presenting the following options:
+
+    (a) "Include Feedback" — a tickbox, defaulting to unticked.
+
+    (b) "Include Mark Scheme" — a tickbox, defaulting to unticked.
+    
+    (c) A "Download" button to confirm the export.
+
+(3) **Export Invocation**
+
+    When the "Download" button is activated —
+
+    (a) the frontend shall invoke `GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`, as defined in s1(1)(m)(ii) of the Networking API Specification, passing the currently selected material ID, the currently selected device ID, and the toggle values;
+
+    (b) the frontend shall display a loading indicator while awaiting the response;
+
+    (c) upon receipt of the byte array, the frontend shall prompt the user to save the PDF file using the system file save dialogue;
+
+    (d) the suggested filename shall be `{materialTitle} - {deviceDisplayName} Responses.pdf`, with invalid filename characters removed;
+
+    (e) if the server method throws an exception, the frontend shall display an error message to the user.
+
+(4) **Availability**
+
+    The export button shall be available only when both a device and a material are selected and at least one response exists from that device for that material.
+
+
 ## Section 7 - Functionalities for the "Settings" tab
 
 (1) **Device Base Configuration**
@@ -991,3 +1091,19 @@ For a list of all server method and client handlers to be implemented for commun
     (e) upon failure, display the error message preventing the save operation.
 
 (4) The Settings interface shall also provide a means to view the currently configured `EmailAddress` (retrieved via `GetEmailCredentials()`) and a button to delete the configuration via `DeleteEmailCredentials()`.
+
+(5) **PDF Export Defaults**
+
+    (a) On entry of the "Settings" tab, the frontend shall call `GetPdfExportSettings()` to retrieve the current global PDF export defaults.
+
+    (a1) The frontend shall display a description informing the user that these are the global defaults, and that they may be overridden on a per-material basis (in the editor) or on a per-device basis (in the external device configuration modal).
+
+    (b) The frontend shall display three dropdown controls:
+
+        (i) Line Pattern Type — with options `RULED`, `SQUARE`, `ISOMETRIC`, `NONE`.
+
+        (ii) Line Spacing Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+        (iii) Font Size Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+    (c) The frontend shall provide a "Save PDF Defaults" button. When activated, the frontend shall call `UpdatePdfExportSettings(entity)` to persist the updated defaults.

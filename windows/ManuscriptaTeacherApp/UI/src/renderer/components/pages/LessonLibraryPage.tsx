@@ -4,15 +4,19 @@
  * Per WindowsAppStructureSpec §2B(1)(d)(i).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { useAppContext } from '../../state/AppContext';
 import { CreateCollectionModal } from '../modals/CreateCollectionModal';
 import { CreateUnitModal } from '../modals/CreateUnitModal';
 import { CreateLessonModal } from '../modals/CreateLessonModal';
 import { CreateMaterialModal } from '../modals/CreateMaterialModal';
+import { SourceDocumentModal } from '../modals/SourceDocumentModal';
 import { EditorModal } from '../editor/EditorModal';
+import { StreamingGenerationView } from '../editor/StreamingGenerationView';
+import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
 import { markdownToHtml } from '../../utils/markdownConversion';
-import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType } from '../../models';
+import signalRService from '../../services/signalr/SignalRService';
+import type { UnitCollectionEntity, UnitEntity, LessonEntity, MaterialEntity, MaterialType, GenerationRequest, GenerationResult } from '../../models';
 
 // Icons from prototype LibraryVariantTree.tsx
 const ChevronRightIcon = ({ isOpen }: { isOpen: boolean }) => (
@@ -66,15 +70,18 @@ type ModalState =
     | { type: 'createUnit'; collection: UnitCollectionEntity }
     | { type: 'createLesson'; unit: UnitEntity }
     | { type: 'createMaterial'; lesson: LessonEntity }
-    | { type: 'editMaterial'; material: MaterialEntity };
+    | { type: 'editMaterial'; material: MaterialEntity }
+    | { type: 'sourceDocuments'; collection: UnitCollectionEntity };
 
 export const LessonLibraryPage: React.FC = () => {
     const {
         unitCollections,
+        units,
         getUnitsForCollection,
         getLessonsForUnit,
         getMaterialsForLesson,
         getQuestionsForMaterial,
+        getSourceDocumentsForCollection,
         createUnitCollection,
         deleteUnitCollection,
         createUnit,
@@ -82,7 +89,11 @@ export const LessonLibraryPage: React.FC = () => {
         createLesson,
         deleteLesson,
         createMaterial,
+        updateMaterial,
         deleteMaterial,
+        generateReading,
+        generateWorksheet,
+        cancelGeneration,
     } = useAppContext();
 
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
@@ -90,6 +101,18 @@ export const LessonLibraryPage: React.FC = () => {
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
+    const [aiDependenciesAvailable, setAiDependenciesAvailable] = useState<boolean>(true);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation state
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [streamingThinking, setStreamingThinking] = useState('');
+    const [streamingContent, setStreamingContent] = useState('');
+    const [streamingComplete, setStreamingComplete] = useState(false);
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
+    // Use ref for synchronous access during async operations (avoids stale closure issue)
+    const generationIdRef = useRef<string | null>(null);
+    const [isCancelled, setIsCancelled] = useState(false);
 
     const searchKeywords = useMemo(
         () => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -220,6 +243,177 @@ export const LessonLibraryPage: React.FC = () => {
         await createMaterial({ lessonId, title, content: '', materialType });
     };
 
+    React.useEffect(() => {
+        const aiDependencyIds = new Set(["ollama", "chroma", "qwen3:8b", "granite4", "nomic-embed-text"]);
+        const unsubscribe = signalRService.onRuntimeDependencyNotInstalled((dependencyIds) => {
+            const aiMissingDependencies = dependencyIds.filter(id => aiDependencyIds.has(id));
+            if (aiMissingDependencies.length > 0) {
+                setMissingDependencyIds(aiMissingDependencies);
+                setAiDependenciesAvailable(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Per FrontendWorkflowSpec §4B: AI generation handler
+    // NOTE: we also proactively update aiDependenciesAvailable when the modal
+    // opens or when dependencies are installed so that child components can
+    // disable UI appropriately.
+    const handleCreateMaterialWithAI = useCallback(async (
+        lessonId: string,
+        title: string,
+        materialType: MaterialType,
+        generationRequest: GenerationRequest,
+        readingAge: number,
+        actualAge: number
+    ) => {
+        // Per §4B(2): First create material with empty content
+        const createdMaterial = await createMaterial({
+            lessonId,
+            title,
+            content: '',
+            materialType,
+        });
+
+        // Per §4B(2)(a1): Initialize streaming state
+        setIsGenerating(true);
+        setStreamingThinking('');
+        setStreamingContent('');
+        setStreamingComplete(false);
+        setIsCancelled(false);
+
+        // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe to OnGenerationStarted to receive server-generated ID
+        const unsubscribeStarted = signalRService.onGenerationStarted((serverGenerationId) => {
+            generationIdRef.current = serverGenerationId;
+        });
+
+        // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance optimization)
+        let thinkingBuffer = '';
+        let contentBuffer = '';
+        let flushScheduled = false;
+
+        const flushBufferedTokens = () => {
+            if (!thinkingBuffer && !contentBuffer) {
+                flushScheduled = false;
+                return;
+            }
+
+            if (thinkingBuffer) {
+                const chunk = thinkingBuffer;
+                thinkingBuffer = '';
+                setStreamingThinking(prev => prev + chunk);
+            }
+
+            if (contentBuffer) {
+                const chunk = contentBuffer;
+                contentBuffer = '';
+                setStreamingContent(prev => prev + chunk);
+            }
+
+            flushScheduled = false;
+        };
+
+        // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
+        const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
+            if (isThinking) {
+                thinkingBuffer += token;
+            } else {
+                contentBuffer += token;
+            }
+
+            if (!flushScheduled) {
+                flushScheduled = true;
+                window.requestAnimationFrame(flushBufferedTokens);
+            }
+
+            if (done) {
+                // Ensure all remaining buffered tokens are flushed before marking complete
+                flushBufferedTokens();
+                setStreamingComplete(true);
+            }
+        });
+
+        // Per §4B(2)(a1)(vi): Subscribe to cancellation events
+        const unsubscribeCancelled = signalRService.onGenerationCancelled((cancelledId) => {
+            if (cancelledId === generationIdRef.current) {
+                setIsCancelled(true);
+            }
+        });
+
+        try {
+            // Per §4B(2)(a): Invoke GenerateReading or GenerateWorksheet
+            // Server generates and sends ID via OnGenerationStarted event
+            const generationResult: GenerationResult = materialType === 'READING'
+                ? await generateReading(generationRequest)
+                : await generateWorksheet(generationRequest);
+
+            // Per §4B(2)(b): Unsubscribe and clean up streaming state
+            unsubscribeStarted();
+            unsubscribe();
+            unsubscribeCancelled();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
+            generationIdRef.current = null;
+            setIsCancelled(false);
+
+            // Update material with generated content
+            // Backend may transform content (e.g., question-draft extraction per §3B(4a)),
+            // so use the returned entity which reflects the actual saved state.
+            const updatedMaterial = await updateMaterial({
+                ...createdMaterial,
+                content: generationResult.content,
+                readingAge,
+                actualAge,
+            });
+
+            setAiDependenciesAvailable(true);
+
+            // Per §4B(2)(b): Display content in editor modal
+            // Note: Validation warnings will be displayed by the editor modal if present
+            setModal({ type: 'editMaterial', material: updatedMaterial });
+        } catch (error) {
+            // Clean up on error
+            unsubscribeStarted();
+            unsubscribe();
+            unsubscribeCancelled();
+            setIsGenerating(false);
+            setStreamingThinking('');
+            setStreamingContent('');
+            setStreamingComplete(false);
+            generationIdRef.current = null;
+            // Don't reset isCancelled here - keep it true for UI feedback if cancelled
+
+            // Per §4B(2)(a1)(vi): Check if error was due to cancellation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('cancelled') || isCancelled) {
+                // Roll back material creation on cancellation
+                await deleteMaterial(createdMaterial.id);
+                // Reset cancelled state after brief delay to show message
+                setTimeout(() => {
+                    setIsCancelled(false);
+                }, 2000);
+                return; // Don't throw - cancellation is user-initiated
+            }
+
+            console.error('AI generation failed:', error);
+            // Roll back material creation
+            await deleteMaterial(createdMaterial.id);
+            throw error;
+        }
+    }, [createMaterial, deleteMaterial, generateReading, generateWorksheet, updateMaterial, isCancelled]);
+
+    // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancel generation handler
+    // Uses ref to avoid stale closure issue during async operations
+    const handleCancelGeneration = useCallback(async () => {
+        const genId = generationIdRef.current;
+        if (genId) {
+            await cancelGeneration(genId);
+        }
+    }, [cancelGeneration]);
+
     const handleDeleteMaterial = async (materialId: string) => {
         await deleteMaterial(materialId);
     };
@@ -280,6 +474,17 @@ export const LessonLibraryPage: React.FC = () => {
                                 <ChevronRightIcon isOpen={expandedCollections.has(collection.id)} />
                                 <span className="text-sm font-medium text-text-heading truncate flex-1">{collection.title}</span>
                                 <span className="text-xs text-gray-400">{unitsForCollection.length}</span>
+                                {/* Per FrontendWorkflowSpec §4A(3)(a): Source documents button */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setModal({ type: 'sourceDocuments', collection }); }}
+                                    className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 p-1 hover:bg-brand-blue/10 rounded transition-all text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-1"
+                                    aria-label="Source documents"
+                                    title="Source documents"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setModal({ type: 'createUnit', collection }); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-brand-orange/10 rounded transition-all text-brand-orange"
@@ -290,6 +495,7 @@ export const LessonLibraryPage: React.FC = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); deleteUnitCollection(collection.id); }}
                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                    aria-label="Delete collection"
                                     title="Delete collection"
                                 >
                                     <TrashIcon />
@@ -322,6 +528,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); deleteUnit(unit.id); }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                    aria-label="Delete unit"
                                                     title="Delete unit"
                                                 >
                                                     <TrashIcon />
@@ -354,6 +561,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); deleteLesson(lesson.id); }}
                                                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                        aria-label="Delete lesson"
                                                                         title="Delete lesson"
                                                                     >
                                                                         <TrashIcon />
@@ -377,6 +585,7 @@ export const LessonLibraryPage: React.FC = () => {
                                                                                     <button
                                                                                         onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
                                                                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all text-red-500"
+                                                                                        aria-label="Delete material"
                                                                                         title="Delete material"
                                                                                     >
                                                                                         <TrashIcon />
@@ -431,20 +640,75 @@ export const LessonLibraryPage: React.FC = () => {
                     onCreate={(title, description) => handleCreateLesson(modal.unit.id, title, description)}
                 />
             )}
-            {modal.type === 'createMaterial' && (
-                <CreateMaterialModal
-                    lessonId={modal.lesson.id}
-                    lessonTitle={modal.lesson.title}
-                    onClose={() => setModal({ type: 'none' })}
-                    onCreate={(title, materialType) => handleCreateMaterial(modal.lesson.id, title, materialType)}
-                />
-            )}
+            {modal.type === 'createMaterial' && (() => {
+                // Find unit collection ID for AI generation context
+                const lesson = modal.lesson;
+                const unit = units.find(u => u.id === lesson.unitId);
+                const unitCollectionId = unit?.unitCollectionId;
+                // Per FrontendWorkflowSpec §4B(1)(b): Provide source documents for selection
+                const sourceDocuments = unitCollectionId
+                    ? getSourceDocumentsForCollection(unitCollectionId)
+                    : [];
+
+                return (
+                    <CreateMaterialModal
+                        lessonId={lesson.id}
+                        lessonTitle={lesson.title}
+                        unitCollectionId={unitCollectionId}
+                        sourceDocuments={sourceDocuments}
+                        onClose={() => setModal({ type: 'none' })}
+                        onCreate={(title, materialType) => handleCreateMaterial(lesson.id, title, materialType)}
+                        aiDependenciesAvailable={aiDependenciesAvailable}
+                        onCreateWithAI={(title, materialType, generationRequest, readingAge, actualAge) =>
+                            handleCreateMaterialWithAI(
+                                lesson.id,
+                                title,
+                                materialType,
+                                generationRequest,
+                                readingAge,
+                                actualAge
+                            )
+                        }
+                    />
+                );
+            })()}
             {modal.type === 'editMaterial' && (
                 <EditorModal
                     material={modal.material}
                     onClose={() => setModal({ type: 'none' })}
                 />
             )}
+            {/* Per FrontendWorkflowSpec §4AA: Source Document Management Modal */}
+            {modal.type === 'sourceDocuments' && (
+                <SourceDocumentModal
+                    unitCollectionId={modal.collection.id}
+                    unitCollectionTitle={modal.collection.title}
+                    onClose={() => setModal({ type: 'none' })}
+                />
+            )}
+
+            {/* AI Dependency Installation Modal - Per FrontendWorkflowSpecifications §1(3) */}
+            {missingDependencyIds.length > 0 && (
+                <RuntimeDependencyInstallModal
+                    dependencyIds={missingDependencyIds}
+                    onClose={() => setMissingDependencyIds([])}
+                    onInstallComplete={() => {
+                        setMissingDependencyIds([]);
+                        setAiDependenciesAvailable(true);
+                        // User can retry AI generation after installation
+                    }}
+                />
+            )}
+
+            {/* Per FrontendWorkflowSpec §4B(2)(a1): Streaming generation view */}
+            <StreamingGenerationView
+                isVisible={isGenerating}
+                thinkingTokens={streamingThinking}
+                contentTokens={streamingContent}
+                isComplete={streamingComplete}
+                onCancel={handleCancelGeneration}
+                isCancelled={isCancelled}
+            />
         </div>
     );
 };

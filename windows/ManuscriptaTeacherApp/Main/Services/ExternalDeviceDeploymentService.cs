@@ -48,16 +48,15 @@ public class ExternalDeviceDeploymentService : IExternalDeviceDeploymentService
         var material = await _materialRepository.GetByIdAsync(materialId)
             ?? throw new KeyNotFoundException($"Material {materialId} not found.");
 
-        // 2. Generate PDF
-        var pdfBytes = await _pdfService.GeneratePdfAsync(materialId);
-
-        // 3. Name using material title
+        // 2. Name using material title
         var baseFileName = SanitiseFileName(material.Title);
 
-        // 4. Dispatch to each target
+        // 3. Per ExternalDeviceIntegrationSpecification §4(1)(a): generate per-device PDF
+        //    passing target device ID for per-device settings resolution
         var results = new List<ExternalDeviceDeploymentResult>();
         foreach (var deviceId in deviceIds)
         {
+            var pdfBytes = await _pdfService.GeneratePdfAsync(materialId, deviceId);
             results.Add(await DeployToDeviceAsync(deviceId, pdfBytes, baseFileName));
         }
 

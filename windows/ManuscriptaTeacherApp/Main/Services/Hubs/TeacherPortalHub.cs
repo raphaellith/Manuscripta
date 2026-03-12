@@ -6,9 +6,11 @@ using Main.Models.Entities.Questions;
 using Main.Models.Entities.Responses;
 using Main.Models.Enums;
 using Main.Services.Repositories;
+using Main.Services.GenAI;
 using Main.Services.Network;
 using Main.Services.RuntimeDependencies;
 using Main.Models;
+using System.Collections.Concurrent;
 
 namespace Main.Services.Hubs;
 
@@ -57,6 +59,25 @@ public class TeacherPortalHub : Hub
     // Configuration dependencies - NetworkingAPISpec §1(1)(o)
     private readonly IConfigurationService _configurationService;
 
+    // PDF export settings dependencies - NetworkingAPISpec §1(1)(q)
+    private readonly IPdfExportSettingsRepository _pdfExportSettingsRepository;
+
+    private readonly IMaterialGenerationService _materialGenerationService;
+    private readonly IContentModificationService _contentModificationService;
+    private readonly IEmbeddingStatusService _embeddingStatusService;
+    private readonly FeedbackQueueService _feedbackQueueService;
+    private readonly IFeedbackGenerationService _feedbackGenerationService;
+    private readonly IEmbeddingService _documentEmbeddingService;
+    private readonly OllamaClientService _ollamaClient;
+    private readonly QuestionExtractionService _questionExtractionService;
+
+    /// <summary>
+    /// Tracks active generation tasks by their ID for cancellation support.
+    /// Per NetworkingAPISpec §1(1)(i)(x). Maps generation ID to (ConnectionId, CancellationTokenSource)
+    /// for connection-scoped cancellation security.
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, (string ConnectionId, CancellationTokenSource Cts)> _activeGenerations = new();
+
     public TeacherPortalHub(
         IUnitCollectionService unitCollectionService,
         IUnitService unitService,
@@ -87,7 +108,16 @@ public class TeacherPortalHub : Hub
         IExternalDeviceDeploymentService externalDeviceDeploymentService,
         IEmailService emailService,
         IRuntimeDependencyRegistry runtimeDependencyRegistry,
-        IConfigurationService configurationService)
+        IConfigurationService configurationService,
+        IPdfExportSettingsRepository pdfExportSettingsRepository,
+        IMaterialGenerationService materialGenerationService,
+        IContentModificationService contentModificationService,
+        IEmbeddingStatusService embeddingStatusService,
+        FeedbackQueueService feedbackQueueService,
+        IFeedbackGenerationService feedbackGenerationService,
+        IEmbeddingService documentEmbeddingService,
+        OllamaClientService ollamaClient,
+        QuestionExtractionService questionExtractionService)
     {
         _unitCollectionService = unitCollectionService ?? throw new ArgumentNullException(nameof(unitCollectionService));
         _unitService = unitService ?? throw new ArgumentNullException(nameof(unitService));
@@ -103,6 +133,15 @@ public class TeacherPortalHub : Hub
         _questionRepository = questionRepository ?? throw new ArgumentNullException(nameof(questionRepository));
         _sourceDocumentRepository = sourceDocumentRepository ?? throw new ArgumentNullException(nameof(sourceDocumentRepository));
         _attachmentRepository = attachmentRepository ?? throw new ArgumentNullException(nameof(attachmentRepository));
+        _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _responseRepository = responseRepository ?? throw new ArgumentNullException(nameof(responseRepository));
+        _materialGenerationService = materialGenerationService ?? throw new ArgumentNullException(nameof(materialGenerationService));
+        _contentModificationService = contentModificationService ?? throw new ArgumentNullException(nameof(contentModificationService));
+        _embeddingStatusService = embeddingStatusService ?? throw new ArgumentNullException(nameof(embeddingStatusService));
+        _feedbackQueueService = feedbackQueueService ?? throw new ArgumentNullException(nameof(feedbackQueueService));
+        _feedbackGenerationService = feedbackGenerationService ?? throw new ArgumentNullException(nameof(feedbackGenerationService));
+        _documentEmbeddingService = documentEmbeddingService ?? throw new ArgumentNullException(nameof(documentEmbeddingService));
+        _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _udpBroadcastService = udpBroadcastService ?? throw new ArgumentNullException(nameof(udpBroadcastService));
         _tcpPairingService = tcpPairingService ?? throw new ArgumentNullException(nameof(tcpPairingService));
         _deviceRegistryService = deviceRegistryService ?? throw new ArgumentNullException(nameof(deviceRegistryService));
@@ -119,6 +158,9 @@ public class TeacherPortalHub : Hub
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _runtimeDependencyRegistry = runtimeDependencyRegistry ?? throw new ArgumentNullException(nameof(runtimeDependencyRegistry));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _pdfExportSettingsRepository = pdfExportSettingsRepository ?? throw new ArgumentNullException(nameof(pdfExportSettingsRepository));
+        _ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
+        _questionExtractionService = questionExtractionService ?? throw new ArgumentNullException(nameof(questionExtractionService));
     }
 
     #region UnitCollection CRUD - NetworkingAPISpec §1(1)(a)
@@ -171,7 +213,7 @@ public class TeacherPortalHub : Hub
     /// </summary>
     public async Task<UnitEntity> CreateUnit(InternalCreateUnitDto dto)
     {
-        var entity = new UnitEntity(Guid.NewGuid(), dto.UnitCollectionId, dto.Title, dto.SourceDocuments);
+        var entity = new UnitEntity(Guid.NewGuid(), dto.UnitCollectionId, dto.Title);
         return await _unitService.CreateAsync(entity);
     }
 
@@ -274,23 +316,36 @@ public class TeacherPortalHub : Hub
     /// Updates a material entity.
     /// Per NetworkingAPISpec §1(1)(d)(iii).
     /// </summary>
-    public async Task UpdateMaterial(InternalUpdateMaterialDto dto)
+    public async Task<MaterialEntity> UpdateMaterial(InternalUpdateMaterialDto dto)
     {
         // Get existing material to determine concrete type (using repository directly)
         var existing = await _materialRepository.GetByIdAsync(dto.Id);
         if (existing == null)
             throw new HubException($"Material with ID {dto.Id} not found.");
 
+        var content = dto.Content;
+
+        // §3B(4a): Extract and create questions from question-draft markers in worksheet content
+        if (content != null && content.Contains("!!! question-draft"))
+        {
+            var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(content, dto.Id);
+            content = extractionResult.ModifiedContent;
+        }
+
         // Update properties
         existing.Title = dto.Title;
-        existing.Content = dto.Content;
+        existing.Content = content;
         existing.Metadata = dto.Metadata;
         existing.VocabularyTerms = dto.VocabularyTerms;
         existing.ReadingAge = dto.ReadingAge;
         existing.ActualAge = dto.ActualAge;
+        existing.LinePatternType = dto.LinePatternType;
+        existing.LineSpacingPreset = dto.LineSpacingPreset;
+        existing.FontSizePreset = dto.FontSizePreset;
         existing.Timestamp = DateTime.UtcNow;
 
         await _materialRepository.UpdateAsync(existing);
+        return existing;
     }
 
     /// <summary>
@@ -464,6 +519,15 @@ public class TeacherPortalHub : Hub
     }
 
     /// <summary>
+    /// Updates a source document entity.
+    /// Per GenAISpec.md §3A(3) - triggers re-indexing.
+    /// </summary>
+    public async Task UpdateSourceDocument(SourceDocumentEntity updated)
+    {
+        await _sourceDocumentService.UpdateAsync(updated);
+    }
+
+    /// <summary>
     /// Deletes a source document entity by ID.
     /// Per NetworkingAPISpec §1(1)(k)(iii).
     /// </summary>
@@ -517,6 +581,15 @@ public class TeacherPortalHub : Hub
     public async Task<byte[]> GenerateMaterialPdf(Guid materialId)
     {
         return await _materialPdfService.GeneratePdfAsync(materialId);
+    }
+
+    /// <summary>
+    /// Generates a response PDF for a specific device's responses to a worksheet.
+    /// Per NetworkingAPISpec §1(m)(ii).
+    /// </summary>
+    public async Task<byte[]> GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)
+    {
+        return await _materialPdfService.GenerateResponsePdfAsync(materialId, deviceId, includeFeedback, includeMarkScheme);
     }
 
     #endregion
@@ -639,53 +712,6 @@ public class TeacherPortalHub : Hub
     #region Feedback Methods - NetworkingAPISpec §1(1)(h)
 
     /// <summary>
-    /// Approves feedback and triggers dispatch to the student device.
-    /// Per NetworkingAPISpec §1(1)(h)(ii) and GenAISpec §3DA(2).
-    /// </summary>
-    public async Task ApproveFeedback(Guid feedbackId)
-    {
-        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
-        if (feedback == null)
-            throw new HubException($"Feedback {feedbackId} not found");
-
-        if (feedback.Status != FeedbackStatus.PROVISIONAL)
-            throw new HubException($"Feedback {feedbackId} is not in PROVISIONAL status");
-
-        // Transition to READY per §3DA(2)(a)
-        feedback.Status = FeedbackStatus.READY;
-        await _feedbackRepository.UpdateAsync(feedback);
-
-        // Get response to find device ID for dispatch
-        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
-        if (response != null)
-        {
-            // Trigger dispatch per §3DA(2)(b) via Session Interaction §7
-            await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
-        }
-    }
-
-    /// <summary>
-    /// Retries dispatch of feedback in READY status.
-    /// Per NetworkingAPISpec §1(1)(h)(iii) and GenAISpec §3DA(4)(c).
-    /// </summary>
-    public async Task RetryFeedbackDispatch(Guid feedbackId)
-    {
-        var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
-        if (feedback == null)
-            throw new HubException($"Feedback {feedbackId} not found");
-
-        if (feedback.Status != FeedbackStatus.READY)
-            throw new HubException($"Cannot retry dispatch for feedback with status {feedback.Status}. Only READY feedback can be retried.");
-
-        var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
-        if (response == null)
-            throw new HubException($"Response for feedback {feedbackId} not found");
-
-        // Retry dispatch via TCP
-        await _tcpPairingService.SendReturnFeedbackAsync(response.DeviceId.ToString(), new[] { feedbackId });
-    }
-
-    /// <summary>
     /// Retrieves all responses.
     /// Per NetworkingAPISpec §1(1)(i)(i).
     /// </summary>
@@ -769,6 +795,10 @@ public class TeacherPortalHub : Hub
             // Status defaults to PROVISIONAL in constructor
 
             await _feedbackRepository.AddAsync(entity);
+
+            // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is created
+            _feedbackQueueService.RemoveFromQueue(dto.ResponseId);
+
             _logger.LogInformation("CreateFeedback success: Created Feedback {FeedbackId}", entity.Id);
             return entity;
         }
@@ -805,6 +835,9 @@ public class TeacherPortalHub : Hub
         existing.Marks = entity.Marks;
         existing.Text = entity.Text;
         await _feedbackRepository.UpdateAsync(existing);
+
+        // Per GenAISpec §3D(6)(b): Remove response from generation queue when feedback is updated
+        _feedbackQueueService.RemoveFromQueue(existing.ResponseId);
     }
 
     /// <summary>
@@ -1008,6 +1041,9 @@ public class TeacherPortalHub : Hub
     /// <summary>
     /// Checks whether the runtime dependency with the specified dependencyId is available and functional.
     /// Per NetworkingAPISpec §1(1)(nz)(i) and BackendRuntimeDependencyManagementSpecification §2(2) and §3(2).
+    /// Per GenAISpec §1A(3)(a): Ollama availability is determined solely by a 200 response
+    /// from http://localhost:11434/api/version. No test generation is performed here to
+    /// avoid blocking the frontend with an expensive model probe.
     /// </summary>
     public async Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)
     {
@@ -1016,6 +1052,26 @@ public class TeacherPortalHub : Hub
             throw new HubException($"Dependency {dependencyId} not found");
 
         return await manager.CheckDependencyAvailabilityAsync();
+    }
+
+    /// <summary>
+    /// Checks multiple runtime dependencies concurrently and returns a list of missing dependency IDs.
+    /// This avoids sequential blocking when several independent checks are needed.
+    /// </summary>
+    private async Task<List<string>> CheckMultipleDependenciesAsync(params string[] dependencyIds)
+    {
+        var tasks = dependencyIds.Select(async id =>
+        {
+            var available = await CheckRuntimeDependencyAvailability(id);
+            return (id, available);
+        }).ToArray();
+
+        var results = await Task.WhenAll(tasks);
+
+        return results
+            .Where(r => !r.available)
+            .Select(r => r.id)
+            .ToList();
     }
 
     /// <summary>
@@ -1154,4 +1210,535 @@ public class TeacherPortalHub : Hub
     }
 
     #endregion
+
+    #region GenAI Operations - NetworkingAPISpec §1(1)(i)
+
+    private async Task NotifyMissingAiDependenciesIfApplicable(Exception ex)
+    {
+        if (Clients == null)
+            return;
+
+        var message = (ex.Message ?? string.Empty).ToLowerInvariant();
+        var missingDependencyIds = new List<string>();
+
+        if (message.Contains("ollama"))
+            missingDependencyIds.Add("ollama");
+
+        if (message.Contains("chroma"))
+            missingDependencyIds.Add("chroma");
+
+        if (message.Contains("qwen3"))
+            missingDependencyIds.Add("qwen3:8b");
+
+        if (message.Contains("granite"))
+            missingDependencyIds.Add("granite4");
+
+        if (message.Contains("nomic-embed-text") || message.Contains("nomic embed"))
+            missingDependencyIds.Add("nomic-embed-text");
+
+        if (missingDependencyIds.Count == 0)
+            return;
+
+        await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missingDependencyIds);
+    }
+
+    /// <summary>
+    /// Generates reading content using AI.
+    /// Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec.md §3B(1)(a).
+    /// </summary>
+    /// <param name="request">The generation request parameters.</param>
+    public async Task<GenerationResult> GenerateReading(GenerationRequest request)
+    {
+        // Pre-check required AI runtime dependencies concurrently.
+        // If any are missing, notify frontend and abort.
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3H(8): Generate server-side ID and set up cancellation token
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
+        try
+        {
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateReading(request, async chunk =>
+            {
+                // Per GenAISpec §3H(7): Continue generation even if client disconnects
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            // §3H(9): Generation was cancelled by user - notify frontend and re-throw as HubException
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw new HubException("Generation was cancelled by user.");
+        }
+        catch (Exception ex)
+        {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
+            throw new HubException($"Failed to generate reading: {ex.Message}", ex);
+        }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Generates worksheet content using AI.
+    /// Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec.md §3B(1)(b).
+    /// </summary>
+    /// <param name="request">The generation request parameters.</param>
+    public async Task<GenerationResult> GenerateWorksheet(GenerationRequest request)
+    {
+        // Pre-check required AI runtime dependencies concurrently.
+        // If any are missing, notify frontend and abort.
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3H(8): Generate server-side ID and set up cancellation token
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
+        try
+        {
+            // Per NetworkingAPISpec §2(1)(h)(ii): Notify frontend of generation ID for cancellation support
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            // Per §3H(5)(a): Forward streaming chunks to caller via OnGenerationProgress
+            return await _materialGenerationService.GenerateWorksheet(request, async chunk =>
+            {
+                // Per GenAISpec §3H(7): Continue generation even if client disconnects
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            // §3H(9): Generation was cancelled by user - notify frontend and re-throw as HubException
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw new HubException("Generation was cancelled by user.");
+        }
+        catch (Exception ex)
+        {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
+            throw new HubException($"Failed to generate worksheet: {ex.Message}", ex);
+        }
+        finally
+        {
+            // Cleanup: remove from tracking and dispose
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Cancels an in-progress generation operation.
+    /// Per NetworkingAPISpec §1(1)(i)(x).
+    /// </summary>
+    /// <param name="generationId">The ID of the generation to cancel.</param>
+    /// <returns>True if cancellation was requested; false if generation not found or belongs to another connection.</returns>
+    public Task<bool> CancelGeneration(Guid generationId)
+    {
+        if (_activeGenerations.TryGetValue(generationId, out var entry))
+        {
+            // Security: Only allow cancellation from the same connection that started the generation
+            if (entry.ConnectionId != Context.ConnectionId)
+            {
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                entry.Cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // CTS was already disposed (generation completed concurrently) - not an error
+            }
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Modifies selected content using the AI assistant.
+    /// Per NetworkingAPISpec §1(1)(i)(iv) and GenAISpec.md §3C(1)(a).
+    /// </summary>
+    public async Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)
+    {
+        var missing = await CheckMultipleDependenciesAsync("ollama", "nomic-embed-text", "qwen3:8b", "granite4");
+
+        if (missing.Count > 0)
+        {
+            await Clients.Caller.SendAsync("RuntimeDependencyNotInstalled", missing);
+            throw new HubException("Required runtime dependency(ies) are not installed: " + string.Join(", ", missing));
+        }
+
+        // §3C(2)(a): Resolve unitCollectionId by traversing Material → Lesson → Unit → UnitCollection.
+        Guid? unitCollectionId = null;
+        var material = await _materialRepository.GetByIdAsync(materialId);
+        if (material != null)
+        {
+            var lesson = await _lessonRepository.GetByIdAsync(material.LessonId);
+            if (lesson != null)
+            {
+                var unit = await _unitRepository.GetByIdAsync(lesson.UnitId);
+                if (unit != null)
+                {
+                    unitCollectionId = unit.UnitCollectionId;
+                }
+            }
+        }
+
+        var generationId = Guid.NewGuid();
+        var cts = new CancellationTokenSource();
+        _activeGenerations[generationId] = (Context.ConnectionId, cts);
+
+        try
+        {
+            await Clients.Caller.SendAsync("OnGenerationStarted", generationId.ToString());
+
+            var result = await _contentModificationService.ModifyContent(selectedContent, instruction, unitCollectionId, materialType, title, readingAge, actualAge, async chunk =>
+            {
+                try
+                {
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                }
+                catch (Exception)
+                {
+                    // Swallow send exceptions so generation continues even if the caller disconnects mid-stream
+                }
+            }, cts.Token);
+
+            // §3C(2)(e1): Extract question-draft markers from modified content
+            if (result.Content != null && result.Content.Contains("!!! question-draft"))
+            {
+                var extractionResult = await _questionExtractionService.ExtractAndCreateQuestionsAsync(result.Content, materialId);
+                result.Content = extractionResult.ModifiedContent;
+                if (extractionResult.CreatedQuestionIds.Count > 0)
+                {
+                    result.CreatedQuestionIds ??= new List<Guid>();
+                    result.CreatedQuestionIds.AddRange(extractionResult.CreatedQuestionIds);
+                }
+                if (extractionResult.Warnings.Count > 0)
+                {
+                    result.Warnings ??= new List<ValidationWarning>();
+                    result.Warnings.AddRange(extractionResult.Warnings);
+                }
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            await Clients.Caller.SendAsync("OnGenerationCancelled", generationId.ToString());
+            throw new HubException("Generation was cancelled by user.");
+        }
+        catch (Exception ex)
+        {
+            await NotifyMissingAiDependenciesIfApplicable(ex);
+            throw new HubException($"Failed to modify content: {ex.Message}", ex);
+        }
+        finally
+        {
+            _activeGenerations.TryRemove(generationId, out _);
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the current embedding status of a source document.
+    /// Per NetworkingAPISpec §1(1)(i)(v) and GenAISpec.md §3E(1)(a).
+    /// </summary>
+    public async Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)
+    {
+        try
+        {
+            return await _embeddingStatusService.GetEmbeddingStatus(sourceDocumentId);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get embedding status: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Queues a response for AI feedback generation.
+    /// Per NetworkingAPISpec §1(1)(i)(vi) and GenAISpec.md §3D(5).
+    /// </summary>
+    public Task QueueForAiGeneration(Guid responseId)
+    {
+        try
+        {
+            _feedbackQueueService.QueueForAiGeneration(responseId);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to queue response for AI generation: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Removes a response from the AI feedback generation queue.
+    /// Per NetworkingAPISpec §1(1)(i)(ix) and GenAISpec.md §3D(6)(a).
+    /// </summary>
+    public Task RemoveFromAiGenerationQueue(Guid responseId)
+    {
+        try
+        {
+            _feedbackQueueService.RemoveFromQueue(responseId);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to remove response from AI generation queue: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Moves a queued response to the front of the generation queue.
+    /// Per NetworkingAPISpec §1(1)(i)(viii) and GenAISpec.md §3D(8A).
+    /// </summary>
+    public Task PrioritiseFeedbackGeneration(Guid responseId)
+    {
+        try
+        {
+            // Per §3D(8A)(b): no effect if the response is not currently queued
+            // or is currently being generated — return successfully.
+            _feedbackQueueService.PrioritizeResponse(responseId);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to prioritise feedback generation: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the list of response IDs currently queued for AI feedback generation.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<List<Guid>> GetFeedbackQueueStatus()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackQueueService.GetQueuedResponseIds());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get feedback queue status: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the response ID currently being processed for feedback generation, or null if idle.
+    /// Per GenAISpec.md §3D(4).
+    /// </summary>
+    public Task<string?> GetCurrentlyGeneratingResponseId()
+    {
+        try
+        {
+            return Task.FromResult(_feedbackGenerationService.GetCurrentlyGeneratingResponseId());
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to get currently generating response ID: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Retries embedding for a failed source document.
+    /// Per NetworkingAPISpec §1(1)(i)(vii) and GenAISpec.md §3A(7).
+    /// </summary>
+    public async Task RetryEmbedding(Guid sourceDocumentId)
+    {
+        try
+        {
+            await _documentEmbeddingService.RetryEmbeddingAsync(sourceDocumentId);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to retry embedding: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Generates feedback for a student response.
+    /// Per NetworkingAPISpec §1(1)(i)(iii) and GenAISpec.md §3D(9).
+    /// Note: This is for direct/manual feedback generation. Automatic feedback generation is handled via QueueForAiGeneration.
+    /// </summary>
+    public async Task<string> GenerateFeedback(Guid questionId, Guid responseId)
+    {
+        try
+        {
+            var response = await _responseRepository.GetByIdAsync(responseId);
+            if (response == null)
+            {
+                throw new HubException($"Response {responseId} not found");
+            }
+
+            var question = await _questionRepository.GetByIdAsync(questionId);
+            if (question == null)
+            {
+                throw new HubException($"Question {questionId} not found");
+            }
+
+            if (response.QuestionId != questionId)
+            {
+                throw new HubException($"Response {responseId} does not belong to question {questionId}");
+            }
+
+            // Reuse the canonical prompt from FeedbackGenerationService
+            var feedbackText = await _ollamaClient.GenerateChatCompletionAsync(
+                "granite4",
+                FeedbackGenerationService.ConstructFeedbackPrompt(question, response)
+            );
+
+            return feedbackText;
+        }
+        catch (HubException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to generate feedback: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
+
+    #region Feedback Operations - NetworkingAPISpec §1(1)(h)
+
+    /// <summary>
+    /// Approves feedback and triggers dispatch to the student device.
+    /// Per NetworkingAPISpec §1(1)(h)(ii) and GenAISpec.md §3DA(2).
+    /// </summary>
+    public async Task ApproveFeedback(Guid feedbackId)
+    {
+        try
+        {
+            var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new HubException($"Feedback {feedbackId} not found");
+            }
+
+            if (feedback.Status != FeedbackStatus.PROVISIONAL)
+            {
+                throw new HubException($"Feedback {feedbackId} cannot be approved: status is {feedback.Status}, not PROVISIONAL");
+            }
+
+            // Approve feedback (transitions PROVISIONAL → READY and triggers dispatch)
+            await _feedbackQueueService.ApproveFeedbackAsync(feedback);
+
+            // Persist the status change
+            await _feedbackRepository.UpdateAsync(feedback);
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to approve feedback: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Retries dispatch of feedback in READY status.
+    /// Per NetworkingAPISpec §1(1)(h)(iii) and GenAISpec.md §3DA(4).
+    /// </summary>
+    public async Task RetryFeedbackDispatch(Guid feedbackId)
+    {
+        try
+        {
+            var feedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+            if (feedback == null)
+            {
+                throw new HubException($"Feedback {feedbackId} not found");
+            }
+
+            if (feedback.Status != FeedbackStatus.READY)
+            {
+                throw new HubException($"Cannot retry dispatch for feedback with status {feedback.Status}. Only READY feedback can be retried.");
+            }
+
+            // Retrieve the response to get the device ID
+            var response = await _responseRepository.GetByIdAsync(feedback.ResponseId);
+            if (response == null)
+            {
+                throw new HubException($"Response for feedback {feedbackId} not found");
+            }
+
+            // Retry dispatch via TCP
+            await _tcpPairingService.SendReturnFeedbackAsync(
+                response.DeviceId.ToString(),
+                new[] { feedback.Id });
+        }
+        catch (Exception ex)
+        {
+            throw new HubException($"Failed to retry feedback dispatch: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region PDF Export Settings Methods - NetworkingAPISpec §1(1)(q)
+
+    /// <summary>
+    /// Retrieves the global default PDF export settings.
+    /// Per NetworkingAPISpec §1(1)(q)(i).
+    /// </summary>
+    public async Task<PdfExportSettingsEntity> GetPdfExportSettings()
+    {
+        _logger.LogInformation("GetPdfExportSettings called");
+        return await _pdfExportSettingsRepository.GetAsync();
+    }
+
+    /// <summary>
+    /// Updates the global default PDF export settings.
+    /// Per NetworkingAPISpec §1(1)(q)(ii).
+    /// </summary>
+    public async Task UpdatePdfExportSettings(PdfExportSettingsEntity settings)
+    {
+        _logger.LogInformation("UpdatePdfExportSettings called");
+
+        if (settings == null)
+            throw new HubException("PDF export settings cannot be null");
+
+        await _pdfExportSettingsRepository.UpdateAsync(settings);
+        _logger.LogInformation("PDF export settings updated");
+    }
+
+    #endregion
+
 }

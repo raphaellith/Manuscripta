@@ -29,6 +29,12 @@ public abstract class QuestionEntity
     /// </summary>
     public int? MaxScore { get; set; }
 
+    /// <summary>
+    /// The mark scheme for the question, for the purpose of AI-marking.
+    /// Per AdditionalValidationRules §2E(1)(a).
+    /// </summary>
+    public string? MarkScheme { get; set; }
+
     protected QuestionEntity() { }
 
     protected QuestionEntity(Guid id, Guid materialId, string questionText, QuestionType questionType, int? maxScore = null)

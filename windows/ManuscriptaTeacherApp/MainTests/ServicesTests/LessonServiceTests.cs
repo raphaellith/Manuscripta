@@ -55,7 +55,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "Test Lesson", "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
         _mockLessonRepo.Setup(r => r.AddAsync(It.IsAny<LessonEntity>()))
             .Returns(Task.CompletedTask);
 
@@ -84,7 +84,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "", "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -99,7 +99,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "   ", "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -115,7 +115,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, longTitle, "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -130,7 +130,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "Title", "");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -161,7 +161,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, exactTitle, "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
         _mockLessonRepo.Setup(r => r.AddAsync(It.IsAny<LessonEntity>()))
             .Returns(Task.CompletedTask);
 
@@ -185,7 +185,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "Updated", "Updated Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
         _mockLessonRepo.Setup(r => r.GetByIdAsync(lesson.Id))
             .ReturnsAsync(lesson);
         _mockLessonRepo.Setup(r => r.UpdateAsync(It.IsAny<LessonEntity>()))
@@ -215,7 +215,7 @@ public class LessonServiceTests
         var lesson = new LessonEntity(Guid.NewGuid(), unitId, "Title", "Description");
         
         _mockUnitRepo.Setup(r => r.GetByIdAsync(unitId))
-            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit", new List<string>()));
+            .ReturnsAsync(new UnitEntity(unitId, Guid.NewGuid(), "Unit"));
         _mockLessonRepo.Setup(r => r.GetByIdAsync(lesson.Id))
             .ReturnsAsync((LessonEntity?)null);
 

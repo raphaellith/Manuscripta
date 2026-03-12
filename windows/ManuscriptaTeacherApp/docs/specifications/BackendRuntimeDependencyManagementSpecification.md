@@ -2,7 +2,7 @@
 
 ## Explanatory Note
 
-This specification defines the requirement to provide and use a standardised interface for all dependencies to be checked and installed at runtime, including AI-related dependencies and integration with external platforms, such as reMarkable.
+This specification defines the requirement to provide and use a standardised interface for all dependencies to be checked and installed at runtime, including AI-related dependencies and integration with external platforms, such as reMarkable, ChromaDB and Ollama.
 
 ## Section 1 - General Principles
 

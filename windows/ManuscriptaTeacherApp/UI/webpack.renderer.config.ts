@@ -15,5 +15,16 @@ export const rendererConfig: Configuration = {
   plugins,
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    // Prioritize browser entry points
+    mainFields: ['browser', 'module', 'main'],
+    aliasFields: ['browser'],
+    alias: {
+      // Use mammoth's self-contained browser bundle to avoid Node.js-only
+      // imports (fs, path) that fail in the renderer process.
+      mammoth: require.resolve('mammoth/mammoth.browser.min.js'),
+    },
+    fallback: {
+      stream: require.resolve('stream-browserify'),
+    },
   },
 };

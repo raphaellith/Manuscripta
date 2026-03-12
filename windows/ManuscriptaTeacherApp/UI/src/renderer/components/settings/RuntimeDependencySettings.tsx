@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import { DEPENDENCY_METADATA } from '../../constants/dependencies';
 import { SETTINGS_SECTION_MAX_WIDTH } from '../../constants/ui';
@@ -24,10 +24,28 @@ const DependencyItem: React.FC<{ id: string }> = ({ id }) => {
         errorMessage: null,
     });
 
+    const checkAvailability = useCallback(async () => {
+        setDep(prev => ({ ...prev, state: 'checking', errorMessage: null, phase: '' }));
+        try {
+            const available = await signalRService.checkRuntimeDependencyAvailability(id);
+            setDep(prev => ({
+                ...prev,
+                isAvailable: available,
+                state: 'idle',
+            }));
+        } catch (e: unknown) {
+            setDep(prev => ({
+                ...prev,
+                state: 'failed',
+                errorMessage: (e as Error).message || 'Failed to check status.'
+            }));
+        }
+    }, [id]);
+
     // Check availability on mount
     useEffect(() => {
         checkAvailability();
-    }, [id]);
+    }, [checkAvailability]);
 
     // Subscribe to install progress
     useEffect(() => {
@@ -66,24 +84,6 @@ const DependencyItem: React.FC<{ id: string }> = ({ id }) => {
             unsubscribe();
         };
     }, [id]);
-
-    const checkAvailability = async () => {
-        setDep(prev => ({ ...prev, state: 'checking', errorMessage: null, phase: '' }));
-        try {
-            const available = await signalRService.checkRuntimeDependencyAvailability(id);
-            setDep(prev => ({
-                ...prev,
-                isAvailable: available,
-                state: 'idle',
-            }));
-        } catch (e: unknown) {
-            setDep(prev => ({
-                ...prev,
-                state: 'failed',
-                errorMessage: (e as Error).message || 'Failed to check status.'
-            }));
-        }
-    };
 
     const handleInstall = async () => {
         setDep(prev => ({
