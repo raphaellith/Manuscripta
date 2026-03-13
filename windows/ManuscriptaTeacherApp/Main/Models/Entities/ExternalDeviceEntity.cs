@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
@@ -36,6 +37,24 @@ public class ExternalDeviceEntity
     /// Type-specific configuration data (e.g. Kindle email address).
     /// </summary>
     public string? ConfigurationData { get; set; }
+
+    /// <summary>
+    /// Per-device line pattern override for written-answer areas.
+    /// Per AdditionalValidationRules §3D(1)(e).
+    /// </summary>
+    public LinePatternType? LinePatternType { get; set; }
+
+    /// <summary>
+    /// Per-device line spacing override for written-answer areas.
+    /// Per AdditionalValidationRules §3D(1)(f).
+    /// </summary>
+    public LineSpacingPreset? LineSpacingPreset { get; set; }
+
+    /// <summary>
+    /// Per-device body text font size override.
+    /// Per AdditionalValidationRules §3D(1)(g).
+    /// </summary>
+    public FontSizePreset? FontSizePreset { get; set; }
 
     public ExternalDeviceEntity() { }
 

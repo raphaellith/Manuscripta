@@ -17,13 +17,6 @@ public class WrittenAnswerQuestionEntity : QuestionEntity
     [MaxLength(500)]
     public string? CorrectAnswer { get; set; }
 
-    /// <summary>
-    /// Mark scheme for AI-marking. Per AdditionalValidationRules §2E(1)(a).
-    /// Mutually exclusive with CorrectAnswer per §2E(2)(b).
-    /// </summary>
-    [MaxLength(2000)]
-    public string? MarkScheme { get; set; }
-
     private WrittenAnswerQuestionEntity() : base() { }
 
     public WrittenAnswerQuestionEntity(Guid id, Guid materialId, string questionText, string? correctAnswer, string? markScheme = null, int? maxScore = null)

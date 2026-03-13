@@ -52,6 +52,8 @@ For a description of how these server methods and client handlers are expected t
         (iii) `Task UpdateMaterial(MaterialEntity updated)`: Updates a material entity, identified by its UUID.
 
         (iv) `Task DeleteMaterial(Guid id)`: Deletes a Material entity, identified by its UUID.
+
+        [Note: `MaterialEntity` includes optional fields `LinePatternType?`, `LineSpacingPreset?`, and `FontSizePreset?` per AdditionalValidationRules §2D(2)(c–e). When null, the global default from `PdfExportSettingsEntity` applies.]
     
     (d1) CRUD methods for questions.
 
@@ -94,28 +96,55 @@ For a description of how these server methods and client handlers are expected t
         (ii) `Task ApproveFeedback(Guid feedbackId)`: Approves the specified feedback and triggers dispatch to the student device. See GenAISpec §3DA(2).
 
         (iii) `Task RetryFeedbackDispatch(Guid feedbackId)`: Retries dispatch of feedback in `READY` status.
-
+        
         (iv) `Task<List<FeedbackEntity>> GetAllFeedbacks()`: Retrieves all feedback entities.
 
-        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). Per FrontendWorkflowSpecifications §6A(7)(b)(ii), this method shall reject updates if the feedback's Status is not `PROVISIONAL`.
+        (v) `Task UpdateFeedback(FeedbackEntity entity)`: Updates an existing feedback entity (marks and text only; status unchanged). This method shall reject updates if the feedback's Status is not `PROVISIONAL`.
 
         (vi) `Task DeleteFeedback(Guid feedbackId)`: Deletes an existing feedback entity. Per FrontendWorkflowSpecifications §6A(7)(a)(ii), this is invoked when the teacher clears both Text and Marks on a `PROVISIONAL` feedback.
 
-    (i) Methods for retrieving responses.
+    (i) Methods for GenAI functionalities, as specified in GenAISpec.
+
+        (i) `Task<GenerationResult> GenerateReading(GenerationRequest request)`: Generates reading material content. Returns `GenerationResult` (AdditionalValidationRules §3AC). See GenAISpec §3B. The server generates a unique generation ID and sends it via `OnGenerationStarted` before streaming begins, enabling cancellation via `CancelGeneration`.
+
+        (ii) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request)`: Generates worksheet material content. Returns `GenerationResult`. See GenAISpec §3B. The server generates a unique generation ID and sends it via `OnGenerationStarted` before streaming begins, enabling cancellation via `CancelGeneration`.
+
+
+        (iii) `Task<string> GenerateFeedback(Guid questionId, Guid responseId)`: Generates feedback for a student response. See GenAISpec §3D(9).
+
+        (iv) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)`: Modifies selected content based on the instruction, with material metadata for prompt context. The `materialId` identifies the material being modified, enabling question-draft extraction per GenAISpec §3C(2)(e1) and entity-hierarchy resolution to the owning `UnitCollectionId` for RAG retrieval per GenAISpec §3C(2)(a). Returns `GenerationResult`. See GenAISpec §3C.
+
+        (v) `Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)`: Returns the embedding status of a source document. See GenAISpec §3E.
+
+        (vi) `Task QueueForAiGeneration(Guid responseId)`: Adds or re-adds the specified response to the AI feedback generation queue. See GenAISpec §3D(5).
+
+        (vii) `Task RetryEmbedding(Guid sourceDocumentId)`: Re-queues a source document with `FAILED` status for indexing. See GenAISpec §3A(7).
+
+        (viii) `Task PrioritiseFeedbackGeneration(Guid responseId)`: Moves the specified response to the front of the AI feedback generation queue. See GenAISpec §3D(8A).
+
+        (ix) `Task RemoveFromAiGenerationQueue(Guid responseId)`: Removes the specified response from the AI feedback generation queue. See GenAISpec §3D(6)(a).
+
+        (x) `Task<bool> CancelGeneration(Guid generationId)`: Cancels an in-progress AI generation. Returns `true` if a matching in-progress generation was found and cancellation was requested; returns `false` if the specified generation ID is not found, has already completed, or belongs to a different connection. See GenAISpec §3H(8).
+
+        (xi) `Task<List<Guid>> GetFeedbackQueueStatus()`: Returns a snapshot of all response IDs currently queued for AI feedback generation. See GenAISpec §3D(4).
+
+        (xii) `Task<string?> GetCurrentlyGeneratingResponseId()`: Returns the response ID currently being processed for feedback generation, or null if idle. See GenAISpec §3D(4).
+        
+    (j) Methods for retrieving responses.
 
         (i) `Task<List<ResponseEntity>> GetAllResponses()`: Retrieves all responses.
 
         (ii) `Task<List<ResponseEntity>> GetResponsesUnderQuestion(Guid questionId)`: Retrieves all responses associated with the question with the questionId.
 
-    (j) Methods for updating app settings. **To be confirmed.**
+    (k) CRUD methods for source documents.
 
-    (k) Creation, retrieval and deletion methods for source documents.
-
-        (i) `Task CreateSourceDocument(SourceDocumentEntity newSourceDocumentEntity)`: Receives data for a new source document entity (without an assigned UUID), and creates the entity with an assigned UUID.
+        (i) `Task CreateSourceDocument(SourceDocumentEntity newSourceDocumentEntity)`: Receives data for a new source document entity (without an assigned UUID), and creates the entity with an assigned UUID. Triggers embedding indexing per GenAISpec §3A.
 
         (ii) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`: Retrieves all source document entities.
 
-        (iii) `Task DeleteSourceDocument(Guid id)`: Deletes a source document entity, identified by its UUID.
+        (iii) `Task UpdateSourceDocument(SourceDocumentEntity updated)`: Updates a source document entity, including its `Transcript` field. Triggers re-indexing per GenAISpec §3A(3).
+
+        (iv) `Task DeleteSourceDocument(Guid id)`: Deletes a source document entity, identified by its UUID. Removes associated embeddings per GenAISpec §3A(4).
     
     (l) Creation, retrieval and deletion methods for attachments.
 
@@ -128,6 +157,8 @@ For a description of how these server methods and client handlers are expected t
     (m) Methods for PDF generation.
 
         (i) `Task<byte[]> GenerateMaterialPdf(Guid materialId)`: Generates a PDF document for the specified material and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification.
+
+        (ii) `Task<byte[]> GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`: Generates a Response PDF for the specified material and device, with optional feedback and mark scheme inclusion, and returns the PDF content as a byte array. The PDF shall be generated in accordance with Material Conversion Specification §7.
 
     (nz) Methods for runtime dependency management.
 
@@ -143,7 +174,7 @@ For a description of how these server methods and client handlers are expected t
 
         (iii) `Task<List<ExternalDeviceEntity>> GetAllExternalDevices()`: Retrieves all paired external devices.
 
-        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID.
+        (iv) `Task UpdateExternalDevice(ExternalDeviceEntity entity)`: Updates an external device entity, identified by its UUID. This includes updating the per-device PDF export setting overrides defined in AdditionalValidationRules §3D(1)(e–g).
 
         (v) `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`: Deploys a material to the specified external devices by dispatching it through their respective delivery mechanisms. Returns when all deployments are complete or have failed.
 
@@ -167,6 +198,12 @@ For a description of how these server methods and client handlers are expected t
 
         (iv) `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`: Updates the overrides associated with an Android device, identified by its UUID. The overrides are determined by comparing the new device configuration with the base configuration.
 
+    (q) Methods for PDF export settings.
+
+        (i) `Task<PdfExportSettingsEntity> GetPdfExportSettings()`: Retrieves the global default PDF export settings.
+
+        (ii) `Task UpdatePdfExportSettings(PdfExportSettingsEntity settings)`: Updates the global default PDF export settings.
+
 
 ### Section 2 - Frontend handlers
 
@@ -182,11 +219,19 @@ For a description of how these server methods and client handlers are expected t
 
     (b) Handlers updating the responses page.
         
-        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received.
+        (i) `RefreshResponses`. Signals that the frontend should refresh the responses page. The backend shall invoke this handler when a response is received, or a feedback changes state.
 
-    (c) [DELETED]
+    (c) Handlers for AI feedback notifications.
 
-    (d) [DELETED]
+        (i) `OnFeedbackGenerationFailed`, with parameters `responseId` (Guid) and `error` (string): Notifies the frontend that AI feedback generation has failed for the specified response. See GenAISpec §3D(7)(b).
+
+        (ii) `OnFeedbackDispatchFailed`, with parameters `feedbackId` (Guid) and `deviceId` (Guid): Notifies the frontend that feedback dispatch has failed for the specified device. See GenAISpec §3DA(4)(a).
+
+        (iii) `OnFeedbackGenerated`, with parameters `feedbackId` (Guid) and `responseId` (Guid): Notifies the frontend that AI feedback generation has succeeded for the specified response. The frontend shall use this as a signal to refresh feedback data. See GenAISpec §3D(8).
+
+    (d) Handlers for embedding notifications.
+
+        (i) `OnEmbeddingFailed`, with parameters `sourceDocumentId` (Guid) and `error` (string): Notifies the frontend that source document indexing has failed after all retries. See GenAISpec §3A(6)(b)(ii).
 
     (e) Handlers for alerts.
 
@@ -211,3 +256,11 @@ For a description of how these server methods and client handlers are expected t
         (i) `ExternalDeviceAuthInvalid`, with parameter `deviceId` (Guid): Notifies the frontend that the specified external device requires re-authentication (e.g. revoked reMarkable token).
 
         (ii) `EmailCredentialsNotConfigured`: Notifies the frontend that an operation failed because email credentials have not been configured.
+
+    (h) Handlers for generation streaming.
+
+        (i) `OnGenerationProgress`, with parameters `token` (string), `isThinking` (bool), and `done` (bool): Notifies the frontend that a generation chunk has been received from the AI model. The `token` parameter contains the text fragment. The `isThinking` parameter indicates whether the token is part of the model's chain-of-thought reasoning. The `done` parameter indicates whether the stream has completed. See GenAISpec §3H(5)(a).
+
+        (ii) `OnGenerationStarted`, with parameter `generationId` (string): Notifies the frontend that a generation has started and provides the server-generated ID for cancellation support. The frontend must subscribe to this event before invoking `GenerateReading` or `GenerateWorksheet` to receive the ID. See GenAISpec §3H(8).
+
+        (iii) `OnGenerationCancelled`, with parameter `generationId` (string): Notifies the frontend that a generation was cancelled. The frontend should clean up streaming state and display appropriate feedback to the user. See GenAISpec §3H(9).

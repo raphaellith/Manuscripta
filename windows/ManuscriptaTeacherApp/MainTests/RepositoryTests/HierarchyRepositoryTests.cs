@@ -161,7 +161,7 @@ public class HierarchyRepositoryTests
             await ctx.SaveChangesAsync();
 
             var repo = new EfUnitRepository(ctx);
-            var unit = new UnitEntity(unitId, unitCollectionId, "Test Unit", new List<string> { "doc.pdf" });
+            var unit = new UnitEntity(unitId, unitCollectionId, "Test Unit");
             await repo.AddAsync(unit);
         }
 
@@ -172,7 +172,6 @@ public class HierarchyRepositoryTests
 
             Assert.NotNull(retrieved);
             Assert.Equal("Test Unit", retrieved!.Title);
-            Assert.Single(retrieved.SourceDocuments);
         }
     }
 
@@ -192,8 +191,8 @@ public class HierarchyRepositoryTests
             await ctx.SaveChangesAsync();
 
             var repo = new EfUnitRepository(ctx);
-            await repo.AddAsync(new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 1", new List<string>()));
-            await repo.AddAsync(new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 2", new List<string>()));
+            await repo.AddAsync(new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 1"));
+            await repo.AddAsync(new UnitEntity(Guid.NewGuid(), unitCollectionId, "Unit 2"));
         }
 
         using (var ctx = new MainDbContext(options))
@@ -225,7 +224,7 @@ public class HierarchyRepositoryTests
             
             // Create hierarchy (FK constraints)
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             await ctx.SaveChangesAsync();
 
             var repo = new EfLessonRepository(ctx);
@@ -258,7 +257,7 @@ public class HierarchyRepositoryTests
         {
             ctx.Database.EnsureCreated();
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             await ctx.SaveChangesAsync();
 
             var repo = new EfLessonRepository(ctx);
@@ -293,7 +292,7 @@ public class HierarchyRepositoryTests
         {
             ctx.Database.EnsureCreated();
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             await ctx.SaveChangesAsync();
         }
 
@@ -327,7 +326,7 @@ public class HierarchyRepositoryTests
         {
             ctx.Database.EnsureCreated();
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             ctx.Lessons.Add(new LessonEntity(lessonId, unitId, "Lesson", "Description"));
             await ctx.SaveChangesAsync();
         }
@@ -362,7 +361,7 @@ public class HierarchyRepositoryTests
         {
             ctx.Database.EnsureCreated();
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             ctx.Lessons.Add(new LessonEntity(lessonId, unitId, "Lesson", "Description"));
             await ctx.SaveChangesAsync();
 
@@ -405,7 +404,7 @@ public class HierarchyRepositoryTests
             
             // Build full hierarchy
             ctx.UnitCollections.Add(new UnitCollectionEntity(unitCollectionId, "Collection"));
-            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit", new List<string>()));
+            ctx.Units.Add(new UnitEntity(unitId, unitCollectionId, "Unit"));
             ctx.Lessons.Add(new LessonEntity(lessonId, unitId, "Lesson", "Description"));
             await ctx.SaveChangesAsync();
 

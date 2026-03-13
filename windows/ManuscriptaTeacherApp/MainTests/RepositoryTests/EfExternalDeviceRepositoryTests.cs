@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Main.Data;
 using Main.Models.Entities;
+using Main.Models.Enums;
 using Main.Services.Repositories;
 
 namespace MainTests.RepositoryTests;
@@ -180,5 +181,77 @@ public class EfExternalDeviceRepositoryTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => repo.UpdateAsync(new ExternalDeviceEntity(Guid.NewGuid(), "Ghost", ExternalDeviceType.REMARKABLE)));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UpdatesPdfExportOverrides()
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = CreateSqliteInMemoryOptions(connection);
+
+        var deviceId = Guid.NewGuid();
+
+        using (var ctx = new MainDbContext(options))
+        {
+            ctx.Database.EnsureCreated();
+            var repo = new EfExternalDeviceRepository(ctx);
+            await repo.AddAsync(new ExternalDeviceEntity(deviceId, "Device", ExternalDeviceType.REMARKABLE));
+        }
+
+        using (var ctx = new MainDbContext(options))
+        {
+            var repo = new EfExternalDeviceRepository(ctx);
+            var updated = new ExternalDeviceEntity(deviceId, "Device", ExternalDeviceType.REMARKABLE)
+            {
+                LinePatternType = LinePatternType.SQUARE,
+                LineSpacingPreset = LineSpacingPreset.LARGE,
+                FontSizePreset = FontSizePreset.EXTRA_LARGE
+            };
+            await repo.UpdateAsync(updated);
+        }
+
+        using (var ctx = new MainDbContext(options))
+        {
+            var repo = new EfExternalDeviceRepository(ctx);
+            var device = await repo.GetByIdAsync(deviceId);
+            Assert.NotNull(device);
+            Assert.Equal(LinePatternType.SQUARE, device!.LinePatternType);
+            Assert.Equal(LineSpacingPreset.LARGE, device.LineSpacingPreset);
+            Assert.Equal(FontSizePreset.EXTRA_LARGE, device.FontSizePreset);
+        }
+    }
+
+    [Fact]
+    public async Task AddAndGetById_WithPdfSettings_ReturnsPdfSettings()
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = CreateSqliteInMemoryOptions(connection);
+
+        var deviceId = Guid.NewGuid();
+
+        using (var ctx = new MainDbContext(options))
+        {
+            ctx.Database.EnsureCreated();
+            var repo = new EfExternalDeviceRepository(ctx);
+            var device = new ExternalDeviceEntity(deviceId, "PDF Device", ExternalDeviceType.KINDLE)
+            {
+                LinePatternType = LinePatternType.ISOMETRIC,
+                LineSpacingPreset = LineSpacingPreset.SMALL,
+                FontSizePreset = FontSizePreset.SMALL
+            };
+            await repo.AddAsync(device);
+        }
+
+        using (var ctx = new MainDbContext(options))
+        {
+            var repo = new EfExternalDeviceRepository(ctx);
+            var device = await repo.GetByIdAsync(deviceId);
+            Assert.NotNull(device);
+            Assert.Equal(LinePatternType.ISOMETRIC, device!.LinePatternType);
+            Assert.Equal(LineSpacingPreset.SMALL, device.LineSpacingPreset);
+            Assert.Equal(FontSizePreset.SMALL, device.FontSizePreset);
+        }
     }
 }

@@ -54,7 +54,7 @@ public class UnitServiceTests
     {
         // Arrange
         var unitCollectionId = Guid.NewGuid();
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Test Unit", new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Test Unit");
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
             .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));
@@ -83,7 +83,7 @@ public class UnitServiceTests
     {
         // Arrange - §2B(1)(b): Title is mandatory
         var unitCollectionId = Guid.NewGuid();
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "", new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "");
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
             .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));
@@ -99,7 +99,7 @@ public class UnitServiceTests
         // Arrange - §2B(1)(b): Title max 500 chars
         var unitCollectionId = Guid.NewGuid();
         var longTitle = new string('a', 501);
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, longTitle, new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, longTitle);
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
             .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));
@@ -114,7 +114,7 @@ public class UnitServiceTests
     {
         // Arrange - §2B(1)(a): UnitCollectionId must reference existing collection
         var invalidUnitCollectionId = Guid.NewGuid();
-        var unit = new UnitEntity(Guid.NewGuid(), invalidUnitCollectionId, "Title", new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), invalidUnitCollectionId, "Title");
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(invalidUnitCollectionId))
             .ReturnsAsync((UnitCollectionEntity?)null);
@@ -122,26 +122,6 @@ public class UnitServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateAsync(unit));
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithSourceDocuments_Success()
-    {
-        // Arrange - §2B(1)(c): SourceDocuments is optional
-        var unitCollectionId = Guid.NewGuid();
-        var sourceDocuments = new List<string> { "/path/doc1.pdf", "/path/doc2.docx" };
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Title", sourceDocuments);
-        
-        _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
-            .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));
-        _mockUnitRepo.Setup(r => r.AddAsync(It.IsAny<UnitEntity>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _service.CreateAsync(unit);
-
-        // Assert
-        Assert.Equal(2, result.SourceDocuments.Count);
     }
 
     #endregion
@@ -153,7 +133,7 @@ public class UnitServiceTests
     {
         // Arrange
         var unitCollectionId = Guid.NewGuid();
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Updated", new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Updated");
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
             .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));
@@ -183,7 +163,7 @@ public class UnitServiceTests
     {
         // Arrange
         var unitCollectionId = Guid.NewGuid();
-        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Title", new List<string>());
+        var unit = new UnitEntity(Guid.NewGuid(), unitCollectionId, "Title");
         
         _mockUnitCollectionRepo.Setup(r => r.GetByIdAsync(unitCollectionId))
             .ReturnsAsync(new UnitCollectionEntity(unitCollectionId, "Collection"));

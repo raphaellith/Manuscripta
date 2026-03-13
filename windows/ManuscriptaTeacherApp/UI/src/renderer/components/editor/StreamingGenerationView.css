@@ -1,0 +1,456 @@
+/**
+ * Styles for StreamingGenerationView component.
+ * Per FrontendWorkflowSpecifications §4B(2)(a1).
+ */
+
+/* Full-screen modal overlay */
+.streaming-generation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 2rem;
+}
+
+/* Main container */
+.streaming-generation-container {
+    background-color: #ffffff;
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 800px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header section */
+.streaming-generation-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.streaming-generation-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+    flex: 1;
+}
+
+/* Loading spinner */
+.streaming-generation-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #f97316; /* brand-orange */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Scrollable content area */
+.streaming-generation-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #374151;
+}
+
+/* Per §4B(2)(a1)(i): Thinking section styling */
+.streaming-thinking-section {
+    margin-bottom: 1.5rem;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.streaming-thinking-summary {
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    user-select: none;
+    font-style: italic;
+}
+
+.streaming-thinking-summary:hover {
+    color: #4b5563;
+}
+
+.streaming-thinking-content {
+    padding: 0 1rem 1rem 1rem;
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Per §4B(2)(a1)(ii): Content section styling — rich Markdown rendering */
+.streaming-content-section {
+    word-break: break-word;
+}
+
+/* Per §4B(2)(a1)(ii): Rich rendered content inherits editor typography */
+.streaming-content-rendered {
+    line-height: 1.75;
+}
+
+/* Headings */
+.streaming-content-rendered h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 1.25rem 0 0.5rem;
+    color: #111827;
+}
+.streaming-content-rendered h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem;
+    color: #111827;
+}
+.streaming-content-rendered h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0.875rem 0 0.375rem;
+    color: #111827;
+}
+
+/* Paragraphs */
+.streaming-content-rendered p {
+    margin: 0.5rem 0;
+}
+
+/* Lists */
+.streaming-content-rendered ul,
+.streaming-content-rendered ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+.streaming-content-rendered li {
+    margin: 0.25rem 0;
+}
+
+/* Bold / italic */
+.streaming-content-rendered strong {
+    font-weight: 600;
+}
+.streaming-content-rendered em {
+    font-style: italic;
+}
+
+/* Tables */
+.streaming-content-rendered table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+}
+.streaming-content-rendered th,
+.streaming-content-rendered td {
+    border: 1px solid #d1d5db;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+.streaming-content-rendered th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+}
+
+/* Code */
+.streaming-content-rendered code {
+    background-color: #f3f4f6;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.streaming-content-rendered pre {
+    background-color: #1f2937;
+    color: #e5e7eb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}
+.streaming-content-rendered pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+}
+
+/* Blockquotes */
+.streaming-content-rendered blockquote {
+    border-left: 4px solid #f97316;
+    padding-left: 1rem;
+    margin: 0.75rem 0;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Horizontal rules */
+.streaming-content-rendered hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 1rem 0;
+}
+
+/* KaTeX display math */
+.streaming-content-rendered .katex-display {
+    margin: 0.75rem 0;
+    text-align: center;
+}
+.streaming-content-rendered .katex-fallback {
+    font-family: 'Fira Code', monospace;
+    color: #6b7280;
+}
+
+/* PDF / question placeholders */
+.streaming-pdf-placeholder,
+.streaming-question-placeholder {
+    display: block;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    background-color: #f3f4f6;
+    border: 1px dashed #d1d5db;
+    border-radius: 0.5rem;
+    color: #6b7280;
+    font-style: italic;
+    text-align: center;
+}
+
+/* ===================================================================
+   Question-Draft Preview Cards
+   Per GenAISpec Appendix C — mirrors editor QuestionRef styling
+   =================================================================== */
+
+.question-draft-preview {
+    margin: 0.75rem 0;
+    padding: 1rem;
+    border: 2px solid rgb(249, 115, 22); /* brand-orange */
+    border-radius: 0.5rem;
+    background-color: rgb(255, 247, 237); /* orange-50 */
+}
+
+.question-draft-partial {
+    opacity: 0.7;
+}
+
+/* Header row */
+.question-draft-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.question-draft-badge {
+    font-weight: 600;
+    color: rgb(249, 115, 22); /* brand-orange */
+}
+
+.question-draft-type {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    background-color: rgb(254, 215, 170); /* orange-200 */
+    color: rgb(194, 65, 12); /* orange-700 */
+    border-radius: 0.25rem;
+}
+
+.question-draft-score {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Question text */
+.question-draft-text {
+    font-weight: 500;
+    color: #1f2937;
+    margin: 0 0 0.75rem;
+}
+
+.question-draft-loading {
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* MC options list */
+.question-draft-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.question-draft-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+}
+
+.question-draft-option-correct {
+    background-color: rgb(220, 252, 231); /* green-100 */
+    border: 1px solid rgb(134, 239, 172); /* green-300 */
+}
+
+.question-draft-option-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #e5e7eb;
+    color: #4b5563;
+    flex-shrink: 0;
+}
+
+.question-draft-option-letter.correct {
+    background-color: rgb(34, 197, 94); /* green-500 */
+    color: #ffffff;
+}
+
+.question-draft-correct-mark {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: rgb(22, 163, 74); /* green-600 */
+}
+
+/* Written answer - correct answer box */
+.question-draft-answer {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: rgb(239, 246, 255); /* blue-50 */
+    border: 1px solid rgb(191, 219, 254); /* blue-200 */
+    border-radius: 0.375rem;
+}
+
+.question-draft-answer-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(37, 99, 235); /* blue-600 */
+    margin: 0 0 0.25rem;
+}
+
+.question-draft-answer-value {
+    font-size: 0.875rem;
+    color: rgb(30, 64, 175); /* blue-800 */
+    margin: 0;
+}
+
+/* Written answer - mark scheme box */
+.question-draft-markscheme {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: rgb(250, 245, 255); /* purple-50 */
+    border: 1px solid rgb(221, 214, 254); /* purple-200 */
+    border-radius: 0.375rem;
+}
+
+.question-draft-markscheme-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(147, 51, 234); /* purple-600 */
+    margin: 0 0 0.25rem;
+}
+
+.question-draft-markscheme-value {
+    font-size: 0.875rem;
+    color: rgb(107, 33, 168); /* purple-800 */
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+/* Per §4B(2)(a1)(iii): Blinking cursor animation */
+.streaming-cursor {
+    color: #f97316; /* brand-orange */
+    animation: blink 0.7s step-end infinite;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Scrollbar styling for content area */
+.streaming-generation-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.streaming-generation-content::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.streaming-generation-content::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.streaming-generation-content::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Per §4B(2)(a1)(v): Footer with cancel button */
+.streaming-generation-footer {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+/* Cancel button styling */
+.streaming-cancel-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #dc2626;
+    background-color: #ffffff;
+    border: 1px solid #dc2626;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.streaming-cancel-button:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.streaming-cancel-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+}

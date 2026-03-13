@@ -36,7 +36,7 @@ public class RepositoryTests
         var unitCollection = new UnitCollectionEntity(unitCollectionId, "Test Unit Collection");
         ctx.UnitCollections.Add(unitCollection);
         
-        var unit = new UnitEntity(unitId, unitCollectionId, "Test Unit", new List<string>());
+        var unit = new UnitEntity(unitId, unitCollectionId, "Test Unit");
         ctx.Units.Add(unit);
         
         var lesson = new LessonEntity(lessonId, unitId, "Test Lesson", "Test Description");

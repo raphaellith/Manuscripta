@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppProvider, useAppContext } from './state/AppContext';
-import { AlertProvider } from './state/AlertContext';
+import { AlertProvider, useAlertContext } from './state/AlertContext';
 import { Header } from './components/layout/Header';
 import { GlobalAlerts } from './components/layout/GlobalAlerts';
 import { LessonLibraryPage } from './components/pages/LessonLibraryPage';
@@ -16,8 +16,14 @@ import { SettingsPage } from './components/pages/SettingsPage';
 type View = 'lesson-library' | 'classroom-control' | 'responses' | 'settings';
 
 const AppContent: React.FC = () => {
-    const { isLoading, error, refreshData } = useAppContext();
+    const { isLoading, error, isConnected, backendState, refreshData, sourceDocuments } = useAppContext();
+    const { setSourceDocuments } = useAlertContext();
     const [activeView, setActiveView] = useState<View>('lesson-library');
+
+    // Sync source documents to AlertContext for embedding failure alerts (§4AA(6)(a))
+    React.useEffect(() => {
+        setSourceDocuments(sourceDocuments);
+    }, [sourceDocuments, setSourceDocuments]);
 
     React.useEffect(() => {
         const handleNavigate = (e: Event) => {

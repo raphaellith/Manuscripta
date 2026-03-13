@@ -2,64 +2,461 @@
 
 ## Explanatory Note
 
-This document defines the specifications for classes enabling the `Main` component to access generative AI (GenAI) functionalities provided by Granite and Ollama.
+This document defines the specifications for the Windows application's backend generative AI functionalities. It specifies the Retrieval-Augmented Generation (RAG) pipeline for efficient context injection from source documents.
+
+Frontend workflows interacting with these functionalities are defined in FrontendWorkflowSpecifications §4AA, §4B, and §4C.
+
+
+## Section 1 — General Principles
+
+(1) All GenAI functionalities of the Windows application must be provided locally via Ollama.
+
+(2) The following models shall be used, with task-specific assignments:
+
+| Purpose | Model | Ollama Name | Role | Rationale |
+|---------|-------|-------------|------|----------|
+| Material generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Content modification | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for structured output |
+| Feedback generation | Qwen3 8B | `qwen3:8b` | Primary | Better instruction adherence for mark-scheme evaluation |
+| All generative tasks (fallback) | IBM Granite 4.0 | `granite4` | Fallback | Smaller resource footprint when primary model is unavailable |
+| Embeddings | Nomic Embed Text | `nomic-embed-text` | — | Optimised for retrieval |
+
+[Explanatory Note: Qwen3 8B replaces IBM Granite 4.0 as the primary model for content modification and feedback generation. Granite 4.0 was observed to produce unreliable output when evaluating mark-by-mark mark schemes for written-answer feedback. To maintain consistency and quality across all generative tasks, Qwen3 8B is now the universal primary model, with Granite 4.0 retained solely as a resource-constraint fallback.]
+
+(3) [Deleted.]
+
+(4) [Deleted.]
+
+(5) Source documents shall not be passed in full to the language model. Instead, the backend shall use semantic retrieval to extract relevant chunks, as specified in Section 2.
+
+(6) If the primary model (`qwen3:8b`) fails during any generative task (material generation, content modification, or feedback generation) due to resource constraints —
+
+    (a) the backend shall attempt to fall back to a smaller model (`granite4`) by first unloading the primary model.
+
+    (b) if a fallback is used for a task that produces Material Encoding output (material generation, content modification), the iterative refinement process specified in §3F shall be applied.
+
+(7) [Deleted.]
+
+(8) Prior to any operation requiring Ollama, Chroma or any large language model, the application shall verify that the dependency is available and functional in accordance with the Backend Runtime Dependency Management Specification and Sections 1A to 1E of this document.
+
+(9) As Ollama, Chroma, large language models are treated as runtime dependencies, the application shall not assume on startup that they have already been installed. They must only be installed upon user consent expressed from the frontend.
 
 
 
-## Section 1 - General Principles
+## Section 1A - Ascertaining the availability of Ollama
 
-(1) All GenAI functionalities of the Windows application must be provided by the large language model (LLM) Granite 4.0, hereafter referred to with its Ollama model name `granite4`. The `granite4` model must be locally hosted and run via Ollama.
+(1) The `OllamaRuntimeDependencyManager` class shall manage the availability and installation of Ollama by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
 
-(2) Ollama is assumed to have been installed silently during the installation of the Windows application.
+(2) The `OllamaRuntimeDependencyManager` class shall have the unique identifier `"ollama"`.
 
-(3) All calls to Ollama and the `granite4` model must be performed by calling a method belonging to one of the following classes. All classes listed below must inherit the superclass `AiWorkflowService`.
+(3) The `OllamaRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `ReadingGenerationAiWorkflowService`: For creating a reading material based on requirements inputted by the user.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Ollama by calling `http://localhost:11434/api/version`. It shall return true if the HTTP request succeeds with a 200 status code, and false if the request fails.
 
-    (b) `WorksheetGenerationAiWorkflowService`: For creating a worksheet material based on requirements inputted by the user.
+    (b) `Task DownloadDependencyAsync()` shall download the standalone Windows release from `https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip` and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-windows-amd64.zip`. It shall also ensure that the `ManuscriptaTeacherApp` directory is included in the PATH environmental variable.
 
-    (c) `FeedbackGeneratationAiWorkflowService`: For generating feedback to student responses.
+    (c) `Task VerifyDownloadAsync()` shall verify the downloaded ZIP file by comparing its SHA256 hash output against the published checksum. The checksum shall be retrieved from `https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt`, in which the checksum precedes the file name `./ollama-windows-amd64.zip`.
+
+    (d) `Task PerformInstallDependencyAsync()` shall extract the ZIP file to `%AppData%\ManuscriptaTeacherApp\bin\ollama\`, delete the ZIP file and start `ollama serve` from the extracted directory.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall kill any running `ollama.exe` processes, delete the `%AppData%\ManuscriptaTeacherApp\bin\ollama\` directory and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService`.
+
+
+(4) Before invoking any model, the backend shall —
+
+    (a) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
+
+
+## Section 1B - Ascertaining the availability of Chroma
+
+(1) The `ChromaRuntimeDependencyManager` class shall manage the availability and installation of Chroma by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `ChromaRuntimeDependencyManager` class shall have the unique identifier `"chroma"`.
+
+(3) The `ChromaRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Chroma by calling `chroma --version`.
+
+    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling `iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))`. The location of the installed executable shall also be added to the PATH environment variable.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Chroma has not published any checksums or other methods for verifying downloads.
+
+    (d) `Task PerformInstallDependencyAsync()` shall configure ChromaDB to use the data directory `%AppData%\ManuscriptaTeacherApp\VectorStore` and start the ChromaDB server in client-server mode as a background process
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall stop the ChromaDB server process if running and return true upon successful termination.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `ChromaClientService`.
+
+
+## Section 1C - Ascertaining the availability of Qwen3 8B Model
+
+(1) The `Qwen3ModelRuntimeDependencyManager` class shall manage the availability and installation of the Qwen3 8B model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `Qwen3ModelRuntimeDependencyManager` class shall have the unique identifier `"qwen3:8b"`.
+
+(3) The `Qwen3ModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the Qwen3 8B model by calling `ollama pull qwen3:8b` via the command line. This operation may take significant time and download several gigabytes of data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Qwen3 8B model by calling `ollama rm qwen3:8b` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the Qwen3 8B model.
+
+
+## Section 1D - Ascertaining the availability of IBM Granite 4.0 Model
+
+(1) The `GraniteModelRuntimeDependencyManager` class shall manage the availability and installation of the IBM Granite 4.0 model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `GraniteModelRuntimeDependencyManager` class shall have the unique identifier `"granite4"`.
+
+(3) The `GraniteModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the IBM Granite 4.0 model by calling `ollama pull granite4` via the command line. This operation may take significant time and download several gigabytes of data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the IBM Granite 4.0 model by calling `ollama rm granite4` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the IBM Granite 4.0 model.
+
+
+## Section 1E - Ascertaining the availability of Nomic Embed Text Model
+
+(1) The `NomicEmbedTextModelRuntimeDependencyManager` class shall manage the availability and installation of the Nomic Embed Text model by extending the `RuntimeDependencyManagerBase` abstract class specified in the Backend Runtime Dependency Management Specification §2.
+
+(2) The `NomicEmbedTextModelRuntimeDependencyManager` class shall have the unique identifier `"nomic-embed-text"`.
+
+(3) The `NomicEmbedTextModelRuntimeDependencyManager` class shall implement abstract methods as follows.
+
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
+
+    (b) `Task DownloadDependencyAsync()` shall download the Nomic Embed Text model by calling `ollama pull nomic-embed-text` via the command line. This operation may take significant time and download data.
+
+    (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Ollama verifies model integrity internally during the pull process.
+
+    (d) `Task PerformInstallDependencyAsync()` shall call `CheckDependencyAvailabilityAsync()` to verify the model is available after `DownloadDependencyAsync()` has completed. If the model is not available, it shall throw an exception.
+
+    (e) `Task<Boolean> UninstallDependencyAsync()` shall remove the Nomic Embed Text model by calling `ollama rm nomic-embed-text` and return `true` on success.
+
+    (f) `ProvideDependencyServiceAsync()` shall return a singleton instance of `OllamaClientService` configured for the Nomic Embed Text model.
 
 
 
+## Section 2 — Document Chunking and Vector Storage
 
-## Section 2 - Requirements for `AiWorkflowService` and its Subclasses
+(1) When a source document transcript is chunked, as part of the indexing workflow in §3A(2) —
 
-### Section 2A - `AiWorkflowService`
+    (a) the transcript shall be split into chunks of at most 512 tokens.
 
-(1) `AiWorkflowService` must provide the following methods.
+    (b) adjacent chunks shall overlap by 64 tokens to preserve context continuity.
 
-    (a) `public async Task<string> GetChatResponseAsync(string prompt)`: After receiving a prompt,
+    (c) chunk boundaries shall respect sentence boundaries where possible.
+
+(2) When a chunk is embedded —
+
+    (a) the backend shall call Ollama's embedding endpoint with `nomic-embed-text`.
+
+    (b) the resulting vector shall have 768 dimensions.
+
+(3) When embeddings are stored —
+
+    (a) [Deleted.]
+
+    (a1) ChromaDB shall be used in client-server mode.
+
+    (b) ChromaDB shall store its data in `%AppData%\ManuscriptaTeacherApp\VectorStore`.
+
+    (c) a single collection named `source_documents` shall be used, with metadata including `SourceDocumentId` and `UnitCollectionId`.
+
+(4) When relevant context is retrieved —
+
+    (a) the backend shall embed the query text using `nomic-embed-text`.
+
+    (b) the backend shall query ChromaDB for the top-K most similar chunks, applying the following filters:
+
+        (i) if `SourceDocumentIds` are provided, filter by those specific document IDs.
+
+        (ii) otherwise, filter by `UnitCollectionId` to include all indexed documents in the unit collection.
+
+    (c) the default value of K shall be 5.
+
+
+## Section 3 — Backend GenAI Workflows
+
+(1) Each subsection of this Section shall be implemented as a separate service class:
+
+| Section | Service Class |
+|---------|---------------|
+| §3A | `DocumentEmbeddingService` |
+| §3B | `MaterialGenerationService` |
+| §3B(4a) | `QuestionExtractionService` |
+| §3C | `ContentModificationService` |
+| §3D | `FeedbackGenerationService` |
+| §3DA | `FeedbackQueueService` |
+| §3E | `EmbeddingStatusService` |
+| §3F | `OutputValidationService` |
+
+(2) All service classes shall depend on a common `OllamaClientService` for low-level Ollama API interactions (model verification, chat completion, embedding generation).
+
+### Section 3A — Source Document Indexing
+
+(1) When a `SourceDocumentEntity` is created, as specified in FrontendWorkflowSpecifications §4AA, the backend shall index it for semantic retrieval.
+
+(2) The indexing workflow shall proceed as follows —
+
+    (a) set the `EmbeddingStatus` field (AdditionalValidationRules §3A(1)(c)) to `PENDING`.
+
+    (b) split the `Transcript` field into chunks as specified in §2(1).
+
+    (c) for each chunk, generate an embedding as specified in §2(2).
+
+    (d) store the embeddings in ChromaDB as specified in §2(3), associating each chunk with the `SourceDocumentId` and `UnitCollectionId`.
+
+    (e) upon successful completion, update `EmbeddingStatus` to `INDEXED`.
+
+    (f) if any step fails, update `EmbeddingStatus` to `FAILED`.
+
+(3) When a `SourceDocumentEntity` is updated, as specified in FrontendWorkflowSpecifications §4AA —
+
+    (a) remove all existing chunks associated with the document from ChromaDB.
+
+    (b) re-index the document following the workflow in (2).
+
+(4) When a `SourceDocumentEntity` is deleted, as specified in FrontendWorkflowSpecifications §4AA —
+
+    (a) remove all chunks associated with the document from ChromaDB.
+
+(5) The above workflows require the following internal operations —
+
+    (a) `Task IndexSourceDocumentAsync(SourceDocumentEntity document)` — Executes the indexing workflow in (2).
+
+    (b) `Task RemoveSourceDocumentAsync(Guid sourceDocumentId)` — Removes all chunks for the given document from ChromaDB.
+
+(6) Upon indexing failure —
+
+    (a) the backend shall retry automatically up to `MAX_EMBEDDING_RETRIES` (see Appendix A) with exponential backoff (1 second, 10 seconds, 60 seconds).
+
+    (b) if all retries are exhausted, the backend shall —
+
+        (i) set `EmbeddingStatus` to `FAILED`.
+
+        (ii) notify the frontend via the SignalR handler `OnEmbeddingFailed(Guid sourceDocumentId, string error)` (NetworkingAPISpec §2(1)(d)).
+
+    (c) the document shall remain in `FAILED` status until manually retried or deleted.
+
+(7) The frontend may request re-indexing of a failed document by invoking —
+
+    (a) `Task RetryEmbedding(Guid sourceDocumentId)` (NetworkingAPISpec §1(1)(i)(vii))
+
+(8) On application startup, the backend shall —
+
+    (a) identify all `SourceDocumentEntity` objects with `EmbeddingStatus` of `FAILED`.
+
+    (b) not automatically retry these documents (to avoid repeated failures).
+
+    (c) the frontend may offer a batch retry option.
+
+
+### Section 3B — Material Generation
+
+(1) When a teacher wishes to generate reading or worksheet content using AI, the frontend shall invoke one of the following server methods (NetworkingAPISpec §1(1)(i)) via `TeacherPortalHub` —
+
+    (a) `Task<GenerationResult> GenerateReading(GenerationRequest request)`
+
+    (b) `Task<GenerationResult> GenerateWorksheet(GenerationRequest request)`
+
+(2) `GenerationRequest`, as defined in AdditionalValidationRules §3AB, shall be passed as the parameter to these methods. The response shall be a `GenerationResult` as defined in AdditionalValidationRules §3AC.
+
+(3) Upon receiving a generation request, the backend shall —
+
+    (a) embed the `Description` field using `nomic-embed-text`.
+
+    (b) query ChromaDB for the top-K most similar chunks, applying filters as specified in §2(4)(b).
+
+    (c) construct a prompt containing —
+
+        (i) the retrieved chunks as context.
+
+        (ii) the reading age, actual age, and duration constraints.
+
+        (iii) instructions to generate content in Material Encoding Specification format.
+
+        (iv) for worksheets, instructions to embed question drafts inline using the `question-draft` marker syntax specified in Appendix C. The AI shall place questions at pedagogically appropriate points within the content.
+
+        (v) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C.
+
+    (d) invoke `qwen3:8b` via Ollama to generate the content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+
+    (e) validate the generated content and apply refinement as specified in §3F.
+
+    (f) [Deleted.]
+
+    (g) return the `GenerationResult` containing the content and any validation warnings. For worksheets, the returned content shall contain `question-draft` markers, to be processed when the material is persisted (per §3B(4)).
+
+(4) [Deleted.]
+
+(4a) Upon receiving a request to create or update a material with content containing `question-draft` markers, the backend shall extract and process question drafts as follows —
+
+    (a) parse each `question-draft` marker to extract:
+
+        (i) the question type (`MULTIPLE_CHOICE` or `WRITTEN_ANSWER`).
+
+        (ii) the question text.
+
+        (iii) for multiple-choice, the options list and correct answer index.
+
+        (iv) for written-answer, the mark scheme (if provided) and correct answer (if provided).
+
+        (v) the maximum score (if provided).
+
+    (b) for each parsed question draft, create a `QuestionEntity` via `IQuestionService` with —
+
+        (i) a newly generated UUID.
+
+        (ii) the `MaterialId` of the material being created.
+
+        (iii) the extracted question data.
+
+    (c) replace the `question-draft` marker in the content with a valid `question` marker:
+        `!!! question id="{generated-uuid}"`.
+
+    (d) if parsing fails for any `question-draft` marker —
+
+        (i) remove the malformed marker from the content.
+
+        (ii) add a `ValidationWarning` to the result indicating the failure.
+
+(5) Question extraction shall be performed by a `QuestionExtractionService`, registered per §3(1).
+
+
+### Section 3C — Content Modification (AI Assistant)
+
+(1) When a teacher wishes to modify selected content using the AI assistant, the frontend shall invoke the following server method (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub` —
+
+    (a) `Task<GenerationResult> ModifyContent(string selectedContent, string instruction, string materialType, string title, int? readingAge, int? actualAge, Guid materialId)`
+
+(2) Upon receiving a modification request, the backend shall —
+
+    (a) resolve the `unitCollectionId` by traversing the entity hierarchy from `materialId` (Material → Lesson → Unit → UnitCollection), then retrieve relevant chunks as specified in §2(4) using a combination of the `instruction` and `selectedContent` as the query. If the hierarchy traversal fails (e.g. because an entity has been deleted), the backend shall skip RAG retrieval and proceed without injected context.
     
-        (i) runs `ollama list` to verify that `granite4` is locally available via Ollama, and runs `ollama pull granite4` to install the model if it is not.
+    [Explanatory Note: Searching by the instruction alone (e.g. "make this longer") often fails to retrieve semantically meaningful context. Including the `selectedContent` ensures semantic retrieval targets the actual subject matter. For example, the combined query could be formatted as `$"[{instruction}] {selectedContent}"`.]
 
-        (ii) runs `curl http://localhost:11434` to verify that Ollama's core daemon server is in operation, and runs `ollama serve` to start the server if it is not.
+    (b) construct a prompt containing —
 
-        (iii) asynchronously returns the chat response generated by `granite4` based on the inputted prompt.
+        (i) the selected content.
+
+        (ii) the teacher's instruction.
+
+        (iii) any retrieved context (if applicable).
+
+        (iv) instructions to return modified content in Material Encoding Specification format.
+
+        (v) the material title.
+
+        (vi) reading age and actual age constraints, if provided.
+
+        (vii) the material type.
+
+        (viii) a condensed reference of Material Encoding Specification syntax, as defined in Appendix C. When `materialType` is `WORKSHEET`, the question-draft syntax section of Appendix C shall be included.
+
+    (c) invoke `qwen3:8b` via Ollama to generate the modified content using streaming mode as specified in §3H (or `granite4` if fallback per §1(6)). During generation, the backend shall forward streaming chunks to the frontend per §3H(5)(a).
+
+    (d) validate the modified content and apply refinement as specified in §3F.
+
+    (e1) if the modified content contains `question-draft` markers, process them in accordance with §3B(4a). The `MaterialId` used for `QuestionEntity` creation shall be the material to which the modified content belongs.
+
+    (e) return the `GenerationResult` containing the content and any validation warnings.
 
 
+### Section 3D — Feedback Generation
 
-## Section 2B - `ReadingGenerationAiWorkflowService`
+(1) AI feedback generation shall be triggered automatically when a `ResponseEntity` is created for a question that —
 
-(1) `ReadingGenerationAiWorkflowService` must provide the following methods.
+    (a) is of type `WRITTEN_ANSWER` (per AdditionalValidationRules §2B(1)(b)); and
 
-    (a) `public async Task<string> GenerateReading(string description, int readingAge, int actualAge, int durationInMinutes, List<SourceDocumentEntity> sourceDocuments)`: Generates a reading material based on the given description, reading age, actual age, approximation duration (in minutes) and source documents.
+    (b) has a `MarkScheme` (per AdditionalValidationRules §2E(1)(a)).
 
+(2) The backend shall maintain an in-memory generation queue.
 
+(3) A response shall be deemed queued for AI feedback generation if —
 
-## Section 2C - `WorksheetGenerationAiWorkflowService`
+    (a) its question satisfies the conditions in (1); and
 
-(1) `WorksheetGenerationAiWorkflowService` must provide the following methods.
+    (b) no `FeedbackEntity` exists for that response; and
 
-    (a) `public async Task<string> GenerateWorksheet(string description, int readingAge, int actualAge, int durationInMinutes, List<SourceDocumentEntity> sourceDocuments)`: Generates a worksheet material based on the given description, reading age, actual age, approximation duration (in minutes) and source documents.
+    (c) it is present in the generation queue.
 
+(4) A response shall be deemed generating if the `FeedbackGenerationService` is currently processing it.
 
+(5) The frontend may request that a response be added or re-added to the generation queue by invoking —
 
-## Section 2D - `FeedbackGeneratationAiWorkflowService`
+    (a) `Task QueueForAiGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(vi))
 
-(1) `FeedbackGeneratationAiWorkflowService` must provide the following methods.
+(6) A response shall be removed from the generation queue —
 
-    (a) `public async Task<string> GenerateFeedback(QuestionEntity question, ResponseEntity response)`: Generates feedback for a student's response to a question.
+    (a) when the frontend explicitly requests removal by invoking `Task RemoveFromAiGenerationQueue(Guid responseId)` (NetworkingAPISpec §1(1)(i)(ix)); or
+
+    (b) automatically when a `FeedbackEntity` is created or updated for that response.
+
+(7) Upon failure of AI feedback generation —
+
+    (a) the response shall be removed from the generation queue.
+
+    (b) the backend shall notify the frontend immediately via the SignalR handler `OnFeedbackGenerationFailed(Guid responseId, string error)`.
+
+    (c) the teacher may retry by invoking `QueueForAiGeneration`.
+
+(8A) The frontend may request to prioritise a queued response by invoking `Task PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)).
+
+    (a) Upon invocation, the backend shall move the specified response to the front of the generation queue, making it the next response to be processed.
+
+    (b) This operation shall have no effect if —
+
+        (i) the response is not currently queued; or
+
+        (ii) the response is currently being generated.
+
+(8) Upon successful AI feedback generation —
+
+    (a) a `FeedbackEntity` shall be created with status `PROVISIONAL` (AdditionalValidationRules §3AE).
+
+(9) The generation workflow shall —
+
+    (a) retrieve the `QuestionEntity` and `ResponseEntity` for the given IDs.
+
+    (b) construct a prompt containing —
+
+        (i) the question text.
+
+        (ii) the mark scheme.
+
+        (iii) the maximum score, if present.
+
+        (iv) the student's response text.
+
+    (c) the prompt shall instruct the model to begin its response with a mark line in the format `MARK: X` where X is an integer between 0 and the maximum score (inclusive), if the question has a `MaxScore`.
+
+    (d) invoke `qwen3:8b` via Ollama to generate feedback (or `granite4` if fallback per §1(6)).
+
+    (e) parse the model response to extract —
+
+        (i) the numeric mark from the `MARK: X` line, if present. The extracted value shall be stored in the `Marks` field of the `FeedbackEntity`.
+
+        (ii) the remaining text, which shall be stored in the `Text` field of the `FeedbackEntity`.
+
+    (f) return structured feedback including the mark (if applicable), score justification and improvement suggestions.
 
 
 ### Section 3DA — Feedback Approval Workflow
@@ -85,3 +482,246 @@ This document defines the specifications for classes enabling the `Main` compone
     (b) the `FeedbackEntity` shall remain in `READY` status.
 
     (c) the teacher may retry dispatch by invoking `RetryFeedbackDispatch(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(iii)).
+
+
+### Section 3E — Embedding Status Query
+
+(1) When the frontend wishes to display the indexing status of a source document, it shall invoke the following server method (NetworkingAPISpec §1(1)(i)(v)) via `TeacherPortalHub` —
+
+    (a) `Task<EmbeddingStatus> GetEmbeddingStatus(Guid sourceDocumentId)`
+
+(2) The backend shall return the current `EmbeddingStatus` (AdditionalValidationRules §3A(1)(c)) of the specified `SourceDocumentEntity`.
+
+
+### Section 3F — Output Validation Service
+
+(1) After any content generation step in §3B or §3C, the backend shall validate the output against the Material Encoding Specification.
+
+[Explanatory Note: Feedback generation (§3D) does not produce Material Encoding output, therefore §3F validation does not apply to it.]
+
+(2) The validation process shall check for:
+
+    (a) well-formed markdown syntax (headers, lists, code blocks, tables).
+
+    (b) valid custom marker syntax (per Material Encoding Specification §4).
+
+    (c) valid attachment references (per Material Encoding Specification §3).
+
+    (d) valid question references (per Material Encoding Specification §4(4)).
+
+(3) If validation fails and the generation used `qwen3:8b` —
+
+    (a) the backend shall apply deterministic post-processing fixes for common errors, as specified in (5).
+
+    (b) the backend shall re-validate after post-processing.
+
+    (c) if validation still fails, the backend shall return the content with a list of validation warnings.
+
+(4) If validation fails and the generation used `granite4` (fallback mode per §1(6)) —
+
+    (a) the backend shall construct a refinement prompt containing:
+
+        (i) the original output.
+
+        (ii) a list of specific validation errors.
+
+        (iii) instructions to fix only the errors while preserving content.
+
+    (b) the backend shall re-invoke the model with the refinement prompt.
+
+    (c) steps (a) and (b) shall repeat up to a maximum of `MAX_REFINEMENT_ITERATIONS` (see Appendix A).
+
+    (d) after the final iteration, the backend shall apply deterministic post-processing fixes.
+
+    (e) the backend shall return the content with any remaining validation warnings.
+
+(5) Deterministic post-processing fixes shall include:
+
+    (a) closing unclosed code blocks (detecting by counting backtick sequences).
+
+    (b) normalising header levels to a maximum of H3.
+
+    (c) reconstructing malformed question markers where the `id` attribute is parseable.
+
+    (d) reconstructing malformed attachment markers where the `id` attribute is parseable.
+
+    (e) removing invalid or empty custom markers. A custom marker is considered invalid if:
+
+        (i) in the case of an attachment marker, the attachment entity or attachment file associated with the referenced ID does not exist; or
+
+        (ii) in the case of a question marker, the question entity associated with the referenced ID does not exist.
+
+
+### Section 3G — Validation Warning Response
+
+(1) When the backend returns content with validation warnings —
+
+    (a) the response shall include a `Warnings` field containing a list of unresolved issues.
+
+    (b) each warning shall be a `ValidationWarning` (AdditionalValidationRules §3AD) specifying:
+
+        (i) the line number (if applicable).
+
+        (ii) the error type (e.g., `MALFORMED_MARKER`, `UNCLOSED_BLOCK`, `INVALID_REFERENCE`).
+
+        (iii) a human-readable description.
+
+(2) The frontend shall display warnings to the user, allowing them to manually correct issues in the editor modal.
+
+
+### Section 3H — Streaming Generation Output
+
+(1) When the backend generates content via `OllamaClientService`, it shall use Ollama's streaming mode (`"stream": true`) instead of awaiting the full response.
+
+(2) The `OllamaClientService` shall provide a new method —
+
+    (a) `IAsyncEnumerable<StreamingGenerationChunk> GenerateChatCompletionStreamingAsync(string model, string prompt, string? systemPrompt = null)` — which yields individual chunks as they are received from Ollama's streaming API.
+
+(3) A `StreamingGenerationChunk` shall contain —
+
+    (a) `string Token` — the token(s) received in this chunk.
+
+    (b) `bool IsThinking` — `true` if the token is part of the model's chain-of-thought reasoning (i.e., content enclosed within `<think>...</think>` tags emitted by the model), and `false` if the token is part of the final visible content.
+
+    (c) `bool Done` — `true` if this is the final chunk in the stream.
+
+(4) The backend shall parse the model's raw streaming output to distinguish between chain-of-thought and content tokens. Specifically —
+
+    (a) tokens received after a `<think>` tag and before the corresponding `</think>` tag shall be classified as chain-of-thought (`IsThinking = true`).
+
+    (b) all other tokens shall be classified as content (`IsThinking = false`).
+
+    (c) the `<think>` and `</think>` tags themselves shall not be forwarded to the frontend.
+
+(5) During a streaming generation (for `GenerateReading`, `GenerateWorksheet`, or `ModifyContent`), the backend shall —
+
+    (a) forward each `StreamingGenerationChunk` to the calling frontend client via the SignalR client handler `OnGenerationProgress` as defined in NetworkingAPISpec §2(1)(h).
+
+    (b) accumulate the full content output internally for subsequent validation per §3F.
+
+    (c) upon stream completion, perform validation and refinement as specified in §3F. During refinement iterations (if any), the backend shall continue streaming the refined output.
+
+    (d) return the final `GenerationResult` as before, so that the existing method signatures (`GenerateReading`, `GenerateWorksheet`, `ModifyContent`) remain unchanged. The `GenerationResult` return value shall contain the validated, post-processed content.
+
+(6) The existing non-streaming method `GenerateChatCompletionAsync` shall be retained for use cases that do not require streaming (e.g., feedback generation per §3D, embedding status checks, resource-availability probes).
+
+(7) If the SignalR connection is lost during streaming —
+
+    (a) the backend shall continue the generation to completion.
+
+    (b) the final `GenerationResult` shall still be returned upon reconnection if the hub invocation has not timed out.
+
+(8) The backend shall support cancellation of in-progress generation. Specifically —
+
+    (a) the streaming pipeline (`MaterialGenerationService`, `OllamaClientService`) shall accept a `CancellationToken` and honour cancellation requests by terminating the HTTP stream and ceasing chunk forwarding.
+
+    (b) if cancellation occurs during streaming, an `OperationCanceledException` shall be thrown.
+
+(9) Upon cancellation —
+
+    (a) no `GenerationResult` shall be returned to the caller.
+
+    (b) validation and refinement per §3F shall not be performed.
+
+---
+
+## Appendix A — Configuration Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `CHUNK_SIZE_TOKENS` | 512 | Maximum tokens per chunk |
+| `CHUNK_OVERLAP_TOKENS` | 64 | Overlap between adjacent chunks |
+| `DEFAULT_TOP_K` | 5 | Default number of chunks to retrieve |
+| `EMBEDDING_DIMENSIONS` | 768 | Dimension of `nomic-embed-text` vectors |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
+| `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
+| `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
+| `PRIMARY_MODEL` | `qwen3:8b` | Primary model for all generative tasks |
+| `FALLBACK_MODEL` | `granite4` | Fallback model if primary unavailable |
+
+---
+
+## Appendix B — Workflow Diagram (Illustrative)
+
+The following diagram provides an illustrative overview of the workflows defined in Section 3. In the event of any inconsistency between this diagram and Section 3, Section 3 shall prevail.
+
+```mermaid
+sequenceDiagram
+    participant Frontend
+    participant Hub as TeacherPortalHub
+    participant RAG as DocumentEmbeddingService
+    participant Ollama
+
+    Note over Frontend,Ollama: Source Document Indexing (§3A)
+    Frontend->>Hub: CreateSourceDocument()
+    Hub->>RAG: IndexSourceDocumentAsync()
+    RAG->>Ollama: nomic-embed-text
+    RAG->>RAG: Store in ChromaDB
+    Hub-->>Frontend: EmbeddingStatus: INDEXED
+
+    Note over Frontend,Ollama: Material Generation (§3B)
+    Frontend->>Hub: GenerateReading(request)
+    Hub->>RAG: Retrieve top-K chunks
+    RAG-->>Hub: chunks[]
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
+    Ollama-->>Hub: content
+    Hub-->>Frontend: generated content
+
+    Note over Frontend,Ollama: Content Modification (§3C)
+    Frontend->>Hub: ModifyContent(selection, instruction, metadata)
+    Hub->>RAG: Retrieve context (optional)
+    Hub->>Ollama: qwen3:8b (or granite4 fallback)
+    Ollama-->>Hub: modified content
+    Hub-->>Frontend: modified content
+```
+
+---
+
+## Appendix C — Material Encoding Reference for LLM Prompts
+
+The following condensed reference shall be included in material generation prompts. Only include the "Questions" section in a prompt when generating worksheets.
+
+---
+
+**Markdown syntax supported:**
+- H1 to H3 headers: `#`, `##`, `###`
+- Avoid using H4 headers.
+- Bold text: `**text**`
+- Italic text: `*text*`
+- Unordered lists: `- item`
+- Ordered lists: `1. item`
+- Tables: `| col | col |` with `|---|---|` separator
+- LaTeX: `$inline mode$` or `$$display mode$$`
+- Code blocks: triple backticks with optional language identifier
+- Blockquotes: `> text`
+
+**Questions:**
+Embed questions inline using the following syntax. Ensure all questions are of type `MULTIPLE_CHOICE` or `WRITTEN_ANSWER`. No other types exist. Place questions at natural break points after relevant content. Use only plain text without Markdown syntax in question text, options or correct answers.
+
+```
+!!! question-draft type="MULTIPLE_CHOICE"
+    text: "Question text"
+    options:
+      - "Option A"
+      - "Option B"
+    correct: 0
+    max_score: 1
+
+!!! question-draft type="WRITTEN_ANSWER"
+    text: "Question text"
+    correct_answer: "exact expected answer"
+    max_score: 2
+
+!!! question-draft type="WRITTEN_ANSWER"
+    text: "Question text"
+    mark_scheme: "Marking criteria for AI grading"
+    max_score: 4
+```
+
+For questions of type `WRITTEN_ANSWER`, optionally include at most one of the attributes `correct_answer` and `mark_scheme`. Never include both attributes in the same question. If neither attributes are included, the question requires manual marking.
+- `correct_answer`: Use for questions with a single exact expected answer (e.g., "What is 2+2?" → "4"). The student device auto-marks by exact match. Only include short factual answers.
+- `mark_scheme`: Use for open-ended questions requiring judgement (e.g., "Explain why..."). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
+
+For questions of type `MULTIPLE_CHOICE`, optionally include the attribute `correct`, which stores the zero-based index of the correct option. If this attribute is not included, the question will not be auto-marked.
+
+---

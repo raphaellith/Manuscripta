@@ -2,6 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Main.Models.Entities;
 using Main.Services.Repositories;
+using Main.Services.GenAI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Main.Services;
 
@@ -9,18 +12,28 @@ namespace Main.Services;
 /// Service for managing source documents.
 /// Enforces validation rules per AdditionalValidationRules.md §3A.
 /// Cascade deletion is handled by database FK constraints per PersistenceAndCascadingRules.md §2(3A).
+/// Triggers AI indexing per GenAISpec.md §3A(1).
 /// </summary>
 public class SourceDocumentService : ISourceDocumentService
 {
     private readonly ISourceDocumentRepository _repository;
     private readonly IUnitCollectionRepository _unitCollectionRepository;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ILogger<SourceDocumentService> _logger;
 
     public SourceDocumentService(
         ISourceDocumentRepository repository,
-        IUnitCollectionRepository unitCollectionRepository)
+        IUnitCollectionRepository unitCollectionRepository,
+        IEmbeddingService embeddingService,
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<SourceDocumentService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitCollectionRepository = unitCollectionRepository ?? throw new ArgumentNullException(nameof(unitCollectionRepository));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<SourceDocumentEntity> CreateAsync(SourceDocumentEntity entity)
@@ -29,13 +42,60 @@ public class SourceDocumentService : ISourceDocumentService
             throw new ArgumentNullException(nameof(entity));
 
         await ValidateEntityAsync(entity);
+
+        // §3A(2)(a): Set EmbeddingStatus to PENDING before persisting so that
+        // the entity returned to the frontend has the correct initial status,
+        // enabling the polling mechanism (FrontendWorkflowSpec §4AA(2)(e)).
+        entity.EmbeddingStatus = Models.Enums.EmbeddingStatus.PENDING;
         await _repository.AddAsync(entity);
+        
+        // §3A(1): When a SourceDocumentEntity is created, index it for semantic retrieval.
+        // Indexing runs in the background to avoid blocking the hub response.
+        // A new DI scope is created so that the scoped IEmbeddingService and its
+        // DbContext remain valid for the full duration of the background task.
+        var documentId = entity.Id;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _serviceScopeFactory.CreateScope();
+                var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+                await embeddingService.IndexSourceDocumentByIdAsync(documentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Failed to index source document {SourceDocumentId} for unit collection {UnitCollectionId}. " +
+                    "Document created successfully but semantic search will not work until re-indexed.",
+                    documentId, entity.UnitCollectionId);
+            }
+        });
+        
         return entity;
+    }
+
+    public async Task UpdateAsync(SourceDocumentEntity entity)
+    {
+        if (entity == null)
+            throw new ArgumentNullException(nameof(entity));
+
+        await ValidateEntityAsync(entity);
+        
+        // Persist the updated entity first so the database remains the source of truth
+        await _repository.UpdateAsync(entity);
+        
+        // §3A(3): After a SourceDocumentEntity is successfully updated, re-index it
+        // This removes old chunks and creates new ones
+        await _embeddingService.ReIndexSourceDocumentAsync(entity);
     }
 
     public async Task DeleteAsync(Guid id)
     {
+        // First delete from the primary data store
         await _repository.DeleteAsync(id);
+        
+        // §3A(4): When a SourceDocumentEntity is deleted, remove its chunks from ChromaDB
+        await _embeddingService.RemoveSourceDocumentAsync(id);
     }
 
     private async Task ValidateEntityAsync(SourceDocumentEntity entity)

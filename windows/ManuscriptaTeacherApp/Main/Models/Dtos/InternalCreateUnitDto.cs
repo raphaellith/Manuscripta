@@ -6,5 +6,4 @@ namespace Main.Models.Dtos;
 /// </summary>
 public record InternalCreateUnitDto(
     Guid UnitCollectionId,
-    string Title,
-    List<string>? SourceDocuments = null);
+    string Title);

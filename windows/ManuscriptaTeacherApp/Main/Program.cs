@@ -1,10 +1,17 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using ChromaDB.Client;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 using Main.Data;
+using Main.Models;
 using Main.Services;
 using Main.Services.Network;
+using Main.Services.GenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +45,38 @@ else
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
-    options.UseSqlite(dbConnectionString));
+{
+    options.UseSqlite(dbConnectionString);
+    // Suppress PendingModelChangesWarning in Testing environment (for integration tests with in-memory databases)
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        options.ConfigureWarnings(w => 
+            w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+});
+
+// Configure ChromaDB for client-server mode
+// See GenAISpec.md §2(3)
+// Note: ChromaDB.Client is a client-server library. The database path is configured
+// on the server side (e.g., `chroma run --path /path/to/store`), not in the C# client.
+// The client connects via HTTP to the running server using the URI below.
+var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
+
+builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
+// Register a named "ChromaDB" HttpClient with a URL rewrite handler that translates
+// ChromaDB.Client v1 API URLs (query-parameter-based tenant/database) into v2 API
+// URLs (path-based routing) expected by the Chroma Rust CLI server.
+// See GenAISpec.md §1B, §2(3)(a1).
+builder.Services.AddTransient<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient("ChromaDB")
+    .AddHttpMessageHandler<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient(); // default HttpClient for non-Chroma use
+builder.Services.AddSingleton<ChromaClient>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("ChromaDB");
+    return new ChromaClient(new ChromaConfigurationOptions(uri: chromaServerUri), httpClient);
+});
 
 // Register pairing and device services
 builder.Services.AddSingleton<IDeviceRegistryService, DeviceRegistryService>();
@@ -54,6 +92,7 @@ builder.Services.AddSingleton<Main.Services.Repositories.IResponseRepository, Ma
 builder.Services.AddSingleton<Main.Services.Repositories.IFeedbackRepository, Main.Services.Repositories.InMemoryFeedbackRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IPdfExportSettingsRepository, Main.Services.Repositories.EfPdfExportSettingsRepository>();
 
 // Register configuration — two-tier model per ConfigurationManagementSpecification
 // Defaults: long-term persisted (EF Core) per PersistenceAndCascadingRules §1(1)(h)
@@ -86,6 +125,22 @@ builder.Services.AddSingleton<IRmapiService>(sp =>
         new HttpClient()));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+
+// Register GenAI services
+// See GenAISpec.md §3(1) and §3(2)
+builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
+builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
+builder.Services.AddScoped<IContentModificationService, ContentModificationService>();
+builder.Services.AddSingleton<FeedbackGenerationService>();
+builder.Services.AddSingleton<IFeedbackGenerationService>(
+    provider => provider.GetRequiredService<FeedbackGenerationService>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<FeedbackGenerationService>());
+builder.Services.AddSingleton<FeedbackQueueService>();
+builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
+builder.Services.AddScoped<OutputValidationService>();
+builder.Services.AddScoped<QuestionExtractionService>();
 
 // Register Runtime Dependency Management
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
@@ -93,10 +148,26 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
 {
     var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
     var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    var ollamaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+    var chromaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+    var qwen3Manager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+    var graniteManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+    var nomicManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
+    
     registry.Register(rmapiManager);
+    registry.Register(ollamaManager);
+    registry.Register(chromaManager);
+    registry.Register(qwen3Manager);
+    registry.Register(graniteManager);
+    registry.Register(nomicManager);
     return registry;
 });
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
@@ -112,11 +183,23 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
 builder.Services.AddHostedService<HubEventBridge>();
 
+// Register embedding initialization as background service per GenAISpec.md §3A(8)
+// This runs asynchronously after startup to avoid blocking the health endpoint
+builder.Services.AddHostedService<EmbeddingInitializationHostedService>();
+
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    // Allow CancelGeneration to execute concurrently with an in-progress
+    // GenerateReading/GenerateWorksheet call on the same connection.
+    // Default is 1, which serialises all hub invocations and prevents
+    // cancellation from reaching the server while generation is running.
+    hubOptions.MaximumParallelInvocationsPerClient = 2;
+    // Increase max message size from 32KB default to 10MB for large source documents
+    // (per FrontendWorkflowSpecifications §4AA source document uploads)
+    hubOptions.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
@@ -303,6 +386,9 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
+// Per FrontendWorkflowSpecifications §2ZA(5)(a)-(d): Embedding initialization is now a background
+// hosted service and will not block startup, ensuring the health endpoint responds quickly.
+
 // Port-based routing per API Contract.md §Ports and FrontendWorkflowSpecifications §2ZA(8).
 // - SignalR and health endpoint: available on ANY bound port (frontend uses dynamic port selection)
 // - REST API controllers: ONLY on port 5911 (Android clients need stable port per API Contract)
@@ -339,6 +425,13 @@ else
     // Frontend uses dynamic port selection and connects to whatever port succeeded.
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 }
+
+// Per GenAISpec §1(9): Runtime dependencies (Ollama, Chroma, LLMs) shall not be installed on startup.
+// They must only be installed upon user consent expressed from the frontend.
+// Per BackendRuntimeDependencyManagementSpecification §3(1): Frontend assumes dependencies are available.
+// When a feature requiring a dependency is used, the backend will notify the frontend via
+// RuntimeDependencyNotInstalled if the dependency is unavailable (§3(2)(a)), and the frontend
+// will handle this notification per Frontend Workflow Specifications §3A.
 
 app.Run();
 

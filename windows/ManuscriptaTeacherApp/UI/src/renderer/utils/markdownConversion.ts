@@ -287,6 +287,267 @@ export function markdownToHtml(markdown: string): string {
 }
 
 /**
+ * Convert Markdown to HTML for streaming preview display.
+ * Per FrontendWorkflowSpecifications §4B(2)(a1)(ii): renders content tokens
+ * "in a manner consistent with the editor's rendering capabilities".
+ *
+ * Unlike `markdownToHtml` (which emits TipTap data-attributes for LaTeX/questions),
+ * this function produces self-contained HTML with:
+ *  - KaTeX-rendered LaTeX
+ *  - question-draft preview cards matching editor styling
+ *  - standard Markdown formatting (headers, bold, tables, etc.)
+ *
+ * Tolerant of incomplete Markdown mid-stream: `marked` renders what it can and
+ * passes through unparsed syntax as text.
+ */
+export function markdownToStreamingHtml(markdown: string): string {
+    if (!markdown || markdown.trim() === '') return '';
+
+    let processed = markdown;
+
+    // --- Question-draft preview cards (GenAISpec Appendix C) ---
+    // Use HTML comment placeholders so `marked` doesn't mangle the generated HTML.
+    // Actual HTML is substituted back after marked.parse() (same pattern as center blocks).
+    const questionDraftBlocks: string[] = [];
+
+    // Matches complete question-draft blocks (header + indented body).
+    processed = processed.replace(
+        /^!!! question-draft type="(MULTIPLE_CHOICE|WRITTEN_ANSWER)"\n((?:[ ]{4}.*\n?)*)/gm,
+        (_match, type: string, body: string) => {
+            questionDraftBlocks.push(buildQuestionDraftHtml(type, body));
+            return `<!--QUESTION_DRAFT_${questionDraftBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // Incomplete question-draft (streaming: header arrived but body still incoming).
+    processed = processed.replace(
+        /^!!! question-draft type="(MULTIPLE_CHOICE|WRITTEN_ANSWER)"$/gm,
+        (_match, type: string) => {
+            const label = type === 'MULTIPLE_CHOICE' ? 'Multiple Choice' : 'Written Answer';
+            questionDraftBlocks.push(
+                `<div class="question-draft-preview question-draft-partial">` +
+                `<div class="question-draft-header">` +
+                `<span class="question-draft-badge">📝 Draft</span>` +
+                `<span class="question-draft-type">${label}</span>` +
+                `</div>` +
+                `<p class="question-draft-loading">Generating question…</p>` +
+                `</div>`
+            );
+            return `<!--QUESTION_DRAFT_${questionDraftBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // --- Center blocks ---
+    const centerBlocks: string[] = [];
+    processed = processed.replace(
+        /^!!! center\n((?:[ ]{4}.*\n?)*)/gm,
+        (_match, content) => {
+            const unindented = content.replace(/^[ ]{4}/gm, '');
+            centerBlocks.push(unindented.trim());
+            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // --- PDF embeds (use placeholder to survive marked) ---
+    const miscBlocks: string[] = [];
+    processed = processed.replace(
+        /^!!! pdf id="([^"]+)"$/gm,
+        () => {
+            miscBlocks.push('<div class="streaming-pdf-placeholder">[PDF Attachment]</div>');
+            return `<!--MISC_BLOCK_${miscBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // --- Question embeds (already-persisted, unlikely during stream but handle gracefully) ---
+    processed = processed.replace(
+        /^!!! question id="([^"]+)"$/gm,
+        () => {
+            miscBlocks.push('<div class="streaming-question-placeholder">[Embedded Question]</div>');
+            return `<!--MISC_BLOCK_${miscBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // --- Block LaTeX $$...$$ → KaTeX HTML ---
+    processed = processed.replace(
+        /\$\$([\s\S]*?)\$\$/g,
+        (_match, latex: string) => {
+            return renderKatexSafe(latex.trim(), true);
+        }
+    );
+
+    // --- Inline LaTeX $...$ → KaTeX HTML ---
+    processed = processed.replace(
+        /(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g,
+        (_match, latex: string) => {
+            return renderKatexSafe(latex.trim(), false);
+        }
+    );
+
+    // --- Run marked for standard Markdown ---
+    let html = marked.parse(processed, { async: false }) as string;
+
+    // --- Post-process question-draft blocks ---
+    html = html.replace(
+        /<!--QUESTION_DRAFT_(\d+)-->/g,
+        (_match, index) => questionDraftBlocks[parseInt(index)] ?? ''
+    );
+
+    // --- Post-process misc blocks (PDF embeds, question embeds) ---
+    html = html.replace(
+        /<!--MISC_BLOCK_(\d+)-->/g,
+        (_match, index) => miscBlocks[parseInt(index)] ?? ''
+    );
+
+    // --- Post-process center blocks ---
+    html = html.replace(
+        /<!--CENTER_BLOCK_(\d+)-->/g,
+        (_match, index) => {
+            const blockContent = centerBlocks[parseInt(index)];
+            let blockHtml = marked.parse(blockContent, { async: false }) as string;
+            blockHtml = blockHtml.replace(
+                /<(p|h[1-6])([^>]*)>/g,
+                (_tagMatch, tagName, attrs) => {
+                    let newAttrs = attrs || '';
+                    const styleMatch = newAttrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
+                    if (styleMatch) {
+                        const updatedStyle = styleMatch[1].trim().endsWith(';')
+                            ? styleMatch[1] + ' text-align: center;'
+                            : styleMatch[1] + '; text-align: center;';
+                        newAttrs = newAttrs.replace(styleMatch[1], updatedStyle);
+                    } else {
+                        newAttrs = (newAttrs || '') + ' style="text-align: center;"';
+                    }
+                    return `<${tagName}${newAttrs}>`;
+                }
+            );
+            return blockHtml;
+        }
+    );
+
+    return stripLinksFromHtml(html);
+}
+
+/**
+ * Render a LaTeX string via KaTeX, returning HTML.
+ * Falls back to escaped source text on parse errors.
+ */
+function renderKatexSafe(latex: string, displayMode: boolean): string {
+    try {
+        // Dynamic import not possible synchronously; katex is available via the
+        // same bundle that loads extensions.tsx. Use a deferred require.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const katex = require('katex');
+        return katex.renderToString(latex, { throwOnError: false, displayMode });
+    } catch {
+        // If KaTeX isn't available (shouldn't happen), return raw text
+        const escaped = latex.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return displayMode ? `<div class="katex-fallback">$$${escaped}$$</div>`
+            : `<span class="katex-fallback">$${escaped}$</span>`;
+    }
+}
+
+/**
+ * Build an HTML preview card for a `!!! question-draft` block.
+ * Styling mirrors the editor's QuestionRef component (extensions.tsx).
+ */
+function buildQuestionDraftHtml(type: string, body: string): string {
+    const lines = body.replace(/^[ ]{4}/gm, '').split('\n');
+    const label = type === 'MULTIPLE_CHOICE' ? 'Multiple Choice' : 'Written Answer';
+
+    let text = '';
+    let maxScore = '';
+    let correctAnswer = '';
+    let markScheme = '';
+    let correctIndex = -1;
+    const options: string[] = [];
+    let inOptions = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === '') { inOptions = false; continue; }
+
+        const textMatch = trimmed.match(/^text:\s*"(.+)"$/);
+        if (textMatch) { text = textMatch[1]; inOptions = false; continue; }
+
+        const scoreMatch = trimmed.match(/^max_score:\s*(\d+)$/);
+        if (scoreMatch) { maxScore = scoreMatch[1]; inOptions = false; continue; }
+
+        const correctMatch = trimmed.match(/^correct:\s*(\d+)$/);
+        if (correctMatch) { correctIndex = parseInt(correctMatch[1]); inOptions = false; continue; }
+
+        const answerMatch = trimmed.match(/^correct_answer:\s*"(.+)"$/);
+        if (answerMatch) { correctAnswer = answerMatch[1]; inOptions = false; continue; }
+
+        const schemeMatch = trimmed.match(/^mark_scheme:\s*"(.+)"$/);
+        if (schemeMatch) { markScheme = schemeMatch[1]; inOptions = false; continue; }
+
+        if (trimmed === 'options:') { inOptions = true; continue; }
+
+        if (inOptions) {
+            const optMatch = trimmed.match(/^-\s*"(.+)"$/);
+            if (optMatch) { options.push(optMatch[1]); }
+        }
+    }
+
+    // --- Build HTML ---
+    let html = `<div class="question-draft-preview">`;
+
+    // Header
+    html += `<div class="question-draft-header">`;
+    html += `<span class="question-draft-badge">📝 Draft</span>`;
+    html += `<span class="question-draft-type">${label}</span>`;
+    if (maxScore) {
+        html += `<span class="question-draft-score">${maxScore} ${maxScore === '1' ? 'mark' : 'marks'}</span>`;
+    }
+    html += `</div>`;
+
+    // Question text
+    if (text) {
+        html += `<p class="question-draft-text">${escapeHtml(text)}</p>`;
+    }
+
+    // MC options
+    if (type === 'MULTIPLE_CHOICE' && options.length > 0) {
+        html += `<div class="question-draft-options">`;
+        options.forEach((opt, i) => {
+            const isCorrect = i === correctIndex;
+            const cls = isCorrect ? 'question-draft-option question-draft-option-correct' : 'question-draft-option';
+            const letter = String.fromCharCode(65 + i);
+            html += `<div class="${cls}">`;
+            html += `<span class="question-draft-option-letter ${isCorrect ? 'correct' : ''}">${letter}</span>`;
+            html += `<span>${escapeHtml(opt)}</span>`;
+            if (isCorrect) html += `<span class="question-draft-correct-mark">✓ Correct</span>`;
+            html += `</div>`;
+        });
+        html += `</div>`;
+    }
+
+    // Written answer - correct answer
+    if (type === 'WRITTEN_ANSWER' && correctAnswer) {
+        html += `<div class="question-draft-answer">`;
+        html += `<p class="question-draft-answer-label">Correct Answer:</p>`;
+        html += `<p class="question-draft-answer-value">${escapeHtml(correctAnswer)}</p>`;
+        html += `</div>`;
+    }
+
+    // Written answer - mark scheme
+    if (type === 'WRITTEN_ANSWER' && markScheme) {
+        html += `<div class="question-draft-markscheme">`;
+        html += `<p class="question-draft-markscheme-label">Mark Scheme (AI-marking):</p>`;
+        html += `<p class="question-draft-markscheme-value">${escapeHtml(markScheme)}</p>`;
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+/** Escape HTML special characters. */
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
  * Process custom markers in content for display.
  * Used to render PDF embeds and question references.
  */

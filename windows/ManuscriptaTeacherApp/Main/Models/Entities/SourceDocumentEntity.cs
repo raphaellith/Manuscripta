@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Main.Models.Enums;
 
 namespace Main.Models.Entities;
 
@@ -34,6 +35,12 @@ public class SourceDocumentEntity
     /// </summary>
     [Required]
     public string Transcript { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tracks the indexing state of the document for semantic retrieval.
+    /// Per §3A(1)(c).
+    /// </summary>
+    public EmbeddingStatus? EmbeddingStatus { get; set; }
 
     public SourceDocumentEntity() { }
 

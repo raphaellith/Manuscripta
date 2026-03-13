@@ -28,6 +28,11 @@ public abstract class ResponseEntity
 
     public bool? IsCorrect { get; set; }
 
+    /// <summary>
+    /// The response text, for questions that accept text responses.
+    /// </summary>
+    public string? ResponseText { get; set; }
+
     protected ResponseEntity() { }
 
     protected ResponseEntity(Guid id, Guid questionId, Guid deviceId, DateTime? timestamp = null, bool? isCorrect = null)
