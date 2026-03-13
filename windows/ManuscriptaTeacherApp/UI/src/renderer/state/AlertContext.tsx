@@ -64,16 +64,23 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
     }, []);
 
     // Helper to add alerts - uses ref to avoid dependency cycles
+    // Deduplicates by (type, deviceId) to prevent repeated SignalR events
+    // from stacking identical alerts that make dismissal appear broken.
     const addAlert = useCallback((type: Alert['type'], deviceId: string | undefined, message: string) => {
         const device = deviceId ? devicesRef.current.find(d => d.deviceId === deviceId) : undefined;
-        setAlerts(prev => [...prev, {
-            id: `${Date.now()}-${deviceId || 'global'}`,
-            type,
-            deviceId,
-            deviceName: device?.name,
-            message,
-            timestamp: Date.now()
-        }]);
+        setAlerts(prev => {
+            // Skip if an alert with the same type and deviceId already exists
+            const isDuplicate = prev.some(a => a.type === type && a.deviceId === deviceId);
+            if (isDuplicate) return prev;
+            return [...prev, {
+                id: `${Date.now()}-${deviceId || 'global'}`,
+                type,
+                deviceId,
+                deviceName: device?.name,
+                message,
+                timestamp: Date.now()
+            }];
+        });
     }, []);
 
     // Dismiss a specific alert
