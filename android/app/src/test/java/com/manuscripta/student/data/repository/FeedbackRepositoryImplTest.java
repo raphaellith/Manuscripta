@@ -23,6 +23,8 @@ import com.manuscripta.student.network.FeedbackResponse;
 import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.message.FeedbackAckMessage;
 
+import androidx.lifecycle.MutableLiveData;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,6 +57,8 @@ public class FeedbackRepositoryImplTest {
         mockDao = mock(FeedbackDao.class);
         mockApiService = mock(ApiService.class);
         mockAckRetrySender = mock(AckRetrySender.class);
+        when(mockDao.getAllLive())
+                .thenReturn(new MutableLiveData<>(Collections.emptyList()));
         repository = new FeedbackRepositoryImpl(mockDao, mockApiService, mockAckRetrySender);
     }
 

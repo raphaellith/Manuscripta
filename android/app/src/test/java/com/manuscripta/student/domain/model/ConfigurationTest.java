@@ -309,7 +309,7 @@ public class ConfigurationTest {
     public void testDefaultConstants() {
         assertEquals(5, Configuration.MIN_TEXT_SIZE);
         assertEquals(50, Configuration.MAX_TEXT_SIZE);
-        assertEquals(12, Configuration.DEFAULT_TEXT_SIZE);
+        assertEquals(6, Configuration.DEFAULT_TEXT_SIZE);
         assertEquals(FeedbackStyle.IMMEDIATE, Configuration.DEFAULT_FEEDBACK_STYLE);
         assertFalse(Configuration.DEFAULT_TTS_ENABLED);
         assertFalse(Configuration.DEFAULT_AI_SCAFFOLDING_ENABLED);

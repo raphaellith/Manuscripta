@@ -17,6 +17,9 @@ import static org.mockito.Mockito.when;
 
 import android.content.SharedPreferences;
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
+import androidx.lifecycle.LiveData;
+
 import com.manuscripta.student.data.model.FeedbackStyle;
 import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.domain.model.Configuration;
@@ -26,6 +29,7 @@ import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.RefreshConfigMessage;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -38,6 +42,9 @@ import retrofit2.Response;
 public class ConfigRepositoryImplTest {
 
     private static final String TEST_DEVICE_ID = "device-123";
+
+    @Rule
+    public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
     @Mock
     private SharedPreferences preferences;
@@ -203,5 +210,32 @@ public class ConfigRepositoryImplTest {
     public void testSetRefreshCallbackAfterDestroy() {
         repository.destroy();
         repository.setRefreshCallback(mock(ConfigRepository.ConfigRefreshCallback.class));
+    }
+
+    @Test
+    public void testGetConfigLiveDataReturnsNonNull() {
+        LiveData<Configuration> liveData = repository.getConfigLiveData();
+        assertNotNull(liveData);
+        assertNotNull(liveData.getValue());
+        assertEquals(Configuration.DEFAULT_TEXT_SIZE, liveData.getValue().getTextSize());
+    }
+
+    @Test
+    public void testGetConfigLiveDataUpdatesAfterFetch() throws Exception {
+        ConfigResponseDto dto = new ConfigResponseDto(24, "NEUTRAL", false, true, false, "MASCOT2");
+        when(apiService.getConfig(TEST_DEVICE_ID)).thenReturn(call);
+        when(call.execute()).thenReturn(Response.success(dto));
+
+        repository.fetchAndStoreConfig(TEST_DEVICE_ID);
+
+        LiveData<Configuration> liveData = repository.getConfigLiveData();
+        assertNotNull(liveData.getValue());
+        assertEquals(24, liveData.getValue().getTextSize());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testGetConfigLiveDataAfterDestroy() {
+        repository.destroy();
+        repository.getConfigLiveData();
     }
 }

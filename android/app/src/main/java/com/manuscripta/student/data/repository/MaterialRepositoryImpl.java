@@ -8,13 +8,17 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
+import com.manuscripta.student.data.model.QuestionEntity;
 import com.manuscripta.student.domain.mapper.MaterialMapper;
+import com.manuscripta.student.domain.mapper.QuestionMapper;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DistributionBundleDto;
 import com.manuscripta.student.network.dto.MaterialDto;
+import com.manuscripta.student.network.dto.QuestionDto;
 import com.manuscripta.student.network.tcp.AckRetrySender;
 import com.manuscripta.student.network.tcp.TcpSocketManager;
 import com.manuscripta.student.network.tcp.message.DistributeAckMessage;
@@ -57,6 +61,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     /** The DAO for material persistence. */
     private final MaterialDao materialDao;
 
+    /** The DAO for question persistence. */
+    private final QuestionDao questionDao;
+
     /** The file storage manager for attachments. */
     private final FileStorageManager fileStorageManager;
 
@@ -68,6 +75,9 @@ public class MaterialRepositoryImpl implements MaterialRepository {
 
     /** Handles retry logic for sending ACK messages over TCP. */
     private final AckRetrySender ackRetrySender;
+
+    /** Repository for managing learning sessions. */
+    private final SessionRepository sessionRepository;
 
     /** Executor for running sync operations on a background thread. */
     private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
@@ -97,20 +107,27 @@ public class MaterialRepositoryImpl implements MaterialRepository {
      * and the DAO read operation has no side effects.</p>
      *
      * @param materialDao        The DAO for material persistence
+     * @param questionDao        The DAO for question persistence
      * @param fileStorageManager The file storage manager for attachments
      * @param apiService         The API service for network operations
      * @param tcpSocketManager   The TCP socket manager for DISTRIBUTE_MATERIAL signals
      * @param ackRetrySender     The retry sender for ACK messages
+     * @param sessionRepository  The session repository for creating sessions per material
      * @throws IllegalArgumentException if any dependency is null
      */
     @Inject
     public MaterialRepositoryImpl(@NonNull MaterialDao materialDao,
+                                  @NonNull QuestionDao questionDao,
                                   @NonNull FileStorageManager fileStorageManager,
                                   @NonNull ApiService apiService,
                                   @NonNull TcpSocketManager tcpSocketManager,
-                                  @NonNull AckRetrySender ackRetrySender) {
+                                  @NonNull AckRetrySender ackRetrySender,
+                                  @NonNull SessionRepository sessionRepository) {
         if (materialDao == null) {
             throw new IllegalArgumentException("MaterialDao cannot be null");
+        }
+        if (questionDao == null) {
+            throw new IllegalArgumentException("QuestionDao cannot be null");
         }
         if (fileStorageManager == null) {
             throw new IllegalArgumentException("FileStorageManager cannot be null");
@@ -124,11 +141,16 @@ public class MaterialRepositoryImpl implements MaterialRepository {
         if (ackRetrySender == null) {
             throw new IllegalArgumentException("AckRetrySender cannot be null");
         }
+        if (sessionRepository == null) {
+            throw new IllegalArgumentException("SessionRepository cannot be null");
+        }
         this.materialDao = materialDao;
+        this.questionDao = questionDao;
         this.fileStorageManager = fileStorageManager;
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
         this.ackRetrySender = ackRetrySender;
+        this.sessionRepository = sessionRepository;
         this.materialsLiveData = new MutableLiveData<>(new ArrayList<>());
 
         // Initialize LiveData with existing materials from database on a background thread.
@@ -294,14 +316,12 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                 try {
                     // 3. Parse content for attachment references and download each one.
                     // Done before acquiring the lock to avoid holding it during network I/O.
-                    boolean attachmentsOk = true;
                     List<String> attachmentIds =
                             ContentParser.extractDistinctAttachmentReferences(dto.getContent());
                     for (String attachmentId : attachmentIds) {
                         if (!downloadAttachment(dto.getId(), attachmentId)) {
-                            attachmentsOk = false;
                             Log.w(TAG, "Attachment download failed for material: "
-                                    + dto.getId());
+                                    + dto.getId() + ", attachment: " + attachmentId);
                         }
                     }
 
@@ -312,16 +332,41 @@ public class MaterialRepositoryImpl implements MaterialRepository {
                         Log.d(TAG, "Saved material: " + entity.getId());
                     }
 
-                    // Per API Contract §3.6.2, send one ACK per successfully received material
-                    // (device ID + material ID) immediately after download and save succeed.
-                    if (attachmentsOk) {
-                        ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
-                    } else {
-                        Log.w(TAG, "Skipping DISTRIBUTE_ACK for material: " + dto.getId());
+                    // Per API Contract §3.6.2, send one ACK per received material.
+                    // ACK is sent regardless of attachment failures — missing attachments
+                    // are a server-side data integrity issue and retrying will not recover them.
+                    ackRetrySender.send(new DistributeAckMessage(deviceId, dto.getId()), TAG);
+
+                    // Per Session Interaction §3(3), create a session in RECEIVED state
+                    // for each material received in the distribution bundle.
+                    try {
+                        sessionRepository.startSession(dto.getId(), deviceId);
+                        Log.d(TAG, "Created session for material: " + dto.getId());
+                    } catch (Exception se) {
+                        Log.e(TAG, "Failed to create session for material: "
+                                + dto.getId() + " — " + se.getMessage());
                     }
                 } catch (IllegalArgumentException e) {
                     Log.e(TAG, "Invalid material data: " + e.getMessage());
                 }
+            }
+
+            // Save questions from the bundle after all materials are persisted
+            // (foreign key constraint requires parent materials to exist first).
+            List<QuestionDto> questionDtos = bundle.getQuestions();
+            if (questionDtos != null && !questionDtos.isEmpty()) {
+                for (QuestionDto questionDto : questionDtos) {
+                    try {
+                        QuestionEntity questionEntity =
+                                QuestionMapper.dtoToEntity(questionDto);
+                        synchronized (lock) {
+                            questionDao.insert(questionEntity);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        Log.e(TAG, "Invalid question data: " + e.getMessage());
+                    }
+                }
+                Log.i(TAG, "Saved " + questionDtos.size() + " questions");
             }
 
             // Refresh LiveData once after all materials are saved to notify observers.

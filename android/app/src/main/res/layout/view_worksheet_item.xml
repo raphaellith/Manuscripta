@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingTop="@dimen/spacing_item"
+    android:paddingBottom="@dimen/spacing_item">
+
+    <!-- Question number -->
+    <TextView
+        android:id="@+id/questionNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold"
+        tools:text="1. " />
+
+    <!-- Sentence text before the blank -->
+    <TextView
+        android:id="@+id/sentenceBefore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        tools:text="The Battle of Hastings was fought in the year " />
+
+    <!-- Fill-in-the-blank input -->
+    <EditText
+        android:id="@+id/blankInput"
+        android:layout_width="192dp"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:gravity="center"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:minWidth="96dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold"
+        tools:hint="______"
+        tools:ignore="LabelFor" />
+
+    <!-- Sentence text after the blank -->
+    <TextView
+        android:id="@+id/sentenceAfter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        tools:text="." />
+
+</LinearLayout>

@@ -90,7 +90,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             throw new IllegalArgumentException("Response cannot be null");
         }
         ResponseEntity entity = ResponseMapper.toEntity(response);
-        responseDao.insert(entity);
+        syncExecutor.execute(() -> responseDao.insert(entity));
     }
 
     @Override
@@ -185,6 +185,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         List<ResponseEntity> unsyncedResponses = responseDao.getUnsynced();
 
         if (unsyncedResponses.isEmpty()) {
+            Log.d(TAG, "No unsynced responses to sync");
             if (callback != null) {
                 callback.onSyncComplete(0, 0);
             }
@@ -217,6 +218,7 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             }
         }
 
+        Log.d(TAG, "Sync complete: " + successCount + " succeeded, " + failureCount + " failed");
         if (callback != null) {
             callback.onSyncComplete(successCount, failureCount);
         }
@@ -270,8 +272,11 @@ public class ResponseRepositoryImpl implements ResponseRepository {
      * to the server via HTTP POST /responses.
      *
      * <p>Per API Contract §2.4, expects HTTP 201 Created on success.</p>
+     *
+     * <p>Retry logic is not handled here; it is managed transparently by
+     * {@link com.manuscripta.student.network.interceptor.RetryInterceptor}
+     * at the OkHttp interceptor layer.</p>
      */
-    @VisibleForTesting
     static class NetworkSyncEngine implements SyncEngine {
 
         /** Tag for logging. */
@@ -310,8 +315,14 @@ public class ResponseRepositoryImpl implements ResponseRepository {
                     Log.d(TAG, "Successfully synced response: " + entity.getId());
                     return true;
                 } else {
+                    String errorBody = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            errorBody = response.errorBody().string();
+                        }
+                    } catch (IOException ignored) { }
                     Log.w(TAG, "Failed to sync response: " + entity.getId()
-                            + " - HTTP " + response.code());
+                            + " - HTTP " + response.code() + " body: " + errorBody);
                     return false;
                 }
             } catch (IOException e) {

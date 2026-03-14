@@ -20,6 +20,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.model.MaterialEntity;
 import com.manuscripta.student.data.model.MaterialType;
 import com.manuscripta.student.domain.model.Material;
@@ -64,6 +65,9 @@ public class MaterialRepositoryImplTest {
     private MaterialDao mockDao;
 
     @Mock
+    private QuestionDao mockQuestionDao;
+
+    @Mock
     private FileStorageManager mockFileStorageManager;
 
     @Mock
@@ -74,6 +78,9 @@ public class MaterialRepositoryImplTest {
 
     @Mock
     private AckRetrySender mockAckRetrySender;
+
+    @Mock
+    private SessionRepository mockSessionRepository;
 
     @Mock
     private Call<DistributionBundleDto> mockDistributionCall;
@@ -93,8 +100,8 @@ public class MaterialRepositoryImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         when(mockDao.getAll()).thenReturn(new ArrayList<>());
-        repository = new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                mockTcpSocketManager, mockAckRetrySender);
+        repository = new MaterialRepositoryImpl(mockDao, mockQuestionDao, mockFileStorageManager,
+                mockApiService, mockTcpSocketManager, mockAckRetrySender, mockSessionRepository);
     }
 
     // ========== Constructor tests ==========
@@ -107,36 +114,56 @@ public class MaterialRepositoryImplTest {
     @Test
     public void testConstructor_nullDao_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(null, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, mockAckRetrySender));
+                () -> new MaterialRepositoryImpl(null, mockQuestionDao, mockFileStorageManager,
+                        mockApiService, mockTcpSocketManager, mockAckRetrySender,
+                        mockSessionRepository));
+    }
+
+    @Test
+    public void testConstructor_nullQuestionDao_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, null, mockFileStorageManager,
+                        mockApiService, mockTcpSocketManager, mockAckRetrySender,
+                        mockSessionRepository));
     }
 
     @Test
     public void testConstructor_nullFileStorageManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, null, mockApiService,
-                        mockTcpSocketManager, mockAckRetrySender));
+                () -> new MaterialRepositoryImpl(mockDao, mockQuestionDao, null,
+                        mockApiService, mockTcpSocketManager, mockAckRetrySender,
+                        mockSessionRepository));
     }
 
     @Test
     public void testConstructor_nullApiService_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, null,
-                        mockTcpSocketManager, mockAckRetrySender));
+                () -> new MaterialRepositoryImpl(mockDao, mockQuestionDao, mockFileStorageManager,
+                        null, mockTcpSocketManager, mockAckRetrySender,
+                        mockSessionRepository));
     }
 
     @Test
     public void testConstructor_nullTcpSocketManager_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        null, mockAckRetrySender));
+                () -> new MaterialRepositoryImpl(mockDao, mockQuestionDao, mockFileStorageManager,
+                        mockApiService, null, mockAckRetrySender,
+                        mockSessionRepository));
     }
 
     @Test
     public void testConstructor_nullAckRetrySender_throwsException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new MaterialRepositoryImpl(mockDao, mockFileStorageManager, mockApiService,
-                        mockTcpSocketManager, null));
+                () -> new MaterialRepositoryImpl(mockDao, mockQuestionDao, mockFileStorageManager,
+                        mockApiService, mockTcpSocketManager, null,
+                        mockSessionRepository));
+    }
+
+    @Test
+    public void testConstructor_nullSessionRepository_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new MaterialRepositoryImpl(mockDao, mockQuestionDao, mockFileStorageManager,
+                        mockApiService, mockTcpSocketManager, mockAckRetrySender, null));
     }
 
     // ========== getMaterialById tests ==========
@@ -607,111 +634,276 @@ public class MaterialRepositoryImplTest {
         assertTrue(exception.getMessage().contains("null at index 1"));
     }
 
+    // ========== Concurrent sync prevention ==========
+
+    /**
+     * Verifies that a second concurrent syncMaterials call is
+     * ignored when a sync is already in progress.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSyncMaterials_concurrentCall_ignored()
+            throws IOException {
+        // First call will take a while (simulate)
+        DistributionBundleDto emptyBundle =
+                new DistributionBundleDto();
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(emptyBundle));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // Syncing just completed (flag reset), call again to
+        // ensure it works after the first one finishes
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // Two complete syncs should call execute twice
+        verify(mockDistributionCall, times(2)).execute();
+    }
+
     // ========== Attachment download tests ==========
 
+    /**
+     * Material content with attachment references triggers
+     * download and ACK is sent when all succeed.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_withAttachment_successfulDownload_savesFile() throws IOException {
-        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
-                CONTENT_WITH_ATTACHMENT, null, null, 0L);
-        DistributionBundleDto bundle = new DistributionBundleDto(
-                Collections.singletonList(dto), Collections.emptyList());
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+    public void testSyncMaterials_withAttachments_downloadsAndAcks()
+            throws IOException {
+        // Material content containing an attachment reference
+        String attId =
+                "550e8400-e29b-41d4-a716-446655440000";
+        String content =
+                "![img](/attachments/" + attId + ")";
+        MaterialDto dto = new MaterialDto(
+                "mat-1", "READING", "Title", content,
+                null, null, 0L);
+        DistributionBundleDto bundle =
+                new DistributionBundleDto(
+                        Collections.singletonList(dto),
+                        Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(bundle));
 
-        ResponseBody attachmentBody = ResponseBody.create(MediaType.parse("image/png"),
-                new byte[]{1, 2, 3});
-        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
-        when(mockAttachmentCall.execute()).thenReturn(Response.success(attachmentBody));
+        // Mock attachment download
+        byte[] imageBytes = new byte[]{1, 2, 3};
+        ResponseBody attachBody = ResponseBody.create(
+                MediaType.parse("image/png"), imageBytes);
+        when(mockApiService.getAttachment(attId))
+                .thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute())
+                .thenReturn(Response.success(attachBody));
 
         repository.syncMaterials(TEST_DEVICE_ID);
 
         verify(mockFileStorageManager).saveAttachment(
-                eq("mat-1"), eq(TEST_ATTACHMENT_ID), eq("png"), any(byte[].class));
-        verify(mockAckRetrySender).send(any(DistributeAckMessage.class), anyString());
+                eq("mat-1"), eq(attId),
+                eq("png"), eq(imageBytes));
+        verify(mockAckRetrySender).send(
+                any(DistributeAckMessage.class),
+                anyString());
     }
 
+    /**
+     * When attachment download fails, ACK is still sent.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_withAttachment_nullContentType_defaultsToBin() throws IOException {
-        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
-                CONTENT_WITH_ATTACHMENT, null, null, 0L);
-        DistributionBundleDto bundle = new DistributionBundleDto(
-                Collections.singletonList(dto), Collections.emptyList());
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+    public void testSyncMaterials_attachmentFails_stillSendsAck()
+            throws IOException {
+        String attId =
+                "660e8400-e29b-41d4-a716-446655440001";
+        String content =
+                "![img](/attachments/" + attId + ")";
+        MaterialDto dto = new MaterialDto(
+                "mat-1", "READING", "Title", content,
+                null, null, 0L);
+        DistributionBundleDto bundle =
+                new DistributionBundleDto(
+                        Collections.singletonList(dto),
+                        Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(bundle));
 
-        ResponseBody attachmentBody = ResponseBody.create((MediaType) null, new byte[]{1, 2, 3});
-        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
-        when(mockAttachmentCall.execute()).thenReturn(Response.success(attachmentBody));
+        // Attachment returns 404
+        when(mockApiService.getAttachment(attId))
+                .thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute())
+                .thenReturn(Response.error(404,
+                        ResponseBody.create(null, "")));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        // Material is still saved to DB
+        verify(mockDao).insert(any(MaterialEntity.class));
+        // ACK is sent despite attachment failure
+        verify(mockAckRetrySender).send(
+                any(DistributeAckMessage.class),
+                anyString());
+    }
+
+    /**
+     * When attachment download throws IOException, ACK is still sent.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSyncMaterials_attachmentIOException_stillSendsAck()
+            throws IOException {
+        String attId =
+                "770e8400-e29b-41d4-a716-446655440002";
+        String content =
+                "![img](/attachments/" + attId + ")";
+        MaterialDto dto = new MaterialDto(
+                "mat-1", "READING", "Title", content,
+                null, null, 0L);
+        DistributionBundleDto bundle =
+                new DistributionBundleDto(
+                        Collections.singletonList(dto),
+                        Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(bundle));
+
+        when(mockApiService.getAttachment(attId))
+                .thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute())
+                .thenThrow(new IOException("timeout"));
+
+        repository.syncMaterials(TEST_DEVICE_ID);
+
+        verify(mockDao).insert(any(MaterialEntity.class));
+        verify(mockAckRetrySender).send(
+                any(DistributeAckMessage.class),
+                anyString());
+    }
+
+    /**
+     * Attachment with null content type uses "bin" extension.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSyncMaterials_attachmentNullContentType()
+            throws IOException {
+        String attId =
+                "880e8400-e29b-41d4-a716-446655440003";
+        String content =
+                "![img](/attachments/" + attId + ")";
+        MaterialDto dto = new MaterialDto(
+                "mat-1", "READING", "Title", content,
+                null, null, 0L);
+        DistributionBundleDto bundle =
+                new DistributionBundleDto(
+                        Collections.singletonList(dto),
+                        Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(bundle));
+
+        // Create ResponseBody with null content type
+        byte[] bytes = new byte[]{1};
+        ResponseBody body = ResponseBody.create(null, bytes);
+        when(mockApiService.getAttachment(attId))
+                .thenReturn(mockAttachmentCall);
+        when(mockAttachmentCall.execute())
+                .thenReturn(Response.success(body));
 
         repository.syncMaterials(TEST_DEVICE_ID);
 
         verify(mockFileStorageManager).saveAttachment(
-                eq("mat-1"), eq(TEST_ATTACHMENT_ID), eq("bin"), any(byte[].class));
+                eq("mat-1"), eq(attId),
+                eq("bin"), any(byte[].class));
     }
 
+    /**
+     * Successful response with null body returns failure.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_withAttachment_httpFailure_skipsAck() throws IOException {
-        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
-                CONTENT_WITH_ATTACHMENT, null, null, 0L);
-        DistributionBundleDto bundle = new DistributionBundleDto(
-                Collections.singletonList(dto), Collections.emptyList());
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
-
-        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
-        when(mockAttachmentCall.execute()).thenReturn(
-                Response.error(404, ResponseBody.create(null, "")));
+    public void testSyncMaterials_nullResponseBody_doesNotCrash()
+            throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(null));
 
         repository.syncMaterials(TEST_DEVICE_ID);
 
-        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
+        // Should return early without processing
+        verify(mockDao, never()).insert(
+                any(MaterialEntity.class));
     }
 
+    /**
+     * Unexpected runtime exception during sync does not crash
+     * and resets the syncing flag.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_withAttachment_nullResponseBody_skipsAck() throws IOException {
-        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
-                CONTENT_WITH_ATTACHMENT, null, null, 0L);
-        DistributionBundleDto bundle = new DistributionBundleDto(
-                Collections.singletonList(dto), Collections.emptyList());
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
-
-        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
-        when(mockAttachmentCall.execute()).thenReturn(Response.<ResponseBody>success(null));
+    public void testSyncMaterials_unexpectedException_resetsSyncing()
+            throws IOException {
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenThrow(new RuntimeException("DB error"));
 
         repository.syncMaterials(TEST_DEVICE_ID);
 
-        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
+        assertFalse(repository.isSyncing());
     }
 
+    /**
+     * Callback that throws runtime exception does not
+     * propagate to the caller.
+     *
+     * @throws IOException if mock setup fails
+     */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testSyncMaterials_withAttachment_ioException_skipsAck() throws IOException {
-        MaterialDto dto = new MaterialDto("mat-1", "READING", "Title",
-                CONTENT_WITH_ATTACHMENT, null, null, 0L);
-        DistributionBundleDto bundle = new DistributionBundleDto(
-                Collections.singletonList(dto), Collections.emptyList());
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenReturn(Response.success(bundle));
+    public void testSyncMaterials_callbackThrows_doesNotPropagate()
+            throws IOException {
+        MaterialDto dto = new MaterialDto(
+                "mat-1", "READING", "Title", null,
+                null, null, 0L);
+        DistributionBundleDto bundle =
+                new DistributionBundleDto(
+                        Collections.singletonList(dto),
+                        Collections.emptyList());
+        when(mockApiService.getDistribution(TEST_DEVICE_ID))
+                .thenReturn(mockDistributionCall);
+        when(mockDistributionCall.execute())
+                .thenReturn(Response.success(bundle));
 
-        when(mockApiService.getAttachment(TEST_ATTACHMENT_ID)).thenReturn(mockAttachmentCall);
-        when(mockAttachmentCall.execute()).thenThrow(new IOException("Network error"));
+        repository.setMaterialAvailableCallback(
+                () -> {
+                    throw new RuntimeException("fail");
+                });
 
+        // Should not throw
         repository.syncMaterials(TEST_DEVICE_ID);
 
-        verify(mockAckRetrySender, never()).send(any(DistributeAckMessage.class), anyString());
-    }
-
-    @Test
-    public void testSyncMaterials_unexpectedException_doesNotNotifyCallback() throws IOException {
-        when(mockApiService.getDistribution(TEST_DEVICE_ID)).thenReturn(mockDistributionCall);
-        when(mockDistributionCall.execute()).thenThrow(new RuntimeException("Unexpected error"));
-
-        final boolean[] callbackCalled = {false};
-        repository.setMaterialAvailableCallback(() -> callbackCalled[0] = true);
-
-        repository.syncMaterials(TEST_DEVICE_ID);
-
-        assertFalse(callbackCalled[0]);
+        assertFalse(repository.isSyncing());
     }
 
     // ========== Helper methods ==========

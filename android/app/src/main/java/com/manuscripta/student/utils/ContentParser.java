@@ -29,6 +29,14 @@ public final class ContentParser {
                     + "[a-fA-F0-9]{4}-[a-fA-F0-9]{12})");
 
     /**
+     * Regex pattern to match PDF admonition attachment references.
+     * Per Material Encoding §4(2), PDF embeds use {@code !!! pdf id="uuid"}.
+     */
+    private static final Pattern PDF_ADMONITION_PATTERN =
+            Pattern.compile("!!! pdf id=\"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-"
+                    + "[a-fA-F0-9]{4}-[a-fA-F0-9]{12})\"");
+
+    /**
      * Private constructor to prevent instantiation of utility class.
      */
     private ContentParser() {
@@ -58,6 +66,14 @@ public final class ContentParser {
             }
         }
 
+        Matcher pdfMatcher = PDF_ADMONITION_PATTERN.matcher(content);
+        while (pdfMatcher.find()) {
+            String pdfId = pdfMatcher.group(1);
+            if (pdfId != null && !pdfId.isEmpty()) {
+                attachmentIds.add(pdfId);
+            }
+        }
+
         return attachmentIds;
     }
 
@@ -72,7 +88,8 @@ public final class ContentParser {
         if (content == null || content.isEmpty()) {
             return false;
         }
-        return ATTACHMENT_PATTERN.matcher(content).find();
+        return ATTACHMENT_PATTERN.matcher(content).find()
+                || PDF_ADMONITION_PATTERN.matcher(content).find();
     }
 
     /**

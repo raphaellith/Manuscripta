@@ -8,6 +8,7 @@ import com.manuscripta.student.data.local.DeviceStatusDao;
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
 import com.manuscripta.student.data.local.MaterialDao;
+import com.manuscripta.student.data.local.QuestionDao;
 import com.manuscripta.student.data.local.ResponseDao;
 import com.manuscripta.student.data.local.SessionDao;
 import com.manuscripta.student.data.repository.ConfigRepository;
@@ -110,6 +111,18 @@ public class RepositoryModule {
     }
 
     /**
+     * Provides the QuestionDao from the database.
+     *
+     * @param database The ManuscriptaDatabase instance
+     * @return QuestionDao instance
+     */
+    @Provides
+    @Singleton
+    public QuestionDao provideQuestionDao(ManuscriptaDatabase database) {
+        return database.questionDao();
+    }
+
+    /**
      * Provides the FileStorageManager for attachment file storage.
      *
      * @param context The application context
@@ -137,21 +150,25 @@ public class RepositoryModule {
      * Provides the MaterialRepository implementation.
      *
      * @param materialDao        The MaterialDao instance
+     * @param questionDao        The QuestionDao instance
      * @param fileStorageManager The FileStorageManager instance
      * @param apiService         The ApiService instance
      * @param tcpSocketManager   The TcpSocketManager instance
      * @param ackRetrySender     The AckRetrySender instance
+     * @param sessionRepository  The SessionRepository instance
      * @return MaterialRepository instance
      */
     @Provides
     @Singleton
     public MaterialRepository provideMaterialRepository(MaterialDao materialDao,
+                                                        QuestionDao questionDao,
                                                         FileStorageManager fileStorageManager,
                                                         ApiService apiService,
                                                         TcpSocketManager tcpSocketManager,
-                                                        AckRetrySender ackRetrySender) {
-        return new MaterialRepositoryImpl(materialDao, fileStorageManager, apiService,
-                tcpSocketManager, ackRetrySender);
+                                                        AckRetrySender ackRetrySender,
+                                                        SessionRepository sessionRepository) {
+        return new MaterialRepositoryImpl(materialDao, questionDao, fileStorageManager,
+                apiService, tcpSocketManager, ackRetrySender, sessionRepository);
     }
 
     /**
@@ -200,14 +217,32 @@ public class RepositoryModule {
      * @param preferences      The SharedPreferences instance
      * @param apiService       The ApiService instance
      * @param tcpSocketManager The TcpSocketManager instance
+     * @param pairingManager   The PairingManager instance
      * @return ConfigRepository instance
      */
     @Provides
     @Singleton
     public ConfigRepository provideConfigRepository(SharedPreferences preferences,
                                                     ApiService apiService,
-                                                    TcpSocketManager tcpSocketManager) {
-        return new ConfigRepositoryImpl(preferences, apiService, tcpSocketManager);
+                                                    TcpSocketManager tcpSocketManager,
+                                                    PairingManager pairingManager) {
+        ConfigRepositoryImpl repo = new ConfigRepositoryImpl(
+                preferences, apiService, tcpSocketManager);
+        repo.setRefreshCallback(deviceId -> {
+            String id = deviceId != null ? deviceId : pairingManager.getDeviceId();
+            if (id == null || id.isEmpty()) {
+                Log.w(TAG, "Config refresh skipped: no device ID");
+                return;
+            }
+            new Thread(() -> {
+                try {
+                    repo.fetchAndStoreConfig(id);
+                } catch (Exception e) {
+                    Log.w(TAG, "Config refresh failed: " + e.getMessage());
+                }
+            }, "config-refresh").start();
+        });
+        return repo;
     }
 
     /**
@@ -235,13 +270,16 @@ public class RepositoryModule {
     }
 
     /**
-     * Provides the HeartbeatManager wired with material, feedback, and status callbacks.
+     * Provides the HeartbeatManager wired with material, feedback, status,
+     * and unpair callbacks.
      *
      * @param tcpSocketManager       The TcpSocketManager instance
      * @param pairingManager         The PairingManager instance
      * @param materialRepository     The MaterialRepository instance
      * @param feedbackRepository     The FeedbackRepository instance
      * @param deviceStatusRepository The DeviceStatusRepository instance
+     * @param sessionRepository      The SessionRepository instance
+     * @param configRepository       The ConfigRepository instance
      * @return HeartbeatManager instance
      */
     @Provides
@@ -251,13 +289,16 @@ public class RepositoryModule {
             PairingManager pairingManager,
             MaterialRepository materialRepository,
             FeedbackRepository feedbackRepository,
-            DeviceStatusRepository deviceStatusRepository) {
+            DeviceStatusRepository deviceStatusRepository,
+            SessionRepository sessionRepository,
+            ConfigRepository configRepository) {
 
         HeartbeatManager hm = new HeartbeatManager(tcpSocketManager);
 
         hm.setDeviceStatusProvider(() -> {
             String deviceId = pairingManager.getDeviceId();
             if (deviceId != null && !deviceId.trim().isEmpty()) {
+                deviceStatusRepository.initialiseDeviceStatus(deviceId);
                 return deviceStatusRepository.getDeviceStatus(deviceId);
             }
             return null;
@@ -285,10 +326,45 @@ public class RepositoryModule {
             }
         });
 
-        // Start heartbeat if already connected (avoids missing the CONNECTED event)
-        if (tcpSocketManager.isConnected()) {
-            hm.start();
-        }
+        hm.setLockStateCallback(new HeartbeatManager.LockStateCallback() {
+            @Override
+            public void onLocked() {
+                String deviceId = pairingManager.getDeviceId();
+                if (deviceId != null && !deviceId.trim().isEmpty()) {
+                    deviceStatusRepository.setLocked(deviceId);
+                }
+            }
+
+            @Override
+            public void onUnlocked() {
+                String deviceId = pairingManager.getDeviceId();
+                if (deviceId != null && !deviceId.trim().isEmpty()) {
+                    deviceStatusRepository.setOnTask(deviceId, null);
+                }
+            }
+        });
+
+        hm.setUnpairCallback(() -> {
+            Log.d(TAG, "Unpair received — clearing local data");
+            try {
+                sessionRepository.cancelSession();
+            } catch (IllegalStateException e) {
+                Log.d(TAG, "No active session to cancel");
+            }
+            sessionRepository.deleteAllSessions();
+            materialRepository.deleteAllMaterials();
+            feedbackRepository.deleteAllFeedback();
+            configRepository.clearConfig();
+            String deviceId = pairingManager.getDeviceId();
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                deviceStatusRepository.clearDeviceStatus(deviceId);
+            }
+            tcpSocketManager.disconnect();
+            pairingManager.resetPairingData();
+        });
+
+        // Heartbeat will start automatically when PAIRING_ACK is received
+        // via HeartbeatManager's TcpMessageListener
 
         return hm;
     }

@@ -90,6 +90,8 @@ public class PairingManager implements TcpMessageListener {
     private String currentHost;
     /** The port for the current pairing attempt. */
     private int currentPort;
+    /** The HTTP port of the server, stored during pairing for Retrofit base URL. */
+    private volatile int serverHttpPort;
 
     /**
      * Creates a new PairingManager with the specified socket manager.
@@ -283,18 +285,23 @@ public class PairingManager implements TcpMessageListener {
             capturedDeviceId = deviceId;
         }
 
-        try {
-            PairingRequestMessage request = new PairingRequestMessage(capturedDeviceId);
-            socketManager.send(request);
-            Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + capturedDeviceId);
+        // Send on a background thread to avoid NetworkOnMainThreadException,
+        // since this method is called from onConnectionStateChanged which is
+        // dispatched on the main thread by TcpSocketManager.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                PairingRequestMessage request = new PairingRequestMessage(capturedDeviceId);
+                socketManager.send(request);
+                Log.d(TAG, "Sent PAIRING_REQUEST with deviceId: " + capturedDeviceId);
 
-            // Start timeout timer
-            startTimeoutTimer();
+                // Start timeout timer
+                startTimeoutTimer();
 
-        } catch (IOException | TcpProtocolException e) {
-            Log.e(TAG, "Failed to send PAIRING_REQUEST: " + e.getMessage());
-            handlePairingFailure("Failed to send pairing request: " + e.getMessage());
-        }
+            } catch (IOException | TcpProtocolException e) {
+                Log.e(TAG, "Failed to send PAIRING_REQUEST: " + e.getMessage());
+                handlePairingFailure("Failed to send pairing request: " + e.getMessage());
+            }
+        });
     }
 
     /**
@@ -459,5 +466,48 @@ public class PairingManager implements TcpMessageListener {
     @Nullable
     public String getDeviceId() {
         return deviceId;
+    }
+
+    /**
+     * Returns the server host (IP address) used during pairing.
+     *
+     * @return The server host, or null if not yet paired.
+     */
+    @Nullable
+    public String getServerHost() {
+        return currentHost;
+    }
+
+    /**
+     * Returns the server HTTP port stored during pairing.
+     *
+     * @return The server HTTP port, or 0 if not yet set.
+     */
+    public int getServerHttpPort() {
+        return serverHttpPort;
+    }
+
+    /**
+     * Stores the server HTTP port for use by the HTTP layer after pairing.
+     *
+     * @param httpPort The server HTTP port from UDP discovery.
+     */
+    public void setServerHttpPort(int httpPort) {
+        this.serverHttpPort = httpPort;
+    }
+
+    /**
+     * Resets pairing data, returning the manager to NOT_PAIRED state.
+     * Called on unpair to clear stored server information.
+     */
+    public void resetPairingData() {
+        synchronized (lock) {
+            cleanup();
+            deviceId = null;
+            currentHost = null;
+            currentPort = 0;
+            serverHttpPort = 0;
+            updatePairingState(PairingState.NOT_PAIRED);
+        }
     }
 }

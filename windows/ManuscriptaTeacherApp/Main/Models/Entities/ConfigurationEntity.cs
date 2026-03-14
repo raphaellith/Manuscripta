@@ -85,11 +85,11 @@ public class ConfigurationEntity
     {
         return new ConfigurationEntity(
             id: DefaultId,
-            textSize: 12,
+            textSize: 6,
             feedbackStyle: FeedbackStyle.IMMEDIATE,
-            ttsEnabled: true,
-            aiScaffoldingEnabled: true,
-            summarisationEnabled: true,
-            mascotSelection: MascotSelection.MASCOT1);
+            ttsEnabled: false,
+            aiScaffoldingEnabled: false,
+            summarisationEnabled: false,
+            mascotSelection: MascotSelection.NONE);
     }
 }

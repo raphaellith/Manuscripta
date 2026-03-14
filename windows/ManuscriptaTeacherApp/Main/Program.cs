@@ -173,6 +173,15 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Integration mode: explicitly bind Kestrel to the configured HTTP port so that
+// RequireHost routing filters actually receive traffic (--no-launch-profile skips
+// launchSettings URLs, causing Kestrel to default to port 5000).
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    var integSettings = builder.Configuration.GetSection("NetworkSettings").Get<NetworkSettings>() ?? new NetworkSettings();
+    builder.WebHost.UseUrls($"http://*:{integSettings.HttpPort}");
+}
+
 var app = builder.Build();
 
 // Eagerly resolve singleton so its DevicePaired event subscription is active

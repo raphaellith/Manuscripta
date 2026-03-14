@@ -9,6 +9,9 @@
 /frontend-variants/
 claude.md
 
+# Local reference prototypes (not tracked, for development reference only)
+/frontend-variants/manuscripta-tablet-ui-prototype/
+
 # AI coding agent instructions (personal configuration)
 .github/copilot-instructions.md
 .agent/
@@ -358,3 +361,5 @@ site/
 *.bak
 *.backup
 *~.nib
+.claude/commands/run-checks.md
+.gitignore

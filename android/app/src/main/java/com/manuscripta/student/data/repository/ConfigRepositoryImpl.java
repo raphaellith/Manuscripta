@@ -4,6 +4,8 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.manuscripta.student.data.model.FeedbackStyle;
 import com.manuscripta.student.data.model.MascotSelection;
@@ -67,6 +69,9 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     /** Callback for refresh requests. */
     private ConfigRefreshCallback refreshCallback;
 
+    /** Observable LiveData for configuration changes. */
+    private final MutableLiveData<Configuration> configLiveData = new MutableLiveData<>();
+
     /**
      * Creates a new ConfigRepositoryImpl.
      *
@@ -82,6 +87,7 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
         this.apiService = apiService;
         this.tcpSocketManager = tcpSocketManager;
         this.tcpSocketManager.addMessageListener(this);
+        this.configLiveData.setValue(readConfigFromPreferences());
     }
 
     @Override
@@ -128,7 +134,24 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
     @NonNull
     public Configuration getConfig() {
         checkNotDestroyed();
-        if (!hasStoredConfig()) {
+        return readConfigFromPreferences();
+    }
+
+    @Override
+    @NonNull
+    public LiveData<Configuration> getConfigLiveData() {
+        checkNotDestroyed();
+        return configLiveData;
+    }
+
+    /**
+     * Reads the current configuration from SharedPreferences.
+     *
+     * @return The stored configuration, or defaults if none stored
+     */
+    @NonNull
+    private Configuration readConfigFromPreferences() {
+        if (!preferences.getBoolean(KEY_HAS_CONFIG, false)) {
             return Configuration.createDefault();
         }
 
@@ -205,15 +228,15 @@ public class ConfigRepositoryImpl implements ConfigRepository, TcpMessageListene
         editor.putString(KEY_MASCOT_SELECTION, config.getMascotSelection().name());
         editor.putBoolean(KEY_HAS_CONFIG, true);
         editor.apply();
+
+        configLiveData.postValue(config);
     }
 
     // ========== TcpMessageListener implementation ==========
-
-    @Override
     public void onMessageReceived(@NonNull TcpMessage message) {
         if (message instanceof RefreshConfigMessage) {
             Log.d(TAG, "Received REFRESH_CONFIG signal");
-            if (refreshCallback != null && deviceId != null) {
+            if (refreshCallback != null) {
                 refreshCallback.onConfigRefreshRequested(deviceId);
             }
         }

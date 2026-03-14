@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import com.manuscripta.student.BuildConfig;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.interceptor.AuthInterceptor;
+import com.manuscripta.student.network.interceptor.BaseUrlInterceptor;
 import com.manuscripta.student.network.interceptor.ErrorInterceptor;
 import com.manuscripta.student.network.interceptor.LoggingInterceptor;
 import com.manuscripta.student.network.interceptor.RetryInterceptor;
@@ -51,10 +52,10 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_hasInterceptors() {
         OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
-        // Release builds have 3 interceptors (Retry, Auth, Error);
-        // debug builds have 4 (Retry, Auth, Logging, Error)
-        assertTrue("OkHttpClient should have at least 3 interceptors",
-                   client.interceptors().size() >= 3);
+        // Release builds have 4 interceptors (BaseUrl, Retry, Auth, Error);
+        // debug builds have 5 (BaseUrl, Retry, Auth, Logging, Error)
+        assertTrue("OkHttpClient should have at least 4 interceptors",
+                   client.interceptors().size() >= 4);
     }
 
     @Test
@@ -140,21 +141,24 @@ public class NetworkModuleTest {
     public void testProvideOkHttpClient_interceptorOrder() {
         OkHttpClient client = networkModule.provideOkHttpClient(mockConnectionManager, mockPairingManager);
 
-        // Order: Retry → Auth → [Logging (debug only)] → Error
-        // Release: Retry, Auth, Error (size 3); Debug: Retry, Auth, Logging, Error (size 4)
+        // Order: BaseUrl → Retry → Auth → [Logging (debug only)] → Error
+        // Release: BaseUrl, Retry, Auth, Error (size 4);
+        // Debug: BaseUrl, Retry, Auth, Logging, Error (size 5)
         int size = client.interceptors().size();
-        assertTrue("OkHttpClient should have at least 3 interceptors", size >= 3);
+        assertTrue("OkHttpClient should have at least 4 interceptors", size >= 4);
 
-        assertTrue("First interceptor should be RetryInterceptor",
-                   client.interceptors().get(0) instanceof RetryInterceptor);
-        assertTrue("Second interceptor should be AuthInterceptor",
-                   client.interceptors().get(1) instanceof AuthInterceptor);
+        assertTrue("First interceptor should be BaseUrlInterceptor",
+                   client.interceptors().get(0) instanceof BaseUrlInterceptor);
+        assertTrue("Second interceptor should be RetryInterceptor",
+                   client.interceptors().get(1) instanceof RetryInterceptor);
+        assertTrue("Third interceptor should be AuthInterceptor",
+                   client.interceptors().get(2) instanceof AuthInterceptor);
         assertTrue("Last interceptor should be ErrorInterceptor",
                    client.interceptors().get(size - 1) instanceof ErrorInterceptor);
 
-        if (size == 4) {
-            assertTrue("Third interceptor should be LoggingInterceptor",
-                       client.interceptors().get(2) instanceof LoggingInterceptor);
+        if (size == 5) {
+            assertTrue("Fourth interceptor should be LoggingInterceptor",
+                       client.interceptors().get(3) instanceof LoggingInterceptor);
         }
     }
 }

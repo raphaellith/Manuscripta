@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="@dimen/padding_screen"
+    tools:context=".ui.pairing.PairingActivity">
+
+    <!-- Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/pairing_title"
+            android:src="@drawable/quill_logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pairing_title"
+            android:textColor="@color/eink_black"
+            android:maxLines="1"
+            android:textSize="36sp"
+            android:fontFamily="@font/fraunces_bold" />
+
+    </LinearLayout>
+
+    <!-- Device name input -->
+    <EditText
+        android:id="@+id/deviceNameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_tab_inactive"
+        android:hint="@string/pairing_name_hint"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:maxLength="50"
+        android:padding="@dimen/padding_card"
+        android:textColor="@color/eink_black"
+        android:textColorHint="@color/eink_dark"
+        android:textSize="@dimen/text_body_small" />
+
+    <!-- Status message -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="@string/pairing_tap_to_begin"
+        android:textColor="@color/eink_dark"
+        android:textSize="@dimen/text_body_small" />
+
+    <!-- Progress indicator (simple text-based for e-ink) -->
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:textColor="@color/eink_dark"
+        android:textSize="@dimen/text_body_small"
+        android:visibility="gone" />
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/errorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body_small"
+        android:visibility="gone" />
+
+    <!-- Pair button -->
+    <Button
+        android:id="@+id/pairButton"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/button_min_height"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_tab_active"
+        android:text="@string/pairing_pair_button"
+        android:textAllCaps="false"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body_small"
+        android:textStyle="bold" />
+
+    <!-- Retry button (hidden by default) -->
+    <Button
+        android:id="@+id/retryButton"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/button_min_height"
+        android:background="@drawable/bg_tab_inactive"
+        android:text="@string/pairing_retry_button"
+        android:textAllCaps="false"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body_small"
+        android:visibility="gone" />
+
+</LinearLayout>

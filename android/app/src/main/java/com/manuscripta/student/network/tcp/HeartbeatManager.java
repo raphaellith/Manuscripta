@@ -9,8 +9,12 @@ import androidx.annotation.VisibleForTesting;
 import com.google.gson.Gson;
 import com.manuscripta.student.domain.model.DeviceStatus;
 import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
 import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
 import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -87,6 +91,32 @@ public class HeartbeatManager implements TcpMessageListener {
         void onFeedbackAvailable();
     }
 
+    /**
+     * Callback for when the server sends a lock or unlock command.
+     */
+    public interface LockStateCallback {
+        /**
+         * Called when the server sends a LOCK_SCREEN message.
+         */
+        void onLocked();
+
+        /**
+         * Called when the server sends an UNLOCK_SCREEN message.
+         */
+        void onUnlocked();
+    }
+
+    /**
+     * Callback for when the server sends an UNPAIR command.
+     */
+    public interface UnpairCallback {
+        /**
+         * Called when the server sends an UNPAIR message.
+         * The implementation should clear all local data and navigate to pairing.
+         */
+        void onUnpaired();
+    }
+
     /** The TCP socket manager for sending messages. */
     private final TcpSocketManager socketManager;
     /** Gson instance for JSON serialization. */
@@ -109,6 +139,12 @@ public class HeartbeatManager implements TcpMessageListener {
     /** Callback for when feedback is available. */
     @Nullable
     private volatile FeedbackAvailableCallback feedbackCallback;
+    /** Callback for when lock state changes. */
+    @Nullable
+    private volatile LockStateCallback lockStateCallback;
+    /** Callback for when an unpair command is received. */
+    @Nullable
+    private volatile UnpairCallback unpairCallback;
     /** Executor owned by this manager for dispatching material/feedback callbacks. */
     private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
 
@@ -118,6 +154,8 @@ public class HeartbeatManager implements TcpMessageListener {
     private final AtomicBoolean running = new AtomicBoolean(false);
     /** Whether this manager has been permanently destroyed. */
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    /** Whether pairing has completed (heartbeats deferred until true). */
+    private final AtomicBoolean paired = new AtomicBoolean(false);
     /** Counter for heartbeats sent. */
     private final AtomicLong heartbeatCount = new AtomicLong(0);
     /** Timestamp of the last heartbeat sent. */
@@ -186,6 +224,24 @@ public class HeartbeatManager implements TcpMessageListener {
      */
     public void setFeedbackCallback(@Nullable FeedbackAvailableCallback callback) {
         this.feedbackCallback = callback;
+    }
+
+    /**
+     * Sets the callback for lock/unlock state changes.
+     *
+     * @param callback The callback to invoke when LOCK_SCREEN or UNLOCK_SCREEN is received.
+     */
+    public void setLockStateCallback(@Nullable LockStateCallback callback) {
+        this.lockStateCallback = callback;
+    }
+
+    /**
+     * Sets the callback for unpair events.
+     *
+     * @param callback The callback to invoke when UNPAIR is received.
+     */
+    public void setUnpairCallback(@Nullable UnpairCallback callback) {
+        this.unpairCallback = callback;
     }
 
     /**
@@ -271,6 +327,18 @@ public class HeartbeatManager implements TcpMessageListener {
         if (destroyed.get()) {
             return;
         }
+        if (message instanceof PairingAckMessage) {
+            Log.d(TAG, "Received PAIRING_ACK — marking as paired");
+            paired.set(true);
+            // Start heartbeat now that pairing handshake completed
+            synchronized (lock) {
+                if (config.isEnabled() && !running.get()
+                        && socketManager.isConnected()) {
+                    startInternal();
+                }
+            }
+            return;
+        }
         if (message instanceof DistributeMaterialMessage) {
             Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
             MaterialAvailableCallback callback = this.materialCallback;
@@ -283,6 +351,24 @@ public class HeartbeatManager implements TcpMessageListener {
             if (callback != null) {
                 callbackExecutor.execute(callback::onFeedbackAvailable);
             }
+        } else if (message instanceof LockScreenMessage) {
+            Log.d(TAG, "Received LOCK_SCREEN signal");
+            LockStateCallback callback = this.lockStateCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onLocked);
+            }
+        } else if (message instanceof UnlockScreenMessage) {
+            Log.d(TAG, "Received UNLOCK_SCREEN signal");
+            LockStateCallback callback = this.lockStateCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onUnlocked);
+            }
+        } else if (message instanceof UnpairMessage) {
+            Log.d(TAG, "Received UNPAIR signal");
+            UnpairCallback callback = this.unpairCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onUnpaired);
+            }
         }
     }
 
@@ -290,13 +376,12 @@ public class HeartbeatManager implements TcpMessageListener {
     public void onConnectionStateChanged(@NonNull ConnectionState state) {
         synchronized (lock) {
             if (state == ConnectionState.CONNECTED) {
-                Log.d(TAG, "Connected - starting heartbeat");
-                if (config.isEnabled() && !running.get()) {
-                    startInternal();
-                }
+                Log.d(TAG, "Connected - deferring heartbeat until paired");
+                // Do NOT start heartbeat here; wait for PAIRING_ACK
             } else if (state == ConnectionState.DISCONNECTED) {
                 Log.d(TAG, "Disconnected - stopping heartbeat");
                 stopInternal();
+                paired.set(false);
             }
         }
     }
@@ -352,10 +437,6 @@ public class HeartbeatManager implements TcpMessageListener {
 
         try {
             String jsonPayload = buildStatusJson();
-            if (jsonPayload == null) {
-                Log.d(TAG, "No device status available, skipping heartbeat");
-                return;
-            }
             StatusUpdateMessage message = new StatusUpdateMessage(jsonPayload);
             socketManager.send(message);
 
@@ -367,6 +448,8 @@ public class HeartbeatManager implements TcpMessageListener {
             Log.e(TAG, "Failed to send heartbeat: " + e.getMessage());
         } catch (TcpProtocolException e) {
             Log.e(TAG, "Protocol error sending heartbeat: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Heartbeat misconfigured: " + e.getMessage());
         }
     }
 
@@ -376,13 +459,17 @@ public class HeartbeatManager implements TcpMessageListener {
      * @return JSON string containing device status, or null if no
      *         valid status is available from the provider.
      */
-    @Nullable
+    @NonNull
     private String buildStatusJson() {
         DeviceStatusProvider provider = this.statusProvider;
-        DeviceStatus status = provider != null ? provider.getDeviceStatus() : null;
-
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "DeviceStatusProvider is null — heartbeat started before provider was set");
+        }
+        DeviceStatus status = provider.getDeviceStatus();
         if (status == null) {
-            return null;
+            throw new IllegalStateException(
+                    "DeviceStatusProvider returned null — device status not initialised");
         }
 
         Map<String, Object> json = new LinkedHashMap<>();

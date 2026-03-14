@@ -3,6 +3,8 @@ package com.manuscripta.student.data.repository;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Transformations;
 
 import com.manuscripta.student.data.local.FeedbackDao;
 import com.manuscripta.student.data.model.FeedbackEntity;
@@ -39,6 +41,8 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
     private final ApiService apiService;
     /** Handles retry logic for sending ACK messages over TCP. */
     private final AckRetrySender ackRetrySender;
+    /** Observable LiveData for feedback changes, backed by Room. */
+    private final LiveData<List<Feedback>> feedbackLiveData;
 
     /**
      * Creates a new FeedbackRepositoryImpl.
@@ -63,6 +67,16 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
         this.feedbackDao = feedbackDao;
         this.apiService = apiService;
         this.ackRetrySender = ackRetrySender;
+        this.feedbackLiveData = Transformations.map(
+                feedbackDao.getAllLive(),
+                entities -> {
+                    List<Feedback> result = new ArrayList<>();
+                    for (FeedbackEntity entity : entities) {
+                        result.add(FeedbackMapper.toDomain(entity));
+                    }
+                    return result;
+                }
+        );
     }
 
     @Override
@@ -117,6 +131,12 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
         for (String feedbackId : feedbackIds) {
             ackRetrySender.send(new FeedbackAckMessage(deviceId, feedbackId), TAG);
         }
+    }
+
+    @Override
+    @NonNull
+    public LiveData<List<Feedback>> getFeedbackLiveData() {
+        return feedbackLiveData;
     }
 
     @Override

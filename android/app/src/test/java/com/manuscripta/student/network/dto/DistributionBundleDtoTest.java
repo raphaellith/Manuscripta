@@ -21,6 +21,7 @@ public class DistributionBundleDtoTest {
 
     private static final String TEST_MATERIAL_ID = "mat-11111111-1111-1111-1111-111111111111";
     private static final String TEST_QUESTION_ID = "q-22222222-2222-2222-2222-222222222222";
+    private static final long TEST_TIMESTAMP = 1700000000000L;
 
     @Test
     public void testDefaultConstructor() {
@@ -332,7 +333,7 @@ public class DistributionBundleDtoTest {
     @Test
     public void testMaterialWithMultipleQuestions() {
         MaterialDto material = new MaterialDto(TEST_MATERIAL_ID, "WORKSHEET",
-                "Worksheet", "Content", null, null, System.currentTimeMillis());
+                "Worksheet", "Content", null, null, TEST_TIMESTAMP);
 
         QuestionDto q1 = new QuestionDto("q-1", TEST_MATERIAL_ID, "MULTIPLE_CHOICE",
                 "Question 1?", Arrays.asList("A", "B", "C"), "B", 5);
@@ -393,7 +394,7 @@ public class DistributionBundleDtoTest {
                 "Math Worksheet",
                 "Solve these problems",
                 null, null,
-                System.currentTimeMillis()
+                TEST_TIMESTAMP
         );
         MaterialDto material2 = new MaterialDto(
                 "mat-33333333-3333-3333-3333-333333333333",
@@ -401,7 +402,7 @@ public class DistributionBundleDtoTest {
                 "Reading Material",
                 "Read this passage",
                 null, null,
-                System.currentTimeMillis()
+                TEST_TIMESTAMP
         );
         return Arrays.asList(material1, material2);
     }

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ui.quiz.QuizFragment">
+
+    <!-- Back to Lesson button -->
+    <Button
+        android:id="@+id/buttonBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_item"
+        android:background="@drawable/bg_button"
+        android:gravity="center"
+        android:minHeight="@dimen/button_back_min_height"
+        android:paddingLeft="24dp"
+        android:paddingTop="16dp"
+        android:paddingRight="24dp"
+        android:paddingBottom="16dp"
+        android:text="@string/back_to_lesson"
+        android:textAllCaps="false"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <!-- Question card -->
+    <FrameLayout
+        android:id="@+id/cardQuestion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_item"
+        style="@style/Widget.Manuscripta.Card">
+
+        <TextView
+            android:id="@+id/textQuestion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_heading"
+            android:textStyle="bold"
+            android:textColor="@color/eink_black"
+            tools:text="Who won the Battle of Hastings?" />
+
+    </FrameLayout>
+
+    <!-- Options list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerOptions"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false" />
+
+    <!-- Submit button -->
+    <Button
+        android:id="@+id/buttonSubmit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_item"
+        android:background="@drawable/bg_button"
+        android:gravity="center"
+        android:minHeight="@dimen/button_min_height"
+        android:paddingLeft="24dp"
+        android:paddingTop="16dp"
+        android:paddingRight="24dp"
+        android:paddingBottom="16dp"
+        android:text="@string/submit_answer"
+        android:textAllCaps="false"
+        android:textColor="@color/eink_black"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <!-- Loading indicator -->
+    <TextView
+        android:id="@+id/textLoading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/loading"
+        android:visibility="gone"
+        android:textColor="@color/eink_dark"
+        android:textSize="@dimen/text_body" />
+
+</LinearLayout>

@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,8 +140,9 @@ public class PairingManagerTest {
 
         pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
 
+        // sendPairingRequest dispatches on a background thread; use timeout to wait
         ArgumentCaptor<TcpMessage> captor = ArgumentCaptor.forClass(TcpMessage.class);
-        verify(mockSocketManager).send(captor.capture());
+        verify(mockSocketManager, timeout(2000)).send(captor.capture());
         assertTrue(captor.getValue() instanceof PairingRequestMessage);
         assertEquals(TEST_DEVICE_ID, ((PairingRequestMessage) captor.getValue()).getDeviceId());
     }
@@ -271,6 +273,12 @@ public class PairingManagerTest {
         pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
         pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
 
+        // sendPairingRequest dispatches on a background thread; wait for failure state
+        long deadline = System.currentTimeMillis() + 2000;
+        while (pairingManager.getCurrentState() != PairingState.PAIRING_FAILED
+                && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
         assertEquals(PairingState.PAIRING_FAILED, pairingManager.getCurrentState());
     }
 
@@ -298,5 +306,84 @@ public class PairingManagerTest {
     @Test
     public void getDeviceId_returnsNullInitially() {
         assertNull(pairingManager.getDeviceId());
+    }
+
+    // ========== Server info tests ==========
+
+    @Test
+    public void getServerHost_returnsNullInitially() {
+        assertNull(pairingManager.getServerHost());
+    }
+
+    @Test
+    public void getServerHost_returnsHostAfterPairingStarted() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+
+        assertEquals(TEST_HOST, pairingManager.getServerHost());
+    }
+
+    @Test
+    public void getServerHttpPort_returnsZeroInitially() {
+        assertEquals(0, pairingManager.getServerHttpPort());
+    }
+
+    @Test
+    public void setServerHttpPort_storesPort() {
+        pairingManager.setServerHttpPort(5911);
+
+        assertEquals(5911, pairingManager.getServerHttpPort());
+    }
+
+    // ========== resetPairingData tests ==========
+
+    @Test
+    public void resetPairingData_clearsDeviceId() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
+        pairingManager.onMessageReceived(new PairingAckMessage());
+
+        pairingManager.resetPairingData();
+
+        assertNull(pairingManager.getDeviceId());
+    }
+
+    @Test
+    public void resetPairingData_clearsServerHost() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+
+        pairingManager.resetPairingData();
+
+        assertNull(pairingManager.getServerHost());
+    }
+
+    @Test
+    public void resetPairingData_clearsServerHttpPort() {
+        pairingManager.setServerHttpPort(5911);
+
+        pairingManager.resetPairingData();
+
+        assertEquals(0, pairingManager.getServerHttpPort());
+    }
+
+    @Test
+    public void resetPairingData_setsStateToNotPaired() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        pairingManager.onConnectionStateChanged(ConnectionState.CONNECTED);
+        pairingManager.onMessageReceived(new PairingAckMessage());
+        assertEquals(PairingState.PAIRED, pairingManager.getCurrentState());
+
+        pairingManager.resetPairingData();
+
+        assertEquals(PairingState.NOT_PAIRED, pairingManager.getCurrentState());
+    }
+
+    @Test
+    public void resetPairingData_stopsPairingInProgress() {
+        pairingManager.startPairing(TEST_DEVICE_ID, TEST_HOST, TEST_PORT);
+        assertTrue(pairingManager.isPairingInProgress());
+
+        pairingManager.resetPairingData();
+
+        assertFalse(pairingManager.isPairingInProgress());
     }
 }

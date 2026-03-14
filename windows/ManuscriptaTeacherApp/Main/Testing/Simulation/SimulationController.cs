@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Main.Data;
 using Main.Models.Enums;
 using Main.Models.Entities;
 using Main.Services;
@@ -25,6 +27,7 @@ public class SimulationController : ControllerBase
     private readonly IDeviceStatusCacheService _statusCache;
     private readonly ITcpPairingService _tcpPairingService;
     private readonly IDistributionService _distributionService;
+    private readonly IUdpBroadcastService _udpBroadcastService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<SimulationController> _logger;
 
@@ -34,6 +37,7 @@ public class SimulationController : ControllerBase
         IDeviceStatusCacheService statusCache,
         ITcpPairingService tcpPairingService,
         IDistributionService distributionService,
+        IUdpBroadcastService udpBroadcastService,
         IServiceProvider serviceProvider,
         ILogger<SimulationController> logger)
     {
@@ -42,6 +46,7 @@ public class SimulationController : ControllerBase
         _statusCache = statusCache;
         _tcpPairingService = tcpPairingService;
         _distributionService = distributionService;
+        _udpBroadcastService = udpBroadcastService;
         _serviceProvider = serviceProvider;
         _logger = logger;
     }
@@ -136,6 +141,137 @@ public class SimulationController : ControllerBase
     }
 
     // ========================================================================
+    // Manual Testing Endpoints
+    // ========================================================================
+
+    /// <summary>
+    /// Starts the UDP broadcast and TCP listener services for device pairing.
+    /// In production these are triggered via SignalR from the frontend.
+    /// </summary>
+    [HttpPost("start-pairing")]
+    public async Task<IActionResult> StartPairing()
+    {
+        _logger.LogInformation("Starting pairing services via simulation endpoint");
+        await _udpBroadcastService.StartBroadcastingAsync(CancellationToken.None);
+        await _tcpPairingService.StartListeningAsync(CancellationToken.None);
+        return Ok(new { Message = "UDP broadcast and TCP listener started" });
+    }
+
+    /// <summary>
+    /// Creates test materials in the database, assigns them to a device, and triggers distribution.
+    /// This is a convenience endpoint for manual on-device testing.
+    /// </summary>
+    [HttpPost("seed-and-distribute")]
+    public async Task<IActionResult> SeedAndDistribute([FromBody] StageDeviceRequest request)
+    {
+        _logger.LogInformation("Seeding and distributing materials to device {DeviceId}", request.DeviceId);
+
+        var collectionId = Guid.NewGuid();
+        var unitId = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
+        var material1Id = Guid.NewGuid();
+        var material2Id = Guid.NewGuid();
+        var material3Id = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var pollQuestionId = Guid.NewGuid();
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<Main.Data.MainDbContext>();
+
+            // Create hierarchy chain: UnitCollection → Unit → Lesson
+            context.UnitCollections.Add(new Main.Models.Entities.UnitCollectionEntity(collectionId, "Manual Test Collection"));
+            context.Units.Add(new Main.Models.Entities.UnitEntity(unitId, collectionId, "Manual Test Unit"));
+            context.Lessons.Add(new Main.Models.Entities.LessonEntity(lessonId, unitId, "Manual Test Lesson", "Lesson for manual testing"));
+
+            // Material 1: READING type (markdown content)
+            context.Materials.Add(new MaterialDataEntity
+            {
+                Id = material1Id,
+                LessonId = lessonId,
+                MaterialType = MaterialType.READING,
+                Title = "The History of Writing",
+                Content = "# The History of Writing\n\nWriting is one of humanity's greatest inventions. "
+                    + "It began around 3400 BCE in Mesopotamia with cuneiform script.\n\n"
+                    + "## Key Milestones\n\n"
+                    + "- **3400 BCE**: Cuneiform in Sumer\n"
+                    + "- **3200 BCE**: Hieroglyphics in Egypt\n"
+                    + "- **1200 BCE**: Phoenician alphabet\n"
+                    + "- **800 BCE**: Greek alphabet\n\n"
+                    + "The development of writing allowed civilisations to record laws, stories, and knowledge.",
+                Timestamp = DateTime.UtcNow
+            });
+
+            // Material 2: READING type with a question
+            context.Materials.Add(new MaterialDataEntity
+            {
+                Id = material2Id,
+                LessonId = lessonId,
+                MaterialType = MaterialType.READING,
+                Title = "Ancient Civilisations Quiz",
+                Content = "# Ancient Civilisations\n\nRead the following passage and answer the question below.\n\n"
+                    + "The ancient Egyptians built the pyramids as tombs for their pharaohs. "
+                    + "The Great Pyramid of Giza was built around 2560 BCE.\n\n"
+                    + $"!!! question id=\"{questionId}\"",
+                Timestamp = DateTime.UtcNow
+            });
+
+            // Question linked to material 2
+            context.Questions.Add(new QuestionDataEntity
+            {
+                Id = questionId,
+                MaterialId = material2Id,
+                QuestionType = QuestionType.WRITTEN_ANSWER,
+                QuestionText = "Why did the ancient Egyptians build the pyramids?",
+                CorrectAnswer = "As tombs for their pharaohs",
+                MaxScore = 2
+            });
+
+            // Material 3: POLL type (triggers QuizFragment on Android)
+            context.Materials.Add(new MaterialDataEntity
+            {
+                Id = material3Id,
+                LessonId = lessonId,
+                MaterialType = MaterialType.POLL,
+                Title = "Quick Knowledge Poll",
+                Content = "# Quick Poll\n\nAnswer the question below.\n\n"
+                    + $"!!! question id=\"{pollQuestionId}\"",
+                Timestamp = DateTime.UtcNow
+            });
+
+            // MULTIPLE_CHOICE question linked to POLL material 3
+            context.Questions.Add(new QuestionDataEntity
+            {
+                Id = pollQuestionId,
+                MaterialId = material3Id,
+                QuestionType = QuestionType.MULTIPLE_CHOICE,
+                QuestionText = "Which civilisation invented cuneiform script?",
+                CorrectAnswer = "Sumerians",
+                Options = new List<string> { "Egyptians", "Greeks", "Sumerians", "Romans" },
+                MaxScore = 1
+            });
+
+            await context.SaveChangesAsync();
+        }
+
+        // Assign all three materials to the device (in-memory)
+        await _distributionService.AssignMaterialsToDeviceAsync(
+            request.DeviceId, new[] { material1Id, material2Id, material3Id });
+
+        // Trigger TCP DISTRIBUTE_MATERIAL signal
+        await _tcpPairingService.SendDistributeMaterialAsync(
+            request.DeviceId.ToString(), new[] { material1Id, material2Id, material3Id });
+
+        return Ok(new
+        {
+            Message = "Materials seeded and distribution triggered",
+            MaterialIds = new[] { material1Id, material2Id, material3Id },
+            QuestionId = questionId,
+            PollQuestionId = pollQuestionId
+        });
+    }
+
+    // ========================================================================
     // Integration Test Endpoints — IntegrationTestSpecification §5(2)
     // ========================================================================
 
@@ -224,6 +360,82 @@ public class SimulationController : ControllerBase
         return Ok(new { Message = $"Command {request.Command} sent" });
     }
 
+    // ========================================================================
+    // Convenience Endpoints for Manual Testing
+    // ========================================================================
+
+    /// <summary>
+    /// Lists all paired devices with their IDs and names.
+    /// </summary>
+    [HttpGet("devices")]
+    public async Task<IActionResult> ListDevices()
+    {
+        var devices = await _registryService.GetAllAsync();
+        var result = devices.Select(d => new { d.DeviceId, d.Name });
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Creates a dummy response and feedback for the given device, then triggers
+    /// RETURN_FEEDBACK so the Android client fetches and displays it immediately.
+    /// </summary>
+    [HttpPost("create-and-send-feedback")]
+    public async Task<IActionResult> CreateAndSendFeedback(
+        [FromBody] CreateAndSendFeedbackRequest request)
+    {
+        _logger.LogInformation(
+            "Creating and sending feedback to device {DeviceId}", request.DeviceId);
+
+        using var scope = _serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
+        var responseRepo = scope.ServiceProvider
+            .GetRequiredService<IResponseRepository>();
+        var feedbackRepo = scope.ServiceProvider
+            .GetRequiredService<IFeedbackRepository>();
+
+        // Find any question in the DB to attach the response to
+        var question = await context.Questions.FirstOrDefaultAsync();
+        if (question == null)
+        {
+            return BadRequest(new
+            {
+                error = "No questions exist. Run seed-and-distribute first."
+            });
+        }
+
+        // Create a response for this device
+        var responseId = Guid.NewGuid();
+        var response = new Main.Models.Entities.Responses.WrittenAnswerResponseEntity(
+            responseId,
+            question.Id,
+            request.DeviceId,
+            "Sim response for feedback test",
+            DateTime.UtcNow,
+            true);
+        await responseRepo.AddAsync(response);
+
+        // Create feedback in READY state
+        var feedbackId = Guid.NewGuid();
+        var text = string.IsNullOrWhiteSpace(request.Text) ? "Good work!" : request.Text;
+        var marks = request.Marks ?? 5;
+        var feedback = new FeedbackEntity(feedbackId, responseId, text, marks);
+        feedback.Status = FeedbackStatus.READY;
+        await feedbackRepo.AddAsync(feedback);
+
+        // Trigger RETURN_FEEDBACK TCP signal
+        await _tcpPairingService.SendReturnFeedbackAsync(
+            request.DeviceId.ToString(), new[] { feedbackId });
+
+        return Ok(new
+        {
+            Message = "Feedback created and delivery triggered",
+            FeedbackId = feedbackId,
+            ResponseId = responseId,
+            Text = text,
+            Marks = marks
+        });
+    }
+
     /// <summary>
     /// Stores an attachment file in the attachment directory.
     /// Per IntegrationTestSpecification §5(2)(d).
@@ -303,4 +515,16 @@ public class SendCommandRequest
     /// One of: LOCK_SCREEN, UNLOCK_SCREEN, REFRESH_CONFIG, UNPAIR.
     /// </summary>
     public string Command { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request DTO for create-and-send-feedback endpoint.
+/// </summary>
+public class CreateAndSendFeedbackRequest
+{
+    public Guid DeviceId { get; set; }
+    /// <summary>Optional feedback text. Defaults to "Good work!".</summary>
+    public string? Text { get; set; }
+    /// <summary>Optional marks. Defaults to 5.</summary>
+    public int? Marks { get; set; }
 }
