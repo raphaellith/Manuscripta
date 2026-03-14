@@ -162,6 +162,34 @@ public class TcpPairingService : ITcpPairingService, IDisposable
         _isListening = false;
     }
 
+    /// <inheritdoc />
+    public void DisconnectAllClients()
+    {
+        _logger.LogInformation("Disconnecting all TCP clients...");
+
+        // Close all connected TcpClients
+        foreach (var kvp in _connectedClients)
+        {
+            try
+            {
+                kvp.Value.Close();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error closing TCP client {ClientId}", kvp.Key);
+            }
+        }
+
+        _connectedClients.Clear();
+        _deviceConnections.Clear();
+        _lastHeartbeat.Clear();
+        _pendingMaterials.Clear();
+        _pendingFeedbacks.Clear();
+        _pendingLockUnlock.Clear();
+
+        _logger.LogInformation("All TCP clients disconnected and tracking state cleared.");
+    }
+
     private async Task AcceptClientsAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)

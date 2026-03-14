@@ -1,32 +1,29 @@
 package com.manuscripta.student.data.model;
 
 /**
- * Enum representing different types of questions that can appear in quizzes.
+ * Enum representing different types of questions that can appear in worksheets and polls.
  * Used to determine how questions should be displayed and answered.
  */
 public enum QuestionType {
     /**
-     * Multiple choice question with several options (A, B, C, D)
+     * Multiple choice question with several options (A, B, C, D).
      */
     MULTIPLE_CHOICE,
 
     /**
-     * True or False question
+     * Written answer.
+     * Student types their response.
      */
-    TRUE_FALSE,
-
-    /**
-     * Short answer - student types their response
-     */
-    SHORT_ANSWER;
+    WRITTEN_ANSWER;
 
     /**
      * Check if this question type requires predefined options.
+     * Written answer does not require options as student types their response.
      *
-     * @return true if options are needed (multiple choice, true/false)
+     * @return true if options are needed (multiple choice)
      */
     public boolean requiresOptions() {
-        return this == MULTIPLE_CHOICE || this == TRUE_FALSE;
+        return this == MULTIPLE_CHOICE;
     }
 
     /**
@@ -37,8 +34,7 @@ public enum QuestionType {
     public String getDisplayName() {
         return switch (this) {
             case MULTIPLE_CHOICE -> "Multiple Choice";
-            case TRUE_FALSE      -> "True/False";
-            case SHORT_ANSWER    -> "Short Answer";
+            case WRITTEN_ANSWER  -> "Written Answer";
         };
     }
 }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Text sizes -->
+    <dimen name="text_heading">36sp</dimen>
+    <dimen name="text_body">30sp</dimen>
+    <dimen name="text_body_small">20sp</dimen>
+    <dimen name="text_tab">24sp</dimen>
+    <dimen name="text_feedback_icon">160sp</dimen>
+    <dimen name="text_feedback_title">48sp</dimen>
+
+    <!-- Borders -->
+    <dimen name="border_width">4dp</dimen>
+    <dimen name="border_width_tab">4dp</dimen>
+
+    <!-- Padding -->
+    <dimen name="padding_card">24dp</dimen>
+    <dimen name="padding_screen">40dp</dimen>
+    <dimen name="padding_content">32dp</dimen>
+
+    <!-- Button sizes -->
+    <dimen name="button_min_height">60dp</dimen>
+    <dimen name="button_back_min_height">55dp</dimen>
+    <dimen name="audio_button_size">80dp</dimen>
+    <dimen name="mascot_size">96dp</dimen>
+
+    <!-- Spacing -->
+    <dimen name="spacing_section">40dp</dimen>
+    <dimen name="spacing_item">20dp</dimen>
+    <dimen name="spacing_options">20dp</dimen>
+</resources>

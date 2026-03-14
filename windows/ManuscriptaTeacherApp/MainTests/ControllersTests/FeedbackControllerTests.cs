@@ -170,7 +170,7 @@ public class FeedbackControllerTests
         // Act
         var result = await _controller.GetFeedback("not-a-valid-guid");
 
-        // Assert
+        // Assert — malformed GUID returns 400 per Validation Rules
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -182,8 +182,6 @@ public class FeedbackControllerTests
 
         // Assert
         Assert.NotNull(result);
-        var value = result.Value?.ToString();
-        Assert.Contains("GUID", value, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

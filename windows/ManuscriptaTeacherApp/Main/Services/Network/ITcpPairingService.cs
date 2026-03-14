@@ -20,6 +20,12 @@ public interface ITcpPairingService
     void StopListening();
 
     /// <summary>
+    /// Forcefully disconnects all connected TCP clients and clears connection tracking state.
+    /// Used by integration tests to ensure a clean TCP state between test runs.
+    /// </summary>
+    void DisconnectAllClients();
+
+    /// <summary>
     /// Gets whether the service is currently listening.
     /// </summary>
     bool IsListening { get; }

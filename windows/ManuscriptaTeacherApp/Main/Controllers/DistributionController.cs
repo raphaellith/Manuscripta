@@ -45,7 +45,7 @@ public class DistributionController : ControllerBase
         if (!Guid.TryParse(deviceId, out var parsedDeviceId))
         {
             _logger.LogWarning("Distribution request with invalid device ID format: {DeviceId}", deviceId);
-            return BadRequest(new { error = "DeviceId must be a valid GUID" });
+            return BadRequest(new { error = "Invalid device ID format" });
         }
 
         _logger.LogInformation("Distribution request for device {DeviceId}", parsedDeviceId);

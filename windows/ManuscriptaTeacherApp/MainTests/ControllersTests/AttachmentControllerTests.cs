@@ -78,7 +78,7 @@ public class AttachmentControllerTests
         // Act
         var result = await _controller.GetAttachment("not-a-guid");
 
-        // Assert
+        // Assert — malformed GUID returns 400 per Validation Rules
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequest.StatusCode);
     }

@@ -90,6 +90,8 @@ Bytes 7-8:   0x18 0x17                    (5912 little-endian)
 
 **General Validation:** All HTTP endpoints accepting request bodies must validate incoming DTOs against `Validation Rules.md`. If validation fails, the endpoint shall return HTTP Status **400 (Bad Request)** per `Validation Rules.md` §1A(3).
 
+**Path Parameter Validation:** All HTTP endpoints accepting UUID path parameters (e.g., `{deviceId}`, `{id}`) must validate that the parameter is a well-formed UUID. If the parameter is not a valid UUID, the endpoint shall return HTTP Status **400 (Bad Request)**. If the UUID is valid but the referenced resource does not exist, the endpoint shall return **404 (Not Found)**.
+
 ### 2.1. Lesson Materials (Server -> Client)
 
 **DELETED** - These endpoints have been removed due to security concerns (unauthorized access to all materials). Use the alternative API: `GET /distribution/{deviceId}` as specified in `API Contract.md` §2.5 for device-specific material distribution.
@@ -101,6 +103,8 @@ Downloads specific attachment files referenced within material content.
 -   **Response:** `200 OK`
     The response body will contain the raw binary data of the requested file (e.g., image, PDF).
     -   **Content-Type:** `image/png`, `application/pdf`, etc. (determined by the server based on file type).
+-   **Error Response:** `400 Bad Request` (if `id` is not a valid UUID)
+-   **Error Response:** `404 Not Found` (if no attachment exists for the given UUID)
 
 **Note:** The `content` field within materials (returned by `GET /distribution/{deviceId}`) may contain references to these attachments using URLs like `/attachments/{id}`. The Android client is expected to fetch these referenced attachments separately.
 
@@ -123,6 +127,8 @@ Tablet configuration is an object associated with lesson materials but handled s
       "MascotSelection": "MASCOT1"
     }
     ```
+-   **Error Response:** `400 Bad Request` (if `deviceId` is not a valid UUID)
+-   **Error Response:** `404 Not Found` (if the device is unknown or not an Android device)
 
 ### 2.3. Student Responses (Client -> Server)
 
@@ -192,6 +198,7 @@ Retrieves materials and questions assigned to a specific device.
       ]
     }
     ```
+-   **Error Response:** `400 Bad Request` (if `deviceId` is not a valid UUID)
 -   **Error Response:** `404 Not Found` (if no materials available for deviceId)
 
 
@@ -208,6 +215,7 @@ Retrieves all available feedback for responses previously submitted by a specifi
       ],
     }
     ```
+-   **Error Response:** `400 Bad Request` (if `deviceId` is not a valid UUID)
 -   **Error Response:** `404 Not Found` (if no feedback available for deviceId)
 
 
@@ -325,7 +333,7 @@ This section documents explicit and implicit acknowledgement mechanisms for TCP 
 | `PAIRING_REQUEST (0x20)` | `PAIRING_ACK (0x21)` | Client → Server, Server → Client |
 | `HAND_RAISED (0x11)` | `HAND_ACK (0x06)` | Client → Server, Server → Client |
 | `DISTRIBUTE_MATERIAL (0x05)` | `DISTRIBUTE_ACK (0x12)` | Server → Client, Client → Server |
-| `RETURN_FEEDBACK (0x06)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
+| `RETURN_FEEDBACK (0x07)` | `FEEDBACK_ACK (0x13)` | Server → Client, Client → Server |
 
 #### Implicit ACKs
 

@@ -51,6 +51,8 @@ This is specified in `API Contract.md` §2.5.
 
 (2) The Android client may evaluate the correctness of the response if it is straightforward to do so (such as for multiple choice, true / false or simple blank filling questions), and place the result of evaluation in the `IsCorrect` field.
 
+(3) Each Android client must not, at any point, submit two responses related to the same question.
+
 ## Section 4A: Raising Hand
 
 (1) The Android client should signal that its user is asked for help by sending a TCP `HAND_RAISED` (0x11) message.

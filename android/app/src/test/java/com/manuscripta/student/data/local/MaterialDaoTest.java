@@ -45,8 +45,8 @@ public class MaterialDaoTest {
 
         defaultMaterial = new MaterialEntity(
                 "mat-1",
-                MaterialType.QUIZ,
-                "Test Quiz",
+                MaterialType.WORKSHEET,
+                "Test Worksheet",
                 "Sample Content",
                 "{\"author\": \"Teacher\"}",
                 "[\"term1\", \"term2\"]",
@@ -68,8 +68,8 @@ public class MaterialDaoTest {
         MaterialEntity retrieved = materialDao.getById("mat-1");
         assertNotNull(retrieved);
         assertEquals("mat-1", retrieved.getId());
-        assertEquals("Test Quiz", retrieved.getTitle());
-        assertEquals(MaterialType.QUIZ, retrieved.getType());
+        assertEquals("Test Worksheet", retrieved.getTitle());
+        assertEquals(MaterialType.WORKSHEET, retrieved.getType());
         assertEquals("Sample Content", retrieved.getContent());
     }
 
@@ -78,9 +78,9 @@ public class MaterialDaoTest {
         materialDao.insert(defaultMaterial);
         
         MaterialEntity material2 = new MaterialEntity(
-                "mat-2", 
-                MaterialType.LESSON, 
-                "Lesson 1",
+                "mat-2",
+                MaterialType.READING,
+                "Reading 1",
                 "Lesson Content",
                 "{}",
                 "[]",
@@ -94,24 +94,24 @@ public class MaterialDaoTest {
 
     @Test
     public void testGetByType() {
-        MaterialEntity quiz = new MaterialEntity(
+        MaterialEntity worksheet = new MaterialEntity(
                 "mat-1", 
-                MaterialType.QUIZ, 
-                "Quiz",
+                MaterialType.WORKSHEET, 
+                "Worksheet",
                 "Content", "{}", "[]", 0
         );
-        MaterialEntity lesson = new MaterialEntity(
-                "mat-2", 
-                MaterialType.LESSON, 
-                "Lesson",
+        MaterialEntity reading = new MaterialEntity(
+                "mat-2",
+                MaterialType.READING,
+                "Reading",
                 "Content", "{}", "[]", 0
         );
-        materialDao.insert(quiz);
-        materialDao.insert(lesson);
+        materialDao.insert(worksheet);
+        materialDao.insert(reading);
 
-        List<MaterialEntity> quizzes = materialDao.getByType(MaterialType.QUIZ);
-        assertEquals(1, quizzes.size());
-        assertEquals("Quiz", quizzes.get(0).getTitle());
+        List<MaterialEntity> worksheets = materialDao.getByType(MaterialType.WORKSHEET);
+        assertEquals(1, worksheets.size());
+        assertEquals("Worksheet", worksheets.get(0).getTitle());
     }
 
     @Test
@@ -152,7 +152,7 @@ public class MaterialDaoTest {
     @Test
     public void testDeleteAll() {
         materialDao.insert(defaultMaterial);
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.WORKSHEET, "Worksheet 2", "C", "{}", "[]", 0));
         materialDao.deleteAll();
 
         assertEquals(0, materialDao.getCount());
@@ -165,13 +165,13 @@ public class MaterialDaoTest {
         materialDao.insert(defaultMaterial);
         assertEquals(1, materialDao.getCount());
 
-        materialDao.insert(new MaterialEntity("mat-2", MaterialType.QUIZ, "Quiz 2", "C", "{}", "[]", 0));
+        materialDao.insert(new MaterialEntity("mat-2", MaterialType.WORKSHEET, "Worksheet 2", "C", "{}", "[]", 0));
         assertEquals(2, materialDao.getCount());
     }
 
     @Test
     public void testInsertAll() {
-        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.LESSON, "Lesson 1", "C", "{}", "[]", 0);
+        MaterialEntity mat2 = new MaterialEntity("mat-2", MaterialType.READING, "Reading 1", "C", "{}", "[]", 0);
         materialDao.insertAll(Arrays.asList(defaultMaterial, mat2));
 
         assertEquals(2, materialDao.getCount());
@@ -183,7 +183,7 @@ public class MaterialDaoTest {
 
         MaterialEntity updated = new MaterialEntity(
                 "mat-1", 
-                MaterialType.QUIZ, 
+                MaterialType.WORKSHEET, 
                 "Replaced",
                 "New Content",
                 "{}",

@@ -6,6 +6,14 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
+      "applicationUrl": "http://0.0.0.0:5910;http://0.0.0.0:5911"
+    },
+    "Integration": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Integration"
+      },
       "applicationUrl": "http://localhost:5910;http://localhost:5911"
     }
   }

@@ -11,8 +11,7 @@ public class MaterialTypeTest {
 
     @Test
     public void testGetDisplayName() {
-        assertEquals("Reading Material", MaterialType.LESSON.getDisplayName());
-        assertEquals("Quiz", MaterialType.QUIZ.getDisplayName());
+        assertEquals("Reading", MaterialType.READING.getDisplayName());
         assertEquals("Worksheet", MaterialType.WORKSHEET.getDisplayName());
         assertEquals("Poll", MaterialType.POLL.getDisplayName());
     }

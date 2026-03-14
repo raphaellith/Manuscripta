@@ -12,6 +12,9 @@ using Main.Models;
 using Main.Services;
 using Main.Services.Network;
 using Main.Services.GenAI;
+#if DEBUG
+using Main.Testing;
+#endif
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +45,16 @@ if (string.IsNullOrWhiteSpace(configuredConnectionString)
 else
 {
     dbConnectionString = configuredConnectionString;
+}
+
+// Integration mode: use an ephemeral temp-file database per Integration Test Contract §12.3
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    var tempDb = Path.Combine(
+        Path.GetTempPath(),
+        $"manuscripta_integration_{Guid.NewGuid()}.db");
+    dbConnectionString = $"Data Source={tempDb}";
+    Console.WriteLine($"Integration mode: using ephemeral database at {tempDb}");
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
@@ -176,16 +189,27 @@ builder.Services.AddSingleton<ITcpPairingService, TcpPairingService>();
 builder.Services.AddSingleton<IDeviceStatusCacheService, DeviceStatusCacheService>();
 builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
-// NOTE: UDP broadcasting and TCP pairing are NOT auto-started.
+// NOTE: UDP broadcasting and TCP pairing are NOT auto-started in production.
 // They should be triggered on-demand via UI when the teacher starts a pairing/classroom session.
 // The services are registered as singletons above and can be injected where needed.
 // builder.Services.AddHostedService<UdpBroadcastHostedService>();
 // builder.Services.AddHostedService<TcpPairingHostedService>();
+
 builder.Services.AddHostedService<HubEventBridge>();
 
 // Register embedding initialization as background service per GenAISpec.md §3A(8)
 // This runs asynchronously after startup to avoid blocking the health endpoint
 builder.Services.AddHostedService<EmbeddingInitializationHostedService>();
+// Integration mode: auto-start network services and seed test data
+// Per Integration Test Contract §12.1
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    builder.Services.AddHostedService<UdpBroadcastHostedService>();
+    builder.Services.AddHostedService<TcpPairingHostedService>();
+#if DEBUG
+    builder.Services.AddHostedService<IntegrationSeedService>();
+#endif
+}
 
 // NOTE: Controllers are enabled so that REST controllers can be added later.
 builder.Services.AddControllers();
@@ -233,6 +257,15 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Integration mode: explicitly bind Kestrel to the configured HTTP port so that
+// RequireHost routing filters actually receive traffic (--no-launch-profile skips
+// launchSettings URLs, causing Kestrel to default to port 5000).
+if (builder.Environment.IsEnvironment("Integration"))
+{
+    var integSettings = builder.Configuration.GetSection("NetworkSettings").Get<NetworkSettings>() ?? new NetworkSettings();
+    builder.WebHost.UseUrls($"http://*:{integSettings.HttpPort}");
+}
+
 var app = builder.Build();
 
 // Eagerly resolve singleton so its DevicePaired event subscription is active
@@ -248,8 +281,9 @@ if (app.Environment.IsDevelopment())
 // Apply CORS policy
 app.UseCors("AllowElectron");
 
-// Skip database initialization and orphan cleanup in Testing environment (for integration tests)
-if (!app.Environment.IsEnvironment("Testing"))
+// Skip database initialization and orphan cleanup in Testing/Integration environments
+// (Testing uses in-memory test server; Integration seeds via IntegrationSeedService)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment("Integration"))
 {
     using (var scope = app.Services.CreateScope())
     {
@@ -407,6 +441,24 @@ if (app.Environment.IsEnvironment("Testing"))
     app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
     app.MapControllers();
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+}
+else if (app.Environment.IsEnvironment("Integration"))
+{
+    // Integration environment: same port routing as production per IntegrationTestSpecification §2(5).
+    var httpApiHostInteg = $"*:{networkSettings.HttpPort}";
+    app.MapGet("/", () => Results.Ok("Manuscripta Main API (net10.0) is running"));
+    app.MapControllers().RequireHost(httpApiHostInteg);
+    app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
+
+    // Per IntegrationTestSpecification §2(6): readiness log
+    app.Logger.LogInformation("Integration test services ready");
+
+    // Per IntegrationTestSpecification §2(2): auto-start UDP broadcasting and TCP listener.
+    // Mirrors TeacherPortalHub.PairDevices() which calls these services directly.
+    var udpService = app.Services.GetRequiredService<IUdpBroadcastService>();
+    var tcpService = app.Services.GetRequiredService<ITcpPairingService>();
+    await udpService.StartBroadcastingAsync(CancellationToken.None);
+    await tcpService.StartListeningAsync(CancellationToken.None);
 }
 else
 {
