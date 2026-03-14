@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <!-- Header: task name + close button -->
+    <LinearLayout
+        android:id="@+id/headerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/taskNameText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/eink_black"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold"
+            tools:text="Simplify" />
+
+        <Button
+            android:id="@+id/closeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:text="@string/ai_close"
+            android:textColor="@color/eink_black"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Divider below header -->
+    <View
+        android:id="@+id/headerDivider"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/border_width"
+        android:background="@color/eink_black" />
+
+    <!-- Scrollable response body -->
+    <ScrollView
+        android:id="@+id/bodyScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:paddingTop="16dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Loading state -->
+            <TextView
+                android:id="@+id/loadingText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:paddingTop="48dp"
+                android:paddingBottom="48dp"
+                android:text="@string/ai_thinking"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <!-- Response content -->
+            <TextView
+                android:id="@+id/responseText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.4"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body"
+                android:visibility="gone"
+                tools:text="Sample response content"
+                tools:visibility="visible" />
+
+        </FrameLayout>
+
+    </ScrollView>
+
+</merge>

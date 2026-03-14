@@ -1,0 +1,120 @@
+using Main.Models.Events;
+
+namespace Main.Services.Network;
+
+/// <summary>
+/// Service interface for TCP pairing operations.
+/// Implements Pairing Process.md §2(3)(a) - TCP PAIRING_ACK response.
+/// </summary>
+public interface ITcpPairingService
+{
+    /// <summary>
+    /// Starts listening for TCP pairing requests.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cancel the listening.</param>
+    Task StartListeningAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stops listening for TCP connections.
+    /// </summary>
+    void StopListening();
+
+    /// <summary>
+    /// Forcefully disconnects all connected TCP clients and clears connection tracking state.
+    /// Used by integration tests to ensure a clean TCP state between test runs.
+    /// </summary>
+    void DisconnectAllClients();
+
+    /// <summary>
+    /// Gets whether the service is currently listening.
+    /// </summary>
+    bool IsListening { get; }
+
+    /// <summary>
+    /// Sends a LOCK_SCREEN (0x01) command to the specified device.
+    /// </summary>
+    Task SendLockScreenAsync(string deviceId);
+
+    /// <summary>
+    /// Sends an UNLOCK_SCREEN (0x02) command to the specified device.
+    /// </summary>
+    Task SendUnlockScreenAsync(string deviceId);
+
+    /// <summary>
+    /// Sends a DISTRIBUTE_MATERIAL (0x05) command to the specified device and waits for DISTRIBUTE_ACK.
+    /// Per Session Interaction.md §3(6): waits for ACKs for all materials within 30 seconds.
+    /// </summary>
+    /// <param name="deviceId">Target device ID.</param>
+    /// <param name="materialIds">Material entity IDs being sent to this device.</param>
+    Task SendDistributeMaterialAsync(string deviceId, IEnumerable<Guid> materialIds);
+
+    /// <summary>
+    /// Sends an UNPAIR (0x04) command to the specified device and removes it from registry.
+    /// Per Pairing Process.md §3(2).
+    /// </summary>
+    Task SendUnpairAsync(string deviceId);
+
+    /// <summary>
+    /// Sends a REFRESH_CONFIG (0x03) command to the specified device.
+    /// Per Session Interaction.md §6(3).
+    /// </summary>
+    Task SendRefreshConfigAsync(string deviceId);
+
+    /// <summary>
+    /// Sends a RETURN_FEEDBACK (0x07) command to the specified device and waits for FEEDBACK_ACK.
+    /// Per Session Interaction.md §7 and API Contract.md §3.4.
+    /// </summary>
+    /// <param name="deviceId">Target device ID.</param>
+    /// <param name="feedbackIds">Feedback entity IDs being sent to this device.</param>
+    Task SendReturnFeedbackAsync(string deviceId, IEnumerable<Guid> feedbackIds);
+
+    /// <summary>
+    /// Event raised when a device status update (STATUS_UPDATE 0x10) is received.
+    /// Per Session Interaction.md §2.
+    /// </summary>
+    event EventHandler<Models.Events.DeviceStatusEventArgs>? StatusUpdateReceived;
+
+    /// <summary>
+    /// Event raised when a device is deemed disconnected due to heartbeat silence.
+    /// Per Session Interaction.md §2(3): after 10 seconds of no heartbeat.
+    /// </summary>
+    event EventHandler<Models.Events.DeviceStatusEventArgs>? DeviceDisconnected;
+
+    /// <summary>
+    /// Event raised when a control command times out waiting for implicit acknowledgement.
+    /// Per Session Interaction.md §6(2) and §6(3).
+    /// </summary>
+    event EventHandler<Models.Events.ControlTimeoutEventArgs>? ControlCommandTimedOut;
+
+    /// <summary>
+    /// Event raised when a HAND_RAISED (0x11) message is received.
+    /// Per Session Interaction.md §4A(1).
+    /// </summary>
+    event EventHandler<Guid>? HandRaisedReceived;
+
+    /// <summary>
+    /// Event raised when a distribution command times out for a specific material (no DISTRIBUTE_ACK).
+    /// Per NetworkingAPISpec §2(1)(d)(ii): includes both deviceId and materialId.
+    /// </summary>
+    event EventHandler<EntityDeliveryFailedEventArgs>? DistributionTimedOut;
+
+    /// <summary>
+    /// Event raised when a feedback delivery command times out for a specific feedback (no FEEDBACK_ACK).
+    /// Per NetworkingAPISpec §2(1)(d)(v): includes both deviceId and feedbackId.
+    /// </summary>
+    event EventHandler<EntityDeliveryFailedEventArgs>? FeedbackDeliveryTimedOut;
+
+    /// <summary>
+    /// Event raised when FEEDBACK_ACK is received for a single feedback entity.
+    /// Per API Contract.md §3.6.2: one ACK per feedback entity.
+    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED.
+    /// </summary>
+    event EventHandler<FeedbackAckEventArgs>? FeedbackAckReceived;
+
+    /// <summary>
+    /// Event raised when DISTRIBUTE_ACK is received for a single material entity.
+    /// Per API Contract.md §3.6.2: one ACK per material entity.
+    /// </summary>
+    event EventHandler<DistributionAckEventArgs>? DistributionAckReceived;
+}
+

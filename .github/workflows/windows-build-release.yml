@@ -1,0 +1,114 @@
+# Windows Build Release Workflow
+# Implements BuildAndDeploymentSpec.md Section 6
+#
+# Triggers:
+#   - Manual dispatch (workflow_dispatch) with optional version override
+#   - GitHub release events (published only)
+#
+# Outputs:
+#   - windows-installer artifact (90-day retention)
+#   - Attaches installer to release (if release-triggered)
+
+name: Windows Build Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version override (leave empty to use package.json version)'
+        required: false
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: windows/ManuscriptaTeacherApp/UI/package-lock.json
+
+      - name: Clean previous build artifacts
+        run: |
+          if (Test-Path "windows/ManuscriptaTeacherApp/UI/resources/backend") {
+            Remove-Item -Recurse -Force "windows/ManuscriptaTeacherApp/UI/resources/backend"
+          }
+          if (Test-Path "windows/ManuscriptaTeacherApp/UI/out") {
+            Remove-Item -Recurse -Force "windows/ManuscriptaTeacherApp/UI/out"
+          }
+        shell: pwsh
+
+      - name: Restore backend dependencies
+        run: dotnet restore windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj
+
+      - name: Publish backend (self-contained)
+        run: |
+          dotnet publish windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output windows/ManuscriptaTeacherApp/UI/resources/backend
+        shell: pwsh
+
+      - name: Verify backend output
+        run: |
+          if (-not (Test-Path "windows/ManuscriptaTeacherApp/UI/resources/backend/Manuscripta.Main.exe")) {
+            Write-Error "Backend executable not found!"
+            exit 1
+          }
+          Write-Host "Backend published successfully"
+          Get-ChildItem "windows/ManuscriptaTeacherApp/UI/resources/backend" | Select-Object Name, Length
+        shell: pwsh
+
+      - name: Install frontend dependencies
+        working-directory: windows/ManuscriptaTeacherApp/UI
+        run: npm ci
+
+      - name: Override version (if provided)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
+        working-directory: windows/ManuscriptaTeacherApp/UI
+        run: npm version ${{ inputs.version }} --no-git-tag-version
+        shell: pwsh
+
+      - name: Build frontend (Electron Forge)
+        working-directory: windows/ManuscriptaTeacherApp/UI
+        run: npm run make
+
+      - name: List build outputs
+        run: |
+          Write-Host "=== Squirrel Installer ==="
+          Get-ChildItem "windows/ManuscriptaTeacherApp/UI/out/make/squirrel.windows/x64" -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: windows/ManuscriptaTeacherApp/UI/out/make/squirrel.windows/x64/*.exe
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Attach installer to release
+        if: ${{ github.event_name == 'release' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: windows/ManuscriptaTeacherApp/UI/out/make/squirrel.windows/x64/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

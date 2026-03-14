@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <!-- Header: title + close button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/feedbackTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/teacher_feedback_title"
+            android:textColor="@color/eink_black"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/feedbackCloseButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:text="@string/ai_close"
+            android:textColor="@color/eink_black"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/border_width"
+        android:background="@color/eink_black" />
+
+    <!-- Scrollable feedback body -->
+    <ScrollView
+        android:id="@+id/feedbackScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:paddingTop="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Marks line (hidden if no marks) -->
+            <TextView
+                android:id="@+id/feedbackMarks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold"
+                android:paddingBottom="8dp"
+                android:visibility="gone"
+                tools:text="Marks: 8"
+                tools:visibility="visible" />
+
+            <!-- Teacher comment text -->
+            <TextView
+                android:id="@+id/feedbackText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.4"
+                android:textColor="@color/eink_black"
+                android:textSize="@dimen/text_body"
+                android:visibility="gone"
+                tools:text="Good work, but check question 3 again."
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</merge>

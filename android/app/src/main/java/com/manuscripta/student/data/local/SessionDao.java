@@ -91,6 +91,16 @@ public interface SessionDao {
     void endSession(String id, long endTime, SessionStatus status);
 
     /**
+     * Activate a session by setting its start time and transitioning to ACTIVE status.
+     * Used for RECEIVED → ACTIVE transition when student first interacts with material.
+     *
+     * @param id The UUID of the session
+     * @param startTime The start timestamp
+     */
+    @Query("UPDATE sessions SET startTime = :startTime, status = 'ACTIVE' WHERE id = :id")
+    void activateSession(String id, long startTime);
+
+    /**
      * Insert a new session into the database.
      * If a session with the same ID already exists, it will be replaced.
      *

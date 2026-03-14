@@ -12,6 +12,7 @@ This directory contains configuration files for JaCoCo code coverage tool.
   - Dagger modules and components
   - Application class (ManuscriptaApplication)
   - Database (ManuscriptaDatabase)
+  - TcpSocketManager (I/O component with real networking logic)
   - Test files
 
 ## Running Coverage Reports

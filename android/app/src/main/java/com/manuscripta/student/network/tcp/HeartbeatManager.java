@@ -1,0 +1,498 @@
+package com.manuscripta.student.network.tcp;
+
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+
+import com.google.gson.Gson;
+import com.manuscripta.student.domain.model.DeviceStatus;
+import com.manuscripta.student.network.tcp.message.DistributeMaterialMessage;
+import com.manuscripta.student.network.tcp.message.LockScreenMessage;
+import com.manuscripta.student.network.tcp.message.PairingAckMessage;
+import com.manuscripta.student.network.tcp.message.ReturnFeedbackMessage;
+import com.manuscripta.student.network.tcp.message.StatusUpdateMessage;
+import com.manuscripta.student.network.tcp.message.UnlockScreenMessage;
+import com.manuscripta.student.network.tcp.message.UnpairMessage;
+
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Manages the TCP heartbeat mechanism for maintaining connection and triggering fetches.
+ *
+ * <p>The heartbeat pattern works as follows:
+ * <ol>
+ *   <li>Android sends periodic {@code STATUS_UPDATE} (0x10) messages via TCP</li>
+ *   <li>Server checks if new materials or feedback are available for this device</li>
+ *   <li>If materials are available, server responds with {@code DISTRIBUTE_MATERIAL} (0x05)</li>
+ *   <li>If feedback is available, server responds with {@code RETURN_FEEDBACK} (0x07)</li>
+ *   <li>HeartbeatManager notifies the appropriate callback to trigger HTTP fetch</li>
+ * </ol>
+ *
+ * <p>Usage:
+ * <pre>{@code
+ * HeartbeatManager heartbeat = new HeartbeatManager(socketManager);
+ * heartbeat.setDeviceStatusProvider(() -> getCurrentDeviceStatus());
+ * heartbeat.setMaterialCallback(() -> fetchMaterialsViaHttp());
+ * heartbeat.setFeedbackCallback(() -> fetchFeedbackViaHttp());
+ * heartbeat.start();
+ * }</pre>
+ *
+ * @see HeartbeatConfig
+ * @see TcpSocketManager
+ */
+public class HeartbeatManager implements TcpMessageListener {
+
+    /** Tag for logging. */
+    private static final String TAG = "HeartbeatManager";
+
+    /**
+     * Provides the current device status for heartbeat messages.
+     */
+    public interface DeviceStatusProvider {
+        /**
+         * Returns the current device status.
+         *
+         * @return The current DeviceStatus, or null if unavailable.
+         */
+        @Nullable
+        DeviceStatus getDeviceStatus();
+    }
+
+    /**
+     * Callback for when the server signals that new materials are available.
+     */
+    public interface MaterialAvailableCallback {
+        /**
+         * Called when the server sends a DISTRIBUTE_MATERIAL message.
+         * The implementation should trigger an HTTP fetch to download materials.
+         */
+        void onMaterialsAvailable();
+    }
+
+    /**
+     * Callback for when the server signals that feedback is available.
+     */
+    public interface FeedbackAvailableCallback {
+        /**
+         * Called when the server sends a RETURN_FEEDBACK message.
+         * The implementation should trigger an HTTP fetch to download feedback.
+         */
+        void onFeedbackAvailable();
+    }
+
+    /**
+     * Callback for when the server sends a lock or unlock command.
+     */
+    public interface LockStateCallback {
+        /**
+         * Called when the server sends a LOCK_SCREEN message.
+         */
+        void onLocked();
+
+        /**
+         * Called when the server sends an UNLOCK_SCREEN message.
+         */
+        void onUnlocked();
+    }
+
+    /**
+     * Callback for when the server sends an UNPAIR command.
+     */
+    public interface UnpairCallback {
+        /**
+         * Called when the server sends an UNPAIR message.
+         * The implementation should clear all local data and navigate to pairing.
+         */
+        void onUnpaired();
+    }
+
+    /** The TCP socket manager for sending messages. */
+    private final TcpSocketManager socketManager;
+    /** Gson instance for JSON serialization. */
+    private final Gson gson;
+    /** Lock object for synchronising heartbeat operations. */
+    private final Object lock = new Object();
+
+    /** The executor service for scheduling heartbeats. */
+    @Nullable
+    private ScheduledExecutorService scheduler;
+    /** The future representing the scheduled heartbeat task. */
+    @Nullable
+    private ScheduledFuture<?> heartbeatFuture;
+    /** Provider for current device status. */
+    @Nullable
+    private volatile DeviceStatusProvider statusProvider;
+    /** Callback for when materials are available. */
+    @Nullable
+    private volatile MaterialAvailableCallback materialCallback;
+    /** Callback for when feedback is available. */
+    @Nullable
+    private volatile FeedbackAvailableCallback feedbackCallback;
+    /** Callback for when lock state changes. */
+    @Nullable
+    private volatile LockStateCallback lockStateCallback;
+    /** Callback for when an unpair command is received. */
+    @Nullable
+    private volatile UnpairCallback unpairCallback;
+    /** Executor owned by this manager for dispatching material/feedback callbacks. */
+    private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor();
+
+    /** The heartbeat configuration. */
+    private volatile HeartbeatConfig config;
+    /** Whether the heartbeat is currently running. */
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    /** Whether this manager has been permanently destroyed. */
+    private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    /** Whether pairing has completed (heartbeats deferred until true). */
+    private final AtomicBoolean paired = new AtomicBoolean(false);
+    /** Counter for heartbeats sent. */
+    private final AtomicLong heartbeatCount = new AtomicLong(0);
+    /** Timestamp of the last heartbeat sent. */
+    private final AtomicLong lastHeartbeatTimestamp = new AtomicLong(0);
+
+    /**
+     * Creates a new HeartbeatManager with the specified socket manager.
+     *
+     * @param socketManager The TCP socket manager for sending messages.
+     */
+    public HeartbeatManager(@NonNull TcpSocketManager socketManager) {
+        this(socketManager, new HeartbeatConfig(), new Gson());
+    }
+
+    /**
+     * Creates a new HeartbeatManager with the specified socket manager and config.
+     *
+     * @param socketManager The TCP socket manager for sending messages.
+     * @param config        The heartbeat configuration.
+     */
+    public HeartbeatManager(@NonNull TcpSocketManager socketManager,
+                            @NonNull HeartbeatConfig config) {
+        this(socketManager, config, new Gson());
+    }
+
+    /**
+     * Creates a new HeartbeatManager with all dependencies.
+     *
+     * @param socketManager The TCP socket manager for sending messages.
+     * @param config        The heartbeat configuration.
+     * @param gson          The Gson instance for JSON serialization.
+     */
+    @VisibleForTesting
+    HeartbeatManager(@NonNull TcpSocketManager socketManager,
+                     @NonNull HeartbeatConfig config,
+                     @NonNull Gson gson) {
+        this.socketManager = socketManager;
+        this.config = config;
+        this.gson = gson;
+        // Register as listener to receive DISTRIBUTE_MATERIAL messages
+        this.socketManager.addMessageListener(this);
+    }
+
+    /**
+     * Sets the provider for device status information.
+     *
+     * @param provider The status provider.
+     */
+    public void setDeviceStatusProvider(@Nullable DeviceStatusProvider provider) {
+        this.statusProvider = provider;
+    }
+
+    /**
+     * Sets the callback for when materials are available.
+     *
+     * @param callback The callback to invoke when DISTRIBUTE_MATERIAL is received.
+     */
+    public void setMaterialCallback(@Nullable MaterialAvailableCallback callback) {
+        this.materialCallback = callback;
+    }
+
+    /**
+     * Sets the callback for when feedback is available.
+     *
+     * @param callback The callback to invoke when RETURN_FEEDBACK is received.
+     */
+    public void setFeedbackCallback(@Nullable FeedbackAvailableCallback callback) {
+        this.feedbackCallback = callback;
+    }
+
+    /**
+     * Sets the callback for lock/unlock state changes.
+     *
+     * @param callback The callback to invoke when LOCK_SCREEN or UNLOCK_SCREEN is received.
+     */
+    public void setLockStateCallback(@Nullable LockStateCallback callback) {
+        this.lockStateCallback = callback;
+    }
+
+    /**
+     * Sets the callback for unpair events.
+     *
+     * @param callback The callback to invoke when UNPAIR is received.
+     */
+    public void setUnpairCallback(@Nullable UnpairCallback callback) {
+        this.unpairCallback = callback;
+    }
+
+    /**
+     * Updates the heartbeat configuration.
+     *
+     * @param config The new configuration.
+     */
+    public void setConfig(@NonNull HeartbeatConfig config) {
+        synchronized (lock) {
+            this.config = config;
+            // If running, restart with new config
+            if (running.get()) {
+                stopInternal();
+                startInternal();
+            }
+        }
+    }
+
+    /**
+     * Returns the current heartbeat configuration.
+     *
+     * @return The current config.
+     */
+    @NonNull
+    public HeartbeatConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * Starts the heartbeat mechanism.
+     * Heartbeats will be sent at the configured interval while connected.
+     */
+    public void start() {
+        synchronized (lock) {
+            if (!config.isEnabled()) {
+                Log.d(TAG, "Heartbeat disabled in config, not starting");
+                return;
+            }
+            startInternal();
+        }
+    }
+
+    /**
+     * Stops the heartbeat mechanism.
+     */
+    public void stop() {
+        synchronized (lock) {
+            stopInternal();
+        }
+    }
+
+    /**
+     * Returns whether the heartbeat is currently running.
+     *
+     * @return true if heartbeat is actively sending.
+     */
+    public boolean isRunning() {
+        return running.get();
+    }
+
+    /**
+     * Returns the number of heartbeats sent since start.
+     *
+     * @return The heartbeat count.
+     */
+    public long getHeartbeatCount() {
+        return heartbeatCount.get();
+    }
+
+    /**
+     * Returns the timestamp of the last sent heartbeat.
+     *
+     * @return Unix timestamp in milliseconds, or 0 if never sent.
+     */
+    public long getLastHeartbeatTimestamp() {
+        return lastHeartbeatTimestamp.get();
+    }
+
+    // ========== TcpMessageListener implementation ==========
+
+    @Override
+    public void onMessageReceived(@NonNull TcpMessage message) {
+        if (destroyed.get()) {
+            return;
+        }
+        if (message instanceof PairingAckMessage) {
+            Log.d(TAG, "Received PAIRING_ACK — marking as paired");
+            paired.set(true);
+            // Start heartbeat now that pairing handshake completed
+            synchronized (lock) {
+                if (config.isEnabled() && !running.get()
+                        && socketManager.isConnected()) {
+                    startInternal();
+                }
+            }
+            return;
+        }
+        if (message instanceof DistributeMaterialMessage) {
+            Log.d(TAG, "Received DISTRIBUTE_MATERIAL signal");
+            MaterialAvailableCallback callback = this.materialCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onMaterialsAvailable);
+            }
+        } else if (message instanceof ReturnFeedbackMessage) {
+            Log.d(TAG, "Received RETURN_FEEDBACK signal");
+            FeedbackAvailableCallback callback = this.feedbackCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onFeedbackAvailable);
+            }
+        } else if (message instanceof LockScreenMessage) {
+            Log.d(TAG, "Received LOCK_SCREEN signal");
+            LockStateCallback callback = this.lockStateCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onLocked);
+            }
+        } else if (message instanceof UnlockScreenMessage) {
+            Log.d(TAG, "Received UNLOCK_SCREEN signal");
+            LockStateCallback callback = this.lockStateCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onUnlocked);
+            }
+        } else if (message instanceof UnpairMessage) {
+            Log.d(TAG, "Received UNPAIR signal");
+            UnpairCallback callback = this.unpairCallback;
+            if (callback != null) {
+                callbackExecutor.execute(callback::onUnpaired);
+            }
+        }
+    }
+
+    @Override
+    public void onConnectionStateChanged(@NonNull ConnectionState state) {
+        synchronized (lock) {
+            if (state == ConnectionState.CONNECTED) {
+                Log.d(TAG, "Connected - deferring heartbeat until paired");
+                // Do NOT start heartbeat here; wait for PAIRING_ACK
+            } else if (state == ConnectionState.DISCONNECTED) {
+                Log.d(TAG, "Disconnected - stopping heartbeat");
+                stopInternal();
+                paired.set(false);
+            }
+        }
+    }
+
+    @Override
+    public void onError(@NonNull TcpProtocolException error) {
+        Log.w(TAG, "TCP error: " + error.getMessage());
+    }
+
+    // ========== Internal methods ==========
+
+    private void startInternal() {
+        if (running.get()) {
+            return;
+        }
+
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        heartbeatFuture = scheduler.scheduleAtFixedRate(
+                this::sendHeartbeat,
+                0, // Send first heartbeat immediately
+                config.getIntervalMs(),
+                TimeUnit.MILLISECONDS
+        );
+        running.set(true);
+        Log.i(TAG, "Heartbeat started with interval " + config.getIntervalMs() + "ms");
+    }
+
+    private void stopInternal() {
+        running.set(false);
+
+        if (heartbeatFuture != null) {
+            heartbeatFuture.cancel(false);
+            heartbeatFuture = null;
+        }
+
+        if (scheduler != null) {
+            scheduler.shutdown();
+            scheduler = null;
+        }
+
+        Log.i(TAG, "Heartbeat stopped. Total heartbeats sent: " + heartbeatCount.get());
+    }
+
+    /**
+     * Sends a single heartbeat message.
+     */
+    @VisibleForTesting
+    void sendHeartbeat() {
+        if (!socketManager.isConnected()) {
+            Log.d(TAG, "Not connected, skipping heartbeat");
+            return;
+        }
+
+        try {
+            String jsonPayload = buildStatusJson();
+            StatusUpdateMessage message = new StatusUpdateMessage(jsonPayload);
+            socketManager.send(message);
+
+            heartbeatCount.incrementAndGet();
+            lastHeartbeatTimestamp.set(System.currentTimeMillis());
+            Log.d(TAG, "Heartbeat #" + heartbeatCount.get() + " sent");
+
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to send heartbeat: " + e.getMessage());
+        } catch (TcpProtocolException e) {
+            Log.e(TAG, "Protocol error sending heartbeat: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Heartbeat misconfigured: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Builds the JSON payload for the STATUS_UPDATE message.
+     *
+     * @return JSON string containing device status, or null if no
+     *         valid status is available from the provider.
+     */
+    @NonNull
+    private String buildStatusJson() {
+        DeviceStatusProvider provider = this.statusProvider;
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "DeviceStatusProvider is null — heartbeat started before provider was set");
+        }
+        DeviceStatus status = provider.getDeviceStatus();
+        if (status == null) {
+            throw new IllegalStateException(
+                    "DeviceStatusProvider returned null — device status not initialised");
+        }
+
+        Map<String, Object> json = new LinkedHashMap<>();
+        json.put("DeviceId", status.getDeviceId());
+        json.put("Status", status.getStatus().name());
+        json.put("BatteryLevel", status.getBatteryLevel());
+        if (status.getCurrentMaterialId() != null) {
+            json.put("CurrentMaterialId", status.getCurrentMaterialId());
+        }
+        if (status.getStudentView() != null) {
+            json.put("StudentView", status.getStudentView());
+        }
+        json.put("Timestamp", status.getLastUpdated() / 1000); // Convert to seconds
+        return gson.toJson(json);
+    }
+
+    /**
+     * Cleans up resources. Should be called when the manager is no longer needed.
+     */
+    public void destroy() {
+        destroyed.set(true);
+        socketManager.removeMessageListener(this);
+        stop();
+        callbackExecutor.shutdown();
+    }
+}

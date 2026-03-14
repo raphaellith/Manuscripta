@@ -1,0 +1,297 @@
+/**
+ * Markdown Conversion Utilities.
+ * Converts between HTML (TipTap internal format) and Markdown (Material Encoding Spec).
+ * Per Material Encoding Specification.
+ */
+
+import TurndownService from 'turndown';
+import { marked } from 'marked';
+import { stripLinksFromHtml } from '../../utils/htmlSanitizer';
+
+// Configure Turndown for HTML → Markdown conversion
+const turndownService = new TurndownService({
+    headingStyle: 'atx',
+    codeBlockStyle: 'fenced',
+    bulletListMarker: '-',
+    emDelimiter: '*',
+    strongDelimiter: '**',
+    // Handle empty/blank elements - needed for question refs, pdf embeds, and LaTeX
+    // Turndown skips all custom addRule rules for blank nodes (no text content)
+    // and goes straight to blankReplacement, so all blank-element conversions must live here.
+    blankReplacement: function (content, node) {
+        const element = node as HTMLElement;
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-question-id')) {
+            const questionId = element.getAttribute('data-question-id');
+            return `\n!!! question id="${questionId}"\n`;
+        }
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-pdf-id')) {
+            const pdfId = element.getAttribute('data-pdf-id');
+            return `\n!!! pdf id="${pdfId}"\n`;
+        }
+        // Inline LaTeX per Material Encoding Spec §2(7)(a)
+        // collapseWhitespace strips spaces from text nodes adjacent to empty inline elements,
+        // so we compensate by adding spaces when adjacent text nodes have lost their spacing.
+        if (element.nodeName === 'SPAN' && element.hasAttribute('data-latex')) {
+            const latex = element.getAttribute('data-latex') || '';
+            const prev = element.previousSibling;
+            const next = element.nextSibling;
+            // Add leading space if previous text doesn't already end with whitespace
+            const needsLeadingSpace = prev && prev.nodeType === 3 && !/\s$/.test(prev.nodeValue || '');
+            // Add trailing space if next text doesn't already start with whitespace
+            const needsTrailingSpace = next && next.nodeType === 3 && !/^\s/.test(next.nodeValue || '');
+            return (needsLeadingSpace ? ' ' : '') + `$${latex}$` + (needsTrailingSpace ? ' ' : '');
+        }
+        // Block LaTeX per Material Encoding Spec §2(7)(b)
+        if (element.nodeName === 'DIV' && element.hasAttribute('data-block-latex')) {
+            const latex = element.getAttribute('data-block-latex') || '';
+            return `\n$$${latex}$$\n`;
+        }
+        // When a P/DIV is blank because it only contains empty LaTeX spans,
+        // Turndown considers the parent blank and never processes the children.
+        // Scan children and serialize any LaTeX nodes found.
+        if (element.nodeName === 'P' || element.nodeName === 'DIV') {
+            const children = element.childNodes;
+            let latexParts = '';
+            let hasLatex = false;
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i] as HTMLElement;
+                if (child.nodeType === 1) { // Element node
+                    if (child.nodeName === 'SPAN' && child.hasAttribute('data-latex')) {
+                        latexParts += `$${child.getAttribute('data-latex') || ''}$`;
+                        hasLatex = true;
+                    } else if (child.nodeName === 'DIV' && child.hasAttribute('data-block-latex')) {
+                        latexParts += `$$${child.getAttribute('data-block-latex') || ''}$$`;
+                        hasLatex = true;
+                    }
+                }
+            }
+            if (hasLatex) {
+                return '\n\n' + latexParts + '\n\n';
+            }
+        }
+        // Default behavior for other blank elements
+        return node.nodeName === 'DIV' || node.nodeName === 'P' ? '\n\n' : '';
+    }
+});
+
+// Custom rules for Material Encoding compliance
+
+// Handle tables
+turndownService.addRule('table', {
+    filter: 'table',
+    replacement: function (_content, node) {
+        const table = node as HTMLTableElement;
+        const rows: { cells: string[]; isHeader: boolean }[] = [];
+
+        table.querySelectorAll('tr').forEach((tr) => {
+            const cells: string[] = [];
+            tr.querySelectorAll('th, td').forEach((cell) => {
+                cells.push(cell.textContent?.trim() || '');
+            });
+            const hasHeaderCells = tr.querySelectorAll('th').length > 0;
+            rows.push({ cells, isHeader: hasHeaderCells });
+        });
+
+        if (rows.length === 0) return '';
+
+        const headerIndex = rows.findIndex(row => row.isHeader);
+        const headerRow = (headerIndex !== -1 ? rows[headerIndex] : rows[0]).cells;
+        const dataRows = rows
+            .filter((_, index) => index !== (headerIndex !== -1 ? headerIndex : 0))
+            .map(row => row.cells);
+
+        const separator = headerRow.map(() => '---');
+
+        let markdown = '| ' + headerRow.join(' | ') + ' |\n';
+        markdown += '| ' + separator.join(' | ') + ' |\n';
+        dataRows.forEach(row => {
+            markdown += '| ' + row.join(' | ') + ' |\n';
+        });
+
+        return '\n' + markdown + '\n';
+    }
+});
+
+// Handle horizontal rules
+turndownService.addRule('horizontalRule', {
+    filter: 'hr',
+    replacement: () => '\n---\n'
+});
+
+// Handle centered text (div, p, or heading with text-align: center)
+turndownService.addRule('centeredText', {
+    filter: function (node) {
+        const element = node as HTMLElement;
+        const nodeName = element.nodeName;
+        const textAlign = element.style.textAlign;
+
+        // Match DIV, P, or heading elements with center alignment
+        return (nodeName === 'DIV' || nodeName === 'P' ||
+            nodeName === 'H1' || nodeName === 'H2' || nodeName === 'H3' ||
+            nodeName === 'H4' || nodeName === 'H5' || nodeName === 'H6') &&
+            textAlign === 'center';
+    },
+    replacement: function (content) {
+        // Indent each line by 4 spaces as per Material Encoding Spec §4(3)
+        const lines = content.trim().split('\n');
+        const indentedContent = lines.map(line => '    ' + line).join('\n');
+        return '\n!!! center\n' + indentedContent + '\n';
+    }
+});
+
+// Handle images - convert to standard markdown image syntax
+// If the image has an attachment ID in the title attribute (set during insert),
+// use /attachments/{id} instead of the data URL for proper storage
+turndownService.addRule('images', {
+    filter: 'img',
+    replacement: function (_content, node) {
+        const img = node as HTMLImageElement;
+        // Sanitize alt text: remove newlines and excess whitespace (Word often adds these)
+        const alt = (img.alt || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const title = img.title || '';
+        let src = img.src || '';
+
+        // If title contains an attachment ID and src is a data URL, use attachment path
+        if (title && src.startsWith('data:')) {
+            src = `/attachments/${title}`;
+        }
+
+        return `![${alt}](${src})`;
+    }
+});
+
+// Handle question references - convert back to !!! question marker per Material Encoding Spec §4(4)
+turndownService.addRule('questionRef', {
+    filter: function (node) {
+        const element = node as HTMLElement;
+        const isDiv = element.nodeName === 'DIV';
+        const hasAttr = element.hasAttribute('data-question-id');
+        return isDiv && hasAttr;
+    },
+    replacement: function (_content, node) {
+        const questionId = (node as HTMLElement).getAttribute('data-question-id');
+        return `\n!!! question id="${questionId}"\n`;
+    }
+});
+
+// Handle PDF embeds - convert back to !!! pdf marker per Material Encoding Spec §4(2)
+turndownService.addRule('pdfEmbed', {
+    filter: function (node) {
+        const element = node as HTMLElement;
+        return element.nodeName === 'DIV' && element.hasAttribute('data-pdf-id');
+    },
+    replacement: function (_content, node) {
+        const pdfId = (node as HTMLElement).getAttribute('data-pdf-id');
+        return `\n!!! pdf id="${pdfId}"\n`;
+    }
+});
+
+
+// Prevent Turndown from stripping these custom divs (they have no visible content)
+turndownService.keep(function (node) {
+    const element = node as HTMLElement;
+    return element.nodeName === 'DIV' &&
+        (element.hasAttribute('data-question-id') || element.hasAttribute('data-pdf-id'));
+});
+
+/**
+ * Convert HTML to Markdown per Material Encoding Specification.
+ */
+export function htmlToMarkdown(html: string): string {
+    if (!html || html.trim() === '') return '';
+    return turndownService.turndown(stripLinksFromHtml(html));
+}
+
+/**
+ * Convert Markdown to HTML for TipTap editor.
+ */
+export function markdownToHtml(markdown: string): string {
+    if (!markdown || markdown.trim() === '') return '';
+
+    // Pre-process custom markers before marked conversion
+    let processed = markdown;
+
+    // Convert !!! center markers - mark content for post-processing
+    // Use a unique placeholder that won't be affected by marked
+    const centerBlocks: string[] = [];
+    processed = processed.replace(
+        /^!!! center\n((?:[ ]{4}.*\n?)*)/gm,
+        (_match, content) => {
+            const unindented = content.replace(/^[ ]{4}/gm, '');
+            centerBlocks.push(unindented.trim());
+            // Add newline after placeholder to ensure following content is at line start
+            return `<!--CENTER_BLOCK_${centerBlocks.length - 1}-->\n`;
+        }
+    );
+
+    // Convert !!! pdf markers to placeholder divs
+    processed = processed.replace(
+        /^!!! pdf id="([^"]+)"$/gm,
+        '<div class="pdf-embed" data-pdf-id="$1">[PDF: $1]</div>'
+    );
+
+    // Convert block LaTeX $$...$$ to TipTap block latex nodes per §2(7)(b)
+    // Must be processed before inline LaTeX to prevent $$ being matched by single $
+    processed = processed.replace(
+        /\$\$([\s\S]*?)\$\$/g,
+        (_match, latex) => `<div data-block-latex="${latex.trim()}"></div>`
+    );
+
+    // Convert inline LaTeX $...$ to TipTap inline latex nodes per §2(7)(a)
+    // Negative lookbehind/lookahead for $ to avoid matching $$ remnants
+    processed = processed.replace(
+        /(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g,
+        (_match, latex) => `<span data-latex="${latex.trim()}"></span>`
+    );
+
+    // Convert !!! question markers to placeholder divs
+    processed = processed.replace(
+        /^!!! question id="([^"]+)"$/gm,
+        '<div class="question-embed" data-question-id="$1">[Question: $1]</div>'
+    );
+
+    // Convert using marked
+    let html = marked.parse(processed, { async: false }) as string;
+
+    // Post-process center blocks: convert each placeholder to centered content
+    // Parse each center block through marked separately and apply text-align to block elements
+    html = html.replace(
+        /<!--CENTER_BLOCK_(\d+)-->/g,
+        (_match, index) => {
+            const blockContent = centerBlocks[parseInt(index)];
+            // Parse the center block content
+            let blockHtml = marked.parse(blockContent, { async: false }) as string;
+            // Apply text-align: center to all block-level elements (p, h1-h6)
+            blockHtml = blockHtml.replace(
+                /<(p|h[1-6])([^>]*)>/g,
+                (_tagMatch, tagName, attrs) => {
+                    let newAttrs = attrs || '';
+                    const styleMatch = newAttrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
+                    if (styleMatch) {
+                        const existingStyle = styleMatch[1];
+                        const updatedStyle = (existingStyle.trim().endsWith(';') || existingStyle.trim() === '')
+                            ? existingStyle + ' text-align: center;'
+                            : existingStyle + '; text-align: center;';
+                        newAttrs = newAttrs.replace(styleMatch[1], updatedStyle);
+                    } else {
+                        newAttrs = (newAttrs || '') + ' style="text-align: center;"';
+                    }
+                    return `<${tagName}${newAttrs}>`;
+                }
+            );
+            return blockHtml;
+        }
+    );
+
+    return stripLinksFromHtml(html);
+}
+
+/**
+ * Process custom markers in content for display.
+ * Used to render PDF embeds and question references.
+ */
+export function processCustomMarkers(content: string): string {
+    // This function can be extended to handle dynamic rendering
+    // of PDF embeds and question references
+    return content;
+}
