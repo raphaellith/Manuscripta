@@ -70,9 +70,14 @@ This document is applicable only to Android devices. Non-Android devices do not 
 
 ## Appendix 1 - Initialisation of base configuration
 
-"TextSize": 12,
-"FeedbackStyle": "IMMEDIATE",
-"TtsEnabled": true,
-"AiScaffoldingEnabled": true,
-"SummarisationEnabled": true,
-"MascotSelection": "MASCOT1"
+"TextSize": 6,
+"FeedbackStyle": "NEUTRAL",
+"TtsEnabled": false,
+"AiScaffoldingEnabled": false,
+"SummarisationEnabled": false,
+"MascotSelection": "NONE"
+
+
+## Appendix 2 - Temporary disapplication of configuration values
+
+For the purposes of this version of the application, the configuration values "TtsEnabled", "AiScaffoldingEnabled" and "SummarisationEnabled" shall not made visible or configurable from the frontend.

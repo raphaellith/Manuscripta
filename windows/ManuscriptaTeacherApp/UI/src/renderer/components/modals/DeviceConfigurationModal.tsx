@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import type { ConfigurationEntity, FeedbackStyle, MascotSelection } from '../../models';
 import { ModalOverlay } from './ModalOverlay';
+import { DEFAULT_BASE_CONFIGURATION } from '../../constants/configuration';
 
 interface DeviceConfigurationModalProps {
     deviceId: string;
@@ -105,6 +106,9 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 }}
                                 className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                             />
+                            <p className="text-sm text-gray-500 mt-1">
+                                Default: {DEFAULT_BASE_CONFIGURATION.textSize}
+                            </p>
                         </div>
 
                         {/* Feedback Style - Per Validation Rules §2G(1)(b) */}
@@ -124,67 +128,13 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 {config.feedbackStyle === 'IMMEDIATE'
                                     ? 'Correct/Incorrect feedback is shown immediately'
                                     : 'Only "Response Submitted" confirmation is shown'}
+                                {' '}(default: Neutral)
                             </p>
                         </div>
 
-                        {/* TTS Enabled - Per Validation Rules §2G(1)(c) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="ttsEnabled"
-                                checked={config.ttsEnabled}
-                                onChange={(e) => updateConfig('ttsEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="ttsEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    Text-to-Speech Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable audio narration for text content
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* AI Scaffolding Enabled - Per Validation Rules §2G(1)(d) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="aiScaffoldingEnabled"
-                                checked={config.aiScaffoldingEnabled}
-                                onChange={(e) => updateConfig('aiScaffoldingEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="aiScaffoldingEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    AI Scaffolding Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable AI-powered learning assistance
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Summarisation Enabled - Per Validation Rules §2G(1)(e) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="summarisationEnabled"
-                                checked={config.summarisationEnabled}
-                                onChange={(e) => updateConfig('summarisationEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="summarisationEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    Summarisation Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable content summarisation features
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Mascot Selection - Per Validation Rules §2G(1)(f) */}
+                        {/* Note: TtsEnabled, AiScaffoldingEnabled, SummarisationEnabled are not
+                             visible or configurable per ConfigurationManagementSpecification Appendix 2. */}
                         <div>
                             <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
                                 Mascot Selection
@@ -201,6 +151,9 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 <option value="MASCOT4">Mascot 4</option>
                                 <option value="MASCOT5">Mascot 5</option>
                             </select>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Default: None
+                            </p>
                         </div>
                     </div>
                 )}

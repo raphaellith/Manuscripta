@@ -11,6 +11,7 @@ import type { ConfigurationEntity, MascotSelection, PdfExportSettingsEntity, Lin
 import { EmailCredentialSettings } from "../settings/EmailCredentialSettings";
 import { RuntimeDependencySettings } from "../settings/RuntimeDependencySettings";
 import { SETTINGS_SECTION_MAX_WIDTH } from "../../constants/ui";
+import { DEFAULT_BASE_CONFIGURATION } from "../../constants/configuration";
 
 export const SettingsPage: React.FC = () => {
     const [baseConfig, setBaseConfig] = useState<ConfigurationEntity | null>(null);
@@ -165,7 +166,7 @@ export const SettingsPage: React.FC = () => {
                                             className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <p className="text-sm text-gray-500 mt-1">
-                                            Default text size for reading materials on student devices
+                                            Default text size for reading materials on student devices (default: {DEFAULT_BASE_CONFIGURATION.textSize})
                                         </p>
                                     </div>
 
@@ -183,60 +184,14 @@ export const SettingsPage: React.FC = () => {
                                             <option value="IMMEDIATE">Immediate</option>
                                             <option value="NEUTRAL">Neutral</option>
                                         </select>
-                                    </div>
-
-                                    {/* TTS Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseTtsEnabled"
-                                            checked={baseConfig.ttsEnabled}
-                                            onChange={(e) => updateConfig("ttsEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseTtsEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                Text-to-Speech Enabled
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* AI Scaffolding Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseAiScaffoldingEnabled"
-                                            checked={baseConfig.aiScaffoldingEnabled}
-                                            onChange={(e) => updateConfig("aiScaffoldingEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseAiScaffoldingEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                AI Scaffolding Enabled
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Summarisation Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseSummarisationEnabled"
-                                            checked={baseConfig.summarisationEnabled}
-                                            onChange={(e) => updateConfig("summarisationEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseSummarisationEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                Summarisation Enabled
-                                            </label>
-                                        </div>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Controls how question feedback is presented to students (default: {DEFAULT_BASE_CONFIGURATION.feedbackStyle === 'NEUTRAL' ? 'Neutral' : 'Immediate'})
+                                        </p>
                                     </div>
 
                                     {/* Mascot Selection */}
+                                    {/* Note: TtsEnabled, AiScaffoldingEnabled, SummarisationEnabled are not
+                                         visible or configurable per ConfigurationManagementSpecification Appendix 2. */}
                                     <div>
                                         <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
                                             Mascot Selection
@@ -254,6 +209,9 @@ export const SettingsPage: React.FC = () => {
                                             <option value="MASCOT4">Mascot 4</option>
                                             <option value="MASCOT5">Mascot 5</option>
                                         </select>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Companion mascot displayed on student devices (default: None)
+                                        </p>
                                     </div>
 
                                     {/* Save Actions */}
