@@ -2434,8 +2434,10 @@ public class TeacherPortalHubTests
         Assert.Equal("Hello", progressMsgs[0].Args[0]);
         Assert.Equal(false, progressMsgs[0].Args[1]);  // isThinking
         Assert.Equal(false, progressMsgs[0].Args[2]);  // done
+        Assert.Equal(false, progressMsgs[0].Args[3]);  // isQueryingSourceDocuments
         Assert.Equal(" world", progressMsgs[1].Args[0]);
         Assert.Equal(true, progressMsgs[1].Args[2]);   // done=true on last chunk
+        Assert.Equal(false, progressMsgs[1].Args[3]);  // isQueryingSourceDocuments
 
         // Assert: _activeGenerations was cleaned up after completion
         var activeGenerations = GetActiveGenerations();

@@ -357,6 +357,50 @@ public class MaterialGenerationServiceTests
         Assert.Contains(sourceDoc, capturedSourceDocIds);
     }
 
+    [Fact]
+    public async Task GenerateReading_EmitsQueryingSourceDocumentsStatusChunk()
+    {
+        using var dbContext = BuildDbContext();
+        var fileService = new Mock<IFileService>();
+        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+
+        var ollama = new FakeOllamaClientService
+        {
+            ThrowOnPrimaryChat = false,
+            PrimaryChatResponse = "generated-content"
+        };
+
+        var embeddingService = new Mock<IEmbeddingService>();
+        embeddingService
+            .Setup(s => s.RetrieveRelevantChunksAsync(It.IsAny<float[]>(), It.IsAny<Guid>(), It.IsAny<List<Guid>?>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<string> { "context-chunk" });
+
+        var logger = new Mock<ILogger<MaterialGenerationService>>();
+        var service = new MaterialGenerationService(ollama, embeddingService.Object, validationService, logger.Object);
+
+        var streamedChunks = new List<StreamingGenerationChunk>();
+        var request = new GenerationRequest
+        {
+            Description = "Generate a reading on plants.",
+            ReadingAge = 9,
+            ActualAge = 9,
+            DurationInMinutes = 10,
+            UnitCollectionId = Guid.NewGuid(),
+            Title = "Plants"
+        };
+
+        await service.GenerateReading(
+            request,
+            chunk =>
+            {
+                streamedChunks.Add(chunk);
+                return Task.CompletedTask;
+            });
+
+        Assert.Contains(streamedChunks, c => c.IsQueryingSourceDocuments);
+        Assert.Contains(streamedChunks, c => !c.IsThinking && c.Token == "generated-content");
+    }
+
     private sealed class FakeOllamaClientService : OllamaClientService
     {
         public bool ThrowOnPrimaryChat { get; set; }

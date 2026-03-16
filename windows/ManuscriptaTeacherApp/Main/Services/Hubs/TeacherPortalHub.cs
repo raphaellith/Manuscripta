@@ -1275,7 +1275,7 @@ public class TeacherPortalHub : Hub
                 // Per GenAISpec §3H(7): Continue generation even if client disconnects
                 try
                 {
-                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done, chunk.IsQueryingSourceDocuments);
                 }
                 catch (Exception)
                 {
@@ -1335,7 +1335,7 @@ public class TeacherPortalHub : Hub
                 // Per GenAISpec §3H(7): Continue generation even if client disconnects
                 try
                 {
-                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done, chunk.IsQueryingSourceDocuments);
                 }
                 catch (Exception)
                 {
@@ -1433,7 +1433,7 @@ public class TeacherPortalHub : Hub
             {
                 try
                 {
-                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done);
+                    await Clients.Caller.SendAsync("OnGenerationProgress", chunk.Token, chunk.IsThinking, chunk.Done, chunk.IsQueryingSourceDocuments);
                 }
                 catch (Exception)
                 {

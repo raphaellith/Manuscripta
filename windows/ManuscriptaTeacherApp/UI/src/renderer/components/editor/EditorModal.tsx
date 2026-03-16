@@ -187,6 +187,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [showAiInput, setShowAiInput] = useState(false);
     const [aiContentTokens, setAiContentTokens] = useState('');
     const [aiThinkingTokens, setAiThinkingTokens] = useState('');
+    const [isAiQueryingSourceDocuments, setIsAiQueryingSourceDocuments] = useState(false);
     const [aiWarnings, setAiWarnings] = useState<ValidationWarning[]>([]);
     // Ref to cancel the active modification (set inside handleAiInstructionSubmit)
     const aiCancelRef = useRef<(() => void) | null>(null);
@@ -449,6 +450,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         setAiGenerationId(null);
         aiGenerationIdRef.current = null;
         setAiWarnings([]);
+        setIsAiQueryingSourceDocuments(false);
 
         // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance)
         let thinkingBuffer = '';
@@ -479,10 +481,14 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             setAiGenerationId(id);
         });
 
-        const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean) => {
-            if (isThinking) {
+        const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean, queryingSourceDocuments: boolean) => {
+            if (queryingSourceDocuments) {
+                setIsAiQueryingSourceDocuments(true);
+            }
+
+            if (isThinking && token) {
                 thinkingBuffer += token;
-            } else {
+            } else if (!isThinking && token) {
                 contentBuffer += token;
             }
             if (!flushScheduled) {
@@ -491,6 +497,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
             if (done) {
                 flushBufferedTokens();
+                setIsAiQueryingSourceDocuments(false);
             }
         });
 
@@ -501,6 +508,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 aiGenerationIdRef.current = null;
                 setAiContentTokens('');
                 setAiThinkingTokens('');
+                setIsAiQueryingSourceDocuments(false);
                 editor.setEditable(true);
             }
         });
@@ -545,6 +553,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             aiGenerationIdRef.current = null;
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
 
             // Per §4C(7): Surface validation warnings if present
             if (result.warnings && result.warnings.length > 0) {
@@ -562,6 +571,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             setAiGenerationId(null);
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
             // User cancellation shouldn't popup an alert.
         } finally {
             editor.setEditable(true);
@@ -586,6 +596,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             aiGenerationIdRef.current = null;
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
             editor?.setEditable(true);
         } catch (err) {
             console.error('Failed to cancel generation:', err);
@@ -1764,6 +1775,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 thinkingTokens={aiThinkingTokens}
                 contentTokens={aiContentTokens}
                 isComplete={false}
+                isQueryingSourceDocuments={isAiQueryingSourceDocuments}
                 onCancel={handleCancelModification}
             />
 
