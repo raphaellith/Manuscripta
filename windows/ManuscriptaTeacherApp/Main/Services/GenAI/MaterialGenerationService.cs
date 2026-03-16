@@ -81,6 +81,11 @@ public class MaterialGenerationService : IMaterialGenerationService
         cancellationToken.ThrowIfCancellationRequested();
 
         // §3B(3)(b): Query ChromaDB for relevant chunks (runs in parallel with model check)
+        if (onChunk != null)
+        {
+            await onChunk(new StreamingGenerationChunk(string.Empty, false, false, true));
+        }
+
         var relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
             queryEmbedding,
             request.UnitCollectionId,

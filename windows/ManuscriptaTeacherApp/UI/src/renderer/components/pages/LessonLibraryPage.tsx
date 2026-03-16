@@ -109,6 +109,7 @@ export const LessonLibraryPage: React.FC = () => {
     const [streamingThinking, setStreamingThinking] = useState('');
     const [streamingContent, setStreamingContent] = useState('');
     const [streamingComplete, setStreamingComplete] = useState(false);
+    const [isQueryingSourceDocuments, setIsQueryingSourceDocuments] = useState(false);
     // Per FrontendWorkflowSpec §4B(2)(a1)(v): Cancellation state
     // Use ref for synchronous access during async operations (avoids stale closure issue)
     const generationIdRef = useRef<string | null>(null);
@@ -281,6 +282,7 @@ export const LessonLibraryPage: React.FC = () => {
         setStreamingThinking('');
         setStreamingContent('');
         setStreamingComplete(false);
+        setIsQueryingSourceDocuments(false);
         setIsCancelled(false);
 
         // Per NetworkingAPISpec §2(1)(h)(ii): Subscribe to OnGenerationStarted to receive server-generated ID
@@ -315,10 +317,12 @@ export const LessonLibraryPage: React.FC = () => {
         };
 
         // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
-        const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done) => {
-            if (isThinking) {
+        const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done, queryingSourceDocuments) => {
+            setIsQueryingSourceDocuments(queryingSourceDocuments);
+
+            if (isThinking && token) {
                 thinkingBuffer += token;
-            } else {
+            } else if (!isThinking && token) {
                 contentBuffer += token;
             }
 
@@ -356,6 +360,7 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            setIsQueryingSourceDocuments(false);
             generationIdRef.current = null;
             setIsCancelled(false);
 
@@ -383,6 +388,7 @@ export const LessonLibraryPage: React.FC = () => {
             setStreamingThinking('');
             setStreamingContent('');
             setStreamingComplete(false);
+            setIsQueryingSourceDocuments(false);
             generationIdRef.current = null;
             // Don't reset isCancelled here - keep it true for UI feedback if cancelled
 
@@ -706,6 +712,7 @@ export const LessonLibraryPage: React.FC = () => {
                 thinkingTokens={streamingThinking}
                 contentTokens={streamingContent}
                 isComplete={streamingComplete}
+                isQueryingSourceDocuments={isQueryingSourceDocuments}
                 onCancel={handleCancelGeneration}
                 isCancelled={isCancelled}
             />

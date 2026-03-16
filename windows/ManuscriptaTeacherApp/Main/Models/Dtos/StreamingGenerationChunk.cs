@@ -7,4 +7,9 @@ namespace Main.Models.Dtos;
 /// <param name="Token">The text token for this chunk.</param>
 /// <param name="IsThinking">True if this token is part of chain-of-thought reasoning (&lt;think&gt; block).</param>
 /// <param name="Done">True if this is the final chunk of the generation.</param>
-public record StreamingGenerationChunk(string Token, bool IsThinking, bool Done);
+/// <param name="IsQueryingSourceDocuments">True if this chunk signals that source-document retrieval is currently in progress.</param>
+public record StreamingGenerationChunk(
+	string Token,
+	bool IsThinking,
+	bool Done,
+	bool IsQueryingSourceDocuments = false);

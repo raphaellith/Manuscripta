@@ -379,6 +379,8 @@ For a list of all server method and client handlers to be implemented for commun
 
         (i) display chain-of-thought tokens (`isThinking = true`) in a visually distinct manner (e.g., a collapsible "Thinking…" section with muted or italic styling), to give the user evidence that the AI is actively reasoning.
 
+        (ia) when `isQueryingSourceDocuments = true` is received via `OnGenerationProgress`, display an in-progress status message indicating that source-document retrieval is underway. This status message shall be displayed if and only if `isQueryingSourceDocuments` remains true.
+
         (ii) display content tokens (`isThinking = false`) progressively, rendering them as they arrive, in a manner consistent with the editor's rendering capabilities. Specifically, the streaming view shall convert accumulated content Markdown to HTML using a streaming-specific conversion function (`markdownToStreamingHtml`) that —
 
             (A) renders standard Markdown formatting (headings, bold, italic, lists, tables, code blocks, blockquotes, horizontal rules) via the same `marked` library used by the editor;
