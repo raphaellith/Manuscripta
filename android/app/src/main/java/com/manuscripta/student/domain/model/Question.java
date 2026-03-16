@@ -1,6 +1,7 @@
 package com.manuscripta.student.domain.model;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.manuscripta.student.data.model.QuestionType;
 
@@ -36,6 +37,10 @@ public class Question {
     @NonNull
     private final String correctAnswer;
 
+    /** The maximum number of marks available for this question (null if not specified). */
+    @Nullable
+    private final Integer maxScore;
+
     /**
      * Constructor with all fields.
      *
@@ -45,6 +50,7 @@ public class Question {
      * @param questionType  The type of question (MULTIPLE_CHOICE, WRITTEN_ANSWER)
      * @param options       JSON string of options (empty string if none)
      * @param correctAnswer The correct answer string (empty string if none)
+     * @param maxScore      Maximum marks available (null if not specified)
      * @throws IllegalArgumentException if id is null or empty
      * @throws IllegalArgumentException if materialId is null or empty
      * @throws IllegalArgumentException if questionText is null or empty
@@ -57,7 +63,8 @@ public class Question {
                     @NonNull String questionText,
                     @NonNull QuestionType questionType,
                     @NonNull String options,
-                    @NonNull String correctAnswer) {
+                    @NonNull String correctAnswer,
+                    @Nullable Integer maxScore) {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("Question id cannot be null or empty");
         }
@@ -83,6 +90,7 @@ public class Question {
         this.questionType = questionType;
         this.options = options;
         this.correctAnswer = correctAnswer;
+        this.maxScore = maxScore;
     }
 
     @NonNull
@@ -113,5 +121,10 @@ public class Question {
     @NonNull
     public String getCorrectAnswer() {
         return correctAnswer;
+    }
+
+    @Nullable
+    public Integer getMaxScore() {
+        return maxScore;
     }
 }

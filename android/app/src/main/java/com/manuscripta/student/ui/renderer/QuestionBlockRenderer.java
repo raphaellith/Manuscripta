@@ -88,7 +88,7 @@ public class QuestionBlockRenderer {
      * @return a RadioGroup with option buttons
      */
     @NonNull
-    View renderMultipleChoice(
+    public View renderMultipleChoice(
             @NonNull Context context,
             @NonNull Question question) {
         RadioGroup radioGroup = new RadioGroup(context);
