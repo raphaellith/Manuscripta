@@ -185,58 +185,9 @@ export const SettingsPage: React.FC = () => {
                                         </select>
                                     </div>
 
-                                    {/* TTS Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseTtsEnabled"
-                                            checked={baseConfig.ttsEnabled}
-                                            onChange={(e) => updateConfig("ttsEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseTtsEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                Text-to-Speech Enabled
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* AI Scaffolding Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseAiScaffoldingEnabled"
-                                            checked={baseConfig.aiScaffoldingEnabled}
-                                            onChange={(e) => updateConfig("aiScaffoldingEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseAiScaffoldingEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                AI Scaffolding Enabled
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Summarisation Enabled */}
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="baseSummarisationEnabled"
-                                            checked={baseConfig.summarisationEnabled}
-                                            onChange={(e) => updateConfig("summarisationEnabled", e.target.checked)}
-                                            disabled={hasPairedAndroidDevices}
-                                            className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                        <div className="flex-1">
-                                            <label htmlFor="baseSummarisationEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                                Summarisation Enabled
-                                            </label>
-                                        </div>
-                                    </div>
-
                                     {/* Mascot Selection */}
+                                    {/* Note: TtsEnabled, AiScaffoldingEnabled, SummarisationEnabled are not
+                                         visible or configurable per ConfigurationManagementSpecification Appendix 2. */}
                                     <div>
                                         <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
                                             Mascot Selection

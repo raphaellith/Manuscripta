@@ -127,64 +127,9 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                             </p>
                         </div>
 
-                        {/* TTS Enabled - Per Validation Rules §2G(1)(c) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="ttsEnabled"
-                                checked={config.ttsEnabled}
-                                onChange={(e) => updateConfig('ttsEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="ttsEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    Text-to-Speech Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable audio narration for text content
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* AI Scaffolding Enabled - Per Validation Rules §2G(1)(d) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="aiScaffoldingEnabled"
-                                checked={config.aiScaffoldingEnabled}
-                                onChange={(e) => updateConfig('aiScaffoldingEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="aiScaffoldingEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    AI Scaffolding Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable AI-powered learning assistance
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Summarisation Enabled - Per Validation Rules §2G(1)(e) */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="summarisationEnabled"
-                                checked={config.summarisationEnabled}
-                                onChange={(e) => updateConfig('summarisationEnabled', e.target.checked)}
-                                className="mt-1 h-5 w-5 text-brand-orange border-gray-300 rounded focus:ring-brand-orange"
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="summarisationEnabled" className="font-sans font-medium text-text-heading text-sm block cursor-pointer">
-                                    Summarisation Enabled
-                                </label>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Enable content summarisation features
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Mascot Selection - Per Validation Rules §2G(1)(f) */}
+                        {/* Note: TtsEnabled, AiScaffoldingEnabled, SummarisationEnabled are not
+                             visible or configurable per ConfigurationManagementSpecification Appendix 2. */}
                         <div>
                             <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
                                 Mascot Selection
