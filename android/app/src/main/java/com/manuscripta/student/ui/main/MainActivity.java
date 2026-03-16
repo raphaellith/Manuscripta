@@ -345,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
                         + question.getId() + ", answer: " + answer
                         + ", correct: " + isCorrect);
                 quizViewModel.saveQuizResponse(question, answer);
+                showResponseSubmittedNotification();
                 Configuration config = viewModel.getConfiguration().getValue();
                 boolean immediate = config == null
                         || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
@@ -358,10 +359,6 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         showIncorrectFeedback(correctText);
                     }
-                } else {
-                    Toast.makeText(MainActivity.this,
-                            R.string.answer_submitted,
-                            Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -382,13 +379,7 @@ public class MainActivity extends AppCompatActivity {
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
             worksheetViewModel.submitAllAnswers(answers);
-            Configuration config = viewModel.getConfiguration().getValue();
-            if (config != null
-                    && config.getFeedbackStyle() == FeedbackStyle.NEUTRAL) {
-                Toast.makeText(MainActivity.this,
-                        R.string.answer_submitted,
-                        Toast.LENGTH_SHORT).show();
-            }
+            showResponseSubmittedNotification();
         });
         return worksheet;
     }
@@ -432,15 +423,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
                         worksheetViewModel.submitAllAnswers(answers);
-                    Configuration config =
-                        viewModel.getConfiguration().getValue();
-                    if (config != null
-                        && config.getFeedbackStyle()
-                        == FeedbackStyle.NEUTRAL) {
-                        Toast.makeText(MainActivity.this,
-                            R.string.answer_submitted,
-                            Toast.LENGTH_SHORT).show();
-                    }
+                        showResponseSubmittedNotification();
                     });
             worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
@@ -458,6 +441,7 @@ public class MainActivity extends AppCompatActivity {
                                 boolean isCorrect) {
                             quizViewModel.saveQuizResponse(
                                     question, answer);
+                            showResponseSubmittedNotification();
                             Configuration config =
                                     viewModel.getConfiguration().getValue();
                             boolean immediate = config == null
@@ -476,10 +460,6 @@ public class MainActivity extends AppCompatActivity {
                                 } else {
                                     showIncorrectFeedback(correctText);
                                 }
-                            } else {
-                                Toast.makeText(MainActivity.this,
-                                        R.string.answer_submitted,
-                                        Toast.LENGTH_SHORT).show();
                             }
                         }
                     });
@@ -565,8 +545,7 @@ public class MainActivity extends AppCompatActivity {
             allMaterials.clear();
             if (materials != null && !materials.isEmpty()) {
                 allMaterials.addAll(materials);
-                if (materials.size() > lastKnownMaterialCount
-                        && lastKnownMaterialCount > 0) {
+                if (materials.size() > lastKnownMaterialCount) {
                     showMaterialReceivedNotification();
                 }
                 lastKnownMaterialCount = materials.size();
@@ -794,6 +773,19 @@ public class MainActivity extends AppCompatActivity {
     private void showFeedbackReceivedNotification() {
         Toast toast = Toast.makeText(
                 this, R.string.feedback_received,
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                0, 32);
+        toast.show();
+    }
+
+    /**
+     * Shows a brief notification at the top of the screen when
+     * a student response is submitted.
+     */
+    private void showResponseSubmittedNotification() {
+        Toast toast = Toast.makeText(
+                this, R.string.answer_submitted,
                 Toast.LENGTH_SHORT);
         toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
                 0, 32);

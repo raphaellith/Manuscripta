@@ -18,24 +18,24 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <LinearLayout
+                android:id="@+id/feedbackContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
             <TextView
                 android:id="@+id/feedbackMarks"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:paddingBottom="8dp"
+                android:gravity="start"
+                android:paddingTop="8dp"
                 android:textColor="@color/eink_dark"
                 android:textSize="@dimen/text_body"
                 android:textStyle="bold"
                 android:visibility="gone"
                 tools:text="8 marks"
                 tools:visibility="visible" />
-
-            <LinearLayout
-                android:id="@+id/feedbackContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
 
             <TextView
                 android:id="@+id/feedbackEmpty"
