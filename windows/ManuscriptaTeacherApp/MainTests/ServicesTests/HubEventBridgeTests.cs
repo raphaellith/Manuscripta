@@ -1,11 +1,14 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 using Main.Services;
 using Main.Services.Network;
 using Main.Services.Hubs;
+using Main.Services.Repositories;
 using Main.Models.Events;
 using Main.Models.Entities;
+using Main.Models.Enums;
 using Xunit;
 
 namespace MainTests.ServicesTests;
@@ -165,6 +168,56 @@ public class HubEventBridgeTests
                 It.IsAny<object[]>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task FeedbackAckReceived_WithReadyFeedback_InvokesRefreshResponses()
+    {
+        // Arrange — mock the IServiceScope chain for IFeedbackRepository resolution
+        var feedbackId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
+        var feedback = new FeedbackEntity
+        {
+            Id = feedbackId,
+            ResponseId = Guid.NewGuid(),
+            Text = "Good work",
+            Status = FeedbackStatus.READY
+        };
+
+        var mockFeedbackRepo = new Mock<IFeedbackRepository>();
+        mockFeedbackRepo.Setup(r => r.GetByIdAsync(feedbackId)).ReturnsAsync(feedback);
+
+        var mockScopeServiceProvider = new Mock<IServiceProvider>();
+        mockScopeServiceProvider
+            .Setup(sp => sp.GetService(typeof(IFeedbackRepository)))
+            .Returns(mockFeedbackRepo.Object);
+
+        var mockScope = new Mock<IServiceScope>();
+        mockScope.Setup(s => s.ServiceProvider).Returns(mockScopeServiceProvider.Object);
+
+        var mockScopeFactory = new Mock<IServiceScopeFactory>();
+        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+
+        _mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(IServiceScopeFactory)))
+            .Returns(mockScopeFactory.Object);
+
+        await _hubEventBridge.StartAsync(CancellationToken.None);
+        var eventArgs = new FeedbackAckEventArgs(deviceId, feedbackId);
+
+        // Act
+        _mockTcpService.Raise(s => s.FeedbackAckReceived += null, _mockTcpService.Object, eventArgs);
+
+        // Allow FireAndForget to complete
+        await Task.Delay(200);
+
+        // Assert — Per GenAISpec §3DA(3)(c): RefreshResponses must be invoked
+        _mockClientProxy.Verify(
+            c => c.SendCoreAsync(
+                "RefreshResponses",
+                It.Is<object[]>(args => args.Length == 0 || args.All(a => a == null)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // Helper to get anonymous type property
