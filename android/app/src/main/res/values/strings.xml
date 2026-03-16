@@ -23,6 +23,7 @@
 
     <!-- Feedback -->
     <string name="feedback_correct">Correct!</string>
+    <string name="feedback_correct_generic">All checked answers are correct.</string>
     <string name="feedback_incorrect">Not quite right.</string>
     <string name="correct_answer_label">The correct answer is:</string>
     <string name="next_question">Next Question ►</string>

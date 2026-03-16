@@ -115,7 +115,7 @@ public class QuizFragment extends Fragment {
         binding.textLoading.setVisibility(View.GONE);
         binding.cardQuestion.setVisibility(View.VISIBLE);
         binding.recyclerOptions.setVisibility(View.VISIBLE);
-        binding.buttonSubmit.setVisibility(View.VISIBLE);
+        binding.buttonSubmit.setVisibility(View.GONE);
 
         binding.textQuestion.setText(question.getQuestionText());
 
@@ -149,6 +149,14 @@ public class QuizFragment extends Fragment {
             return "";
         }
         return currentQuestion.getQuestionText();
+    }
+
+    /**
+     * Submits the currently selected quiz answer.
+     * Exposed for the shared footer submit action.
+     */
+    public void submitCurrentAnswer() {
+        handleSubmit();
     }
 
     /**

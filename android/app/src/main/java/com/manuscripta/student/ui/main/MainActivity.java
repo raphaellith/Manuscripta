@@ -18,8 +18,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.manuscripta.student.R;
 import com.manuscripta.student.data.model.FeedbackStyle;
+import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.domain.model.Feedback;
-import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.databinding.ActivityMainBinding;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
@@ -38,10 +38,10 @@ import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.PairingState;
 import com.manuscripta.student.ui.pairing.PairingActivity;
 import com.manuscripta.student.utils.FileStorageManager;
-import com.manuscripta.student.utils.TextToSpeechManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -50,7 +50,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 /**
  * Main activity for the Manuscripta Student application.
  * Manages tab navigation between Reading, Quiz, and Worksheet fragments,
- * plus a footer containing the mascot and audio button areas.
+ * plus footer actions such as submit and raise hand.
  */
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
@@ -69,9 +69,6 @@ public class MainActivity extends AppCompatActivity {
 
     /** ViewModel for worksheet response submission. */
     private WorksheetViewModel worksheetViewModel;
-
-    /** Text-to-speech service manager. */
-    private TextToSpeechManager ttsManager;
 
     /** The currently displayed fragment. */
     @Nullable
@@ -118,9 +115,6 @@ public class MainActivity extends AppCompatActivity {
         quizViewModel = new ViewModelProvider(this).get(QuizViewModel.class);
         worksheetViewModel = new ViewModelProvider(this).get(WorksheetViewModel.class);
 
-        ttsManager = new TextToSpeechManager();
-        ttsManager.init(this);
-
         setupMaterialDropdown();
         wireFooterViews();
         observeViewModel();
@@ -135,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        ttsManager.shutdown();
         binding = null;
     }
 
@@ -379,7 +372,7 @@ public class MainActivity extends AppCompatActivity {
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
             worksheetViewModel.submitAllAnswers(answers);
-            showResponseSubmittedNotification();
+            handleWorksheetSubmissionFeedback(answers);
         });
         return worksheet;
     }
@@ -423,7 +416,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
                         worksheetViewModel.submitAllAnswers(answers);
-                        showResponseSubmittedNotification();
+                    handleWorksheetSubmissionFeedback(answers);
                     });
             worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
@@ -479,20 +472,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates footer visibility based on the current fragment and configuration.
-     * The mascot is only visible on the Reading fragment when a mascot is selected.
+     * Updates footer submit visibility based on the current fragment.
      */
     private void updateFooterVisibility() {
         if (binding == null) {
             return;
         }
-        Configuration config = viewModel.getConfiguration().getValue();
-        boolean mascotEnabled = config != null
-                && config.getMascotSelection() != MascotSelection.NONE;
-        boolean isReading = currentFragment instanceof ReadingFragment;
-        int mascotVisibility = (mascotEnabled && isReading)
-                ? View.VISIBLE : View.INVISIBLE;
-        binding.mascotView.setVisibility(mascotVisibility);
+        if (currentFragment instanceof QuizFragment) {
+            binding.footerSubmitButton.setVisibility(View.VISIBLE);
+            binding.footerSubmitButton.setText(R.string.submit_answer);
+        } else if (currentFragment instanceof WorksheetFragment) {
+            binding.footerSubmitButton.setVisibility(View.VISIBLE);
+            binding.footerSubmitButton.setText(R.string.submit_answers);
+        } else {
+            binding.footerSubmitButton.setVisibility(View.GONE);
+        }
     }
 
     /**
@@ -518,18 +512,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Sets up listeners on footer views: mascot, audio button, and AI panel.
-     */
+    /** Sets up listeners on footer actions and AI panel controls. */
     private void wireFooterViews() {
-        binding.mascotView.setOnTaskSelected(
-            taskName -> viewModel.requestContentTransformation(taskName)
-        );
-        binding.audioButton.setOnAudioClickListener(
-            this::speakCurrentContent
-        );
         binding.aiResponsePanel.setOnCloseListener(
             () -> viewModel.clearAiTask()
+        );
+        binding.footerSubmitButton.setOnClickListener(
+            v -> submitCurrentAnswers()
         );
         binding.raiseHandButton.setOnClickListener(
             v -> raiseHandManager.raiseHand()
@@ -634,13 +623,9 @@ public class MainActivity extends AppCompatActivity {
      * @param config The updated configuration.
      */
     private void applyConfiguration(@NonNull Configuration config) {
-        ttsManager.setTtsEnabled(config.isTtsEnabled());
         if (binding == null) {
             return;
         }
-        binding.audioButton.setVisibility(
-            config.isTtsEnabled() ? View.VISIBLE : View.GONE
-        );
         updateFooterVisibility();
 
         float scaleFactor = config.getTextSize() / DEFAULT_TEXT_SIZE;
@@ -723,34 +708,102 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Speaks the text content of the currently visible fragment via TTS.
+     * Triggers submission for the currently visible answerable fragment.
      */
-    private void speakCurrentContent() {
-        String text = getCurrentFragmentText();
-        if (!text.isEmpty()) {
-            ttsManager.speak(text);
+    private void submitCurrentAnswers() {
+        if (currentFragment instanceof QuizFragment) {
+            ((QuizFragment) currentFragment).submitCurrentAnswer();
+        } else if (currentFragment instanceof WorksheetFragment) {
+            ((WorksheetFragment) currentFragment).submitAnswers();
         }
     }
 
     /**
-     * Returns the text content of the currently active fragment for TTS.
+     * Applies feedback style behaviour for worksheet submissions.
+     * Immediate mode shows correctness for auto-checkable known answers.
+     * Neutral mode shows submission acknowledgement only.
      *
-     * @return The displayable text, or an empty string if unavailable.
+     * @param answers submitted worksheet answers keyed by question id
+     */
+    private void handleWorksheetSubmissionFeedback(
+            @NonNull Map<String, String> answers) {
+        Configuration config = viewModel.getConfiguration().getValue();
+        boolean immediate = config == null
+                || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
+        if (!immediate) {
+            showResponseSubmittedNotification();
+            return;
+        }
+
+        boolean hasKnownAnswer = false;
+        for (Question question : viewModel.getWorksheetQuestions()) {
+            String correctAnswer = question.getCorrectAnswer();
+            if (correctAnswer == null || correctAnswer.trim().isEmpty()) {
+                continue;
+            }
+            hasKnownAnswer = true;
+            if (!isWorksheetAnswerCorrect(question, answers)) {
+                showIncorrectFeedback(resolveWorksheetCorrectAnswer(question));
+                return;
+            }
+        }
+
+        if (hasKnownAnswer) {
+            showCorrectFeedback(getString(R.string.feedback_correct_generic));
+        } else {
+            showResponseSubmittedNotification();
+        }
+    }
+
+    /**
+     * Checks a worksheet answer against a question's known correct value.
+     *
+     * @param question question metadata including expected answer
+     * @param answers submitted answers keyed by question id
+     * @return true if the submitted answer matches the expected one
+     */
+    private boolean isWorksheetAnswerCorrect(
+            @NonNull Question question,
+            @NonNull Map<String, String> answers) {
+        String submitted = answers.get(question.getId());
+        if (submitted == null) {
+            submitted = "";
+        }
+        submitted = submitted.trim();
+
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> options = QuizFragment.parseOptions(question.getOptions());
+            try {
+                int selectedIndex = Integer.parseInt(submitted);
+                if (selectedIndex < 0 || selectedIndex >= options.size()) {
+                    return false;
+                }
+                String selectedText = options.get(selectedIndex);
+                String correctText = QuizFragment.resolveCorrectAnswer(
+                        question.getCorrectAnswer(), options);
+                return selectedText.equals(correctText);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return submitted.equalsIgnoreCase(question.getCorrectAnswer().trim());
+    }
+
+    /**
+     * Resolves the displayable correct answer for worksheet feedback.
+     *
+     * @param question question metadata
+     * @return readable correct answer text for feedback UI
      */
     @NonNull
-    private String getCurrentFragmentText() {
-        if (currentFragment instanceof ReadingFragment) {
-            return ((ReadingFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof QuizFragment) {
-            return ((QuizFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof WorksheetFragment) {
-            return ((WorksheetFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof FeedbackFragment) {
-            return ((FeedbackFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof TeacherFeedbackFragment) {
-            return ((TeacherFeedbackFragment) currentFragment).getTextContent();
+    private String resolveWorksheetCorrectAnswer(@NonNull Question question) {
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> options = QuizFragment.parseOptions(question.getOptions());
+            return QuizFragment.resolveCorrectAnswer(
+                    question.getCorrectAnswer(), options);
         }
-        return "";
+        return question.getCorrectAnswer();
     }
 
     /**

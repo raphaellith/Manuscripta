@@ -200,7 +200,7 @@ public class WorksheetFragment extends Fragment {
 
         binding.textLoading.setVisibility(View.GONE);
         binding.scrollItems.setVisibility(View.VISIBLE);
-        binding.buttonSubmit.setVisibility(View.VISIBLE);
+        binding.buttonSubmit.setVisibility(View.GONE);
 
         currentMaterialContent = material.getContent();
         currentQuestions.clear();
@@ -294,6 +294,14 @@ public class WorksheetFragment extends Fragment {
             sb.append(q.getQuestionText().replace("______", "blank"));
         }
         return sb.toString();
+    }
+
+    /**
+     * Submits all current worksheet answers.
+     * Exposed for the shared footer submit action.
+     */
+    public void submitAnswers() {
+        handleSubmit();
     }
 
     /**
