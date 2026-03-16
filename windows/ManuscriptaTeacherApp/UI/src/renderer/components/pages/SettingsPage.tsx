@@ -11,6 +11,7 @@ import type { ConfigurationEntity, MascotSelection, PdfExportSettingsEntity, Lin
 import { EmailCredentialSettings } from "../settings/EmailCredentialSettings";
 import { RuntimeDependencySettings } from "../settings/RuntimeDependencySettings";
 import { SETTINGS_SECTION_MAX_WIDTH } from "../../constants/ui";
+import { DEFAULT_BASE_CONFIGURATION } from "../../constants/configuration";
 
 export const SettingsPage: React.FC = () => {
     const [baseConfig, setBaseConfig] = useState<ConfigurationEntity | null>(null);
@@ -165,7 +166,7 @@ export const SettingsPage: React.FC = () => {
                                             className="w-full max-w-xs p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <p className="text-sm text-gray-500 mt-1">
-                                            Default text size for reading materials on student devices
+                                            Default text size for reading materials on student devices (default: {DEFAULT_BASE_CONFIGURATION.textSize})
                                         </p>
                                     </div>
 
@@ -183,6 +184,9 @@ export const SettingsPage: React.FC = () => {
                                             <option value="IMMEDIATE">Immediate</option>
                                             <option value="NEUTRAL">Neutral</option>
                                         </select>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Controls how question feedback is presented to students (default: {DEFAULT_BASE_CONFIGURATION.feedbackStyle === 'NEUTRAL' ? 'Neutral' : 'Immediate'})
+                                        </p>
                                     </div>
 
                                     {/* Mascot Selection */}
@@ -205,6 +209,9 @@ export const SettingsPage: React.FC = () => {
                                             <option value="MASCOT4">Mascot 4</option>
                                             <option value="MASCOT5">Mascot 5</option>
                                         </select>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Companion mascot displayed on student devices (default: None)
+                                        </p>
                                     </div>
 
                                     {/* Save Actions */}

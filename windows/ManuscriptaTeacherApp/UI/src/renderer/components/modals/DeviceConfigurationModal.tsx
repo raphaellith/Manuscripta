@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import signalRService from '../../services/signalr/SignalRService';
 import type { ConfigurationEntity, FeedbackStyle, MascotSelection } from '../../models';
 import { ModalOverlay } from './ModalOverlay';
+import { DEFAULT_BASE_CONFIGURATION } from '../../constants/configuration';
 
 interface DeviceConfigurationModalProps {
     deviceId: string;
@@ -105,6 +106,9 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 }}
                                 className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
                             />
+                            <p className="text-sm text-gray-500 mt-1">
+                                Default: {DEFAULT_BASE_CONFIGURATION.textSize}
+                            </p>
                         </div>
 
                         {/* Feedback Style - Per Validation Rules §2G(1)(b) */}
@@ -124,6 +128,7 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 {config.feedbackStyle === 'IMMEDIATE'
                                     ? 'Correct/Incorrect feedback is shown immediately'
                                     : 'Only "Response Submitted" confirmation is shown'}
+                                {' '}(default: Neutral)
                             </p>
                         </div>
 
@@ -146,6 +151,9 @@ export const DeviceConfigurationModal: React.FC<DeviceConfigurationModalProps> =
                                 <option value="MASCOT4">Mascot 4</option>
                                 <option value="MASCOT5">Mascot 5</option>
                             </select>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Default: None
+                            </p>
                         </div>
                     </div>
                 )}
