@@ -1312,24 +1312,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return true;
     };
 
-    // Insert PDF embed
-    const insertPdf = () => {
-        setInputDialog({
-            isOpen: true,
-            title: 'Insert PDF Embed',
-            placeholder: 'Enter PDF Attachment UUID',
-            onSubmit: (id) => {
-                closeInputDialog();
-                if (editor) {
-                    editor.chain().focus().insertContent({
-                        type: 'pdfEmbed',
-                        attrs: { id },
-                    }).run();
-                }
-            },
-        });
-    };
-
     // Insert attachment via file picker - per FrontendWorkflowSpecifications §4C(4)
     const insertAttachment = async () => {
         try {
@@ -1684,9 +1666,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                                 : 'Insert Question Reference'}
                     >
                         <span className="material-symbols-outlined text-base">quiz</span>
-                    </ToolbarButton>
-                    <ToolbarButton onClick={insertPdf} title="Insert PDF Embed">
-                        <span className="material-symbols-outlined text-base">picture_as_pdf</span>
                     </ToolbarButton>
                     <ToolbarButton onClick={insertAttachment} title="Attach File (PNG, JPEG, PDF)">
                         <span className="material-symbols-outlined text-base">attach_file</span>
