@@ -6,32 +6,13 @@
     android:orientation="vertical"
     tools:context=".ui.quiz.QuizFragment">
 
-    <!-- Back to Lesson button -->
-    <Button
-        android:id="@+id/buttonBack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/spacing_item"
-        android:background="@drawable/bg_button"
-        android:gravity="center"
-        android:minHeight="@dimen/button_back_min_height"
-        android:paddingLeft="24dp"
-        android:paddingTop="16dp"
-        android:paddingRight="24dp"
-        android:paddingBottom="16dp"
-        android:text="@string/back_to_lesson"
-        android:textAllCaps="false"
-        android:textColor="@color/eink_black"
-        android:textSize="@dimen/text_body"
-        android:textStyle="bold" />
-
-    <!-- Question card -->
-    <FrameLayout
+    <!-- Question prompt -->
+    <LinearLayout
         android:id="@+id/cardQuestion"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/spacing_item"
-        style="@style/Widget.Manuscripta.Card">
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/textQuestion"
@@ -42,7 +23,7 @@
             android:textColor="@color/eink_black"
             tools:text="Who won the Battle of Hastings?" />
 
-    </FrameLayout>
+    </LinearLayout>
 
     <!-- Options list -->
     <androidx.recyclerview.widget.RecyclerView

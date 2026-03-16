@@ -349,7 +349,8 @@ public class MainViewModel extends ViewModel {
     /**
      * Gets all worksheet-type questions from the current question set.
      *
-     * @return A list of WRITTEN_ANSWER questions, or an empty list if none
+     * @return A list of all questions for the current worksheet material,
+     *         or an empty list if none
      */
     @NonNull
     public List<Question> getWorksheetQuestions() {
@@ -357,13 +358,7 @@ public class MainViewModel extends ViewModel {
         if (all == null) {
             return new ArrayList<>();
         }
-        List<Question> worksheetQuestions = new ArrayList<>();
-        for (Question q : all) {
-            if (q.getQuestionType() == QuestionType.WRITTEN_ANSWER) {
-                worksheetQuestions.add(q);
-            }
-        }
-        return worksheetQuestions;
+        return new ArrayList<>(all);
     }
 
     /**

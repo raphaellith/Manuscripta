@@ -26,6 +26,7 @@ import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.ui.feedback.FeedbackFragment;
+import com.manuscripta.student.ui.feedback.TeacherFeedbackFragment;
 import com.manuscripta.student.ui.quiz.QuizFragment;
 import com.manuscripta.student.ui.quiz.QuizViewModel;
 import com.manuscripta.student.ui.reading.ReadingFragment;
@@ -162,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setCurrentMaterial(material);
         if (binding != null) {
             binding.materialDropdown.setText(material.getTitle());
+            binding.teacherFeedbackPanel.hide();
         }
         showFragmentForMaterial(material);
         updateFooterVisibility();
@@ -269,14 +271,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Displays the given feedback item in the teacher feedback panel.
+     * Displays the given feedback item as material-style full-screen content.
      *
      * @param feedback The feedback item to display.
      */
     private void selectFeedback(@NonNull Feedback feedback) {
         if (binding != null) {
-            binding.teacherFeedbackPanel.showSingleFeedback(feedback);
+            binding.materialDropdown.setText(buildFeedbackLabel(feedback));
+            binding.teacherFeedbackPanel.hide();
         }
+        TeacherFeedbackFragment fragment = TeacherFeedbackFragment.newInstance(feedback);
+        currentFragment = fragment;
+        replaceFragment(fragment);
+        updateFooterVisibility();
     }
 
     /**
@@ -367,6 +374,9 @@ public class MainActivity extends AppCompatActivity {
     @NonNull
     private WorksheetFragment createWorksheetFragment() {
         WorksheetFragment worksheet = WorksheetFragment.newInstance();
+        worksheet.setAttachmentImageLoader(
+            new AttachmentImageLoader(apiService, fileStorageManager));
+        worksheet.setFileStorageManager(fileStorageManager);
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
             worksheetViewModel.submitAllAnswers(answers);
@@ -407,8 +417,11 @@ public class MainActivity extends AppCompatActivity {
             reading.setFileStorageManager(fileStorageManager);
             reading.resetRenderer();
         } else if (currentFragment instanceof WorksheetFragment) {
-            ((WorksheetFragment) currentFragment)
-                    .setSubmitListener(answers -> {
+            WorksheetFragment worksheet = (WorksheetFragment) currentFragment;
+            worksheet.setAttachmentImageLoader(
+                new AttachmentImageLoader(apiService, fileStorageManager));
+            worksheet.setFileStorageManager(fileStorageManager);
+            worksheet.setSubmitListener(answers -> {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
                         worksheetViewModel.submitAllAnswers(answers);
@@ -416,6 +429,7 @@ public class MainActivity extends AppCompatActivity {
                                 R.string.answer_submitted,
                                 Toast.LENGTH_SHORT).show();
                     });
+            worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
             ((QuizFragment) currentFragment).setNavigationListener(
                     new QuizFragment.QuizNavigationListener() {
@@ -640,6 +654,9 @@ public class MainActivity extends AppCompatActivity {
         if (currentFragment instanceof ReadingFragment) {
             ((ReadingFragment) currentFragment)
                     .setTextScaleFactor(scaleFactor);
+        } else if (currentFragment instanceof WorksheetFragment) {
+            ((WorksheetFragment) currentFragment)
+                    .setTextScaleFactor(scaleFactor);
         }
     }
 
@@ -656,7 +673,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (currentFragment instanceof QuizFragment) {
             updateQuizFragment();
         } else if (currentFragment instanceof WorksheetFragment) {
-            updateWorksheetFragment();
+            updateWorksheetFragment(material);
         }
     }
 
@@ -698,16 +715,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates the worksheet fragment with available worksheet questions.
+     * Updates the worksheet fragment with material content and all related questions.
+     *
+     * @param material The current material, or null to show loading.
      */
-    private void updateWorksheetFragment() {
+    private void updateWorksheetFragment(@Nullable Material material) {
         WorksheetFragment worksheet = (WorksheetFragment) currentFragment;
-        List<Question> wsQuestions = viewModel.getWorksheetQuestions();
-        if (!wsQuestions.isEmpty()) {
-            worksheet.displayQuestions(wsQuestions);
-        } else {
+        if (material == null) {
             worksheet.showLoading();
+            return;
         }
+        List<Question> wsQuestions = viewModel.getWorksheetQuestions();
+        worksheet.displayMaterial(material, wsQuestions);
     }
 
     /**
@@ -735,6 +754,8 @@ public class MainActivity extends AppCompatActivity {
             return ((WorksheetFragment) currentFragment).getTextContent();
         } else if (currentFragment instanceof FeedbackFragment) {
             return ((FeedbackFragment) currentFragment).getTextContent();
+        } else if (currentFragment instanceof TeacherFeedbackFragment) {
+            return ((TeacherFeedbackFragment) currentFragment).getTextContent();
         }
         return "";
     }

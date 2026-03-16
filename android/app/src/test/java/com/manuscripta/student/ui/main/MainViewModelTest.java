@@ -241,9 +241,10 @@ public class MainViewModelTest {
         Thread.sleep(200);
 
         List<Question> worksheetQuestions = viewModel.getWorksheetQuestions();
-        assertEquals(2, worksheetQuestions.size());
-        assertEquals("q-2", worksheetQuestions.get(0).getId());
-        assertEquals("q-3", worksheetQuestions.get(1).getId());
+        assertEquals(3, worksheetQuestions.size());
+        assertEquals("q-1", worksheetQuestions.get(0).getId());
+        assertEquals("q-2", worksheetQuestions.get(1).getId());
+        assertEquals("q-3", worksheetQuestions.get(2).getId());
     }
 
     @Test

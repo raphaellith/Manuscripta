@@ -7,19 +7,22 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.manuscripta.student.R;
-import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.databinding.FragmentWorksheetBinding;
+import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.ui.renderer.AttachmentImageLoader;
+import com.manuscripta.student.ui.renderer.MarkdownRenderer;
 import com.manuscripta.student.ui.renderer.QuestionBlockRenderer;
+import com.manuscripta.student.utils.FileStorageManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,14 +45,30 @@ public class WorksheetFragment extends Fragment {
     /** Renderer for question blocks (multiple choice, written answer). */
     private final QuestionBlockRenderer questionBlockRenderer = new QuestionBlockRenderer();
 
+    /** Renderer for worksheet markdown content and embedded question blocks. */
+    @Nullable
+    private MarkdownRenderer markdownRenderer;
+
+    /** Loader for attachment images inside worksheet content. */
+    @Nullable
+    private AttachmentImageLoader attachmentImageLoader;
+
+    /** File storage manager for worksheet PDF embeds. */
+    @Nullable
+    private FileStorageManager fileStorageManager;
+
+    /** Text scale factor from configuration (1.0 = default). */
+    private float textScaleFactor = 1.0f;
+
     /** The list of currently displayed questions. */
     private final List<Question> currentQuestions = new ArrayList<>();
 
     /** Listener for worksheet submission events. */
     private WorksheetSubmitListener submitListener;
 
-    /** Placeholder used to mark blanks in question text. */
-    private static final String BLANK_MARKER = "______";
+    /** Last rendered material content for accessibility/text-to-speech support. */
+    @NonNull
+    private String currentMaterialContent = "";
 
     /**
      * Callback interface for worksheet submission events.
@@ -82,6 +101,43 @@ public class WorksheetFragment extends Fragment {
         this.submitListener = listener;
     }
 
+    /**
+     * Sets the attachment image loader used by the markdown renderer.
+     *
+     * @param loader loader for worksheet attachment images
+     */
+    public void setAttachmentImageLoader(@NonNull AttachmentImageLoader loader) {
+        this.attachmentImageLoader = loader;
+    }
+
+    /**
+     * Sets the file storage manager used for worksheet PDF embeds.
+     *
+     * @param manager storage manager used by the markdown renderer
+     */
+    public void setFileStorageManager(@NonNull FileStorageManager manager) {
+        this.fileStorageManager = manager;
+    }
+
+    /**
+     * Sets the text scale factor for rendered worksheet content.
+     *
+     * @param scaleFactor text scaling factor (1.0 = default)
+     */
+    public void setTextScaleFactor(float scaleFactor) {
+        this.textScaleFactor = scaleFactor;
+        if (markdownRenderer != null) {
+            markdownRenderer.setTextScaleFactor(scaleFactor);
+        }
+    }
+
+    /**
+     * Clears the cached markdown renderer so dependencies can be re-injected.
+     */
+    public void resetRenderer() {
+        this.markdownRenderer = null;
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -104,27 +160,80 @@ public class WorksheetFragment extends Fragment {
     }
 
     /**
-     * Displays the given list of worksheet questions.
+     * Displays worksheet material content with embedded questions.
      *
-     * @param questions The questions to display.
+     * @param material The worksheet material to display.
+     * @param questions The questions associated with this worksheet.
      */
-    public void displayQuestions(@NonNull List<Question> questions) {
+    public void displayMaterial(@NonNull Material material,
+                                @NonNull List<Question> questions) {
         if (binding == null) {
             return;
         }
+
         binding.textLoading.setVisibility(View.GONE);
         binding.scrollItems.setVisibility(View.VISIBLE);
         binding.buttonSubmit.setVisibility(View.VISIBLE);
 
+        currentMaterialContent = material.getContent();
         currentQuestions.clear();
         currentQuestions.addAll(questions);
-        answerFields.clear();
-        mcFields.clear();
-        binding.layoutItems.removeAllViews();
 
-        for (int i = 0; i < questions.size(); i++) {
-            addWorksheetItem(questions.get(i), i + 1);
+        if (markdownRenderer == null) {
+            markdownRenderer = new MarkdownRenderer(
+                    requireContext(),
+                    questionBlockRenderer,
+                    attachmentImageLoader,
+                    fileStorageManager);
+            markdownRenderer.setTextScaleFactor(textScaleFactor);
         }
+
+        Map<String, Question> questionMap;
+        if (questions.isEmpty()) {
+            questionMap = Collections.emptyMap();
+        } else {
+            questionMap = new HashMap<>();
+            for (Question question : questions) {
+                questionMap.put(question.getId(), question);
+            }
+        }
+
+        markdownRenderer.render(
+                binding.layoutItems,
+                material.getContent(),
+                material.getId(),
+                questionMap);
+        rebindInteractiveFields();
+    }
+
+    /**
+     * Backwards-compatible entry point that renders questions only.
+     *
+     * @param questions The questions to display.
+     */
+    public void displayQuestions(@NonNull List<Question> questions) {
+        if (questions.isEmpty()) {
+            showLoading();
+            return;
+        }
+        StringBuilder syntheticContent = new StringBuilder();
+        for (Question question : questions) {
+            if (syntheticContent.length() > 0) {
+                syntheticContent.append("\n\n");
+            }
+            syntheticContent.append("!!! question id=\"")
+                    .append(question.getId())
+                    .append("\"");
+        }
+        Material syntheticMaterial = new Material(
+                questions.get(0).getMaterialId(),
+                com.manuscripta.student.data.model.MaterialType.WORKSHEET,
+                "Worksheet",
+                syntheticContent.toString(),
+                "{}",
+                "[]",
+                System.currentTimeMillis());
+        displayMaterial(syntheticMaterial, questions);
     }
 
     /**
@@ -146,12 +255,16 @@ public class WorksheetFragment extends Fragment {
      */
     @NonNull
     public String getTextContent() {
+        String materialText = currentMaterialContent.replace("______", "blank");
         StringBuilder sb = new StringBuilder();
+        if (!materialText.trim().isEmpty()) {
+            sb.append(materialText);
+        }
         for (Question q : currentQuestions) {
             if (sb.length() > 0) {
                 sb.append(". ");
             }
-            sb.append(q.getQuestionText().replace(BLANK_MARKER, "blank"));
+            sb.append(q.getQuestionText().replace("______", "blank"));
         }
         return sb.toString();
     }
@@ -182,54 +295,46 @@ public class WorksheetFragment extends Fragment {
     }
 
     /**
-     * Adds a single worksheet item view to the layout.
-     *
-     * @param question The question to render.
-     * @param number   The 1-based item number.
+     * Rebuilds the answer field index by scanning rendered worksheet views.
      */
-    private void addWorksheetItem(@NonNull Question question, int number) {
-        View itemView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_worksheet, binding.layoutItems, false);
+    private void rebindInteractiveFields() {
+        answerFields.clear();
+        mcFields.clear();
+        if (binding == null) {
+            return;
+        }
+        collectFieldsRecursive(binding.layoutItems);
+    }
 
-        TextView textNumber = itemView.findViewById(R.id.textNumber);
-        TextView textBefore = itemView.findViewById(R.id.textBefore);
-        EditText editAnswer = itemView.findViewById(R.id.editAnswer);
-        TextView textAfter = itemView.findViewById(R.id.textAfter);
-        TextView textMarks = itemView.findViewById(R.id.textMarks);
+    /**
+     * Traverses rendered views and registers question input controls by tagged question ID.
+     *
+     * @param view Current view in the traversal
+     */
+    private void collectFieldsRecursive(@NonNull View view) {
+        Object tag = view.getTag();
 
-        textNumber.setText(number + ". ");
-
-        if (question.getMaxScore() != null) {
-            textMarks.setText(getString(R.string.worksheet_marks_available, question.getMaxScore()));
-            textMarks.setVisibility(View.VISIBLE);
+        if (view instanceof EditText
+                && questionBlockRenderer.isWrittenAnswerTag(tag)) {
+            String questionId = questionBlockRenderer.extractQuestionIdFromTag(tag);
+            if (questionId != null) {
+                answerFields.put(questionId, (EditText) view);
+            }
         }
 
-        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
-            textBefore.setText(question.getQuestionText());
-            editAnswer.setVisibility(View.GONE);
-            textAfter.setVisibility(View.GONE);
-
-            RadioGroup radioGroup = (RadioGroup) questionBlockRenderer
-                    .renderMultipleChoice(requireContext(), question);
-            binding.layoutItems.addView(itemView);
-            binding.layoutItems.addView(radioGroup);
-            mcFields.put(question.getId(), radioGroup);
-        } else {
-            String questionText = question.getQuestionText();
-            int blankIndex = questionText.indexOf(BLANK_MARKER);
-            if (blankIndex >= 0) {
-                textBefore.setText(questionText.substring(0, blankIndex));
-                textAfter.setText(questionText.substring(
-                        blankIndex + BLANK_MARKER.length()));
-                editAnswer.setVisibility(View.VISIBLE);
-            } else {
-                textBefore.setText(questionText);
-                textAfter.setVisibility(View.GONE);
-                editAnswer.setVisibility(View.VISIBLE);
-                editAnswer.setHint("");
+        if (view instanceof RadioGroup
+                && questionBlockRenderer.isMultipleChoiceTag(tag)) {
+            String questionId = questionBlockRenderer.extractQuestionIdFromTag(tag);
+            if (questionId != null) {
+                mcFields.put(questionId, (RadioGroup) view);
             }
-            answerFields.put(question.getId(), editAnswer);
-            binding.layoutItems.addView(itemView);
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                collectFieldsRecursive(group.getChildAt(i));
+            }
         }
     }
 

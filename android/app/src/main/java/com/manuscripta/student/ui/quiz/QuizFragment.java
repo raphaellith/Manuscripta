@@ -113,7 +113,6 @@ public class QuizFragment extends Fragment {
         }
         this.currentQuestion = question;
         binding.textLoading.setVisibility(View.GONE);
-        binding.buttonBack.setVisibility(View.VISIBLE);
         binding.cardQuestion.setVisibility(View.VISIBLE);
         binding.recyclerOptions.setVisibility(View.VISIBLE);
         binding.buttonSubmit.setVisibility(View.VISIBLE);
@@ -134,7 +133,6 @@ public class QuizFragment extends Fragment {
             return;
         }
         binding.textLoading.setVisibility(View.VISIBLE);
-        binding.buttonBack.setVisibility(View.GONE);
         binding.cardQuestion.setVisibility(View.GONE);
         binding.recyclerOptions.setVisibility(View.GONE);
         binding.buttonSubmit.setVisibility(View.GONE);
@@ -168,15 +166,9 @@ public class QuizFragment extends Fragment {
     }
 
     /**
-     * Sets up button click listeners for back and submit actions.
+     * Sets up button click listeners for submit actions.
      */
     private void setupButtons() {
-        binding.buttonBack.setOnClickListener(v -> {
-            if (navigationListener != null) {
-                navigationListener.onBackToLesson();
-            }
-        });
-
         binding.buttonSubmit.setOnClickListener(v -> handleSubmit());
     }
 
