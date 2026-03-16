@@ -5,6 +5,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,8 +14,10 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.manuscripta.student.R;
+import com.manuscripta.student.data.model.QuestionType;
 import com.manuscripta.student.databinding.FragmentWorksheetBinding;
 import com.manuscripta.student.domain.model.Question;
+import com.manuscripta.student.ui.renderer.QuestionBlockRenderer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,8 +33,14 @@ public class WorksheetFragment extends Fragment {
     /** View binding for the worksheet fragment layout. */
     private FragmentWorksheetBinding binding;
 
-    /** Maps question IDs to their answer EditText fields. */
+    /** Maps question IDs to their written-answer EditText fields. */
     private final Map<String, EditText> answerFields = new LinkedHashMap<>();
+
+    /** Maps question IDs to their multiple-choice RadioGroup fields. */
+    private final Map<String, RadioGroup> mcFields = new LinkedHashMap<>();
+
+    /** Renderer for question blocks (multiple choice, written answer). */
+    private final QuestionBlockRenderer questionBlockRenderer = new QuestionBlockRenderer();
 
     /** The list of currently displayed questions. */
     private final List<Question> currentQuestions = new ArrayList<>();
@@ -109,6 +119,7 @@ public class WorksheetFragment extends Fragment {
         currentQuestions.clear();
         currentQuestions.addAll(questions);
         answerFields.clear();
+        mcFields.clear();
         binding.layoutItems.removeAllViews();
 
         for (int i = 0; i < questions.size(); i++) {
@@ -157,6 +168,16 @@ public class WorksheetFragment extends Fragment {
             String text = entry.getValue().getText().toString().trim();
             answers.put(entry.getKey(), text);
         }
+        for (Map.Entry<String, RadioGroup> entry : mcFields.entrySet()) {
+            RadioGroup radioGroup = entry.getValue();
+            int checkedId = radioGroup.getCheckedRadioButtonId();
+            if (checkedId != -1) {
+                RadioButton selected = radioGroup.findViewById(checkedId);
+                answers.put(entry.getKey(), selected.getText().toString());
+            } else {
+                answers.put(entry.getKey(), "");
+            }
+        }
         return answers;
     }
 
@@ -174,25 +195,42 @@ public class WorksheetFragment extends Fragment {
         TextView textBefore = itemView.findViewById(R.id.textBefore);
         EditText editAnswer = itemView.findViewById(R.id.editAnswer);
         TextView textAfter = itemView.findViewById(R.id.textAfter);
+        TextView textMarks = itemView.findViewById(R.id.textMarks);
 
         textNumber.setText(number + ". ");
 
-        String questionText = question.getQuestionText();
-        int blankIndex = questionText.indexOf(BLANK_MARKER);
-        if (blankIndex >= 0) {
-            textBefore.setText(questionText.substring(0, blankIndex));
-            textAfter.setText(questionText.substring(
-                    blankIndex + BLANK_MARKER.length()));
-            editAnswer.setVisibility(View.VISIBLE);
-        } else {
-            textBefore.setText(questionText);
-            textAfter.setVisibility(View.GONE);
-            editAnswer.setVisibility(View.VISIBLE);
-            editAnswer.setHint("");
+        if (question.getMaxScore() != null) {
+            textMarks.setText(getString(R.string.worksheet_marks_available, question.getMaxScore()));
+            textMarks.setVisibility(View.VISIBLE);
         }
 
-        answerFields.put(question.getId(), editAnswer);
-        binding.layoutItems.addView(itemView);
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            textBefore.setText(question.getQuestionText());
+            editAnswer.setVisibility(View.GONE);
+            textAfter.setVisibility(View.GONE);
+
+            RadioGroup radioGroup = (RadioGroup) questionBlockRenderer
+                    .renderMultipleChoice(requireContext(), question);
+            binding.layoutItems.addView(itemView);
+            binding.layoutItems.addView(radioGroup);
+            mcFields.put(question.getId(), radioGroup);
+        } else {
+            String questionText = question.getQuestionText();
+            int blankIndex = questionText.indexOf(BLANK_MARKER);
+            if (blankIndex >= 0) {
+                textBefore.setText(questionText.substring(0, blankIndex));
+                textAfter.setText(questionText.substring(
+                        blankIndex + BLANK_MARKER.length()));
+                editAnswer.setVisibility(View.VISIBLE);
+            } else {
+                textBefore.setText(questionText);
+                textAfter.setVisibility(View.GONE);
+                editAnswer.setVisibility(View.VISIBLE);
+                editAnswer.setHint("");
+            }
+            answerFields.put(question.getId(), editAnswer);
+            binding.layoutItems.addView(itemView);
+        }
     }
 
     /**

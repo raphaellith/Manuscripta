@@ -199,7 +199,7 @@ public class WorksheetViewModelTest {
             questions[i] = new Question(
                     "q-" + i, "mat-1", "Worksheet question " + i + "?",
                     QuestionType.WRITTEN_ANSWER,
-                    "", "");
+                    "", "", null);
         }
         return Arrays.asList(questions);
     }

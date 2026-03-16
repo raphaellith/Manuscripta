@@ -76,4 +76,12 @@
 
     <!-- Notifications -->
     <string name="material_received">New material received!</string>
+    <string name="feedback_received">New feedback received!</string>
+
+    <!-- Worksheet -->
+    <string name="worksheet_marks_available">%d marks</string>
+
+    <!-- Feedback dropdown labels -->
+    <string name="feedback_dropdown_marks">Feedback: %d marks</string>
+    <string name="feedback_dropdown_comment">Feedback: comment</string>
 </resources>
