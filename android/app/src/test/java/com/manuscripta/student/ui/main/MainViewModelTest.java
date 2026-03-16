@@ -402,6 +402,6 @@ public class MainViewModelTest {
     private QuestionEntity createQuestionEntity(String id, String materialId,
                                                 QuestionType type) {
         return new QuestionEntity(id, materialId, "Question text?",
-                type, "[\"A\",\"B\",\"C\"]", "A");
+                type, "[\"A\",\"B\",\"C\"]", "A", null);
     }
 }

@@ -31,6 +31,17 @@
             android:textSize="@dimen/text_body"
             tools:text="The Battle of Hastings was fought in " />
 
+        <!-- Marks available (hidden when not specified) -->
+        <TextView
+            android:id="@+id/textMarks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/eink_dark"
+            android:textSize="@dimen/text_body"
+            android:visibility="gone"
+            tools:text="[3 marks]" />
+
     </LinearLayout>
 
     <!-- Answer input row -->
@@ -48,9 +59,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="@drawable/bg_heading_underline"
-            android:gravity="center"
+            android:gravity="top|start"
             android:importantForAutofill="no"
-            android:inputType="text"
+            android:inputType="textMultiLine"
+            android:minLines="1"
             android:paddingBottom="4dp"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"

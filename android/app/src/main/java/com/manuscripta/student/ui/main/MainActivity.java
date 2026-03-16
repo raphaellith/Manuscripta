@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.manuscripta.student.R;
 import com.manuscripta.student.data.model.FeedbackStyle;
+import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.data.model.MascotSelection;
 import com.manuscripta.student.databinding.ActivityMainBinding;
 import com.manuscripta.student.domain.model.Configuration;
@@ -77,6 +78,9 @@ public class MainActivity extends AppCompatActivity {
 
     /** Cached list of all distributed materials for the dropdown. */
     private final List<Material> allMaterials = new ArrayList<>();
+
+    /** Cached list of all received feedback items for the dropdown. */
+    private final List<Feedback> allFeedback = new ArrayList<>();
 
     /** Whether the pairing state observer has fired at least once. */
     private boolean observerInitialised;
@@ -234,10 +238,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows a popup menu listing all available materials.
+     * Shows a popup menu listing all available materials and feedback items.
      */
     private void showMaterialDropdown() {
-        if (allMaterials.isEmpty()) {
+        if (allMaterials.isEmpty() && allFeedback.isEmpty()) {
             Toast.makeText(this, R.string.no_materials, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -245,14 +249,47 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < allMaterials.size(); i++) {
             popup.getMenu().add(0, i, i, allMaterials.get(i).getTitle());
         }
+        for (int i = 0; i < allFeedback.size(); i++) {
+            int id = allMaterials.size() + i;
+            popup.getMenu().add(0, id, id, buildFeedbackLabel(allFeedback.get(i)));
+        }
         popup.setOnMenuItemClickListener(item -> {
             int index = item.getItemId();
-            if (index >= 0 && index < allMaterials.size()) {
+            if (index < allMaterials.size()) {
                 selectMaterial(allMaterials.get(index));
+            } else {
+                int feedbackIndex = index - allMaterials.size();
+                if (feedbackIndex < allFeedback.size()) {
+                    selectFeedback(allFeedback.get(feedbackIndex));
+                }
             }
             return true;
         });
         popup.show();
+    }
+
+    /**
+     * Displays the given feedback item in the teacher feedback panel.
+     *
+     * @param feedback The feedback item to display.
+     */
+    private void selectFeedback(@NonNull Feedback feedback) {
+        if (binding != null) {
+            binding.teacherFeedbackPanel.showSingleFeedback(feedback);
+        }
+    }
+
+    /**
+     * Builds a human-readable dropdown label for a feedback item.
+     *
+     * @param feedback The feedback item.
+     * @return A label string for display in the dropdown menu.
+     */
+    private String buildFeedbackLabel(@NonNull Feedback feedback) {
+        if (feedback.hasMarks()) {
+            return getString(R.string.feedback_dropdown_marks, feedback.getMarks());
+        }
+        return getString(R.string.feedback_dropdown_comment);
     }
 
     /**
@@ -568,8 +605,11 @@ public class MainActivity extends AppCompatActivity {
             if (binding == null || feedbackList == null) {
                 return;
             }
-            if (feedbackList.size() > lastKnownFeedbackCount) {
-                binding.teacherFeedbackPanel.showFeedback(feedbackList);
+            allFeedback.clear();
+            allFeedback.addAll(feedbackList);
+            if (feedbackList.size() > lastKnownFeedbackCount
+                    && lastKnownFeedbackCount > 0) {
+                showFeedbackReceivedNotification();
             }
             lastKnownFeedbackCount = feedbackList.size();
         });
@@ -706,6 +746,19 @@ public class MainActivity extends AppCompatActivity {
     private void showMaterialReceivedNotification() {
         Toast toast = Toast.makeText(
                 this, R.string.material_received,
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                0, 32);
+        toast.show();
+    }
+
+    /**
+     * Shows a brief notification at the top of the screen when
+     * new feedback has been received from the teacher server.
+     */
+    private void showFeedbackReceivedNotification() {
+        Toast toast = Toast.makeText(
+                this, R.string.feedback_received,
                 Toast.LENGTH_SHORT);
         toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
                 0, 32);
