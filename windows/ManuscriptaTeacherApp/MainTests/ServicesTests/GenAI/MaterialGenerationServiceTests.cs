@@ -399,6 +399,12 @@ public class MaterialGenerationServiceTests
 
         Assert.Contains(streamedChunks, c => c.IsQueryingSourceDocuments);
         Assert.Contains(streamedChunks, c => !c.IsThinking && c.Token == "generated-content");
+
+        var firstContentIndex = streamedChunks.FindIndex(c => !string.IsNullOrEmpty(c.Token));
+        Assert.True(firstContentIndex >= 0);
+        Assert.DoesNotContain(
+            streamedChunks.Take(firstContentIndex),
+            c => !c.IsQueryingSourceDocuments && !c.Done && string.IsNullOrEmpty(c.Token));
     }
 
     private sealed class FakeOllamaClientService : OllamaClientService
