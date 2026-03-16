@@ -436,7 +436,7 @@ For a list of all server method and client handlers to be implemented for commun
 
         (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
-        (iv) Whilst the modification is in progress, the frontend shall display a streaming generation view in accordance with §4B(2)(a1)(ia), showing the AI's chain-of-thought and the progressively generated replacement content.
+        (iv) Whilst the modification is in progress, the frontend shall display a streaming generation view in accordance with §4B(2)(a1), showing the AI's chain-of-thought and the progressively generated replacement content.
 
         (v) The streaming generation view for content modification shall not replace the user's existing content until the final `GenerationResult` is received. An interim preview may be shown adjacent to or overlaid on the selected content.
 
