@@ -11,8 +11,13 @@ import type {
     DeviceStatusEntity,
     ResponseEntity,
     FeedbackEntity,
-    ReMarkableDeviceEntity,
+    ExternalDeviceEntity,
+    ExternalDeviceType,
+    EmailCredentialEntity,
     ConfigurationEntity,
+    SourceDocumentEntity,
+    EmbeddingStatus,
+    PdfExportSettingsEntity,
     InternalCreateUnitCollectionDto,
     InternalCreateUnitDto,
     InternalCreateLessonDto,
@@ -21,6 +26,9 @@ import type {
     InternalUpdateQuestionDto,
     InternalCreateAttachmentDto,
     InternalCreateFeedbackDto,
+    InternalCreateSourceDocumentDto,
+    GenerationRequest,
+    GenerationResult,
 } from "../../models";
 
 /**
@@ -149,7 +157,10 @@ class SignalRService {
         if (!this.connection) {
             await this.initialize();
         }
-        return this.connection!;
+        if (!this.connection) {
+            throw new Error("Failed to initialize SignalR connection.");
+        }
+        return this.connection;
     }
 
     /**
@@ -334,8 +345,8 @@ class SignalRService {
         return await this.getConnection().invoke<MaterialEntity[]>("GetAllMaterials");
     }
 
-    public async updateMaterial(entity: MaterialEntity): Promise<void> {
-        await this.getConnection().invoke("UpdateMaterial", entity);
+    public async updateMaterial(entity: MaterialEntity): Promise<MaterialEntity> {
+        return await this.getConnection().invoke<MaterialEntity>("UpdateMaterial", entity);
     }
 
     public async deleteMaterial(id: string): Promise<void> {
@@ -358,6 +369,91 @@ class SignalRService {
         }
         return bytes;
     }
+
+    /**
+     * Generates a response PDF for a specific device's responses to a worksheet.
+     * Per NetworkingAPISpec §1(m)(ii).
+     * @returns Decoded PDF file bytes as a Uint8Array.
+     */
+    public async generateResponsePdf(
+        materialId: string,
+        deviceId: string,
+        includeFeedback: boolean,
+        includeMarkScheme: boolean,
+    ): Promise<Uint8Array> {
+        const base64 = await this.connection.invoke<string>(
+            "GenerateResponsePdf", materialId, deviceId, includeFeedback, includeMarkScheme,
+        );
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // ==========================================
+    // AI Generation - NetworkingAPISpec §1(1)(i)
+    // ==========================================
+
+    /**
+     * Modifies selected material content using AI.
+     * Per GenAISpec §3C.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param selectedContent The text selected by the user.
+     * @param instruction The instruction for modification.
+     * @param materialType The type of material being modified (e.g. 'reading', 'worksheet').
+     * @param title The title of the material being modified.
+     * @param readingAge Optional reading age of the material.
+     * @param actualAge Optional actual age of the material.
+     * @param materialId The ID of the material being modified, for question-draft extraction per GenAISpec §3C(2)(e1) and RAG hierarchy resolution per §3C(2)(a).
+     */
+    public async modifyContent(
+        selectedContent: string,
+        instruction: string,
+        materialType: string,
+        title: string,
+        readingAge: number | undefined,
+        actualAge: number | undefined,
+        materialId: string
+    ): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>(
+            "ModifyContent", selectedContent, instruction,
+            materialType, title, readingAge ?? null, actualAge ?? null, materialId
+        );
+    }
+
+    /**
+     * Generates reading material content using AI.
+     * Per NetworkingAPISpec §1(1)(i)(i) and GenAISpec §3B.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param request The generation request parameters.
+     */
+    public async generateReading(request: GenerationRequest): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateReading", request);
+    }
+
+    /**
+     * Generates worksheet material content using AI.
+     * Per NetworkingAPISpec §1(1)(i)(ii) and GenAISpec §3B.
+     * The server generates a unique generation ID and sends it via OnGenerationStarted.
+     * @param request The generation request parameters.
+     */
+    public async generateWorksheet(request: GenerationRequest): Promise<GenerationResult> {
+        return await this.getConnection().invoke<GenerationResult>("GenerateWorksheet", request);
+    }
+
+    /**
+     * Cancels an in-progress generation operation.
+     * Per NetworkingAPISpec §1(1)(i)(x).
+     * @param generationId The ID of the generation to cancel.
+     * @returns True if cancellation was requested; false if generation not found or belongs to another connection.
+     */
+    public async cancelGeneration(generationId: string): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CancelGeneration", generationId);
+    }
+
+
 
     // ==========================================
     // Question CRUD - NetworkingAPISpec §1(1)(d1)
@@ -643,40 +739,133 @@ class SignalRService {
         return this.subscribe("FeedbackDeliveryFailed", callback as (...args: unknown[]) => void);
     }
 
+    /**
+     * Subscribe to feedback generation success events.
+     * Per NetworkingAPISpec §2(1)(c)(iii).
+     */
+    public onFeedbackGenerated(callback: (feedbackId: string, responseId: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerated", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Subscribe to feedback generation failure events.
+     * Per NetworkingAPISpec §2(1)(c)(i).
+     */
+    public onFeedbackGenerationFailed(callback: (responseId: string, error: string) => void): () => void {
+        return this.subscribe("OnFeedbackGenerationFailed", callback as (...args: unknown[]) => void);
+    }
+
+    /**
+     * Queues a response for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(vi) and GenAISpec §3D(5).
+     */
+    public async queueForAiGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("QueueForAiGeneration", responseId);
+    }
+
+    /**
+     * Removes a response from the AI feedback generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(ix) and GenAISpec §3D(6)(a).
+     */
+    public async removeFromAiGenerationQueue(responseId: string): Promise<void> {
+        await this.getConnection().invoke("RemoveFromAiGenerationQueue", responseId);
+    }
+
+    /**
+     * Moves a queued response to the front of the generation queue.
+     * Per NetworkingAPISpec §1(1)(i)(viii) and GenAISpec §3D(8A).
+     */
+    public async prioritiseFeedbackGeneration(responseId: string): Promise<void> {
+        await this.getConnection().invoke("PrioritiseFeedbackGeneration", responseId);
+    }
+
+    /**
+     * Returns a list of response IDs currently queued for AI feedback generation.
+     * Per NetworkingAPISpec §1(1)(i)(xi) and GenAISpec §3D(4).
+     */
+    public async getFeedbackQueueStatus(): Promise<string[]> {
+        return await this.getConnection().invoke<string[]>("GetFeedbackQueueStatus");
+    }
+
+    /**
+     * Returns the response ID currently being processed for feedback generation, or null if idle.
+     * Per NetworkingAPISpec §1(1)(i)(xii) and GenAISpec §3D(4).
+     */
+    public async getCurrentlyGeneratingResponseId(): Promise<string | null> {
+        return await this.getConnection().invoke<string | null>("GetCurrentlyGeneratingResponseId");
+    }
+
     // ==========================================
-    // reMarkable Methods - NetworkingAPISpec §1(1)(n)
+    // External Device Methods - NetworkingAPISpec §1(1)(n)
     // ==========================================
 
     /**
-     * Pairs a reMarkable device using a one-time code.
-     * Per NetworkingAPISpec §1(1)(n)(i).
+     * Pairs an external device (reMarkable/Kindle).
      */
-    public async pairReMarkableDevice(name: string, oneTimeCode: string): Promise<string> {
-        return await this.getConnection().invoke<string>("PairReMarkableDevice", name, oneTimeCode);
+    public async pairExternalDevice(name: string, type: ExternalDeviceType, configurationData: string): Promise<string> {
+        return await this.getConnection().invoke<string>("PairExternalDevice", name, type, configurationData);
     }
 
     /**
-     * Unpairs a reMarkable device.
-     * Per NetworkingAPISpec §1(1)(n)(ii).
+     * Unpairs an external device.
      */
-    public async unpairReMarkableDevice(deviceId: string): Promise<void> {
-        await this.getConnection().invoke("UnpairReMarkableDevice", deviceId);
+    public async unpairExternalDevice(deviceId: string): Promise<void> {
+        await this.getConnection().invoke("UnpairExternalDevice", deviceId);
     }
 
     /**
-     * Retrieves all paired reMarkable devices.
-     * Per NetworkingAPISpec §1(1)(n)(iii).
+     * Retrieves all paired external devices.
      */
-    public async getAllReMarkableDevices(): Promise<ReMarkableDeviceEntity[]> {
-        return await this.getConnection().invoke<ReMarkableDeviceEntity[]>("GetAllReMarkableDevices");
+    public async getAllExternalDevices(): Promise<ExternalDeviceEntity[]> {
+        return await this.getConnection().invoke<ExternalDeviceEntity[]>("GetAllExternalDevices");
     }
 
     /**
-     * Updates a reMarkable device entity.
-     * Per NetworkingAPISpec §1(1)(n)(iv).
+     * Updates an external device entity.
      */
-    public async updateReMarkableDevice(entity: ReMarkableDeviceEntity): Promise<void> {
-        await this.getConnection().invoke("UpdateReMarkableDevice", entity);
+    public async updateExternalDevice(entity: ExternalDeviceEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateExternalDevice", entity);
+    }
+
+    /**
+     * Deploys a material to external devices.
+     */
+    public async deployMaterialToExternalDevices(materialId: string, deviceIds: string[]): Promise<void> {
+        await this.getConnection().invoke("DeployMaterialToExternalDevices", materialId, deviceIds);
+    }
+
+    /**
+     * Subscribe to external device auth invalid events.
+     */
+    public onExternalDeviceAuthInvalid(callback: (deviceId: string) => void): () => void {
+        return this.subscribe("ExternalDeviceAuthInvalid", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // Email Configuration Methods - NetworkingAPISpec §1(1)(o)
+    // ==========================================
+
+    public async saveEmailCredentials(credentials: EmailCredentialEntity): Promise<void> {
+        await this.getConnection().invoke("SaveEmailCredentials", credentials);
+    }
+
+    public async getEmailCredentials(): Promise<EmailCredentialEntity | null> {
+        return await this.getConnection().invoke<EmailCredentialEntity | null>("GetEmailCredentials");
+    }
+
+    public async deleteEmailCredentials(): Promise<void> {
+        await this.getConnection().invoke("DeleteEmailCredentials");
+    }
+
+    public async checkEmailCredentialAvailability(): Promise<boolean> {
+        return await this.getConnection().invoke<boolean>("CheckEmailCredentialAvailability");
+    }
+
+    /**
+     * Subscribe to email credentials not configured events.
+     */
+    public onEmailCredentialsNotConfigured(callback: () => void): () => void {
+        return this.subscribe("EmailCredentialsNotConfigured", callback as (...args: unknown[]) => void);
     }
 
     // ==========================================
@@ -751,21 +940,114 @@ class SignalRService {
         return this.subscribe("RuntimeDependencyInstallProgress", callback as (...args: unknown[]) => void);
     }
 
+    // ==========================================
+    // AI Generation Progress - NetworkingAPISpec §2(1)(h)
+    // ==========================================
+
     /**
-     * Deploys a material to reMarkable devices.
-     * Per NetworkingAPISpec §1(1)(n)(vii).
+     * Subscribe to generation started events for receiving server-generated ID.
+     * Per NetworkingAPISpec §2(1)(h)(ii) and FrontendWorkflowSpecifications §4B(2)(a1).
      */
-    public async deployMaterialToReMarkable(materialId: string, deviceIds: string[]): Promise<void> {
-        await this.getConnection().invoke("DeployMaterialToReMarkable", materialId, deviceIds);
+    public onGenerationStarted(callback: (generationId: string) => void): () => void {
+        return this.subscribe("OnGenerationStarted", callback as (...args: unknown[]) => void);
     }
 
     /**
-     * Subscribe to reMarkable auth invalid events.
-     * Per NetworkingAPISpec §2(1)(f).
+     * Subscribe to generation progress events for streaming AI output.
+     * Per NetworkingAPISpec §2(1)(h)(i) and FrontendWorkflowSpecifications §4B(2)(a1).
      */
-    public onReMarkableAuthInvalid(callback: (deviceId: string) => void): () => void {
-        return this.subscribe("ReMarkableAuthInvalid", callback as (...args: unknown[]) => void);
+    public onGenerationProgress(callback: (token: string, isThinking: boolean, done: boolean) => void): () => void {
+        return this.subscribe("OnGenerationProgress", callback as (...args: unknown[]) => void);
     }
+
+    /**
+     * Subscribe to generation cancelled events.
+     * Per NetworkingAPISpec §2(1)(h)(iii) and FrontendWorkflowSpecifications §4B(2)(a1)(vi).
+     */
+    public onGenerationCancelled(callback: (generationId: string) => void): () => void {
+        return this.subscribe("OnGenerationCancelled", callback as (...args: unknown[]) => void);
+    }
+
+    // ==========================================
+    // Source Document CRUD - NetworkingAPISpec §1(1)(k)
+    // ==========================================
+
+    /**
+     * Creates a new source document.
+     * Per NetworkingAPISpec §1(1)(k)(i) and FrontendWorkflowSpec §4AA(2)(c).
+     */
+    public async createSourceDocument(dto: InternalCreateSourceDocumentDto): Promise<SourceDocumentEntity> {
+        return await this.getConnection().invoke<SourceDocumentEntity>("CreateSourceDocument", dto);
+    }
+
+    /**
+     * Retrieves all source documents.
+     * Per NetworkingAPISpec §1(1)(k)(ii) and FrontendWorkflowSpec §3(1)(a)(v).
+     */
+    public async getAllSourceDocuments(): Promise<SourceDocumentEntity[]> {
+        return await this.getConnection().invoke<SourceDocumentEntity[]>("GetAllSourceDocuments");
+    }
+
+    /**
+     * Updates a source document entity.
+     * Per NetworkingAPISpec §1(1)(k)(iii) and FrontendWorkflowSpec §4AA(3)(a).
+     */
+    public async updateSourceDocument(entity: SourceDocumentEntity): Promise<void> {
+        await this.getConnection().invoke("UpdateSourceDocument", entity);
+    }
+
+    /**
+     * Deletes a source document by ID.
+     * Per NetworkingAPISpec §1(1)(k)(iv) and FrontendWorkflowSpec §4AA(4)(a).
+     */
+    public async deleteSourceDocument(id: string): Promise<void> {
+        await this.getConnection().invoke("DeleteSourceDocument", id);
+    }
+
+    /**
+     * Gets the embedding status of a source document.
+     * Per NetworkingAPISpec §1(1)(i)(v) and FrontendWorkflowSpec §4AA(2)(e).
+     */
+    public async getEmbeddingStatus(sourceDocumentId: string): Promise<EmbeddingStatus> {
+        return await this.getConnection().invoke<EmbeddingStatus>("GetEmbeddingStatus", sourceDocumentId);
+    }
+
+    /**
+     * Retries embedding for a source document with FAILED status.
+     * Per NetworkingAPISpec §1(1)(i)(vii) and FrontendWorkflowSpec §4AA(5)(b).
+     */
+    public async retryEmbedding(sourceDocumentId: string): Promise<void> {
+        await this.getConnection().invoke("RetryEmbedding", sourceDocumentId);
+    }
+
+    /**
+     * Subscribe to embedding failed events.
+     * Per NetworkingAPISpec §2(1)(d)(i) and FrontendWorkflowSpec §4AA(6).
+     */
+    public onEmbeddingFailed(callback: (sourceDocumentId: string, error: string) => void): () => void {
+        return this.subscribe("OnEmbeddingFailed", callback as (...args: unknown[]) => void);
+    }
+    
+    // ==========================================
+    // PDF Export Settings - NetworkingAPISpec §1(1)(q)
+    // ==========================================
+
+    /**
+     * Retrieves the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(i) and FrontendWorkflowSpecifications §3(1)(b).
+     */
+    public async getPdfExportSettings(): Promise<PdfExportSettingsEntity> {
+        return await this.getConnection().invoke<PdfExportSettingsEntity>("GetPdfExportSettings");
+    }
+
+    /**
+     * Updates the global default PDF export settings.
+     * Per NetworkingAPISpec §1(1)(q)(ii).
+     */
+    public async updatePdfExportSettings(settings: PdfExportSettingsEntity): Promise<void> {
+        await this.getConnection().invoke("UpdatePdfExportSettings", settings);
+    }
+
 }
 
 const signalRService = new SignalRService();

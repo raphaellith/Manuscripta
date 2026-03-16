@@ -231,14 +231,14 @@ public class FeedbackControllerTests
 /// Integration tests for FeedbackController JSON serialisation compliance.
 /// Verifies AdditionalValidationRules.md Section 1A(1): PascalCase field names.
 /// </summary>
-public class FeedbackControllerSerialisationTests : IClassFixture<TestWebApplicationFactory>
+public class FeedbackControllerSerialisationTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly TestWebApplicationFactory _factory;
+    private readonly CustomWebApplicationFactory _factory;
     private readonly Guid _testDeviceId = Guid.NewGuid();
     private readonly Guid _testResponseId = Guid.NewGuid();
     private readonly Guid _testQuestionId = Guid.NewGuid();
 
-    public FeedbackControllerSerialisationTests(TestWebApplicationFactory factory)
+    public FeedbackControllerSerialisationTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
     }

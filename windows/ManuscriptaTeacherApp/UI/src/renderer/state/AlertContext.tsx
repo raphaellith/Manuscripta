@@ -5,12 +5,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import signalRService from '../services/signalr/SignalRService';
-import type { PairedDeviceEntity, DeviceStatusEntity } from '../models';
+import type { PairedDeviceEntity, DeviceStatusEntity, SourceDocumentEntity } from '../models';
 
 // Alert types for various events
 export interface Alert {
     id: string;
-    type: 'help' | 'disconnection' | 'distribution_failed' | 'control_failed' | 'config_refresh_failed' | 'feedback_failed' | 'success';
+    type: 'help' | 'disconnection' | 'distribution_failed' | 'control_failed' | 'config_refresh_failed' | 'feedback_failed' | 'embedding_failed' | 'success';
     deviceId?: string;
     deviceName?: string;
     message: string;
@@ -25,6 +25,7 @@ interface AlertContextValue {
     acknowledgeHelp: (deviceId: string) => void;
     acknowledgeAllHelp: () => void;
     setPairedDevices: (devices: PairedDeviceEntity[]) => void;
+    setSourceDocuments: (docs: SourceDocumentEntity[]) => void;
     unacknowledgedHelpCount: number;
 }
 
@@ -49,22 +50,37 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
     // Ref to hold latest devices without triggering re-effects
     const devicesRef = useRef<PairedDeviceEntity[]>([]);
 
+    // Ref to hold latest source documents without triggering re-effects
+    const sourceDocumentsRef = useRef<SourceDocumentEntity[]>([]);
+
     // Update devices ref for name resolution
     const setPairedDevices = useCallback((devices: PairedDeviceEntity[]) => {
         devicesRef.current = devices;
     }, []);
 
+    // Update source documents ref for document identification in alerts
+    const setSourceDocuments = useCallback((docs: SourceDocumentEntity[]) => {
+        sourceDocumentsRef.current = docs;
+    }, []);
+
     // Helper to add alerts - uses ref to avoid dependency cycles
+    // Deduplicates by (type, deviceId) to prevent repeated SignalR events
+    // from stacking identical alerts that make dismissal appear broken.
     const addAlert = useCallback((type: Alert['type'], deviceId: string | undefined, message: string) => {
         const device = deviceId ? devicesRef.current.find(d => d.deviceId === deviceId) : undefined;
-        setAlerts(prev => [...prev, {
-            id: `${Date.now()}-${deviceId || 'global'}`,
-            type,
-            deviceId,
-            deviceName: device?.name,
-            message,
-            timestamp: Date.now()
-        }]);
+        setAlerts(prev => {
+            // Skip if an alert with the same type and deviceId already exists
+            const isDuplicate = prev.some(a => a.type === type && a.deviceId === deviceId);
+            if (isDuplicate) return prev;
+            return [...prev, {
+                id: `${Date.now()}-${deviceId || 'global'}`,
+                type,
+                deviceId,
+                deviceName: device?.name,
+                message,
+                timestamp: Date.now()
+            }];
+        });
     }, []);
 
     // Dismiss a specific alert
@@ -132,12 +148,22 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
             addAlert('feedback_failed', payload.deviceId, `Failed to deliver feedback to ${device?.name || 'device'}`);
         });
 
+        // Handler: Embedding failure alerts (per FrontendWorkflowSpec §4AA(6))
+        const unsubEmbeddingFailed = signalRService.onEmbeddingFailed((sourceDocumentId: string, error: string) => {
+            const doc = sourceDocumentsRef.current.find(d => d.id === sourceDocumentId);
+            const docLabel = doc
+                ? `"${doc.transcript.substring(0, 50).trim()}${doc.transcript.length > 50 ? '…' : ''}"`
+                : sourceDocumentId.substring(0, 8);
+            addAlert('embedding_failed', undefined, `Source document ${docLabel} indexing failed: ${error}`);
+        });
+
         return () => {
             unsubStatus();
             unsubHandRaised();
             unsubDistributionFailed();
             unsubControlFailed();
             unsubFeedbackFailed();
+            unsubEmbeddingFailed();
         };
     }, [addAlert]);
 
@@ -151,6 +177,7 @@ export function AlertProvider({ children }: AlertProviderProps): React.ReactElem
         acknowledgeHelp,
         acknowledgeAllHelp,
         setPairedDevices,
+        setSourceDocuments,
         unacknowledgedHelpCount
     };
 

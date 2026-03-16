@@ -11,8 +11,8 @@ public class PollMaterialEntity : MaterialEntity
 {
     private PollMaterialEntity() : base() { }
 
-    public PollMaterialEntity(Guid id, Guid lessonId, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null, int? readingAge = null, int? actualAge = null)
-        : base(id, lessonId, title, content, MaterialType.POLL, timestamp, metadata, vocabularyTerms, readingAge, actualAge)
+    public PollMaterialEntity(Guid id, Guid lessonId, string title, string content, DateTime? timestamp = null, string? metadata = null, JsonArray? vocabularyTerms = null, int? readingAge = null, int? actualAge = null, LinePatternType? linePatternType = null, LineSpacingPreset? lineSpacingPreset = null, FontSizePreset? fontSizePreset = null)
+        : base(id, lessonId, title, content, MaterialType.POLL, timestamp, metadata, vocabularyTerms, readingAge, actualAge, linePatternType, lineSpacingPreset, fontSizePreset)
     {
     }
 }

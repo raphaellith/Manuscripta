@@ -62,15 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
                     </nav>
                 </div>
 
-                <div className="user-info flex items-center gap-6">
-                    <div className="hidden lg:block text-right">
-                        <p className="font-sans text-sm font-semibold text-text-heading">Teacher</p>
-                        <p className="font-sans text-xs text-text-body/60">Demo Mode</p>
-                    </div>
-                    <div className="user-avatar w-10 h-10 bg-gradient-to-br from-brand-green to-emerald-800 text-white rounded-full flex items-center justify-center font-sans font-bold shadow-sm ring-2 ring-white cursor-pointer hover:ring-brand-orange/20 transition-all">
-                        T
-                    </div>
-                </div>
+
             </header>
         </div>
     );

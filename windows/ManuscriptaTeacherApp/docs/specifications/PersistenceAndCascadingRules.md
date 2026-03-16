@@ -18,7 +18,9 @@ This document is effective for the Windows app only.
     (f) `SourceDocumentEntity`.
     (g) `AttachmentEntity`.
     (h) `ConfigurationEntity`, for the purpose of storing default configuration values, as defined in Configuration Management Specification.
-    (i) `ReMarkableDeviceEntity`.
+    (i) `ExternalDeviceEntity`.
+    (j) `EmailCredentialEntity`.
+    (k) `PdfExportSettingsEntity`, for the purpose of storing default PDF export settings.
 
 (2) Unless otherwise specified, any create, update and delete operations on any other data entity not specified in (1) must be short-term persisted.
 
@@ -64,7 +66,7 @@ This document is effective for the Windows app only.
 
 (7) The deletion of an attachment A must delete the attachment file named by A's `FileName` attribute.
 
-(8) The deletion of a `ReMarkableDeviceEntity` R must delete the rmapi configuration file at `%AppData%\ManuscriptaTeacherApp\rmapi\{R.DeviceId}.conf`.
+(8) The deletion of an `ExternalDeviceEntity` E of type `REMARKABLE` must delete the rmapi configuration file at `%AppData%\ManuscriptaTeacherApp\rmapi\{E.DeviceId}.conf`.
 
 ## Section 3 - Proactive Orphan Removal
 
@@ -80,7 +82,7 @@ This document is effective for the Windows app only.
 
     The backend shall, on startup —
 
-    (a) Retrieve all `ReMarkableDeviceEntity` entities from the database.
-    (b) For each `.conf` file placed under the `%AppData%\ManuscriptaTeacherApp\rmapi` directory, check if its base name (without extension) matches a `DeviceId` of a `ReMarkableDeviceEntity`.
-    (c) If a file is not associated with a `ReMarkableDeviceEntity`, delete the file.
-    (d) If a `RemarkableDeviceEntity` is not associated with a `.conf` file, delete the entity.
+    (a) Retrieve all `ExternalDeviceEntity` entities of type `REMARKABLE` from the database.
+    (b) For each `.conf` file placed under the `%AppData%\ManuscriptaTeacherApp\rmapi` directory, check if its base name (without extension) matches a `DeviceId` of an `ExternalDeviceEntity` of type `REMARKABLE`.
+    (c) If a file is not associated with such an `ExternalDeviceEntity`, delete the file.
+    (d) If such an `ExternalDeviceEntity` is not associated with a `.conf` file, delete the entity.

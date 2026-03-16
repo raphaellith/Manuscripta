@@ -70,6 +70,63 @@ namespace Manuscripta.Main.Migrations
                     b.ToTable("Configurations");
                 });
 
+            modelBuilder.Entity("Main.Models.Entities.EmailCredentialEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SmtpHost")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailCredentials");
+                });
+
+            modelBuilder.Entity("Main.Models.Entities.ExternalDeviceEntity", b =>
+                {
+                    b.Property<Guid>("DeviceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConfigurationData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FontSizePreset")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinePatternType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LineSpacingPreset")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DeviceId");
+
+                    b.ToTable("ExternalDevices");
+                });
+
             modelBuilder.Entity("Main.Models.Entities.LessonEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -106,7 +163,16 @@ namespace Manuscripta.Main.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FontSizePreset")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("LessonId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinePatternType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LineSpacingPreset")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MaterialType")
@@ -136,6 +202,28 @@ namespace Manuscripta.Main.Migrations
                     b.HasIndex("Timestamp");
 
                     b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("Main.Models.Entities.PdfExportSettingsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FontSizePreset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinePatternType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LineSpacingPreset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PdfExportSettings");
                 });
 
             modelBuilder.Entity("Main.Models.Entities.QuestionDataEntity", b =>
@@ -179,25 +267,13 @@ namespace Manuscripta.Main.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("Main.Models.Entities.ReMarkableDeviceEntity", b =>
-                {
-                    b.Property<Guid>("DeviceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("DeviceId");
-
-                    b.ToTable("ReMarkableDevices");
-                });
-
             modelBuilder.Entity("Main.Models.Entities.SourceDocumentEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("EmbeddingStatus")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Transcript")
                         .IsRequired()
@@ -231,10 +307,6 @@ namespace Manuscripta.Main.Migrations
             modelBuilder.Entity("Main.Models.Entities.UnitEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.PrimitiveCollection<string>("SourceDocuments")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

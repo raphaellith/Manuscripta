@@ -13,12 +13,15 @@ import type {
     PairedDeviceEntity,
     DeviceStatusEntity,
     DeviceStatus,
-    ReMarkableDeviceEntity
+    ExternalDeviceEntity,
+    ExternalDeviceType
 } from '../../models';
 import { RenameDeviceModal } from '../modals/RenameDeviceModal';
 import { RuntimeDependencyInstallModal } from '../modals/RuntimeDependencyInstallModal';
-import { ReMarkablePairingModal } from '../modals/ReMarkablePairingModal';
+import { ExternalDevicePairingModal } from '../modals/ExternalDevicePairingModal';
 import { DeviceConfigurationModal } from '../modals/DeviceConfigurationModal';
+import { ExternalDeviceConfigurationModal } from '../modals/ExternalDeviceConfigurationModal';
+import { MissingEmailCredentialsModal } from '../modals/MissingEmailCredentialsModal';
 
 // Icons
 const TabletIcon = () => (
@@ -117,15 +120,15 @@ export const ClassroomPage: React.FC = () => {
     const [deviceStatuses, setDeviceStatuses] = useState<Map<string, DeviceStatusEntity>>(new Map());
     const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
 
-    // reMarkable device state - per §5F
-    const [remarkableDevices, setRemarkableDevices] = useState<ReMarkableDeviceEntity[]>([]);
-    const [selectedRemarkableIds, setSelectedRemarkableIds] = useState<string[]>([]);
+    // External device state
+    const [externalDevices, setExternalDevices] = useState<ExternalDeviceEntity[]>([]);
+    const [selectedExternalDeviceIds, setSelectedExternalDeviceIds] = useState<string[]>([]);
 
-    // Stable ref for remarkableDevices — avoids circular useEffect dependency
-    const remarkableDevicesRef = useRef(remarkableDevices);
-    remarkableDevicesRef.current = remarkableDevices;
+    // Stable ref for externalDevices — avoids circular useEffect dependency
+    const externalDevicesRef = useRef(externalDevices);
+    externalDevicesRef.current = externalDevices;
 
-    const remarkableDeployRef = useRef<{ ids: Set<string>; hadAuthError: boolean } | null>(null);
+    const externalDeployRef = useRef<{ ids: Set<string>; hadAuthError: boolean } | null>(null);
 
     // Pairing state
     const [isPairing, setIsPairing] = useState(false);
@@ -133,9 +136,11 @@ export const ClassroomPage: React.FC = () => {
     // Modal states
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [missingDependencyIds, setMissingDependencyIds] = useState<string[]>([]);
-    const [isRemarkablePairingModalOpen, setIsRemarkablePairingModalOpen] = useState(false);
+    const [isExternalPairingModalOpen, setIsExternalPairingModalOpen] = useState(false);
     const [configDeviceId, setConfigDeviceId] = useState<string | null>(null);
     const [configDeviceName, setConfigDeviceName] = useState<string>('');
+    const [extConfigDevice, setExtConfigDevice] = useState<ExternalDeviceEntity | null>(null);
+    const [isMissingEmailModalOpen, setIsMissingEmailModalOpen] = useState(false);
 
     // Deployment state - per device progress
     const [deployingDevices, setDeployingDevices] = useState<Set<string>>(new Set());
@@ -151,14 +156,14 @@ export const ClassroomPage: React.FC = () => {
     // Refresh device grid - per FrontendWorkflowSpec §5A(3A)
     const refreshDeviceGrid = useCallback(async () => {
         try {
-            const [pairedDevices, statuses, rmDevices] = await Promise.all([
+            const [pairedDevices, statuses, extDevices] = await Promise.all([
                 signalRService.getAllPairedDevices(),
                 signalRService.getAllDeviceStatuses(),
-                signalRService.getAllReMarkableDevices()
+                signalRService.getAllExternalDevices()
             ]);
             setDevices(pairedDevices);
             setDeviceStatuses(new Map(statuses.map(s => [s.deviceId, s])));
-            setRemarkableDevices(rmDevices);
+            setExternalDevices(extDevices);
         } catch (error) {
             console.error('Failed to refresh device grid:', error);
             addAlert('control_failed', undefined, 'Failed to refresh device data');
@@ -211,15 +216,20 @@ export const ClassroomPage: React.FC = () => {
             // Note: Alert for distribution failure is handled by AlertContext
         });
 
-        // §5F(3): subscribe to reMarkable auth invalid events
-        const unsubRemarkableAuth = signalRService.onReMarkableAuthInvalid((deviceId) => {
-            const device = remarkableDevicesRef.current.find(d => d.deviceId === deviceId);
-            const activeDeploy = remarkableDeployRef.current;
+        // Subscribe to external device auth invalid events
+        const unsubExternalAuth = signalRService.onExternalDeviceAuthInvalid((deviceId) => {
+            const device = externalDevicesRef.current.find(d => d.deviceId === deviceId);
+            const activeDeploy = externalDeployRef.current;
             if (activeDeploy && activeDeploy.ids.has(deviceId)) {
                 activeDeploy.hadAuthError = true;
             }
             addAlert('control_failed', undefined,
-                `reMarkable device "${device?.name ?? deviceId}" requires re-authentication. Please re-pair the device.`);
+                `External device "${device?.name ?? deviceId}" requires re-authentication or configuration updates. Please re-pair or check settings.`);
+        });
+
+        // Subscribe to email credentials specific error
+        const unsubEmailNotConfigured = signalRService.onEmailCredentialsNotConfigured(() => {
+            setIsMissingEmailModalOpen(true);
         });
 
         // §3A(1): subscribe to missing runtime dependencies
@@ -231,7 +241,8 @@ export const ClassroomPage: React.FC = () => {
             unsubStatus();
             unsubPaired();
             unsubDistributionFailed();
-            unsubRemarkableAuth();
+            unsubExternalAuth();
+            unsubEmailNotConfigured();
             unsubMissingDependency();
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
@@ -269,24 +280,24 @@ export const ClassroomPage: React.FC = () => {
         );
     };
 
-    // reMarkable device selection
-    const toggleRemarkableSelection = (deviceId: string) => {
-        setSelectedRemarkableIds(prev =>
+    // External device selection
+    const toggleExternalSelection = (deviceId: string) => {
+        setSelectedExternalDeviceIds(prev =>
             prev.includes(deviceId)
                 ? prev.filter(id => id !== deviceId)
                 : [...prev, deviceId]
         );
     };
 
-    const totalDeviceCount = devices.length + remarkableDevices.length;
-    const totalSelectedCount = selectedDeviceIds.length + selectedRemarkableIds.length;
+    const totalDeviceCount = devices.length + externalDevices.length;
+    const totalSelectedCount = selectedDeviceIds.length + selectedExternalDeviceIds.length;
     const selectAll = () => {
         setSelectedDeviceIds(devices.map(d => d.deviceId));
-        setSelectedRemarkableIds(remarkableDevices.map(d => d.deviceId));
+        setSelectedExternalDeviceIds(externalDevices.map(d => d.deviceId));
     };
     const deselectAll = () => {
         setSelectedDeviceIds([]);
-        setSelectedRemarkableIds([]);
+        setSelectedExternalDeviceIds([]);
     };
 
     // Device Actions
@@ -310,24 +321,31 @@ export const ClassroomPage: React.FC = () => {
         }
     };
 
-    // §5G(4): mixed deployment — Android + reMarkable
+    // Deployment logic mixed depending on device type
     const handleDeployMaterial = async () => {
         if (!selectedMaterialId || totalSelectedCount === 0) return;
 
-        const hasRemarkableTargets = selectedRemarkableIds.length > 0;
-        let rmapiAvailable = true;
-        if (hasRemarkableTargets) {
-            rmapiAvailable = await ensureRmapiAvailable();
-            if (!rmapiAvailable && selectedDeviceIds.length === 0) return;
+        let externalIdsToDeploy = [...selectedExternalDeviceIds];
+
+        const hasExternalTargets = selectedExternalDeviceIds.length > 0;
+        const selectedRemarkable = externalDevices.filter(d =>
+            selectedExternalDeviceIds.includes(d.deviceId) && d.type === 'REMARKABLE'
+        );
+
+        if (selectedRemarkable.length > 0) {
+            const rmapiAvailable = await ensureRmapiAvailable();
+            if (!rmapiAvailable) {
+                // filter out remarkable targets
+                externalIdsToDeploy = selectedExternalDeviceIds.filter(id =>
+                    !selectedRemarkable.some(r => r.deviceId === id)
+                );
+            }
         }
 
-        remarkableDeployRef.current = rmapiAvailable && hasRemarkableTargets
-            ? { ids: new Set(selectedRemarkableIds), hadAuthError: false }
-            : null;
+        if (externalIdsToDeploy.length === 0 && selectedDeviceIds.length === 0) return;
 
-        const allTargetIds = rmapiAvailable
-            ? [...selectedDeviceIds, ...selectedRemarkableIds]
-            : [...selectedDeviceIds];
+        externalDeployRef.current = { ids: new Set(externalIdsToDeploy), hadAuthError: false };
+        const allTargetIds = [...selectedDeviceIds, ...externalIdsToDeploy];
         setDeployingDevices(new Set(allTargetIds));
 
         try {
@@ -338,42 +356,47 @@ export const ClassroomPage: React.FC = () => {
                 promises.push(signalRService.deployMaterial(selectedMaterialId, selectedDeviceIds));
             }
 
-            // Deploy to reMarkable devices per §5G(2)
-            if (rmapiAvailable && selectedRemarkableIds.length > 0) {
-                promises.push(signalRService.deployMaterialToReMarkable(selectedMaterialId, selectedRemarkableIds));
+            // Deploy to External devices
+            if (externalIdsToDeploy.length > 0) {
+                promises.push(signalRService.deployMaterialToExternalDevices(selectedMaterialId, externalIdsToDeploy));
             }
 
             await Promise.all(promises);
 
-            const remarkableDeploy = remarkableDeployRef.current;
-            if (rmapiAvailable && selectedRemarkableIds.length > 0 && !remarkableDeploy?.hadAuthError) {
-                // §5G(2)(d): inform user about sync
-                addAlert('success', undefined, 'Material uploaded to reMarkable cloud. Devices will receive it on next sync.');
+            const activeDeploy = externalDeployRef.current;
+            if (hasExternalTargets && externalIdsToDeploy.length > 0 && !activeDeploy?.hadAuthError) {
+                addAlert('success', undefined, 'Please give time for the external device to sync.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Deploy failed:', error);
-            addAlert('distribution_failed', undefined, 'Failed to deploy material');
+            if (error?.message?.includes('EmailCredentialsNotConfigured')) {
+                setIsMissingEmailModalOpen(true);
+            } else if (error?.message?.includes('ExternalDeviceAuthInvalid')) {
+                addAlert('control_failed', undefined, 'External Device authentication is invalid. Please repair the device.');
+            } else {
+                addAlert('distribution_failed', undefined, 'Failed to deploy material');
+            }
         } finally {
             setDeployingDevices(new Set());
-            remarkableDeployRef.current = null;
+            externalDeployRef.current = null;
         }
     };
 
     const handleUnpairDevices = async () => {
-        if (selectedDeviceIds.length === 0 && selectedRemarkableIds.length === 0) return;
+        if (selectedDeviceIds.length === 0 && selectedExternalDeviceIds.length === 0) return;
         try {
             // Unpair Android devices
             if (selectedDeviceIds.length > 0) {
                 await signalRService.unpairDevices(selectedDeviceIds);
             }
-            // Unpair reMarkable devices per §5F(4)
-            for (const rmId of selectedRemarkableIds) {
-                await signalRService.unpairReMarkableDevice(rmId);
+            // Unpair External devices
+            for (const extId of selectedExternalDeviceIds) {
+                await signalRService.unpairExternalDevice(extId);
             }
             // Per FrontendWorkflowSpec §5A(3A)(c)(ii): refresh after unpair
             await refreshDeviceGrid();
             setSelectedDeviceIds([]);
-            setSelectedRemarkableIds([]);
+            setSelectedExternalDeviceIds([]);
         } catch (error) {
             console.error('Unpair failed:', error);
             addAlert('control_failed', undefined, 'Failed to unpair devices');
@@ -383,7 +406,7 @@ export const ClassroomPage: React.FC = () => {
     // Rename Handler — handles both Android and reMarkable
     const handleRenameDevice = async (newName: string) => {
         // Android device rename
-        if (selectedDeviceIds.length === 1 && selectedRemarkableIds.length === 0) {
+        if (selectedDeviceIds.length === 1 && selectedExternalDeviceIds.length === 0) {
             const deviceId = selectedDeviceIds[0];
             const device = devices.find(d => d.deviceId === deviceId);
             if (!device) return;
@@ -397,15 +420,15 @@ export const ClassroomPage: React.FC = () => {
                 throw error;
             }
         }
-        // reMarkable device rename
-        else if (selectedRemarkableIds.length === 1 && selectedDeviceIds.length === 0) {
-            const deviceId = selectedRemarkableIds[0];
-            const device = remarkableDevices.find(d => d.deviceId === deviceId);
+        // External device rename
+        else if (selectedExternalDeviceIds.length === 1 && selectedDeviceIds.length === 0) {
+            const deviceId = selectedExternalDeviceIds[0];
+            const device = externalDevices.find(d => d.deviceId === deviceId);
             if (!device) return;
 
             try {
-                await signalRService.updateReMarkableDevice({ ...device, name: newName });
-                setRemarkableDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, name: newName } : d));
+                await signalRService.updateExternalDevice({ ...device, name: newName });
+                setExternalDevices(prev => prev.map(d => d.deviceId === deviceId ? { ...d, name: newName } : d));
                 addAlert('success', undefined, `Device renamed to ${newName}`);
             } catch (error) {
                 console.error('Rename failed:', error);
@@ -429,28 +452,25 @@ export const ClassroomPage: React.FC = () => {
         }
     };
 
-    // §5F(1): initiate reMarkable pairing
-    const handleRemarkablePairing = async () => {
-        const available = await ensureRmapiAvailable();
-        if (available) {
-            setIsRemarkablePairingModalOpen(true);
-        }
+    // Initiate External pairing
+    const handleExternalPairing = async () => {
+        setIsExternalPairingModalOpen(true);
     };
 
     // Determine if only one device total is selected (for rename)
-    const singleDeviceSelected = (selectedDeviceIds.length === 1 && selectedRemarkableIds.length === 0)
-        || (selectedRemarkableIds.length === 1 && selectedDeviceIds.length === 0);
+    const singleDeviceSelected = (selectedDeviceIds.length === 1 && selectedExternalDeviceIds.length === 0)
+        || (selectedExternalDeviceIds.length === 1 && selectedDeviceIds.length === 0);
 
     // Get the name of the single selected device for rename modal
     const singleSelectedDeviceName = singleDeviceSelected
         ? (selectedDeviceIds.length === 1
             ? devices.find(d => d.deviceId === selectedDeviceIds[0])?.name
-            : remarkableDevices.find(d => d.deviceId === selectedRemarkableIds[0])?.name)
+            : externalDevices.find(d => d.deviceId === selectedExternalDeviceIds[0])?.name)
         ?? ''
         : '';
 
-    // §5F(6): check if any reMarkable devices are selected (to disable Android-only controls)
-    const hasRemarkableInSelection = selectedRemarkableIds.length > 0;
+    // Check if any external devices are selected (to disable Android-only controls)
+    const hasExternalInSelection = selectedExternalDeviceIds.length > 0;
 
     // Material Selection Logic
     const unitsInSelectedCollection = useMemo(() => {
@@ -523,15 +543,16 @@ export const ClassroomPage: React.FC = () => {
                 />
             )}
 
-            {/* reMarkable Pairing Modal — per §5F(2) */}
-            {isRemarkablePairingModalOpen && (
-                <ReMarkablePairingModal
-                    onClose={() => setIsRemarkablePairingModalOpen(false)}
+            {/* External Device Pairing Modal */}
+            {isExternalPairingModalOpen && (
+                <ExternalDevicePairingModal
+                    onClose={() => setIsExternalPairingModalOpen(false)}
                     onPaired={() => {
-                        setIsRemarkablePairingModalOpen(false);
+                        setIsExternalPairingModalOpen(false);
                         refreshDeviceGrid();
                     }}
-                    pairDevice={(name, code) => signalRService.pairReMarkableDevice(name, code)}
+                    pairDevice={(name, type, configurationData) => signalRService.pairExternalDevice(name, type, configurationData)}
+                    onDependencyMissing={(dependencyIds) => setMissingDependencyIds(dependencyIds)}
                 />
             )}
 
@@ -541,6 +562,15 @@ export const ClassroomPage: React.FC = () => {
                     deviceId={configDeviceId}
                     deviceName={configDeviceName}
                     onClose={() => setConfigDeviceId(null)}
+                />
+            )}
+
+            {/* External Device Configuration Modal — per §5H(2) */}
+            {extConfigDevice && (
+                <ExternalDeviceConfigurationModal
+                    device={extConfigDevice}
+                    onClose={() => setExtConfigDevice(null)}
+                    onSaved={() => { setExtConfigDevice(null); refreshDeviceGrid(); }}
                 />
             )}
 
@@ -624,26 +654,26 @@ export const ClassroomPage: React.FC = () => {
                             {isPairing ? '⏹ Stop Pairing' : '📱 Pair Android'}
                         </button>
 
-                        {/* §5F(1): distinct reMarkable pairing button */}
+                        {/* External pairing button */}
                         <button
                             className="bg-gray-700 hover:bg-gray-800 text-white font-sans font-medium py-2 px-4 rounded-md transition-colors shadow-sm"
-                            onClick={handleRemarkablePairing}
+                            onClick={handleExternalPairing}
                         >
-                            📖 Pair reMarkable
+                            📖 Pair External Device
                         </button>
 
-                        {/* §5F(6): lock/unlock disabled when reMarkable devices selected */}
+                        {/* Lock/unlock disabled when external devices selected */}
                         <div className="relative group">
                             <button
                                 className="bg-brand-orange text-white hover:bg-brand-orange-dark font-sans font-medium py-2 px-4 rounded-md transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
                                 onClick={handleLockDevices}
-                                disabled={devices.length === 0 || hasRemarkableInSelection}
+                                disabled={devices.length === 0 || hasExternalInSelection}
                             >
                                 {selectedDeviceIds.length > 0 ? `Lock (${selectedDeviceIds.length})` : 'Lock All'}
                             </button>
-                            {hasRemarkableInSelection && (
+                            {hasExternalInSelection && (
                                 <span className="hidden group-hover:block absolute -bottom-8 left-0 text-xs text-gray-500 whitespace-nowrap bg-white px-2 py-1 rounded shadow">
-                                    Lock is not available for reMarkable devices
+                                    Lock is not available for external devices
                                 </span>
                             )}
                         </div>
@@ -652,13 +682,13 @@ export const ClassroomPage: React.FC = () => {
                             <button
                                 className="bg-white border border-gray-300 text-text-body hover:border-brand-orange hover:text-brand-orange font-sans font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={handleUnlockDevices}
-                                disabled={devices.length === 0 || hasRemarkableInSelection}
+                                disabled={devices.length === 0 || hasExternalInSelection}
                             >
                                 {selectedDeviceIds.length > 0 ? `Unlock (${selectedDeviceIds.length})` : 'Unlock All'}
                             </button>
-                            {hasRemarkableInSelection && (
+                            {hasExternalInSelection && (
                                 <span className="hidden group-hover:block absolute -bottom-8 left-0 text-xs text-gray-500 whitespace-nowrap bg-white px-2 py-1 rounded shadow">
-                                    Unlock is not available for reMarkable devices
+                                    Unlock is not available for external devices
                                 </span>
                             )}
                         </div>
@@ -685,7 +715,7 @@ export const ClassroomPage: React.FC = () => {
                     {isPairing && (
                         <div className="mt-4 flex items-center gap-2 text-brand-green">
                             <div className="animate-pulse h-3 w-3 bg-brand-green rounded-full"></div>
-                            <span className="text-sm font-medium">Waiting for Android devices to connect...</span>
+                            <span className="text-sm font-medium">Waiting for Android devices to join...</span>
                         </div>
                     )}
                 </Card>
@@ -697,7 +727,7 @@ export const ClassroomPage: React.FC = () => {
                     {totalSelectedCount} / {totalDeviceCount} devices selected
                     {totalSelectedCount > 0 && (
                         <span className='text-sm text-gray-400 ml-2'>
-                            ({selectedDeviceIds.length} Android, {selectedRemarkableIds.length} reMarkable)
+                            ({selectedDeviceIds.length} Android, {selectedExternalDeviceIds.length} External)
                         </span>
                     )}
                 </p>
@@ -791,22 +821,22 @@ export const ClassroomPage: React.FC = () => {
                         );
                     })}
 
-                    {/* §5F(5): reMarkable devices with distinct visual indicator */}
-                    {remarkableDevices.map((device) => {
-                        const isSelected = selectedRemarkableIds.includes(device.deviceId);
+                    {/* External devices */}
+                    {externalDevices.map((device) => {
+                        const isSelected = selectedExternalDeviceIds.includes(device.deviceId);
                         const isDeploying = deployingDevices.has(device.deviceId);
 
                         return (
                             <div
-                                key={`rm-${device.deviceId}`}
+                                key={`ext-${device.deviceId}`}
                                 role="gridcell"
                                 aria-selected={isSelected}
                                 tabIndex={0}
-                                onClick={() => toggleRemarkableSelection(device.deviceId)}
+                                onClick={() => toggleExternalSelection(device.deviceId)}
                                 onKeyDown={(e) => {
                                     if (e.key === ' ' || e.key === 'Enter') {
                                         e.preventDefault();
-                                        toggleRemarkableSelection(device.deviceId);
+                                        toggleExternalSelection(device.deviceId);
                                     }
                                 }}
                                 className={`relative rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 border
@@ -827,15 +857,36 @@ export const ClassroomPage: React.FC = () => {
                                 </p>
 
                                 <span className="text-xs font-semibold px-2 py-1 rounded-full mt-2 uppercase tracking-wide bg-gray-600 text-white">
-                                    reMarkable
+                                    {device.type === 'REMARKABLE' ? 'reMarkable' : 'Kindle'}
                                 </span>
 
-                                {/* Per ConfigurationManagementSpecification §1(1): configurations only for Android devices */}
-                                {/* No settings button for reMarkable devices */}
+                                {/* §5B(5A): Settings button for external device PDF export overrides */}
+                                <button
+                                    className="absolute bottom-2 right-2 p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-sm border border-gray-200 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExtConfigDevice(device);
+                                    }}
+                                    title="PDF Export Settings"
+                                    aria-label="External device PDF export settings"
+                                >
+                                    <SettingsIcon />
+                                </button>
                             </div>
                         );
                     })}
                 </div>
+            )}
+
+            {isMissingEmailModalOpen && (
+                <MissingEmailCredentialsModal
+                    isOpen={isMissingEmailModalOpen}
+                    onClose={() => setIsMissingEmailModalOpen(false)}
+                    onGoToSettings={() => {
+                        setIsMissingEmailModalOpen(false);
+                        window.dispatchEvent(new CustomEvent('app-navigate', { detail: { view: 'settings' } }));
+                    }}
+                />
             )}
 
             <style>{`

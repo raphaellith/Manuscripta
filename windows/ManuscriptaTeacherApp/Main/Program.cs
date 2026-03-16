@@ -1,10 +1,17 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using ChromaDB.Client;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 using Main.Data;
+using Main.Models;
 using Main.Services;
 using Main.Services.Network;
+using Main.Services.GenAI;
 #if DEBUG
 using Main.Testing;
 #endif
@@ -51,7 +58,38 @@ if (builder.Environment.IsEnvironment("Integration"))
 }
 
 builder.Services.AddDbContext<MainDbContext>(options =>
-    options.UseSqlite(dbConnectionString));
+{
+    options.UseSqlite(dbConnectionString);
+    // Suppress PendingModelChangesWarning in Testing environment (for integration tests with in-memory databases)
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        options.ConfigureWarnings(w => 
+            w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+});
+
+// Configure ChromaDB for client-server mode
+// See GenAISpec.md §2(3)
+// Note: ChromaDB.Client is a client-server library. The database path is configured
+// on the server side (e.g., `chroma run --path /path/to/store`), not in the C# client.
+// The client connects via HTTP to the running server using the URI below.
+var chromaServerUri = builder.Configuration["ChromaDB:ServerUri"] ?? "http://localhost:8000/api/v2/";
+
+builder.Services.AddSingleton(new ChromaConfigurationOptions(uri: chromaServerUri));
+// Register a named "ChromaDB" HttpClient with a URL rewrite handler that translates
+// ChromaDB.Client v1 API URLs (query-parameter-based tenant/database) into v2 API
+// URLs (path-based routing) expected by the Chroma Rust CLI server.
+// See GenAISpec.md §1B, §2(3)(a1).
+builder.Services.AddTransient<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient("ChromaDB")
+    .AddHttpMessageHandler<ChromaV2UrlRewriteHandler>();
+builder.Services.AddHttpClient(); // default HttpClient for non-Chroma use
+builder.Services.AddSingleton<ChromaClient>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("ChromaDB");
+    return new ChromaClient(new ChromaConfigurationOptions(uri: chromaServerUri), httpClient);
+});
 
 // Register pairing and device services
 builder.Services.AddSingleton<IDeviceRegistryService, DeviceRegistryService>();
@@ -67,6 +105,7 @@ builder.Services.AddSingleton<Main.Services.Repositories.IResponseRepository, Ma
 builder.Services.AddSingleton<Main.Services.Repositories.IFeedbackRepository, Main.Services.Repositories.InMemoryFeedbackRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.ISourceDocumentRepository, Main.Services.Repositories.EfSourceDocumentRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IAttachmentRepository, Main.Services.Repositories.EfAttachmentRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IPdfExportSettingsRepository, Main.Services.Repositories.EfPdfExportSettingsRepository>();
 
 // Register configuration — two-tier model per ConfigurationManagementSpecification
 // Defaults: long-term persisted (EF Core) per PersistenceAndCascadingRules §1(1)(h)
@@ -90,13 +129,31 @@ builder.Services.AddSingleton<Main.Services.Latex.ILatexRenderer, Main.Services.
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 
-// Register reMarkable services - NetworkingAPISpec §1(1)(n)
-builder.Services.AddScoped<Main.Services.Repositories.IReMarkableDeviceRepository, Main.Services.Repositories.EfReMarkableDeviceRepository>();
+// Register external device and email services - NetworkingAPISpec §1(1)(n) and §1(1)(o)
+builder.Services.AddScoped<Main.Services.Repositories.IExternalDeviceRepository, Main.Services.Repositories.EfExternalDeviceRepository>();
+builder.Services.AddScoped<Main.Services.Repositories.IEmailCredentialRepository, Main.Services.Repositories.EfEmailCredentialRepository>();
 builder.Services.AddSingleton<IRmapiService>(sp =>
     new RmapiService(
         sp.GetRequiredService<ILogger<RmapiService>>(),
         new HttpClient()));
-builder.Services.AddScoped<IReMarkableDeploymentService, ReMarkableDeploymentService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+
+// Register GenAI services
+// See GenAISpec.md §3(1) and §3(2)
+builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
+builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
+builder.Services.AddScoped<IContentModificationService, ContentModificationService>();
+builder.Services.AddSingleton<FeedbackGenerationService>();
+builder.Services.AddSingleton<IFeedbackGenerationService>(
+    provider => provider.GetRequiredService<FeedbackGenerationService>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<FeedbackGenerationService>());
+builder.Services.AddSingleton<FeedbackQueueService>();
+builder.Services.AddScoped<IEmbeddingStatusService, EmbeddingStatusService>();
+builder.Services.AddScoped<OutputValidationService>();
+builder.Services.AddScoped<QuestionExtractionService>();
 
 // Register Runtime Dependency Management
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
@@ -104,10 +161,26 @@ builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IRuntimeDependen
 {
     var registry = sp.GetRequiredService<Main.Services.RuntimeDependencies.RuntimeDependencyRegistry>();
     var rmapiManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+    var ollamaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+    var chromaManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+    var qwen3Manager = sp.GetRequiredService<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+    var graniteManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+    var nomicManager = sp.GetRequiredService<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
+    
     registry.Register(rmapiManager);
+    registry.Register(ollamaManager);
+    registry.Register(chromaManager);
+    registry.Register(qwen3Manager);
+    registry.Register(graniteManager);
+    registry.Register(nomicManager);
     return registry;
 });
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.RmapiRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.OllamaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.ChromaRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.Qwen3ModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.GraniteModelRuntimeDependencyManager>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.NomicEmbedTextModelRuntimeDependencyManager>();
 
 // Register network services (singletons for background services)
 builder.Services.AddSingleton<IRefreshConfigTracker, RefreshConfigTracker>();
@@ -124,6 +197,9 @@ builder.Services.AddSingleton<IDistributionService, DistributionService>();
 
 builder.Services.AddHostedService<HubEventBridge>();
 
+// Register embedding initialization as background service per GenAISpec.md §3A(8)
+// This runs asynchronously after startup to avoid blocking the health endpoint
+builder.Services.AddHostedService<EmbeddingInitializationHostedService>();
 // Integration mode: auto-start network services and seed test data
 // Per Integration Test Contract §12.1
 if (builder.Environment.IsEnvironment("Integration"))
@@ -140,6 +216,14 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    // Allow CancelGeneration to execute concurrently with an in-progress
+    // GenerateReading/GenerateWorksheet call on the same connection.
+    // Default is 1, which serialises all hub invocations and prevents
+    // cancellation from reaching the server while generation is running.
+    hubOptions.MaximumParallelInvocationsPerClient = 2;
+    // Increase max message size from 32KB default to 10MB for large source documents
+    // (per FrontendWorkflowSpecifications §4AA source document uploads)
+    hubOptions.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 // Per AdditionalValidationRules.md s1A(1): PascalCase fields, SCREAMING_SNAKE_CASE enums
 builder.Services.AddControllers()
@@ -206,7 +290,42 @@ if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment(
         var services = scope.ServiceProvider;
 
         var context = services.GetRequiredService<MainDbContext>();
-        context.Database.Migrate();
+        
+        // Only run migrations if we are NOT running from EF Core tools (to prevent DB lock issues during design time)
+        bool isEfCoreTool = AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "ef");
+        if (!isEfCoreTool)
+        {
+            // Pre-migration schema fixup: handle databases where AddReMarkableDevices was applied
+            // before the SourceDocuments column was added to UnitEntity. Since the migration ID is
+            // already in __EFMigrationsHistory, EF skips it and the column is never created.
+            try
+            {
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+
+                using var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText =
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Units' " +
+                    "AND sql NOT LIKE '%SourceDocuments%'";
+                var needsFixup = Convert.ToInt64(await checkCmd.ExecuteScalarAsync()) > 0;
+
+                if (needsFixup)
+                {
+                    using var alterCmd = conn.CreateCommand();
+                    alterCmd.CommandText = "ALTER TABLE \"Units\" ADD COLUMN \"SourceDocuments\" TEXT NOT NULL DEFAULT '[]'";
+                    await alterCmd.ExecuteNonQueryAsync();
+                    Console.WriteLine("[MIGRATION FIXUP] Added missing SourceDocuments column to Units table.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore on fresh databases where the Units table doesn't exist yet
+                Console.WriteLine($"[MIGRATION FIXUP] Skipped (expected on fresh DB): {ex.Message}");
+            }
+
+            context.Database.Migrate();
+        }
+        
         // DbInitializer.Initialize(context);
 
         // Orphan file removal per PersistenceAndCascadingRules §3
@@ -255,21 +374,24 @@ if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment(
 
         if (Directory.Exists(rmapiConfigDir))
         {
-            var remarkableRepo = services.GetRequiredService<Main.Services.Repositories.IReMarkableDeviceRepository>();
-            var allDevices = await remarkableRepo.GetAllAsync();
-            var validDeviceIds = new HashSet<string>(allDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
+            var externalRepo = services.GetRequiredService<Main.Services.Repositories.IExternalDeviceRepository>();
+            var allDevices = await externalRepo.GetAllAsync();
+            
+            // Only consider REMARKABLE type devices for rmapi config cleanup (PersistenceAndCascadingRules §3(2))
+            var remarkableDevices = allDevices.Where(d => d.Type == Main.Models.Entities.ExternalDeviceType.REMARKABLE).ToList();
+            var validDeviceIds = new HashSet<string>(remarkableDevices.Select(d => d.DeviceId.ToString().ToLowerInvariant()));
 
             var existingConfigFiles = new HashSet<string>(Directory.GetFiles(rmapiConfigDir, "*.conf")
                 .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant()));
 
-            foreach (var device in allDevices)
+            foreach (var device in remarkableDevices)
             {
                 if (!existingConfigFiles.Contains(device.DeviceId.ToString().ToLowerInvariant()))
                 {
                     try
                     {
-                        await remarkableRepo.DeleteAsync(device.DeviceId);
-                        Console.WriteLine($"Deleted orphan ReMarkableDeviceEntity: {device.DeviceId}");
+                        await externalRepo.DeleteAsync(device.DeviceId);
+                        Console.WriteLine($"Deleted orphan ExternalDeviceEntity: {device.DeviceId}");
                     }
                     catch (Exception ex)
                     {
@@ -297,6 +419,9 @@ if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment(
         }
     }
 }
+
+// Per FrontendWorkflowSpecifications §2ZA(5)(a)-(d): Embedding initialization is now a background
+// hosted service and will not block startup, ensuring the health endpoint responds quickly.
 
 // Port-based routing per API Contract.md §Ports and FrontendWorkflowSpecifications §2ZA(8).
 // - SignalR and health endpoint: available on ANY bound port (frontend uses dynamic port selection)
@@ -352,6 +477,13 @@ else
     // Frontend uses dynamic port selection and connects to whatever port succeeded.
     app.MapHub<Main.Services.Hubs.TeacherPortalHub>("/TeacherPortalHub");
 }
+
+// Per GenAISpec §1(9): Runtime dependencies (Ollama, Chroma, LLMs) shall not be installed on startup.
+// They must only be installed upon user consent expressed from the frontend.
+// Per BackendRuntimeDependencyManagementSpecification §3(1): Frontend assumes dependencies are available.
+// When a feature requiring a dependency is used, the backend will notify the frontend via
+// RuntimeDependencyNotInstalled if the dependency is unavailable (§3(2)(a)), and the frontend
+// will handle this notification per Frontend Workflow Specifications §3A.
 
 app.Run();
 

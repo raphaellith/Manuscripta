@@ -24,6 +24,11 @@ export interface LessonEntity {
 
 export type MaterialType = 'READING' | 'WORKSHEET' | 'POLL';
 
+// Per MaterialConversionSpecification §1(5)(e-g)
+export type LinePatternType = 'RULED' | 'SQUARE' | 'ISOMETRIC' | 'NONE';
+export type LineSpacingPreset = 'SMALL' | 'MEDIUM' | 'LARGE' | 'EXTRA_LARGE';
+export type FontSizePreset = 'SMALL' | 'MEDIUM' | 'LARGE' | 'EXTRA_LARGE';
+
 export interface MaterialEntity {
     id: string;
     lessonId: string;
@@ -35,6 +40,9 @@ export interface MaterialEntity {
     timestamp: string;
     readingAge?: number;
     actualAge?: number;
+    linePatternType?: LinePatternType | null;
+    lineSpacingPreset?: LineSpacingPreset | null;
+    fontSizePreset?: FontSizePreset | null;
 }
 
 // Per Validation Rules §2B and AdditionalValidationRules §2E
@@ -123,16 +131,36 @@ export interface FeedbackEntity {
 }
 
 // ==========================================
-// reMarkable Entities - RemarkableIntegrationSpecification §3
+// External Device Entities
 // ==========================================
 
+export type ExternalDeviceType = 'REMARKABLE' | 'KINDLE';
+
 /**
- * reMarkable device entity per AdditionalValidationRules §3D.
- * Contains device ID and user-friendly name.
+ * Unified external device entity representing paired e-ink reader.
  */
-export interface ReMarkableDeviceEntity {
+export interface ExternalDeviceEntity {
     deviceId: string;
     name: string;
+    type: ExternalDeviceType;
+    configurationData?: string;
+    /** Per AdditionalValidationRules §3D(1)(e): per-device line pattern override. */
+    linePatternType?: LinePatternType | null;
+    /** Per AdditionalValidationRules §3D(1)(f): per-device line spacing override. */
+    lineSpacingPreset?: LineSpacingPreset | null;
+    /** Per AdditionalValidationRules §3D(1)(g): per-device font size override. */
+    fontSizePreset?: FontSizePreset | null;
+}
+
+/**
+ * Email credentials for dispatching materials via SMTP.
+ */
+export interface EmailCredentialEntity {
+    id: string;
+    emailAddress: string;
+    smtpHost: string;
+    smtpPort: number;
+    password?: string; // May be returned as '********' by backend
 }
 
 // ==========================================
@@ -161,5 +189,40 @@ export interface ConfigurationEntity {
     aiScaffoldingEnabled: boolean;
     summarisationEnabled: boolean;
     mascotSelection: MascotSelection;
+}
+
+// ==========================================
+// Source Document Entities - FrontendWorkflowSpec §4AA
+// ==========================================
+
+/**
+ * Embedding status per AdditionalValidationRules §3A(1)(c).
+ */
+export type EmbeddingStatus = 'PENDING' | 'INDEXED' | 'FAILED';
+
+/**
+ * Source document entity per AdditionalValidationRules §3A(1).
+ * Represents a source document imported into a unit collection.
+ */
+export interface SourceDocumentEntity {
+    id: string;
+    unitCollectionId: string;
+    transcript: string;
+    embeddingStatus?: EmbeddingStatus;
+}
+
+// ==========================================
+// PDF Export Settings - FrontendWorkflowSpec §7(5)
+// ==========================================
+
+/**
+ * PDF export settings entity per AdditionalValidationRules §3F.
+ * Represents global default PDF export settings.
+ */
+export interface PdfExportSettingsEntity {
+    id: string;
+    linePatternType: LinePatternType;
+    lineSpacingPreset: LineSpacingPreset;
+    fontSizePreset: FontSizePreset;
 }
 

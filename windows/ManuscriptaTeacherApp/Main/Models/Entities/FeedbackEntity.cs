@@ -40,6 +40,20 @@ public class FeedbackEntity
     [Required]
     public FeedbackStatus Status { get; set; } = FeedbackStatus.PROVISIONAL;
 
+    /// <summary>
+    /// Timestamp when feedback was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Convenience property for the feedback text.
+    /// </summary>
+    public string? FeedbackText
+    {
+        get => Text;
+        set => Text = value;
+    }
+
     public FeedbackEntity() { }
 
     public FeedbackEntity(Guid id, Guid responseId, string? text = null, int? marks = null)
@@ -53,5 +67,6 @@ public class FeedbackEntity
         Text = text;
         Marks = marks;
         Status = FeedbackStatus.PROVISIONAL;
+        CreatedAt = DateTime.UtcNow;
     }
 }

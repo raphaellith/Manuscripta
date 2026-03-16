@@ -8,26 +8,9 @@ interface RuntimeDependencyInstallModalProps {
     onInstallComplete: () => void;
 }
 
-type InstallState = 'prompt' | 'installing' | 'failed';
+type InstallState = 'prompt' | 'installing' | 'failed' | 'manual';
 
-const DEPENDENCY_METADATA: Record<string, {
-    name: string;
-    description: string;
-    manualUrl: string;
-    manualPathInfo: React.ReactNode;
-}> = {
-    'rmapi': {
-        name: 'rmapi',
-        description: 'The rmapi tool is required to communicate with reMarkable devices.',
-        manualUrl: 'https://github.com/ddvk/rmapi/releases',
-        manualPathInfo: (
-            <>
-                Download <span className="font-mono">rmapi</span> from GitHub and place it at{' '}
-                <span className="font-mono">%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe</span>
-            </>
-        )
-    }
-};
+import { DEPENDENCY_METADATA } from '../../constants/dependencies';
 
 /**
  * Modal component for handling the installation of runtime dependencies.
@@ -65,9 +48,9 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                 setState('failed');
                 setErrorMessage('Installation failed to start.');
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             setState('failed');
-            setErrorMessage(e.message || 'An error occurred during installation.');
+            setErrorMessage((e as Error).message || 'An error occurred during installation.');
         }
     };
 
@@ -75,32 +58,20 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
         if (!dependencyId) return;
 
         const unsubscribe = signalRService.onRuntimeDependencyInstallProgress(
-            (id, currentPhase, percentage, errorMsg) => {
-                if (id !== dependencyId) return;
-
-                if (currentPhase === 'Completed') {
-                    if (currentIndex < dependencyIds.length - 1) {
-                        const nextId = dependencyIds[currentIndex + 1];
-                        setCurrentIndex(prev => prev + 1);
-                        handleAutoInstallForId(nextId);
-                    } else {
-                        onInstallComplete();
-                    }
-                } else if (currentPhase === 'Failed') {
-                    setState('failed');
-                    setErrorMessage(errorMsg || 'Installation failed.');
-                } else {
-                    setState('installing');
-                    setPhase(currentPhase);
-                    setProgressPercentage(percentage);
-                }
+            (dependencyId, phase, progressPercentage, errorMessage) => {
+                // Throttle updates to avoid overwhelming the UI
+                requestAnimationFrame(() => {
+                    setPhase(phase);
+                    setProgressPercentage(progressPercentage);
+                    setErrorMessage(errorMessage);
+                });
             }
         );
 
         return () => {
             unsubscribe();
         };
-    }, [dependencyId, currentIndex, dependencyIds, onInstallComplete]);
+    }, []);
 
     const handleAutoInstall = () => {
         setCurrentIndex(0);
@@ -108,8 +79,38 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
     };
 
     const handleManualInstall = () => {
+        // Per FrontendWorkflowSpecifications §3A(3)(a): open browser to download page
         if (meta.manualUrl) {
             window.open(meta.manualUrl, '_blank');
+        }
+        // Per FrontendWorkflowSpecifications §3A(3)(b): display instructions (handled by state change)
+        setState('manual');
+    };
+
+    // Per FrontendWorkflowSpecifications §3A(3)(c): provide re-check button
+    const handleRecheck = async () => {
+        setState('installing');
+        setPhase('Checking availability');
+        setProgressPercentage(null);
+        setErrorMessage(null);
+
+        try {
+            const available = await signalRService.checkRuntimeDependencyAvailability(dependencyId);
+            if (available) {
+                // Dependency is now available, proceed to next or complete
+                if (currentIndex < dependencyIds.length - 1) {
+                    setCurrentIndex(prev => prev + 1);
+                    setState('prompt');
+                } else {
+                    onInstallComplete();
+                }
+            } else {
+                setState('manual');
+                setErrorMessage('Dependency is still not available. Please ensure it is correctly installed.');
+            }
+        } catch (e: any) {
+            setState('manual');
+            setErrorMessage(e.message || 'Failed to check dependency availability.');
         }
     };
 
@@ -138,6 +139,39 @@ export const RuntimeDependencyInstallModal: React.FC<RuntimeDependencyInstallMod
                             )}
                         </div>
                     </div>
+                ) : state === 'manual' ? (
+                    /* Per FrontendWorkflowSpecifications §3A(3)(b) and (c): Display instructions and re-check button */
+                    <>
+                        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-4">
+                            <p className="font-medium mb-2">Manual Installation Required</p>
+                            <p className="text-sm">{meta.manualPathInfo}</p>
+                        </div>
+
+                        {errorMessage && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+                                {errorMessage}
+                            </div>
+                        )}
+
+                        <p className="text-text-body font-sans text-sm leading-relaxed mb-4">
+                            After installing {meta.name} manually, click the button below to verify the installation.
+                        </p>
+
+                        <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">
+                            <button
+                                onClick={handleRecheck}
+                                className="w-full px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm"
+                            >
+                                Re-check Availability
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="w-full px-6 py-3 bg-white text-gray-600 border border-gray-300 font-sans font-medium rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </>
                 ) : (
                     <>
                         <p className="text-text-body font-sans text-sm leading-relaxed">

@@ -1,19 +1,43 @@
 /**
  * Modal for creating a new Material.
- * Only requires Title and MaterialType at creation.
- * Content is optional - edited later with markdown editor.
+ * Implements FrontendWorkflowSpecifications §4A(2) and §4B.
+ * Two-step process:
+ * 1. Enter title and select creation method (AI or Manual)
+ * 2a. If Manual: select material type and create
+ * 2b. If AI: collect generation parameters and invoke AI generation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModalOverlay } from './ModalOverlay';
-import type { MaterialType } from '../../models';
+import type { MaterialType, GenerationRequest, SourceDocumentEntity } from '../../models';
 
 interface CreateMaterialModalProps {
     lessonId: string;
     lessonTitle: string;
+    unitCollectionId?: string; // Required for AI generation to access source documents
+    /**
+     * Per FrontendWorkflowSpec §4B(1)(b): Source documents belonging to the unit collection.
+     * Used to allow users to select which source documents should be referenced.
+     */
+    sourceDocuments?: SourceDocumentEntity[];
     onClose: () => void;
     onCreate: (title: string, materialType: MaterialType) => Promise<void>;
+    onCreateWithAI?: (
+        title: string,
+        materialType: MaterialType,
+        generationRequest: GenerationRequest,
+        readingAge: number,
+        actualAge: number
+    ) => Promise<void>;
+
+    // Indicates whether the necessary AI runtime dependencies are available.
+    // Per BackendRuntimeDependencyManagementSpecification §3(1), frontend
+    // assumes dependencies are available until backend reports otherwise.
+    aiDependenciesAvailable?: boolean;
 }
+
+type CreationMethod = 'AI' | 'MANUAL';
+type Step = 'SELECT_METHOD' | 'MANUAL_TYPE' | 'AI_FORM';
 
 const materialTypes: { value: MaterialType; label: string; color: string }[] = [
     { value: 'READING', label: 'Reading', color: 'bg-brand-green text-white' },
@@ -23,15 +47,54 @@ const materialTypes: { value: MaterialType; label: string; color: string }[] = [
 
 export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
     lessonTitle,
+    unitCollectionId,
+    sourceDocuments = [],
     onClose,
-    onCreate
+    onCreate,
+    onCreateWithAI,
+    aiDependenciesAvailable: aiDepsProp
 }) => {
+    const aiAvailable = aiDepsProp ?? true;
+
+    // Step 1: Title and method selection
+    const [step, setStep] = useState<Step>('SELECT_METHOD');
     const [title, setTitle] = useState('');
+    // Step 2a: Manual creation
     const [materialType, setMaterialType] = useState<MaterialType>('READING');
+    
+    // Step 2b: AI generation parameters (per FrontendWorkflowSpec §4B(1))
+    const [aiDescription, setAiDescription] = useState('');
+    const [readingAge, setReadingAge] = useState<number>(10);
+    const [actualAge, setActualAge] = useState<number>(10);
+    const [durationInMinutes, setDurationInMinutes] = useState<number>(30);
+    const [aiMaterialType, setAiMaterialType] = useState<'READING' | 'WORKSHEET'>('READING');
+    
+    // Per FrontendWorkflowSpec §4B(1)(b): Selected source documents for AI generation.
+    // Defaults to all source documents belonging to the unit collection (empty set means all).
+    const [selectedSourceDocIds, setSelectedSourceDocIds] = useState<Set<string>>(new Set());
+    // Track if user has explicitly made a selection (to differentiate "all" default from explicit empty)
+    const [hasUserSelectedDocs, setHasUserSelectedDocs] = useState(false);
+    
+    // Filter to only show indexed source documents (PENDING or FAILED documents can't be searched)
+    const indexedSourceDocuments = sourceDocuments.filter(doc => doc.embeddingStatus === 'INDEXED');
+    
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async () => {
+    const handleMethodSelect = (method: CreationMethod) => {
+        if (method === 'AI' && !aiAvailable) {
+            setError('AI generation is not available right now. Please install required dependencies.');
+            return;
+        }
+
+        if (method === 'MANUAL') {
+            setStep('MANUAL_TYPE');
+        } else {
+            setStep('AI_FORM');
+        }
+    };
+
+    const handleManualCreate = async () => {
         if (!title.trim()) {
             setError('Title is required');
             return;
@@ -48,68 +111,387 @@ export const CreateMaterialModal: React.FC<CreateMaterialModalProps> = ({
         }
     };
 
-    return (
-        <ModalOverlay priority="low">
-            <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-lg space-y-6 animate-fade-in-up border border-gray-100">
-                <h2 className="text-2xl font-serif text-text-heading">
-                    Add Material to <span className="text-brand-blue italic">"{lessonTitle}"</span>
-                </h2>
+    const handleAIGenerate = async () => {
+        if (!title.trim()) {
+            setError('Title is required');
+            return;
+        }
+        if (!aiDescription.trim()) {
+            setError('Description is required for AI generation');
+            return;
+        }
+        if (!unitCollectionId) {
+            setError('Cannot use AI generation: No unit collection context available');
+            return;
+        }
+        if (!onCreateWithAI) {
+            setError('AI generation is not supported in this context');
+            return;
+        }
+        if (!aiAvailable) {
+            setError('AI runtime dependencies are not available');
+            return;
+        }
 
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            // Per FrontendWorkflowSpec §4B(1): Collect generation parameters
+            // Per §4B(1)(b): If no documents are selected, all indexed documents are searched.
+            // Only include sourceDocumentIds if user has explicitly selected specific documents.
+            const request: GenerationRequest = {
+                description: aiDescription,
+                readingAge,
+                actualAge,
+                durationInMinutes,
+                unitCollectionId,
+                title: title.trim(),
+                sourceDocumentIds: hasUserSelectedDocs && selectedSourceDocIds.size > 0
+                    ? Array.from(selectedSourceDocIds)
+                    : undefined,
+            };
+
+            // Per FrontendWorkflowSpec §4B(2): Pass request to parent handler
+            // The parent will:
+            // 1. Create the material with empty content
+            // 2. Call generateReading or generateWorksheet
+            // 3. Display result in editor modal
+            // 4. Persist reading age and actual age metadata
+            await onCreateWithAI(title.trim(), aiMaterialType, request, readingAge, actualAge);
+            // Note: Parent manages modal transition to editor, so don't call onClose() here
+        } catch (err) {
+            setError('Failed to generate material with AI');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const renderSelectMethodStep = () => (
+        <>
+            <h2 className="text-2xl font-serif text-text-heading">
+                Add Material to <span className="text-brand-blue italic">"{lessonTitle}"</span>
+            </h2>
+
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Material Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => { setTitle(e.target.value); setError(null); }}
+                    className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                    placeholder="e.g., Key Vocabulary"
+                    autoFocus
+                />
+            </div>
+
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    How would you like to create this material?
+                </label>
+                <div className="flex flex-col gap-3">
+                    <button
+                        onClick={() => handleMethodSelect('AI')}
+                        disabled={!title.trim() || !unitCollectionId || !aiAvailable}
+                        className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-brand-orange hover:bg-orange-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <div className="font-sans font-semibold text-text-heading">
+                            ✨ AI Generation
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                            Generate content based on your description and source documents
+                        </div>
+                        {!unitCollectionId && (
+                            <div className="text-xs text-red-500 mt-1">
+                                Not available: No unit collection context
+                            </div>
+                        )}
+                        {!aiAvailable && (
+                            <div className="text-xs text-red-500 mt-1">
+                                AI generation unavailable: install the missing runtime dependency and retry.
+                            </div>
+                        )}
+                        <div className="text-xs text-gray-500 italic mt-2">
+                            Note: Polls cannot be created via AI generation
+                        </div>
+                        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-2">
+                            ⚠️ AI-generated materials may contain mistakes and should be reviewed before being deployed to students.
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => handleMethodSelect('MANUAL')}
+                        disabled={!title.trim()}
+                        className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-brand-orange hover:bg-orange-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <div className="font-sans font-semibold text-text-heading">
+                            ✏️ Manual Creation
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                            Start with a blank material and add content yourself
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <p className="text-sm text-gray-500 italic">
+                You'll be able to make manual edits or invoke the AI assistant after creation.
+            </p>
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <div className="flex gap-4 pt-4 border-t border-gray-100">
+                <button
+                    onClick={onClose}
+                    className="px-6 py-3 bg-white text-gray-600 border border-gray-300 font-sans font-medium rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </>
+    );
+
+    const renderManualTypeStep = () => (
+        <>
+            <button
+                onClick={() => setStep('SELECT_METHOD')}
+                className="text-brand-orange hover:text-brand-orange-dark text-sm font-sans flex items-center gap-1"
+            >
+                ← Back
+            </button>
+
+            <h2 className="text-2xl font-serif text-text-heading">
+                Select Material Type
+            </h2>
+
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Material Type <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                    {materialTypes.map(type => (
+                        <button
+                            key={type.value}
+                            onClick={() => setMaterialType(type.value)}
+                            className={`px-5 py-2 rounded-md font-sans font-medium text-sm transition-all shadow-sm ${materialType === type.value
+                                ? `${type.color} transform -translate-y-0.5`
+                                : 'bg-gray-100 text-text-body hover:bg-gray-200'
+                                }`}
+                        >
+                            {type.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <div className="flex gap-4 pt-4 border-t border-gray-100">
+                <button
+                    onClick={handleManualCreate}
+                    disabled={isSubmitting}
+                    className="px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50"
+                >
+                    {isSubmitting ? 'Creating...' : 'Create Material'}
+                </button>
+                <button
+                    onClick={onClose}
+                    className="px-6 py-3 bg-white text-gray-600 border border-gray-300 font-sans font-medium rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </>
+    );
+
+    const renderAIFormStep = () => (
+        <>
+            <button
+                onClick={() => setStep('SELECT_METHOD')}
+                className="text-brand-orange hover:text-brand-orange-dark text-sm font-sans flex items-center gap-1"
+            >
+                ← Back
+            </button>
+
+            <h2 className="text-2xl font-serif text-text-heading">
+                AI Material Generation
+            </h2>
+
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Material Type <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setAiMaterialType('READING')}
+                        className={`px-5 py-2 rounded-md font-sans font-medium text-sm transition-all shadow-sm ${aiMaterialType === 'READING'
+                            ? 'bg-brand-green text-white transform -translate-y-0.5'
+                            : 'bg-gray-100 text-text-body hover:bg-gray-200'
+                            }`}
+                    >
+                        Reading
+                    </button>
+                    <button
+                        onClick={() => setAiMaterialType('WORKSHEET')}
+                        className={`px-5 py-2 rounded-md font-sans font-medium text-sm transition-all shadow-sm ${aiMaterialType === 'WORKSHEET'
+                            ? 'bg-brand-yellow text-gray-900 transform -translate-y-0.5'
+                            : 'bg-gray-100 text-text-body hover:bg-gray-200'
+                            }`}
+                    >
+                        Worksheet
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                    value={aiDescription}
+                    onChange={(e) => { setAiDescription(e.target.value); setError(null); }}
+                    className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                    placeholder="Describe the content you want to generate, including any specific requirements..."
+                    rows={4}
+                />
+            </div>
+
+            {/* Per FrontendWorkflowSpec §4B(1)(b): Source document selection */}
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Source Documents
+                    <span className="text-gray-400 font-normal ml-2">(Optional)</span>
+                </label>
+                {indexedSourceDocuments.length > 0 ? (
+                    <>
+                        <div className="text-xs text-gray-500 mb-2">
+                            {hasUserSelectedDocs && selectedSourceDocIds.size > 0
+                                ? `${selectedSourceDocIds.size} of ${indexedSourceDocuments.length} document(s) selected`
+                                : 'All indexed documents will be searched (default)'}
+                        </div>
+                        <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
+                            {indexedSourceDocuments.map(doc => {
+                                const isSelected = selectedSourceDocIds.has(doc.id);
+                                const displayText = doc.transcript.length > 60
+                                    ? doc.transcript.substring(0, 60) + '...'
+                                    : doc.transcript;
+                                return (
+                                    <label
+                                        key={doc.id}
+                                        className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                setHasUserSelectedDocs(true);
+                                                const newSet = new Set(selectedSourceDocIds);
+                                                if (e.target.checked) {
+                                                    newSet.add(doc.id);
+                                                } else {
+                                                    newSet.delete(doc.id);
+                                                }
+                                                setSelectedSourceDocIds(newSet);
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange"
+                                        />
+                                        <span className="text-sm text-text-body truncate">
+                                            {displayText || '(Empty document)'}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        {hasUserSelectedDocs && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedSourceDocIds(new Set());
+                                    setHasUserSelectedDocs(false);
+                                }}
+                                className="text-xs text-brand-orange hover:text-brand-orange-dark mt-1"
+                            >
+                                Reset to all documents
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-sm text-gray-500 italic p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        No indexed source documents available. You can still generate content without source documents.
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
-                        Material Title <span className="text-red-500">*</span>
+                        Reading Age <span className="text-red-500">*</span>
                     </label>
                     <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => { setTitle(e.target.value); setError(null); }}
+                        type="number"
+                        value={readingAge}
+                        onChange={(e) => setReadingAge(parseInt(e.target.value) || 10)}
                         className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
-                        placeholder="e.g., Key Vocabulary"
-                        autoFocus
+                        min={5}
+                        max={18}
                     />
                 </div>
-
                 <div>
                     <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
-                        Material Type <span className="text-red-500">*</span>
+                        Actual Age <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-3 flex-wrap">
-                        {materialTypes.map(type => (
-                            <button
-                                key={type.value}
-                                onClick={() => setMaterialType(type.value)}
-                                className={`px-5 py-2 rounded-md font-sans font-medium text-sm transition-all shadow-sm ${materialType === type.value
-                                    ? `${type.color} transform -translate-y-0.5`
-                                    : 'bg-gray-100 text-text-body hover:bg-gray-200'
-                                    }`}
-                            >
-                                {type.label}
-                            </button>
-                        ))}
-                    </div>
+                    <input
+                        type="number"
+                        value={actualAge}
+                        onChange={(e) => setActualAge(parseInt(e.target.value) || 10)}
+                        className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                        min={5}
+                        max={18}
+                    />
                 </div>
+            </div>
 
-                <p className="text-sm text-gray-500 italic">
-                    Content can be added after creation using the editor.
-                </p>
+            <div>
+                <label className="font-sans font-medium text-text-heading text-sm mb-2 block">
+                    Estimated Duration (minutes) <span className="text-red-500">*</span>
+                </label>
+                <input
+                    type="number"
+                    value={durationInMinutes}
+                    onChange={(e) => setDurationInMinutes(parseInt(e.target.value) || 30)}
+                    className="w-full p-3 bg-white text-text-body font-sans rounded-lg border border-gray-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange focus:outline-none"
+                    min={5}
+                    max={120}
+                    step={5}
+                />
+            </div>
 
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <p className="text-red-500 text-sm">{error}</p>}
 
-                <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-100">
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50"
-                    >
-                        {isSubmitting ? 'Creating...' : 'Create Material'}
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-3 bg-white text-gray-600 border border-gray-300 font-sans font-medium rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
-                    >
-                        Cancel
-                    </button>
-                </div>
+            <div className="flex gap-4 pt-4 border-t border-gray-100">
+                <button
+                    onClick={handleAIGenerate}
+                    disabled={isSubmitting || !aiDescription.trim()}
+                    className="px-6 py-3 bg-brand-orange text-white font-sans font-medium rounded-md hover:bg-brand-orange-dark transition-colors shadow-sm disabled:opacity-50"
+                >
+                    {isSubmitting ? 'Generating...' : 'Generate with AI'}
+                </button>
+                <button
+                    onClick={onClose}
+                    className="px-6 py-3 bg-white text-gray-600 border border-gray-300 font-sans font-medium rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </>
+    );
+
+    return (
+        <ModalOverlay priority="low">
+            <div className="bg-white rounded-lg p-8 shadow-2xl w-full max-w-lg space-y-6 animate-fade-in-up border border-gray-100 max-h-[90vh] overflow-y-auto">
+                {step === 'SELECT_METHOD' && renderSelectMethodStep()}
+                {step === 'MANUAL_TYPE' && renderManualTypeStep()}
+                {step === 'AI_FORM' && renderAIFormStep()}
             </div>
             <style>{`
         @keyframes fade-in-up {

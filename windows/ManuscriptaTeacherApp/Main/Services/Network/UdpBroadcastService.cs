@@ -41,6 +41,11 @@ public class UdpBroadcastService : IUdpBroadcastService, IDisposable
             return;
         }
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _udpClient = new UdpClient();
         _udpClient.EnableBroadcast = true;
@@ -51,22 +56,17 @@ public class UdpBroadcastService : IUdpBroadcastService, IDisposable
             _settings.UdpBroadcastPort,
             _settings.BroadcastIntervalMs);
 
-        try
-        {
-            // Run broadcast loop in background so we don't block the caller (Hub)
-            _ = Task.Run(() => BroadcastLoopAsync(_cts.Token), _cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("UDP broadcasting stopped");
-            _isBroadcasting = false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during UDP broadcasting");
-            _isBroadcasting = false;
-            throw;
-        }
+        // Run broadcast loop in background so we don't block the caller (Hub)
+        _ = Task.Run(() => BroadcastLoopAsync(_cts.Token), _cts.Token)
+            .ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    _logger.LogError(task.Exception, "Error during UDP broadcasting");
+                }
+
+                _isBroadcasting = false;
+            }, TaskScheduler.Default);
     }
 
     /// <inheritdoc />

@@ -76,9 +76,9 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) The splash screen shall be dismissed once the backend is confirmed ready, as specified in subsection (5)(c).
 
-    (d) The frontend shall, in no circumstances, use a wording which appears to the user that there is a frontend-backend separation[, such as "connecting"]. 
+(4A) The frontend shall, in no circumstances, use a wording which appears to the user that there is a frontend-backend separation[, such as "connecting"]. 
 
-    [Explanatory note: The frontend-backend separation is not a user-facing concept. The user should be informed as if there is no such separation.] 
+[Explanatory note: The frontend-backend separation is not a user-facing concept. The user should be informed as if there is no such separation.] 
 
 (5) **Backend Readiness Confirmation**
 
@@ -210,6 +210,10 @@ For a list of all server method and client handlers to be implemented for commun
 
         (v) `Task<List<SourceDocumentEntity>> GetAllSourceDocuments()`
 
+    (b) Methods for retrieving global settings.
+
+        (i) `Task<PdfExportSettingsEntity> GetPdfExportSettings()`
+
 
 ## Section 3A - Runtime Dependency Management
 
@@ -251,12 +255,23 @@ For a list of all server method and client handlers to be implemented for commun
 
     (c) provide a button to re-check the availability of the dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` as defined in the Networking API Specification Section 1(1)(nz)(i).
 
-(4) The frontend shall provide an option in the Settings interface to —
+(4) [DELETED. See Section 7(1).]
 
-    (a) re-check the availability of each runtime dependency by calling the method in paragraph (3)(c); and
+## Section 3B - Email Credential Configuration
 
-    (b) reinstall each runtime dependency by calling the method in subparagraph (2)(b)(i).
+(1) The backend may notify the frontend of missing email credentials during an email-dependent operation by invoking the `EmailCredentialsNotConfigured` handler specified in the Networking API Specification Section 2.
 
+(2) When such notification is received, the frontend shall —
+
+    (a) display a modal indicating to the user that email credentials are required for the requested operation;
+
+    (b) provide a button to navigate to the Settings interface to configure the credentials; and
+
+    (c) provide an option to cancel the dependent operation.
+
+(3) [DELETED. See Section 7(2).]
+
+(4) [DELETED. See Section 7(3).]
 
 ## Section 4 - Functionalities for the "Library" tab
 
@@ -284,7 +299,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) prompt the user to select the method of creation, through one of the following initial means:
 
-        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method.
+        (i) AI generation based on description and templates. See Section 4B. The user should be reminded that they may not create a poll through this method. This option should also make clear that AI-generated materials may contain mistakes and should be reviewed before being deployed to students.
 
         (ii) Manual creation. This bypasses the AI creation process specified in Section 4B, and the user should be prompted to select the type of material to create, from reading, worksheet and poll. When the material type selected is poll, the material should be initialised as a material containing one multiple choice question. For any other material type, the material should be initially empty.
     
@@ -294,7 +309,50 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) attach source documents to a unit collection.
 
-    (b) [Deleted.]
+    (b) search for a material based on its title and contents.
+
+
+## Section 4AA - Source Document Management
+
+(1) The frontend shall provide the user with the ability to manage source documents within a unit collection.
+
+(2) When the user uploads a source document —
+
+    (a) the frontend shall prompt the user to either select a file (e.g., PDF, DOCX) or enter plain text.
+
+    (b) the frontend shall create a textual transcript of the document, if a file has been uploaded.
+
+    (c) the frontend shall invoke `CreateSourceDocument` (NetworkingAPISpec §1(1)(k)(i)) via `TeacherPortalHub`, passing the `UnitCollectionId` and `Transcript`.
+
+    (d) the backend shall index the document as specified in GenAISpec §3A(2).
+
+    (e) the frontend may poll `GetEmbeddingStatus` (NetworkingAPISpec §1(1)(i)(v)) to display indexing progress.
+
+(3) When the user edits the transcript of a source document —
+
+    (a) the frontend shall invoke `UpdateSourceDocument` (NetworkingAPISpec §1(1)(k)(iii)) via `TeacherPortalHub` with the updated `Transcript`.
+
+    (b) the backend shall re-index the document as specified in GenAISpec §3A(3).
+
+(4) When the user deletes a source document —
+
+    (a) the frontend shall invoke `DeleteSourceDocument` (NetworkingAPISpec §1(1)(k)(iv)) via `TeacherPortalHub`.
+
+    (b) the backend shall remove associated embeddings as specified in GenAISpec §3A(4).
+
+(5) When a source document has `EmbeddingStatus` of `FAILED` —
+
+    (a) the frontend shall display an error indicator on the document.
+
+    (b) the frontend shall provide a "Retry Indexing" option invoking `RetryEmbedding` (NetworkingAPISpec §1(1)(i)(vii)).
+
+    (c) the frontend shall provide a "Delete" option.
+
+(6) Upon receipt of `OnEmbeddingFailed` (NetworkingAPISpec §2(1)(d)(i)) —
+
+    (a) the frontend shall display an error notification indicating which document failed.
+
+    (b) the frontend shall update the document's status indicator.
 
 
 ## Section 4B - AI Generation
@@ -303,7 +361,7 @@ For a list of all server method and client handlers to be implemented for commun
 
     (a) A description of the material, and any other requirements regarding the material to be generated.
 
-    (b) Any source documents, as specified in S2B(1)(c) of the Additional Validation Rules, that the AI should be made aware of, such as a syllabus or learning objectives.
+    (b) Optionally, specific source documents to use for context. If no documents are selected, all indexed documents in the unit collection are searched automatically.
 
     (c) The type of the material from reading and worksheet.
 
@@ -311,13 +369,41 @@ For a list of all server method and client handlers to be implemented for commun
 
     (e) An approximate of the time, in minutes, that students would need to complete the material.
 
-    (f) The template the material is based on. [Subject to further specification of the concept of templates]
+    (f) [Deleted.]
 
 (2) Once information in subsection (1) have been collected -
 
-    (a) the AI module shall be called to generate a draft of the material. [Subject to further specification of the AI module] 
+    (a) the frontend shall invoke `GenerateReading` (NetworkingAPISpec §1(1)(i)(i)) or `GenerateWorksheet` (NetworkingAPISpec §1(1)(i)(ii)) via `TeacherPortalHub` to generate a draft of the material.
 
-    (b) the draft shall be displayed to the user in the editor modal, as specified in Section 4C. 
+    (a1) Before invoking the generation method, the frontend shall subscribe to the `OnGenerationStarted` handler (NetworkingAPISpec §2(1)(h)(ii)) to receive the server-generated generation ID for cancellation support. Whilst the generation is in progress, the frontend shall also subscribe to the `OnGenerationProgress` handler (NetworkingAPISpec §2(1)(h)(i)) and display a streaming generation view, which shall —
+
+        (i) display chain-of-thought tokens (`isThinking = true`) in a visually distinct manner (e.g., a collapsible "Thinking…" section with muted or italic styling), to give the user evidence that the AI is actively reasoning.
+
+        (ii) display content tokens (`isThinking = false`) progressively, rendering them as they arrive, in a manner consistent with the editor's rendering capabilities. Specifically, the streaming view shall convert accumulated content Markdown to HTML using a streaming-specific conversion function (`markdownToStreamingHtml`) that —
+
+            (A) renders standard Markdown formatting (headings, bold, italic, lists, tables, code blocks, blockquotes, horizontal rules) via the same `marked` library used by the editor;
+
+            (B) renders inline and block LaTeX to KaTeX HTML, consistent with the editor's `InlineLatex` and `BlockLatex` extensions;
+
+            (C) renders `question-draft` markers (GenAISpec Appendix C) as styled preview cards matching the editor's `QuestionRef` visual appearance, with a "Draft" badge, question type tag, question text, multiple-choice options with correct-answer highlighting, and mark-scheme/correct-answer displays for written-answer questions;
+
+            (D) handles incomplete Markdown gracefully during streaming: `marked` shall be invoked tolerantly on each frame, rendering valid syntax and passing through unparsed/partial syntax as text;
+
+            (E) renders `!!! center` blocks, `!!! pdf` embeds, and `!!! question` references as appropriate placeholders.
+
+        (iii) display an animated indicator (e.g., a blinking cursor or pulsing dot) at the end of the streamed content to signal that generation is still in progress.
+
+        (iv) upon receipt of a chunk with `done = true`, remove the animated indicator and transition to the final content display.
+
+        (v) a "Cancel" control, which when activated shall invoke `CancelGeneration` (NetworkingAPISpec §1(1)(i)(x)) with the generation ID received from `OnGenerationStarted`, and close the streaming view without persisting any content.
+
+        (vi) the frontend shall handle `OperationCanceledException` from generation methods gracefully without displaying an error notification.
+
+        (vii) to prevent UI jank from high-frequency token streams, the frontend should buffer incoming tokens and batch state updates using `requestAnimationFrame` or a similar mechanism, rather than updating state on each individual token.
+
+    (a2) The streaming generation view shall not permit editing of the content whilst generation is in progress. Editing shall be enabled only after the final `GenerationResult` is received per paragraph (b).
+
+    (b) on receiving the generation result, the frontend shall display the content in the editor modal as specified in Section 4C. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
 
     (c) the reading age and the actual age metadata shall be persisted, by calling the update material method specified in S1(1)(d) of this document.
 
@@ -340,9 +426,31 @@ For a list of all server method and client handlers to be implemented for commun
 
     The editor modal shall provide means through which the user can -
 
-    (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make.
+    (a) invoke the AI assistant to make changes to the material, by selecting the locations of the content they want to modify, and describing the changes they want to make. When invoking the AI assistant —
+
+        (i) the frontend shall capture the selected content and the user's instruction.
+
+        (ii) the frontend shall invoke `ModifyContent` (NetworkingAPISpec §1(1)(i)(iv)) via `TeacherPortalHub`, passing the material's `id`, `materialType`, `title`, `readingAge`, and `actualAge` alongside the selected content and instruction.
+
+        (iii) on receiving the generation result, the frontend shall replace the user's selection in the editor with the content. If the result contains validation warnings, the frontend shall display them as specified in §4C(7).
+
+        (iv) Whilst the modification is in progress, the frontend shall display a streaming generation view in accordance with §4B(2)(a1), showing the AI's chain-of-thought and the progressively generated replacement content.
+
+        (v) The streaming generation view for content modification shall not replace the user's existing content until the final `GenerationResult` is received. An interim preview may be shown adjacent to or overlaid on the selected content.
 
     (b) modify the reading age and actual age metadata of the material.
+
+    (b1) modify the per-material PDF export settings — line pattern type, line spacing preset, and font size preset. The frontend shall display a description informing the user that these settings override the global defaults for this material, but may in turn be overridden by per-device settings configured on external devices. This shall be provided in means of dropdowns, and each dropdown shall —
+
+        (i) include a "Default" option that maps to null (i.e., the global default from `PdfExportSettingsEntity` is used), and display the current global default value for the teacher's reference (e.g., "Default (Ruled)", "Default (Medium)");
+
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`);
+
+        (iii) display "Default (...)" when the per-material override is null;
+
+        (iv) when the user selects a specific value, set it as a per-material override; and
+
+        (v) be auto-saved with the existing 1-second debounce mechanism like other material properties.
 
     (c) undo and redo changes to the material.  
 
@@ -462,6 +570,16 @@ For a list of all server method and client handlers to be implemented for commun
 
     (b) delete such attachment entity using the deletion endpoint specified in s1(1)(l)(iii) of the Networking API Specification.
 
+(7) **Displaying Validation Warnings**
+
+    When the editor modal receives content with validation warnings (per GenAISpec §3G) —
+
+    (a) the frontend shall display a warning banner indicating issues require attention.
+
+    (b) the frontend shall highlight or annotate the affected lines where line numbers are available.
+
+    (c) the frontend shall provide a list view of all warnings with descriptions.
+
 
 ## Section 4D — PDF Export
 
@@ -478,6 +596,8 @@ For a list of all server method and client handlers to be implemented for commun
     (d) upon receipt of the byte array, the frontend shall prompt the user to save the PDF file using the system file save dialogue;
 
     (e) the suggested filename shall be the material title with `.pdf` extension, with any invalid filename characters removed.
+
+    [Explanatory Note: The export uses the effective PDF settings resolved per MaterialConversionSpecification §1(5)(h) (device → material → global). The same resolution is applied when PDFs are generated as part of deployment to external devices.]
 
 (2) **Error Handling**
 
@@ -593,6 +713,8 @@ For a list of all server method and client handlers to be implemented for commun
 
 (5) For each Android device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's configurations in a configuration modal as outlined in s5H of this specification.
 
+(5A) For each external device in the grid display, the frontend shall provide a settings button which allows the user to view and modify the device's PDF export setting overrides in a configuration modal as outlined in s5H(2) of this specification.
+
 
 ## Section 5C — Device Control
 
@@ -677,86 +799,62 @@ For a list of all server method and client handlers to be implemented for commun
 [DELETED. See Section 3A for generalised runtime dependency management.]
 
 
-## Section 5F — reMarkable Device Pairing
+## Section 5F — External Device Pairing
 
-(1) **Initiating reMarkable Pairing**
+(1) The frontend shall provide a button or other control to initiate external device pairing (reMarkable or Kindle), distinct from Android device pairing.
 
-    The frontend shall provide a button or other control to initiate reMarkable device pairing, distinct from Android device pairing.
+(2) When the user initiates external device pairing —
 
-(2) **Pairing Workflow**
+    (a) the frontend shall prompt the user to select the device type (`REMARKABLE` or `KINDLE`).
 
-    When the user initiates reMarkable pairing —
+    (b) the frontend shall prompt the user to enter a user-friendly device name.
 
-    (a) the frontend shall prompt the user to enter a user-friendly device name;
+    (c) if the selected type is `REMARKABLE`, the frontend shall open `https://my.remarkable.com/device/desktop/connect` and prompt for the one-time code.
 
-    (b) the frontend shall open the user's default browser to `https://my.remarkable.com/device/desktop/connect`;
+    (d) if the selected type is `KINDLE`, the frontend shall prompt for the "Send to Kindle" email address by providing a text input field for the local part and pre-filling/displaying `@kindle.com` as a fixed suffix. It shall also display a reminder to whitelist the sending address.
 
-    (c) the frontend shall display a fallback link for users to visit manually if the browser does not open;
+    (e) the frontend shall call `Task<Guid> PairExternalDevice()`, passing the collected data as the `configurationData` parameter.
 
-    (d) the frontend shall prompt the user to enter the one-time code obtained from the URL in (b);
+    (f) the frontend shall indicate to the user that pairing is in progress.
 
-    (e) the frontend shall call `Task<Guid> PairReMarkableDevice(string name, string oneTimeCode)`, as defined in §1(1)(n)(i) of the Networking API Specification;
-
-    (f) the frontend shall indicate to the user that pairing is in progress;
-
-    (g) upon success, the frontend shall refresh the device grid in accordance with §5A(3A);
+    (g) upon success, the frontend shall refresh the device grid in accordance with Subsection 5A(3A).
 
     (h) upon failure, the frontend shall display an error message and allow the user to retry or cancel.
 
-(3) **Re-authentication**
+(3) When the backend invokes the `ExternalDeviceAuthInvalid` client handler —
 
-    When the backend invokes the `ReMarkableAuthInvalid` client handler —
+    (a) the frontend shall display a notification indicating that the specified device requires re-authentication.
 
-    (a) the frontend shall display a notification indicating that the specified reMarkable device requires re-authentication;
+    (b) the frontend shall provide an option to initiate re-authentication, following the workflow in Subsection (2).
 
-    (b) the frontend shall provide an option to initiate re-authentication, following the workflow in paragraphs (2)(b)-(h).
+(4) The frontend shall provide a means for the user to unpair an external device by calling `Task UnpairExternalDevice(Guid deviceId)`.
 
-(4) **Unpairing**
+(5) External devices shall be visually distinguished in the device grid. Classroom control and response collection UI elements shall be disabled when an external device is selected.
 
-    The frontend shall provide a means for the user to unpair a reMarkable device by calling `Task UnpairReMarkableDevice(Guid deviceId)`, as defined in §1(1)(n)(ii) of the Networking API Specification.
 
-(5) **Display**
+## Section 5G — Material Deployment to External Devices
 
-    reMarkable devices shall be displayed in the device grid alongside Android devices, with a distinct visual indicator per reMarkable Integration Specification §1(3).
+(1) The frontend shall provide a means to deploy materials to external devices using the same material selection workflow as Android devices in Subsection 5C(3).
 
-(6) **Avoidance of Illegal Actions**
+(2) When the user deploys a material to one or more external devices —
 
-    The frontend shall clearly indicate to the user that the classroom control and response collection functionalities are not available for reMarkable devices, by disabling the corresponding UI elements when a reMarkable device is selected, and stating the reason of the unavailability.
+    (a) the frontend shall perform capability checks for the selected device types:
+        (i) If any `KINDLE` devices are selected, it shall call `CheckEmailCredentialAvailability()`. If false, display the configuration modal in accordance with Subsection 3B(2).
+        (ii) If any `REMARKABLE` devices are selected, the application shall verify the availability of `rmapi`. If the backend invokes the `RuntimeDependencyNotInstalled` handler, the frontend shall display the installation modal and halt deployment in accordance with Section 3A.
 
-## Section 5G — Material Deployment to reMarkable Devices
+    (b) the frontend shall call `Task DeployMaterialToExternalDevices(Guid materialId, List<Guid> deviceIds)`.
 
-(1) **Initiating Deployment**
+    (c) the frontend shall indicate that deployment is in progress.
 
-    The frontend shall provide a means to deploy materials to reMarkable devices using the same material selection workflow as Android devices per §5C(3).
+    (d) upon completion, the frontend shall display a success message indicating dispatch.
 
-(2) **Deployment Workflow**
+(3) When the user selects a mix of Android and External devices —
 
-    When the user deploys a material to one or more reMarkable devices —
+    (a) the frontend shall call `DeployMaterial` for Android devices;
 
-    (a) the frontend shall call `Task DeployMaterialToReMarkable(Guid materialId, List<Guid> deviceIds)`, as defined in §1(1)(n)(vii) of the Networking API Specification;
+    (b) the frontend shall call `DeployMaterialToExternalDevices` for External devices;
 
-    (b) the frontend shall indicate that deployment is in progress;
-
-    (c) upon completion, the frontend shall display a success message indicating that the material has been uploaded to the reMarkable cloud;
-
-    (d) the frontend shall inform the user that the device will receive the material on its next sync.
-
-(3) **Error Handling**
-
-    (a) If the backend invokes the `ReMarkableAuthInvalid` client handler during deployment, the frontend shall follow the re-authentication workflow in §5F(3);
-
-    (b) If the deployment fails for other reasons, the frontend shall display an error message with a retry option.
-
-(4) **Mixed Device Selection**
-
-    When the user selects a mix of Android and reMarkable devices for deployment —
-
-    (a) the frontend shall call `DeployMaterial` for Android devices per §5C(3);
-
-    (b) the frontend shall call `DeployMaterialToReMarkable` for reMarkable devices per this section;
-
-    (c) the frontend shall clearly indicate the status of deployment to each device type separately.
-
+    (c) the frontend shall clearly indicate the status of deployment to each device class separately.
 
 ## Section 5H - Configuration modal
 
@@ -767,6 +865,19 @@ For a list of all server method and client handlers to be implemented for commun
     (b) allows the user to modify any value(s) in the selected device's configuration.
     
     (c) includes a "Save" button to allow users to save the changes made via `Task UpdateDeviceConfiguration(Guid DeviceId, ConfigurationEntity newDeviceConfiguration)`.
+
+(2) When the settings button for a displayed external device is pressed, the frontend shall display a configuration modal which —
+
+    (a) shows the per-device PDF export setting overrides currently associated with the selected device, as defined in AdditionalValidationRules §3D(1)(e–g).
+
+    (a1) The modal shall display a description informing the user that per-device settings take the highest priority, overriding both per-material and global default settings when a PDF is generated for this device.
+
+    (b) displays three dropdown controls — line pattern type, line spacing preset, and font size preset — each of which shall —
+        (i) include a "Default" option that maps to null (i.e., the per-material or global default is used);
+        (ii) include options for each enum value of the respective type (`LinePatternType`, `LineSpacingPreset`, `FontSizePreset`); and
+        (iii) display "Default" when the per-device override is null.
+
+    (c) includes a "Save" button to allow users to save the changes made via `Task UpdateExternalDevice(ExternalDeviceEntity entity)`.
 
 
 
@@ -786,6 +897,16 @@ For a list of all server method and client handlers to be implemented for commun
         (i) on entry to the responses tab; or
         
         (ii) when the `RefreshResponses` client handler is invoked by the backend, as defined in s2(1)(b)(i) of the Networking API Specification.
+
+(3A) **Refresh of Feedback**
+
+    (a) Feedback shall be refreshed by calling `GetAllFeedbacks()` s1(1)(h)(iv) of the Networking API Specification.
+
+    (b) The frontend shall refresh feedback —
+
+        (i) when responses are refreshed, by the virtue of paragraph (3)(b); or
+
+        (ii) after each `UpdateFeedback` call [to ascertain that feedback has been appropriately submitted].
 
 (4) **Display of responses on class-level**
 
@@ -857,6 +978,28 @@ For a list of all server method and client handlers to be implemented for commun
 
 ## Section 6A — Response Review and Feedback Workflow
 
+(1) If no `FeedbackEntity` corresponding to a response (R) exists and the question R is related to satisfies GenAISpec §3D(1), the frontend shall —
+
+    (a) if R is deemed queued or generating (per GenAISpec §3D(3)–(4)), display a "pending" indicator, and disable edits for that response.
+
+    (b) provide a "Write Manually" option, enabled only when R is queued and not actively generating. Upon selecting manual feedback, R shall be removed from the queue by invoking `RemoveFromAiGenerationQueue` (NetworkingAPISpec §1(1)(i)(ix)) per GenAISpec §3D(6)(a), and a feedback in `PROVISIONAL` state shall be created. The option shall be disabled while R is being generated.
+
+    (c) provide a "Prioritise" option if R is queued. Upon selection, the frontend shall invoke `PrioritiseFeedbackGeneration(Guid responseId)` (NetworkingAPISpec §1(1)(i)(viii)) to move R to the front of the generation queue.
+
+(1A) If a response (R) corresponds to an existing feedback (F) in `PROVISIONAL` state, the frontend shall provide means for the teacher to send R to the generation queue. R shall be added to the AI generation queue by invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)). The teacher shall be warned that F will be overwritten, and be asked for confirmation.
+
+(2) When the teacher clicks "Release Feedback", the frontend shall invoke `ApproveFeedback(feedbackId)` (NetworkingAPISpec §1(1)(h)(ii)).
+
+(3) Upon receipt of `OnFeedbackGenerationFailed` (NetworkingAPISpec §2(1)(c)(i)) —
+
+    (a) the frontend shall display an error message indicating that AI feedback generation has failed.
+
+    (b) the frontend shall provide a "Retry" option invoking `QueueForAiGeneration` (NetworkingAPISpec §1(1)(i)(vi)).
+
+(4) [DELETED]
+
+(5) [DELETED]
+
 (6) The frontend shall, upon receipt of `FeedbackDeliveryFailed` (NetworkingAPISpec §2(1)(e)(v)) —
 
     (a) display a message indicating that feedback delivery to the specified device has failed, and an indicator for the specific response near the indicator specified in Section 6(5)(e)(vi) above.
@@ -865,23 +1008,102 @@ For a list of all server method and client handlers to be implemented for commun
 
 (7) **Feedback Editing and Deletion Rules**
 
+    Subject to subsection (1) above —
+
     (a) A feedback entity whose Status is `PROVISIONAL` may be edited by the teacher in the following manner —
 
         (i) The teacher may modify the `Text` and/or `Marks` fields via `UpdateFeedback` (NetworkingAPISpec §1(1)(h)(v)).
 
-        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` rather than `UpdateFeedback`, to delete the provisional feedback.
+        (ii) If the teacher clears both `Text` and `Marks` fields (both become null/empty), the frontend shall invoke `DeleteFeedback(Guid feedbackId)` (NetworkingAPISpec §1(1)(h)(vi)) rather than `UpdateFeedback`. This action deletes the provisional feedback.
 
     (b) A feedback entity whose Status is `READY` or `DELIVERED` shall not be editable. The frontend shall not display editing controls for feedback in these states.
 
-    [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalized assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
+    [Explanatory Note: Once feedback has been approved (`READY`) or dispatched (`DELIVERED`), it represents a finalised assessment that the student may have already seen. Editing would create inconsistency between what the teacher approved and what the student received.]
+
+
+## Section 6B — Response Export PDF
+
+(1) **Export Button**
+
+    When the frontend is displaying device-level responses (§6(5)), the frontend shall provide an "Export to PDF" button.
+
+(2) **Export Options**
+
+    When the export button is activated, the frontend shall display a popover or modal presenting the following options:
+
+    (a) "Include Feedback" — a tickbox, defaulting to unticked.
+
+    (b) "Include Mark Scheme" — a tickbox, defaulting to unticked.
+    
+    (c) A "Download" button to confirm the export.
+
+(3) **Export Invocation**
+
+    When the "Download" button is activated —
+
+    (a) the frontend shall invoke `GenerateResponsePdf(Guid materialId, string deviceId, bool includeFeedback, bool includeMarkScheme)`, as defined in s1(1)(m)(ii) of the Networking API Specification, passing the currently selected material ID, the currently selected device ID, and the toggle values;
+
+    (b) the frontend shall display a loading indicator while awaiting the response;
+
+    (c) upon receipt of the byte array, the frontend shall prompt the user to save the PDF file using the system file save dialogue;
+
+    (d) the suggested filename shall be `{materialTitle} - {deviceDisplayName} Responses.pdf`, with invalid filename characters removed;
+
+    (e) if the server method throws an exception, the frontend shall display an error message to the user.
+
+(4) **Availability**
+
+    The export button shall be available only when both a device and a material are selected and at least one response exists from that device for that material.
 
 
 ## Section 7 - Functionalities for the "Settings" tab
 
-(1) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
+(1) **Device Base Configuration**
 
-(2) The frontend shall -
+    (a) On entry of the "Settings" tab, the frontend must call the server method `Task<ConfigurationEntity> GetBaseConfiguration()` to retrieve and display the base configuration assumed by all Android devices.
 
-    (a) when there are no paired Android devices, provide means to modify any value in the base configuration; and
+    (b) The frontend shall -
 
-    (b) when there are paired Android devices, prevent the user from modifying the base configuration.
+        (i) when there are no paired Android devices, provide means to modify any value in the base configuration; and
+
+        (ii) when there are paired Android devices, prevent the user from modifying the base configuration.
+
+(2) **Runtime Dependency Management**
+
+    The frontend shall provide an option in the Settings interface to —
+
+    (a) re-check the availability of each runtime dependency by calling `Task<bool> CheckRuntimeDependencyAvailability(string dependencyId)` per Section 3A(3)(c); and
+
+    (b) reinstall each runtime dependency by calling `Task<bool> InstallRuntimeDependency(string dependencyId)` per Section 3A(2)(b)(i).
+
+(3) **Email Credential Configuration**
+
+    The frontend shall provide an interface in the Settings view to configure email credentials. This interface shall —
+
+    (a) collect the `EmailAddress`, `SmtpHost`, `SmtpPort`, and `Password` (or app-specific password) from the user;
+
+    (b) provide a "Save" button which calls `Task SaveEmailCredentials(EmailCredentialEntity credentials)` per the Networking API Specification Section 1;
+
+    (c) display a loading indicator while the backend tests the connection;
+
+    (d) upon success, display a success message; and
+
+    (e) upon failure, display the error message preventing the save operation.
+
+(4) The Settings interface shall also provide a means to view the currently configured `EmailAddress` (retrieved via `GetEmailCredentials()`) and a button to delete the configuration via `DeleteEmailCredentials()`.
+
+(5) **PDF Export Defaults**
+
+    (a) On entry of the "Settings" tab, the frontend shall call `GetPdfExportSettings()` to retrieve the current global PDF export defaults.
+
+    (a1) The frontend shall display a description informing the user that these are the global defaults, and that they may be overridden on a per-material basis (in the editor) or on a per-device basis (in the external device configuration modal).
+
+    (b) The frontend shall display three dropdown controls:
+
+        (i) Line Pattern Type — with options `RULED`, `SQUARE`, `ISOMETRIC`, `NONE`.
+
+        (ii) Line Spacing Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+        (iii) Font Size Preset — with options `SMALL`, `MEDIUM`, `LARGE`, `EXTRA_LARGE`.
+
+    (c) The frontend shall provide a "Save PDF Defaults" button. When activated, the frontend shall call `UpdatePdfExportSettings(entity)` to persist the updated defaults.

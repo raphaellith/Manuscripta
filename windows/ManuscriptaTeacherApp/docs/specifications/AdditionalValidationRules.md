@@ -74,6 +74,9 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (a) `ReadingAge` (int).
     (b) `ActualAge` (int).
+    (c) `LinePatternType` (enum `LinePatternType`, optional). The line pattern for written-answer areas in the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+    (d) `LineSpacingPreset` (enum `LineSpacingPreset`, optional). The line spacing size for written-answer areas. If null, the global default from `PdfExportSettingsEntity` applies.
+    (e) `FontSizePreset` (enum `FontSizePreset`, optional). The body text font size for the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
 
 
 ### Section 2E - Question
@@ -99,9 +102,83 @@ This document defines the hierarchical system for grouping and organising Materi
 
     (b) `Transcript` (string): A textual transcript of the source document contents.
 
+    (c) `EmbeddingStatus` (enum EmbeddingStatus, optional): Tracks the indexing state of the document for semantic retrieval. If not set, the document has not been submitted for indexing. Possible values are:
+
+        (i) `PENDING` — The document is queued for indexing or indexing is in progress.
+
+        (ii) `INDEXED` — The document has been successfully indexed and is available for semantic retrieval.
+
+        (iii) `FAILED` — The indexing process failed. The document is not available for semantic retrieval.
+
 (2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
 
     (a) The `UnitCollectionId` specified in (1)(a) must associate with a valid `UnitCollectionEntity`.
+
+(3) A source document which does not contain the `EmbeddingStatus` field shall be treated as not available for semantic retrieval. The frontend may offer an option to initiate indexing.
+
+
+### Section 3AB - Generation Request
+
+(1) A generation request is represented by a `GenerationRequest` class. This class must contain the following attributes:
+
+    (a) `Description` (string) — The teacher's description of desired content.
+
+    (b) `ReadingAge` (int) — Target reading age.
+
+    (c) `ActualAge` (int) — Actual age of the audience.
+
+    (d) `DurationInMinutes` (int) — Approximate completion time.
+
+    (e) `UnitCollectionId` (Guid) — The unit collection containing source documents.
+
+    (f) `Title` (string) — The title of the material to be generated.
+
+(2) In addition to the mandatory fields in (1), a `GenerationRequest` object may have the following optional fields:
+
+    (a) `SourceDocumentIds` (List<Guid>) — If provided, limits semantic retrieval to the specified source documents. If null or empty, all indexed documents in the unit collection are searched.
+
+
+### Section 3AC - Generation Result
+
+(1) A generation result is represented by a `GenerationResult` class. This class must contain the following attributes:
+
+    (a) `Content` (string) — The generated or modified content.
+
+(2) In addition to the mandatory fields in (1), a `GenerationResult` object may have the following optional fields:
+
+    (a) `Warnings` (List<ValidationWarning>) — A list of validation issues that could not be automatically resolved. See §3AD.
+
+    (b) `CreatedQuestionIds` (List<Guid>) — A list of UUIDs for `QuestionEntity` objects created during worksheet generation (per GenAISpec §3B(4)). This field shall be empty for reading materials.
+
+
+### Section 3AD - Validation Warning
+
+(1) A validation warning is represented by a `ValidationWarning` class. This class must contain the following attributes:
+
+    (a) `ErrorType` (string) — A code identifying the error type (e.g., `MALFORMED_MARKER`, `UNCLOSED_BLOCK`, `INVALID_REFERENCE`).
+
+    (b) `Description` (string) — A human-readable description of the issue.
+
+(2) In addition to the mandatory fields in (1), a `ValidationWarning` object may have the following optional fields:
+
+    (a) `LineNumber` (int) — The line number where the issue occurs.
+
+
+### Section 3AE — Feedback
+
+(1) A feedback is represented by a `FeedbackEntity` class. In addition to those specified by Section 2F of `Validation Rules.md`, this class shall contain the following field —
+
+    (a) `Status` (enum FeedbackStatus). Possible values are:
+
+        (i) `PROVISIONAL` — Feedback exists but has not been approved by the teacher. Feedback in this status shall not be dispatched.
+
+        (ii) `READY` — Feedback has been approved and is awaiting dispatch or acknowledgement.
+
+        (iii) `DELIVERED` — Feedback has been dispatched and acknowledged by the student device.
+
+    The default value is `PROVISIONAL`.
+
+(2) Additional fields defined in this Section shall not appear in the Data Transfer Objects (DTOs) used for communication with the Android client, specified in the API Contract.
 
 
 ### Section 3AE — Feedback
@@ -162,16 +239,64 @@ This document defines the hierarchical system for grouping and organising Materi
     (a) The device must be deemed paired by virtue of Pairing Process Specification s2(4).
 
 
-### Section 3D - reMarkable Device
+### Section 3D - External Device
 
-(1) A reMarkable device is represented by a `ReMarkableDeviceEntity` class. This class must contain the following attributes.
+(1) An external device is represented by an `ExternalDeviceEntity` class. This class must contain the following attributes:
 
-    (a) `DeviceId` (UUID): The unique identifier of the reMarkable device, generated by the application during pairing.
+    (a) `DeviceId` (UUID): The unique identifier of the device, generated by the application.
 
-    (b) `Name` (string): The user-friendly device name, as provided during pairing per reMarkable Integration Specification §3(2)(a).
+    (b) `Name` (string): The user-friendly device name.
 
-(2) Data fields defined in this Section must also conform to all the following constraints for the object to be valid:
+    (c) `Type` (enum ExternalDeviceType): The type of external device, determining its deployment mechanism. Possible values are:
+        (i) `REMARKABLE`
+        (ii) `KINDLE`
 
-    (a) There must exist a file at `%AppData%\ManuscriptaTeacherApp\rmapi\{DeviceId}.conf` containing valid rmapi authentication tokens.
+    (d) `ConfigurationData` (string): A string storing type-specific configuration data.
 
-    [Explanatory Note: Validity of the authentication tokens is determined by the check specified in reMarkable Integration Specification §3(3).]
+    (e) `LinePatternType` (enum `LinePatternType`, optional). The per-device line pattern override for written-answer areas in the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+
+    (f) `LineSpacingPreset` (enum `LineSpacingPreset`, optional). The per-device line spacing override for written-answer areas. If null, the global default from `PdfExportSettingsEntity` applies.
+
+    (g) `FontSizePreset` (enum `FontSizePreset`, optional). The per-device body text font size override for the generated PDF. If null, the global default from `PdfExportSettingsEntity` applies.
+
+(2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
+
+    (a) If `Type` is `REMARKABLE`, there must exist a file at `%AppData%\ManuscriptaTeacherApp\rmapi\{DeviceId}.conf` containing valid authentication tokens. [Explanatory Note: The `ConfigurationData` field may be empty or null for this type, as config is stored in the dotfile.]
+
+    (b) If `Type` is `KINDLE`, `ConfigurationData` must contain a valid email address ending exactly with `@kindle.com`.
+
+
+### Section 3E - Email Credential
+
+(1) An email credential is represented by an `EmailCredentialEntity` class. This class must contain the following attributes.
+
+    (a) `EmailAddress` (string): The email address used as the sender. Must be a valid email address format.
+
+    (b) `SmtpHost` (string): The SMTP server hostname.
+
+    (c) `SmtpPort` (int): The SMTP server port.
+
+    (d) `Password` (string): The password or app-specific password, stored encrypted per Email Handling Specification Section 2(3).
+
+(2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
+
+    (a) The `SmtpPort` specified in Paragraph (1)(c) must be a valid port number (1-65535).
+
+    (b) Only one `EmailCredentialEntity` may exist at any time.
+
+
+### Section 3F — PDF Export Settings
+
+(1) PDF export settings are represented by a `PdfExportSettingsEntity` class. This class must contain the following attributes:
+
+    (a) `LinePatternType` (enum `LinePatternType`): The default line pattern for written-answer areas. Default value: `RULED`.
+
+    (b) `LineSpacingPreset` (enum `LineSpacingPreset`): The default line spacing for written-answer areas. Default value: `MEDIUM`.
+
+    (c) `FontSizePreset` (enum `FontSizePreset`): The default body text font size. Default value: `MEDIUM`.
+
+(2) Data fields defined in this Section must also conform to the following constraints for the object to be valid:
+
+    (a) All fields in (1) are mandatory.
+
+    (b) Only one `PdfExportSettingsEntity` may exist at any time.
