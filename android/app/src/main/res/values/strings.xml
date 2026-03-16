@@ -11,6 +11,12 @@
     <string name="no_materials">No materials received</string>
     <string name="no_materials_deployed">No materials deployed</string>
     <string name="answer_submitted">Answer submitted</string>
+    <string name="response_already_submitted">You have already submitted this response.</string>
+    <string name="responses_already_submitted">Some questions were already submitted.</string>
+    <string name="immediate_feedback_title">Immediate Feedback</string>
+    <string name="immediate_feedback_result_correct">Correct</string>
+    <string name="immediate_feedback_result_incorrect">Not quite right</string>
+    <string name="immediate_feedback_correct_answer">Correct answer</string>
 
     <!-- Quiz -->
     <string name="submit_answer">Submit Answer</string>

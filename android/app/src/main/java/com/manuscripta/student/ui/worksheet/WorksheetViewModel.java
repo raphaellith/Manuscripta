@@ -15,9 +15,11 @@ import com.manuscripta.student.utils.UiState;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -29,6 +31,42 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
  */
 @HiltViewModel
 public class WorksheetViewModel extends ViewModel {
+
+    /**
+     * Result of submitting worksheet answers with duplicate filtering.
+     */
+    public static class SubmissionResult {
+        /** Number of newly accepted responses. */
+        private final int submittedCount;
+
+        /** Number of blocked duplicate response attempts. */
+        private final int duplicateCount;
+
+        /** IDs of questions that were newly submitted in this attempt. */
+        @NonNull
+        private final List<String> submittedQuestionIds;
+
+        SubmissionResult(int submittedCount,
+                         int duplicateCount,
+                         @NonNull List<String> submittedQuestionIds) {
+            this.submittedCount = submittedCount;
+            this.duplicateCount = duplicateCount;
+            this.submittedQuestionIds = submittedQuestionIds;
+        }
+
+        public int getSubmittedCount() {
+            return submittedCount;
+        }
+
+        public int getDuplicateCount() {
+            return duplicateCount;
+        }
+
+        @NonNull
+        public List<String> getSubmittedQuestionIds() {
+            return Collections.unmodifiableList(submittedQuestionIds);
+        }
+    }
 
     /** Tag for logging. */
     private static final String TAG = "WorksheetViewModel";
@@ -135,22 +173,43 @@ public class WorksheetViewModel extends ViewModel {
      * @return The number of responses successfully saved
      */
     public int submitAllAnswers(@NonNull Map<String, String> submittedAnswers) {
+        return submitAllAnswersValidated(submittedAnswers).getSubmittedCount();
+    }
+
+    /**
+     * Submits answers while preventing multiple responses per question.
+     *
+     * @param submittedAnswers map of question IDs to answer text
+     * @return summary of accepted submissions and duplicate attempts
+     */
+    @NonNull
+    public SubmissionResult submitAllAnswersValidated(
+            @NonNull Map<String, String> submittedAnswers) {
         answers.putAll(submittedAnswers);
         if (getDeviceId().isEmpty()) {
             Log.w(TAG, "submitAllAnswers: device not paired, responses will fail to sync");
         }
         int count = 0;
+        int duplicates = 0;
+        Set<String> submittedIds = new HashSet<>();
         for (Map.Entry<String, String> entry : answers.entrySet()) {
             String questionId = entry.getKey();
             String answer = entry.getValue();
             if (answer != null && !answer.trim().isEmpty()) {
+                if (responseRepository.hasResponseForQuestion(questionId)) {
+                    duplicates++;
+                    continue;
+                }
                 Response response = Response.create(questionId, answer, getDeviceId());
                 responseRepository.saveResponse(response);
                 count++;
+                submittedIds.add(questionId);
             }
         }
-        responseRepository.syncPendingResponses();
-        return count;
+        if (count > 0) {
+            responseRepository.syncPendingResponses();
+        }
+        return new SubmissionResult(count, duplicates, new ArrayList<>(submittedIds));
     }
 
     /**

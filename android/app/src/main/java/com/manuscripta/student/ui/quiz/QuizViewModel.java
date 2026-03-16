@@ -157,12 +157,29 @@ public class QuizViewModel extends ViewModel {
      * @param answer   The answer text to save
      */
     public void saveQuizResponse(@NonNull Question question, @NonNull String answer) {
+        saveQuizResponseIfFirst(question, answer);
+    }
+
+    /**
+     * Saves a quiz response only if the question has not been answered before.
+     *
+     * @param question The question being answered
+     * @param answer   The answer text to save
+     * @return true when the response was saved; false when it is a duplicate
+     */
+    public boolean saveQuizResponseIfFirst(
+            @NonNull Question question,
+            @NonNull String answer) {
+        if (responseRepository.hasResponseForQuestion(question.getId())) {
+            return false;
+        }
         if (getDeviceId().isEmpty()) {
             Log.w(TAG, "saveQuizResponse: device not paired, response will fail to sync");
         }
         Response response = Response.create(question.getId(), answer, getDeviceId());
         responseRepository.saveResponse(response);
         responseRepository.syncPendingResponses();
+        return true;
     }
 
     /**

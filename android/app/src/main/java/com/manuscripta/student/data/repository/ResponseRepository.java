@@ -20,6 +20,14 @@ public interface ResponseRepository {
     void saveResponse(@NonNull Response response);
 
     /**
+     * Checks whether a response already exists for a given question.
+     *
+     * @param questionId The UUID of the question
+     * @return true if at least one response already exists for the question
+     */
+    boolean hasResponseForQuestion(@NonNull String questionId);
+
+    /**
      * Gets a response by its unique identifier.
      *
      * @param id The UUID of the response

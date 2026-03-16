@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity {
     /** Tag for logging. */
     private static final String TAG = "MainActivity";
 
+    /** Special popup menu item ID for locally generated immediate feedback. */
+    private static final int MENU_ID_IMMEDIATE_FEEDBACK = -1;
+
     /** View binding for the main activity layout. */
     private ActivityMainBinding binding;
 
@@ -80,6 +83,10 @@ public class MainActivity extends AppCompatActivity {
     /** Cached list of all received feedback items for the dropdown. */
     private final List<Feedback> allFeedback = new ArrayList<>();
 
+    /** Most recent locally generated immediate feedback page shown in dropdown. */
+    @Nullable
+    private Material immediateFeedbackMaterial;
+
     /** Whether the pairing state observer has fired at least once. */
     private boolean observerInitialised;
 
@@ -88,6 +95,30 @@ public class MainActivity extends AppCompatActivity {
 
     /** Tracks the number of feedback items already seen by the UI. */
     private int lastKnownFeedbackCount;
+
+    /**
+     * In-memory row model for immediate feedback presentation.
+     */
+    private static final class ImmediateFeedbackRow {
+        /** Question prompt shown to the student. */
+        @NonNull
+        private final String questionText;
+
+        /** Whether the student's submitted answer was correct. */
+        private final boolean isCorrect;
+
+        /** The resolved correct answer text for display. */
+        @NonNull
+        private final String correctAnswer;
+
+        ImmediateFeedbackRow(@NonNull String questionText,
+                             boolean isCorrect,
+                             @NonNull String correctAnswer) {
+            this.questionText = questionText;
+            this.isCorrect = isCorrect;
+            this.correctAnswer = correctAnswer;
+        }
+    }
 
     /** Manager for the raise-hand lifecycle, injected by Hilt. */
     @Inject
@@ -236,11 +267,18 @@ public class MainActivity extends AppCompatActivity {
      * Shows a popup menu listing all available materials and feedback items.
      */
     private void showMaterialDropdown() {
-        if (allMaterials.isEmpty() && allFeedback.isEmpty()) {
+        boolean hasImmediateFeedback = immediateFeedbackMaterial != null;
+        if (allMaterials.isEmpty() && allFeedback.isEmpty() && !hasImmediateFeedback) {
             Toast.makeText(this, R.string.no_materials, Toast.LENGTH_SHORT).show();
             return;
         }
         PopupMenu popup = new PopupMenu(this, binding.materialDropdown);
+        if (hasImmediateFeedback) {
+            popup.getMenu().add(0,
+                    MENU_ID_IMMEDIATE_FEEDBACK,
+                    MENU_ID_IMMEDIATE_FEEDBACK,
+                    R.string.immediate_feedback_title);
+        }
         for (int i = 0; i < allMaterials.size(); i++) {
             popup.getMenu().add(0, i, i, allMaterials.get(i).getTitle());
         }
@@ -250,6 +288,10 @@ public class MainActivity extends AppCompatActivity {
         }
         popup.setOnMenuItemClickListener(item -> {
             int index = item.getItemId();
+            if (index == MENU_ID_IMMEDIATE_FEEDBACK) {
+                selectImmediateFeedback();
+                return true;
+            }
             if (index < allMaterials.size()) {
                 selectMaterial(allMaterials.get(index));
             } else {
@@ -261,6 +303,31 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
         popup.show();
+    }
+
+    /**
+     * Displays the locally generated immediate feedback page.
+     */
+    private void selectImmediateFeedback() {
+        if (immediateFeedbackMaterial == null || binding == null) {
+            return;
+        }
+        binding.materialDropdown.setText(R.string.immediate_feedback_title);
+        binding.teacherFeedbackPanel.hide();
+
+        ReadingFragment fragment = createReadingFragment();
+        currentFragment = fragment;
+        replaceFragment(fragment);
+        updateFooterVisibility();
+
+        binding.fragmentContainer.post(() -> {
+            Configuration config = viewModel.getConfiguration().getValue();
+            if (config != null) {
+                fragment.setTextScaleFactor(config.getTextSize() / DEFAULT_TEXT_SIZE);
+            }
+            fragment.displayMaterial(immediateFeedbackMaterial,
+                    java.util.Collections.emptyList());
+        });
     }
 
     /**
@@ -313,6 +380,7 @@ public class MainActivity extends AppCompatActivity {
         }
         currentFragment = fragment;
         replaceFragment(fragment);
+        updateFooterVisibility();
         binding.fragmentContainer.post(this::updateFragmentData);
     }
 
@@ -337,7 +405,12 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Quiz answer submitted for question: "
                         + question.getId() + ", answer: " + answer
                         + ", correct: " + isCorrect);
-                quizViewModel.saveQuizResponse(question, answer);
+                boolean accepted = quizViewModel
+                        .saveQuizResponseIfFirst(question, answer);
+                if (!accepted) {
+                    showDuplicateSubmissionNotification();
+                    return;
+                }
                 showResponseSubmittedNotification();
                 Configuration config = viewModel.getConfiguration().getValue();
                 boolean immediate = config == null
@@ -347,11 +420,12 @@ public class MainActivity extends AppCompatActivity {
                             question.getOptions());
                     String correctText = QuizFragment.resolveCorrectAnswer(
                             question.getCorrectAnswer(), opts);
-                    if (isCorrect) {
-                        showCorrectFeedback(correctText);
-                    } else {
-                        showIncorrectFeedback(correctText);
-                    }
+                    List<ImmediateFeedbackRow> rows = new ArrayList<>();
+                    rows.add(new ImmediateFeedbackRow(
+                            question.getQuestionText(),
+                            isCorrect,
+                            correctText));
+                    showImmediateFeedbackPage(rows);
                 }
             }
         });
@@ -371,8 +445,9 @@ public class MainActivity extends AppCompatActivity {
         worksheet.setFileStorageManager(fileStorageManager);
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
-            worksheetViewModel.submitAllAnswers(answers);
-            handleWorksheetSubmissionFeedback(answers);
+            WorksheetViewModel.SubmissionResult result =
+                    worksheetViewModel.submitAllAnswersValidated(answers);
+            handleWorksheetSubmissionFeedback(answers, result);
         });
         return worksheet;
     }
@@ -415,8 +490,10 @@ public class MainActivity extends AppCompatActivity {
             worksheet.setSubmitListener(answers -> {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
-                        worksheetViewModel.submitAllAnswers(answers);
-                    handleWorksheetSubmissionFeedback(answers);
+                    WorksheetViewModel.SubmissionResult result =
+                        worksheetViewModel
+                            .submitAllAnswersValidated(answers);
+                    handleWorksheetSubmissionFeedback(answers, result);
                     });
             worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
@@ -432,8 +509,12 @@ public class MainActivity extends AppCompatActivity {
                                 @NonNull Question question,
                                 @NonNull String answer,
                                 boolean isCorrect) {
-                            quizViewModel.saveQuizResponse(
-                                    question, answer);
+                            boolean accepted = quizViewModel
+                                .saveQuizResponseIfFirst(question, answer);
+                            if (!accepted) {
+                            showDuplicateSubmissionNotification();
+                            return;
+                            }
                             showResponseSubmittedNotification();
                             Configuration config =
                                     viewModel.getConfiguration().getValue();
@@ -448,11 +529,13 @@ public class MainActivity extends AppCompatActivity {
                                         QuizFragment.resolveCorrectAnswer(
                                                 question.getCorrectAnswer(),
                                                 opts);
-                                if (isCorrect) {
-                                    showCorrectFeedback(correctText);
-                                } else {
-                                    showIncorrectFeedback(correctText);
-                                }
+                                List<ImmediateFeedbackRow> rows =
+                                        new ArrayList<>();
+                                rows.add(new ImmediateFeedbackRow(
+                                        question.getQuestionText(),
+                                        isCorrect,
+                                        correctText));
+                                showImmediateFeedbackPage(rows);
                             }
                         }
                     });
@@ -724,9 +807,19 @@ public class MainActivity extends AppCompatActivity {
      * Neutral mode shows submission acknowledgement only.
      *
      * @param answers submitted worksheet answers keyed by question id
+     * @param result duplicate-filtered submission summary
      */
     private void handleWorksheetSubmissionFeedback(
-            @NonNull Map<String, String> answers) {
+            @NonNull Map<String, String> answers,
+            @NonNull WorksheetViewModel.SubmissionResult result) {
+        if (result.getDuplicateCount() > 0) {
+            if (result.getSubmittedCount() == 0) {
+                showDuplicateSubmissionNotification();
+                return;
+            }
+            showDuplicateSubmissionNotification();
+        }
+
         Configuration config = viewModel.getConfiguration().getValue();
         boolean immediate = config == null
                 || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
@@ -735,25 +828,67 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        boolean hasKnownAnswer = false;
+        List<ImmediateFeedbackRow> rows = new ArrayList<>();
         for (Question question : viewModel.getWorksheetQuestions()) {
+            if (!result.getSubmittedQuestionIds().contains(question.getId())) {
+                continue;
+            }
             String correctAnswer = question.getCorrectAnswer();
             if (correctAnswer == null || correctAnswer.trim().isEmpty()) {
                 continue;
             }
-            hasKnownAnswer = true;
-            if (!isWorksheetAnswerCorrect(question, answers)) {
-                showIncorrectFeedback(resolveWorksheetCorrectAnswer(question));
-                return;
-            }
+            boolean isCorrect = isWorksheetAnswerCorrect(question, answers);
+            rows.add(new ImmediateFeedbackRow(
+                    question.getQuestionText(),
+                    isCorrect,
+                    resolveWorksheetCorrectAnswer(question)));
         }
 
-        if (hasKnownAnswer) {
-            showCorrectFeedback(getString(R.string.feedback_correct_generic));
+        if (!rows.isEmpty()) {
+            showImmediateFeedbackPage(rows);
         } else {
             showResponseSubmittedNotification();
         }
     }
+
+    /**
+     * Shows and stores a local immediate feedback page in dropdown format.
+     *
+     * @param rows feedback rows to render
+     */
+    private void showImmediateFeedbackPage(@NonNull List<ImmediateFeedbackRow> rows) {
+        StringBuilder content = new StringBuilder();
+        content.append(getString(R.string.immediate_feedback_title))
+            .append("\n\n");
+        for (int i = 0; i < rows.size(); i++) {
+            ImmediateFeedbackRow row = rows.get(i);
+            String resultLabel = row.isCorrect
+                    ? getString(R.string.immediate_feedback_result_correct)
+                    : getString(R.string.immediate_feedback_result_incorrect);
+            content.append(i + 1)
+                .append(". ")
+                    .append(row.questionText)
+                .append("\n")
+                .append("Result: ")
+                    .append(resultLabel)
+                    .append("\n")
+                .append(getString(R.string.immediate_feedback_correct_answer))
+                .append(": ")
+                .append(row.correctAnswer)
+                .append("\n\n");
+        }
+
+        // Use plain text layout so sizing follows configured reading body scale.
+        immediateFeedbackMaterial = new Material(
+            "immediate-feedback",
+            com.manuscripta.student.data.model.MaterialType.READING,
+            getString(R.string.immediate_feedback_title),
+            content.toString(),
+            "{}",
+            "[]",
+            System.currentTimeMillis());
+        selectImmediateFeedback();
+        }
 
     /**
      * Checks a worksheet answer against a question's known correct value.
@@ -844,4 +979,16 @@ public class MainActivity extends AppCompatActivity {
                 0, 32);
         toast.show();
     }
+
+        /**
+         * Shows a brief notification when a duplicate response attempt is blocked.
+         */
+        private void showDuplicateSubmissionNotification() {
+        Toast toast = Toast.makeText(
+            this, R.string.response_already_submitted,
+            Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+            0, 32);
+        toast.show();
+        }
 }
