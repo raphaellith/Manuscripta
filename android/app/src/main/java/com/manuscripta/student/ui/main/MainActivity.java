@@ -345,8 +345,6 @@ public class MainActivity extends AppCompatActivity {
                         + question.getId() + ", answer: " + answer
                         + ", correct: " + isCorrect);
                 quizViewModel.saveQuizResponse(question, answer);
-                Toast.makeText(MainActivity.this,
-                        R.string.answer_submitted, Toast.LENGTH_SHORT).show();
                 Configuration config = viewModel.getConfiguration().getValue();
                 boolean immediate = config == null
                         || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
@@ -360,6 +358,10 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         showIncorrectFeedback(correctText);
                     }
+                } else {
+                    Toast.makeText(MainActivity.this,
+                            R.string.answer_submitted,
+                            Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -380,8 +382,13 @@ public class MainActivity extends AppCompatActivity {
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
             worksheetViewModel.submitAllAnswers(answers);
-            Toast.makeText(MainActivity.this,
-                    R.string.answer_submitted, Toast.LENGTH_SHORT).show();
+            Configuration config = viewModel.getConfiguration().getValue();
+            if (config != null
+                    && config.getFeedbackStyle() == FeedbackStyle.NEUTRAL) {
+                Toast.makeText(MainActivity.this,
+                        R.string.answer_submitted,
+                        Toast.LENGTH_SHORT).show();
+            }
         });
         return worksheet;
     }
@@ -425,9 +432,15 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
                         worksheetViewModel.submitAllAnswers(answers);
+                    Configuration config =
+                        viewModel.getConfiguration().getValue();
+                    if (config != null
+                        && config.getFeedbackStyle()
+                        == FeedbackStyle.NEUTRAL) {
                         Toast.makeText(MainActivity.this,
-                                R.string.answer_submitted,
-                                Toast.LENGTH_SHORT).show();
+                            R.string.answer_submitted,
+                            Toast.LENGTH_SHORT).show();
+                    }
                     });
             worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
@@ -445,9 +458,6 @@ public class MainActivity extends AppCompatActivity {
                                 boolean isCorrect) {
                             quizViewModel.saveQuizResponse(
                                     question, answer);
-                            Toast.makeText(MainActivity.this,
-                                    R.string.answer_submitted,
-                                    Toast.LENGTH_SHORT).show();
                             Configuration config =
                                     viewModel.getConfiguration().getValue();
                             boolean immediate = config == null
@@ -466,6 +476,10 @@ public class MainActivity extends AppCompatActivity {
                                 } else {
                                     showIncorrectFeedback(correctText);
                                 }
+                            } else {
+                                Toast.makeText(MainActivity.this,
+                                        R.string.answer_submitted,
+                                        Toast.LENGTH_SHORT).show();
                             }
                         }
                     });

@@ -33,6 +33,18 @@ import java.util.Map;
  */
 public class WorksheetFragment extends Fragment {
 
+    /** Saved-state key for written answer question IDs. */
+    private static final String STATE_WRITTEN_IDS = "worksheet_written_ids";
+
+    /** Saved-state key for written answer values. */
+    private static final String STATE_WRITTEN_VALUES = "worksheet_written_values";
+
+    /** Saved-state key for multiple-choice question IDs. */
+    private static final String STATE_MC_IDS = "worksheet_mc_ids";
+
+    /** Saved-state key for multiple-choice selected indices. */
+    private static final String STATE_MC_VALUES = "worksheet_mc_values";
+
     /** View binding for the worksheet fragment layout. */
     private FragmentWorksheetBinding binding;
 
@@ -69,6 +81,12 @@ public class WorksheetFragment extends Fragment {
     /** Last rendered material content for accessibility/text-to-speech support. */
     @NonNull
     private String currentMaterialContent = "";
+
+    /** Draft written answers kept across view recreation (e.g. orientation changes). */
+    private final Map<String, String> draftWrittenAnswers = new LinkedHashMap<>();
+
+    /** Draft multiple-choice selections kept across view recreation. */
+    private final Map<String, Integer> draftMcSelections = new LinkedHashMap<>();
 
     /**
      * Callback interface for worksheet submission events.
@@ -126,6 +144,7 @@ public class WorksheetFragment extends Fragment {
      */
     public void setTextScaleFactor(float scaleFactor) {
         this.textScaleFactor = scaleFactor;
+        questionBlockRenderer.setTextScaleFactor(scaleFactor);
         if (markdownRenderer != null) {
             markdownRenderer.setTextScaleFactor(scaleFactor);
         }
@@ -150,7 +169,15 @@ public class WorksheetFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        restoreDraftState(savedInstanceState);
         binding.buttonSubmit.setOnClickListener(v -> handleSubmit());
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        captureCurrentInputState();
+        saveDraftState(outState);
     }
 
     @Override
@@ -286,7 +313,8 @@ public class WorksheetFragment extends Fragment {
             int checkedId = radioGroup.getCheckedRadioButtonId();
             if (checkedId != -1) {
                 RadioButton selected = radioGroup.findViewById(checkedId);
-                answers.put(entry.getKey(), selected.getText().toString());
+                int selectedIndex = radioGroup.indexOfChild(selected);
+                answers.put(entry.getKey(), String.valueOf(selectedIndex));
             } else {
                 answers.put(entry.getKey(), "");
             }
@@ -304,6 +332,7 @@ public class WorksheetFragment extends Fragment {
             return;
         }
         collectFieldsRecursive(binding.layoutItems);
+        applyDraftAnswers();
     }
 
     /**
@@ -345,5 +374,115 @@ public class WorksheetFragment extends Fragment {
         if (submitListener != null) {
             submitListener.onAnswersSubmitted(collectAnswers());
         }
+    }
+
+    /**
+     * Captures current on-screen values into draft maps for later restoration.
+     */
+    private void captureCurrentInputState() {
+        draftWrittenAnswers.clear();
+        draftMcSelections.clear();
+
+        for (Map.Entry<String, EditText> entry : answerFields.entrySet()) {
+            draftWrittenAnswers.put(
+                    entry.getKey(),
+                    entry.getValue().getText().toString());
+        }
+
+        for (Map.Entry<String, RadioGroup> entry : mcFields.entrySet()) {
+            RadioGroup group = entry.getValue();
+            int checkedId = group.getCheckedRadioButtonId();
+            if (checkedId != -1) {
+                RadioButton selected = group.findViewById(checkedId);
+                draftMcSelections.put(entry.getKey(), group.indexOfChild(selected));
+            }
+        }
+    }
+
+    /**
+     * Applies any saved draft answers to the freshly rendered fields.
+     */
+    private void applyDraftAnswers() {
+        for (Map.Entry<String, EditText> entry : answerFields.entrySet()) {
+            String value = draftWrittenAnswers.get(entry.getKey());
+            if (value != null) {
+                entry.getValue().setText(value);
+            }
+        }
+
+        for (Map.Entry<String, RadioGroup> entry : mcFields.entrySet()) {
+            Integer selectedIndex = draftMcSelections.get(entry.getKey());
+            if (selectedIndex != null) {
+                RadioGroup group = entry.getValue();
+                if (selectedIndex >= 0 && selectedIndex < group.getChildCount()) {
+                    View child = group.getChildAt(selectedIndex);
+                    group.check(child.getId());
+                }
+            }
+        }
+    }
+
+    /**
+     * Restores draft maps from a saved instance state bundle.
+     *
+     * @param savedInstanceState bundle provided by the fragment lifecycle
+     */
+    private void restoreDraftState(@Nullable Bundle savedInstanceState) {
+        draftWrittenAnswers.clear();
+        draftMcSelections.clear();
+        if (savedInstanceState == null) {
+            return;
+        }
+
+        ArrayList<String> writtenIds =
+                savedInstanceState.getStringArrayList(STATE_WRITTEN_IDS);
+        ArrayList<String> writtenValues =
+                savedInstanceState.getStringArrayList(STATE_WRITTEN_VALUES);
+        if (writtenIds != null && writtenValues != null) {
+            int size = Math.min(writtenIds.size(), writtenValues.size());
+            for (int i = 0; i < size; i++) {
+                draftWrittenAnswers.put(writtenIds.get(i), writtenValues.get(i));
+            }
+        }
+
+        ArrayList<String> mcIds =
+                savedInstanceState.getStringArrayList(STATE_MC_IDS);
+        ArrayList<String> mcValues =
+                savedInstanceState.getStringArrayList(STATE_MC_VALUES);
+        if (mcIds != null && mcValues != null) {
+            int size = Math.min(mcIds.size(), mcValues.size());
+            for (int i = 0; i < size; i++) {
+                try {
+                    draftMcSelections.put(mcIds.get(i), Integer.parseInt(mcValues.get(i)));
+                } catch (NumberFormatException ignored) {
+                    // Ignore malformed saved indices.
+                }
+            }
+        }
+    }
+
+    /**
+     * Writes draft maps to a bundle for orientation and process recreation support.
+     *
+     * @param outState destination bundle
+     */
+    private void saveDraftState(@NonNull Bundle outState) {
+        ArrayList<String> writtenIds = new ArrayList<>();
+        ArrayList<String> writtenValues = new ArrayList<>();
+        for (Map.Entry<String, String> entry : draftWrittenAnswers.entrySet()) {
+            writtenIds.add(entry.getKey());
+            writtenValues.add(entry.getValue());
+        }
+        outState.putStringArrayList(STATE_WRITTEN_IDS, writtenIds);
+        outState.putStringArrayList(STATE_WRITTEN_VALUES, writtenValues);
+
+        ArrayList<String> mcIds = new ArrayList<>();
+        ArrayList<String> mcValues = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : draftMcSelections.entrySet()) {
+            mcIds.add(entry.getKey());
+            mcValues.add(String.valueOf(entry.getValue()));
+        }
+        outState.putStringArrayList(STATE_MC_IDS, mcIds);
+        outState.putStringArrayList(STATE_MC_VALUES, mcValues);
     }
 }

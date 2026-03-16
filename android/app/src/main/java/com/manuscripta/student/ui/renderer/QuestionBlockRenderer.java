@@ -2,6 +2,7 @@ package com.manuscripta.student.ui.renderer;
 
 import android.content.Context;
 import android.text.InputType;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -12,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -52,10 +54,28 @@ public class QuestionBlockRenderer {
     /** Gson instance for parsing option JSON arrays. */
     private static final Gson GSON = new Gson();
 
+    /** Base body text size in SP used by markdown body text. */
+    private static final float BODY_TEXT_SP = 30f;
+
+    /** Smaller text size in SP used for supporting lines such as marks. */
+    private static final float SUPPORT_TEXT_SP = 20f;
+
+    /** Text scaling factor shared with markdown rendering. */
+    private float textScaleFactor = 1.0f;
+
     /**
      * Creates a new QuestionBlockRenderer.
      */
     public QuestionBlockRenderer() {
+    }
+
+    /**
+     * Sets the text scale factor for question blocks so they match body content.
+     *
+     * @param scaleFactor text scaling factor (1.0 = default)
+     */
+    public void setTextScaleFactor(float scaleFactor) {
+        this.textScaleFactor = scaleFactor;
     }
 
     /**
@@ -80,7 +100,10 @@ public class QuestionBlockRenderer {
 
         TextView questionText = new TextView(context);
         questionText.setText(question.getQuestionText());
-        questionText.setTextSize(18f);
+        questionText.setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                BODY_TEXT_SP * textScaleFactor);
+        applyBodyFont(context, questionText);
         container.addView(questionText);
 
         if (question.getMaxScore() != null) {
@@ -88,7 +111,10 @@ public class QuestionBlockRenderer {
             marksText.setText(context.getString(
                 R.string.worksheet_marks_available,
                 question.getMaxScore()));
-            marksText.setTextSize(14f);
+            marksText.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    SUPPORT_TEXT_SP * textScaleFactor);
+            applyBodyFont(context, marksText);
             marksText.setGravity(android.view.Gravity.END);
             LinearLayout.LayoutParams marksParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -142,6 +168,10 @@ public class QuestionBlockRenderer {
             String label =
                     getOptionLabel(i) + ") " + options[i];
             radioButton.setText(label);
+            radioButton.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    BODY_TEXT_SP * textScaleFactor);
+            applyBodyFont(context, radioButton);
             radioButton.setId(View.generateViewId());
             int optPadding = MarkdownRenderer.dpToPx(
                     context, OPTION_PADDING_DP);
@@ -164,6 +194,10 @@ public class QuestionBlockRenderer {
     View renderWrittenAnswer(@NonNull Context context) {
         EditText editText = new EditText(context);
         editText.setHint("Enter your answer");
+        editText.setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                BODY_TEXT_SP * textScaleFactor);
+        applyBodyFont(context, editText);
         editText.setInputType(
                 InputType.TYPE_CLASS_TEXT
                         | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -288,5 +322,25 @@ public class QuestionBlockRenderer {
     @NonNull
     static String getOptionLabel(int index) {
         return String.valueOf((char) ('A' + index));
+    }
+
+    /**
+     * Applies the standard worksheet body font where available.
+     *
+     * @param context Android context
+     * @param textView Target text view
+     */
+    private void applyBodyFont(
+            @NonNull Context context,
+            @NonNull TextView textView) {
+        try {
+            android.graphics.Typeface bodyFont = ResourcesCompat.getFont(
+                    context, R.font.ibm_plex_sans);
+            if (bodyFont != null) {
+                textView.setTypeface(bodyFont);
+            }
+        } catch (Exception ignored) {
+            // Keep default font when resource cannot be loaded.
+        }
     }
 }

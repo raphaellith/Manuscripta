@@ -189,9 +189,10 @@ public class QuizFragment extends Fragment {
         }
 
         List<String> options = parseOptions(currentQuestion.getOptions());
-        String answer = options.get(selected);
+        String answer = String.valueOf(selected);
         String correctText = resolveCorrectAnswer(currentQuestion.getCorrectAnswer(), options);
-        boolean isCorrect = answer.equals(correctText);
+        String selectedText = selected < options.size() ? options.get(selected) : "";
+        boolean isCorrect = selectedText.equals(correctText);
 
         if (navigationListener != null) {
             navigationListener.onAnswerSubmitted(currentQuestion, answer, isCorrect);
