@@ -35,7 +35,8 @@ public class QuestionMapperTest {
                 "What is 2+2?",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"2\",\"3\",\"4\",\"5\"]",
-                "4"
+                "4",
+                null
         );
 
         // When
@@ -60,7 +61,8 @@ public class QuestionMapperTest {
                 "Is the sky blue?",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
-                "true"
+                "true",
+                null
         );
 
         // When
@@ -85,7 +87,8 @@ public class QuestionMapperTest {
                 "Explain photosynthesis",
                 QuestionType.WRITTEN_ANSWER,
                 "",
-                "Process where plants convert sunlight to energy"
+                "Process where plants convert sunlight to energy",
+                null
         );
 
         // When
@@ -110,7 +113,8 @@ public class QuestionMapperTest {
                 "Choose the correct answer",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"A\",\"B\",\"C\",\"D\"]",
-                "B"
+                "B",
+                null
         );
 
         // When
@@ -135,7 +139,8 @@ public class QuestionMapperTest {
                 "True or False question",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"true\",\"false\"]",
-                "false"
+                "false",
+                null
         );
 
         // When
@@ -426,7 +431,8 @@ public class QuestionMapperTest {
                 "What is 2+2?",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"2\",\"3\",\"4\",\"5\"]",
-                "2"
+                "2",
+                null
         );
 
         // When
@@ -440,7 +446,7 @@ public class QuestionMapperTest {
         assertEquals("What is 2+2?", dto.getQuestionText());
         assertEquals(Arrays.asList("2", "3", "4", "5"), dto.getOptions());
         assertEquals("2", dto.getCorrectAnswer());
-        assertNull(dto.getMaxScore()); // maxScore not stored in domain
+        assertNull(dto.getMaxScore());
     }
 
     @Test
@@ -452,7 +458,8 @@ public class QuestionMapperTest {
                 "Explain photosynthesis",
                 QuestionType.WRITTEN_ANSWER,
                 "",
-                "Process where plants convert sunlight to energy"
+                "Process where plants convert sunlight to energy",
+                null
         );
 
         // When
@@ -473,7 +480,8 @@ public class QuestionMapperTest {
                 "Explain your answer",
                 QuestionType.WRITTEN_ANSWER,
                 "[]",
-                ""
+                "",
+                null
         );
 
         // When
@@ -493,7 +501,8 @@ public class QuestionMapperTest {
                 "Question with invalid options",
                 QuestionType.MULTIPLE_CHOICE,
                 "invalid json",
-                "0"
+                "0",
+                null
         );
 
         // When
@@ -540,7 +549,8 @@ public class QuestionMapperTest {
                 "True or false: The sky is blue",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"True\",\"False\"]",
-                "True"
+                "True",
+                null
         );
 
         // When

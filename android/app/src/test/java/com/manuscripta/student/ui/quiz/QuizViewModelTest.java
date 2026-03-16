@@ -110,7 +110,7 @@ public class QuizViewModelTest {
     public void testSubmitCorrectAnswer() {
         List<Question> questions = Arrays.asList(
                 new Question("q-1", "mat-1", "What is 2+2?",
-                        QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4")
+                        QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4", null)
         );
         viewModel.setQuestions(questions);
 
@@ -125,7 +125,7 @@ public class QuizViewModelTest {
     public void testSubmitIncorrectAnswer() {
         List<Question> questions = Arrays.asList(
                 new Question("q-1", "mat-1", "What is 2+2?",
-                        QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4")
+                        QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4", null)
         );
         viewModel.setQuestions(questions);
 
@@ -140,7 +140,7 @@ public class QuizViewModelTest {
     public void testSubmitAnswerSavesResponseWithCorrectQuestionId() {
         List<Question> questions = Arrays.asList(
                 new Question("q-42", "mat-1", "Question?",
-                        QuestionType.MULTIPLE_CHOICE, "[\"A\",\"B\"]", "A")
+                        QuestionType.MULTIPLE_CHOICE, "[\"A\",\"B\"]", "A", null)
         );
         viewModel.setQuestions(questions);
 
@@ -262,7 +262,7 @@ public class QuizViewModelTest {
     @Test
     public void testSaveQuizResponsePersistsViaRepository() {
         Question question = new Question("q-99", "mat-1", "Question?",
-                QuestionType.MULTIPLE_CHOICE, "[\"A\",\"B\"]", "A");
+                QuestionType.MULTIPLE_CHOICE, "[\"A\",\"B\"]", "A", null);
 
         viewModel.saveQuizResponse(question, "B");
 
@@ -278,7 +278,7 @@ public class QuizViewModelTest {
     public void testSaveQuizResponseDoesNotDependOnInternalState() {
         // Verify saveQuizResponse works even without setQuestions being called
         Question question = new Question("q-77", "mat-1", "Q?",
-                QuestionType.MULTIPLE_CHOICE, "[\"X\",\"Y\"]", "X");
+                QuestionType.MULTIPLE_CHOICE, "[\"X\",\"Y\"]", "X", null);
 
         viewModel.saveQuizResponse(question, "Y");
 
@@ -291,7 +291,7 @@ public class QuizViewModelTest {
             questions[i] = new Question(
                     "q-" + i, "mat-1", "Question " + i + "?",
                     QuestionType.MULTIPLE_CHOICE,
-                    "[\"A\",\"B\",\"C\"]", "A");
+                    "[\"A\",\"B\",\"C\"]", "A", null);
         }
         return Arrays.asList(questions);
     }
