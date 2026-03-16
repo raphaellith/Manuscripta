@@ -89,7 +89,7 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
                 <div className="streaming-generation-content" ref={contentRef}>
                     {isQueryingSourceDocuments && !isComplete && !isCancelled && (
                         <div className="streaming-thinking-section">
-                            <div className="streaming-thinking-summary">querying source documents</div>
+                            <div className="streaming-thinking-summary">Querying source documents...</div>
                         </div>
                     )}
 
