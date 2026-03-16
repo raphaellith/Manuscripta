@@ -117,6 +117,11 @@ public class ContentModificationService : IContentModificationService
             relevantChunks.Count,
             promptContainsInjectedContext);
 
+        if (onChunk != null)
+        {
+            await onChunk(new StreamingGenerationChunk(string.Empty, false, false, false));
+        }
+
         string modifiedContent;
         try
         {

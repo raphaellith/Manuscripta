@@ -318,9 +318,7 @@ export const LessonLibraryPage: React.FC = () => {
 
         // Per §4B(2)(a1): Subscribe to streaming progress before invoking generation
         const unsubscribe = signalRService.onGenerationProgress((token, isThinking, done, queryingSourceDocuments) => {
-            if (queryingSourceDocuments) {
-                setIsQueryingSourceDocuments(true);
-            }
+            setIsQueryingSourceDocuments(queryingSourceDocuments);
 
             if (isThinking && token) {
                 thinkingBuffer += token;
@@ -336,7 +334,6 @@ export const LessonLibraryPage: React.FC = () => {
             if (done) {
                 // Ensure all remaining buffered tokens are flushed before marking complete
                 flushBufferedTokens();
-                setIsQueryingSourceDocuments(false);
                 setStreamingComplete(true);
             }
         });

@@ -482,9 +482,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         });
 
         const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean, queryingSourceDocuments: boolean) => {
-            if (queryingSourceDocuments) {
-                setIsAiQueryingSourceDocuments(true);
-            }
+            setIsAiQueryingSourceDocuments(queryingSourceDocuments);
 
             if (isThinking && token) {
                 thinkingBuffer += token;
@@ -497,7 +495,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             }
             if (done) {
                 flushBufferedTokens();
-                setIsAiQueryingSourceDocuments(false);
             }
         });
 

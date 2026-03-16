@@ -123,6 +123,11 @@ public class MaterialGenerationService : IMaterialGenerationService
             retrievedChunkCount,
             promptContainsInjectedContext);
 
+        if (onChunk != null)
+        {
+            await onChunk(new StreamingGenerationChunk(string.Empty, false, false, false));
+        }
+
         // Await the model readiness check before streaming
         await modelReadyTask;
 
