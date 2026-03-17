@@ -211,8 +211,51 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         protected override async Task PerformInstallDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
+            progress?.Report(new RuntimeDependencyProgress { Phase = "Starting ChromaDB server" });
+            await StartServerAsync();
+        }
+
+        /// <summary>
+        /// Ensures the ChromaDB server process is running.
+        /// If the API health check fails (server not responding), the server is
+        /// (re-)started automatically so that callers do not encounter connection-refused errors.
+        /// </summary>
+        public override async Task EnsureRunningAsync()
+        {
+            if (await CheckChromaApiHealthAsync())
+            {
+                return;
+            }
+
+            _logger.LogInformation("ChromaDB server is not responding; starting server process");
+            await StartServerAsync();
+        }
+
+        /// <summary>
+        /// Launches the ChromaDB server process and waits until the API becomes responsive.
+        /// Shared by both <see cref="PerformInstallDependencyAsync"/> and <see cref="EnsureRunningAsync"/>.
+        /// </summary>
+        protected virtual async Task StartServerAsync()
+        {
             try
             {
+                // If a previous process reference exists but is dead, discard it
+                if (_chromaServerProcess != null && _chromaServerProcess.HasExited)
+                {
+                    _chromaServerProcess.Dispose();
+                    _chromaServerProcess = null;
+                }
+
+                // Avoid launching a second instance if one is already alive
+                if (_chromaServerProcess != null && !_chromaServerProcess.HasExited)
+                {
+                    if (await CheckChromaApiHealthAsync())
+                    {
+                        _logger.LogInformation("ChromaDB server process is already running and healthy");
+                        return;
+                    }
+                }
+
                 var dataPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "ManuscriptaTeacherApp",
@@ -222,8 +265,6 @@ namespace Main.Services.RuntimeDependencies
                 Directory.CreateDirectory(dataPath);
 
                 _logger.LogInformation("Starting ChromaDB server with data directory: {DataPath}", dataPath);
-
-                progress?.Report(new RuntimeDependencyProgress { Phase = "Starting ChromaDB server" });
 
                 var chromaExecutable = await ResolveChromaExecutablePathAsync();
 
