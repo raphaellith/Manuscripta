@@ -124,10 +124,39 @@ public class ChromaRuntimeDependencyManagerTests
 		}
 	}
 
+	[Fact]
+	public async Task EnsureRunningAsync_DoesNotStartServer_WhenApiIsHealthy()
+	{
+		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
+		var manager = new TestableChromaRuntimeDependencyManager(
+			logger.Object, "chroma.exe", chromaApiHealthy: true);
+
+		await manager.EnsureRunningAsync();
+
+		Assert.Equal(0, manager.StartServerCallCount);
+	}
+
+	[Fact]
+	public async Task EnsureRunningAsync_StartsServer_WhenApiIsUnhealthy()
+	{
+		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
+		var manager = new TestableChromaRuntimeDependencyManager(
+			logger.Object, "chroma.exe", chromaApiHealthy: false);
+
+		await manager.EnsureRunningAsync();
+
+		Assert.Equal(1, manager.StartServerCallCount);
+	}
+
 	private sealed class TestableChromaRuntimeDependencyManager : ChromaRuntimeDependencyManager
 	{
 		private readonly string _resolvedExecutablePath;
 		private readonly bool _chromaApiHealthy;
+
+		/// <summary>
+		/// Tracks the number of times <see cref="StartServerAsync"/> was invoked.
+		/// </summary>
+		public int StartServerCallCount { get; private set; }
 
 		public TestableChromaRuntimeDependencyManager(
 			ILogger<ChromaRuntimeDependencyManager> logger,
@@ -147,6 +176,12 @@ public class ChromaRuntimeDependencyManagerTests
 		protected override Task<bool> CheckChromaApiHealthAsync()
 		{
 			return Task.FromResult(_chromaApiHealthy);
+		}
+
+		protected override Task StartServerAsync()
+		{
+			StartServerCallCount++;
+			return Task.CompletedTask;
 		}
 	}
 }

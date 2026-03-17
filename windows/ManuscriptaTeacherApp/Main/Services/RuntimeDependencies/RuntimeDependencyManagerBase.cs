@@ -80,6 +80,18 @@ namespace Main.Services.RuntimeDependencies
         public abstract Task<bool> UninstallDependencyAsync();
 
         /// <summary>
+        /// Ensures that the dependency's background service (if any) is running.
+        /// Derived classes that manage long-running server processes should override
+        /// this method to check server health and restart the process when necessary.
+        /// The default implementation is a no-op suitable for dependencies that do
+        /// not require a persistent background process.
+        /// </summary>
+        public virtual Task EnsureRunningAsync()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Provides one domain-specific service instance to manage and use the dependency.
         /// Per BackendRuntimeDependencyManagementSpecification §2(3) and §2(4).
         /// </summary>

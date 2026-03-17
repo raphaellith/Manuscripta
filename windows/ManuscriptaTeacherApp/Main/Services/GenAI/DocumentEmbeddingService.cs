@@ -385,6 +385,10 @@ public class DocumentEmbeddingService : IEmbeddingService
                 // upstream callers generally catch exceptions and return empty results
                 throw new InvalidOperationException("ChromaDB dependency is not available");
             }
+
+            // Ensure the ChromaDB server process is running before attempting
+            // any HTTP calls. This handles app restarts and crashed processes.
+            await manager.EnsureRunningAsync();
         }
 
         // The Chroma Rust CLI server does not pre-create the default tenant and
