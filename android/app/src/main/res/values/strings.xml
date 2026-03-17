@@ -16,7 +16,11 @@
     <string name="immediate_feedback_title">Immediate Feedback</string>
     <string name="immediate_feedback_result_correct">Correct</string>
     <string name="immediate_feedback_result_incorrect">Not quite right</string>
+    <string name="immediate_feedback_result_correct_plain">Correct</string>
+    <string name="immediate_feedback_result_incorrect_plain">Incorrect</string>
+    <string name="immediate_feedback_answer_given_label">Answer Given</string>
     <string name="immediate_feedback_correct_answer">Correct answer</string>
+    <string name="immediate_feedback_correct_answer_unavailable">Unavailable</string>
 
     <!-- Quiz -->
     <string name="submit_answer">Submit Answer</string>
@@ -90,6 +94,6 @@
     <string name="worksheet_marks_available">%d marks</string>
 
     <!-- Feedback dropdown labels -->
-    <string name="feedback_dropdown_marks">Feedback: %d marks</string>
-    <string name="feedback_dropdown_comment">Feedback: comment</string>
+    <string name="feedback_dropdown_label">Feedback: %s</string>
+    <string name="feedback_dropdown_unknown">Feedback</string>
 </resources>

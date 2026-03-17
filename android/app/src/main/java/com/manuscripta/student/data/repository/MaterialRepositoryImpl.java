@@ -274,6 +274,11 @@ public class MaterialRepositoryImpl implements MaterialRepository {
     }
 
     @Override
+    public void resetLiveData() {
+        syncExecutor.execute(this::refreshMaterialsLiveData);
+    }
+
+    @Override
     public void setMaterialAvailableCallback(@Nullable MaterialAvailableCallback callback) {
         this.materialAvailableCallback = callback;
     }

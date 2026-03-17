@@ -21,6 +21,7 @@ import com.manuscripta.student.data.repository.ConfigRepository;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
 import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.MaterialRepository;
+import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
@@ -70,6 +71,9 @@ public class MainViewModelTest {
     @Mock
     private FeedbackRepository mockFeedbackRepository;
 
+    @Mock
+    private ResponseRepository mockResponseRepository;
+
     private MutableLiveData<List<Material>> materialsLiveData;
     private MutableLiveData<com.manuscripta.student.domain.model.DeviceStatus> deviceStatusLiveData;
     private MutableLiveData<Configuration> configLiveData;
@@ -96,7 +100,7 @@ public class MainViewModelTest {
                 mockMaterialRepository, mockQuestionDao,
                 mockConfigRepository, mockConnectionManager,
                 mockSessionRepository, mockDeviceStatusRepository,
-                mockFeedbackRepository);
+                mockFeedbackRepository, mockResponseRepository);
     }
 
     @Test
