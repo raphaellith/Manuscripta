@@ -111,6 +111,7 @@ public class MainViewModel extends ViewModel {
      * @param responseRepository The response repository for resolving feedback titles
      */
     @Inject
+    // CHECKSTYLE:OFF ParameterNumber - Hilt-injected dependencies
     public MainViewModel(@NonNull MaterialRepository materialRepository,
                          @NonNull QuestionDao questionDao,
                          @NonNull ConfigRepository configRepository,
@@ -119,6 +120,7 @@ public class MainViewModel extends ViewModel {
                          @NonNull DeviceStatusRepository deviceStatusRepository,
                          @NonNull FeedbackRepository feedbackRepository,
                          @NonNull com.manuscripta.student.data.repository.ResponseRepository responseRepository) {
+        // CHECKSTYLE:ON ParameterNumber
         this.materialRepository = materialRepository;
         this.questionDao = questionDao;
         this.configRepository = configRepository;
