@@ -956,7 +956,9 @@ class SignalRService {
      * Subscribe to generation progress events for streaming AI output.
      * Per NetworkingAPISpec §2(1)(h)(i) and FrontendWorkflowSpecifications §4B(2)(a1).
      */
-    public onGenerationProgress(callback: (token: string, isThinking: boolean, done: boolean) => void): () => void {
+    public onGenerationProgress(
+        callback: (token: string, isThinking: boolean, done: boolean, isQueryingSourceDocuments: boolean) => void
+    ): () => void {
         return this.subscribe("OnGenerationProgress", callback as (...args: unknown[]) => void);
     }
 

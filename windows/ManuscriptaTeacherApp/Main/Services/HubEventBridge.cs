@@ -186,7 +186,8 @@ public class HubEventBridge : IHostedService, IDisposable
     /// <summary>
     /// Handles FEEDBACK_ACK reception by transitioning a single feedback to DELIVERED.
     /// Per API Contract.md §3.6.2: one ACK per feedback entity.
-    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED and removes from batch.
+    /// Per GenAISpec §3DA(3): triggers status transition to DELIVERED, removes from batch,
+    /// and notifies the frontend via RefreshResponses.
     /// </summary>
     internal async Task HandleFeedbackAckReceivedAsync(FeedbackAckEventArgs e)
     {
@@ -200,6 +201,9 @@ public class HubEventBridge : IHostedService, IDisposable
             await feedbackRepository.UpdateAsync(feedback);
             _logger.LogInformation("Feedback {FeedbackId} transitioned to DELIVERED for device {DeviceId}", 
                 e.FeedbackId, e.DeviceId);
+
+            // Per GenAISpec §3DA(3)(c) and NetworkingAPISpec §2(1)(b)(i)
+            await _hubContext.Clients.All.SendAsync("RefreshResponses");
         }
     }
 

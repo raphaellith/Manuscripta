@@ -475,6 +475,8 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
     (b) the feedback shall be removed from the distribution batch.
 
+    (c) the backend shall invoke the `RefreshResponses` client handler (NetworkingAPISpec §2(1)(b)(i)) to notify the frontend of the state change.
+
 (4) If the backend does not receive a `FEEDBACK_ACK` message within 30 seconds of sending `RETURN_FEEDBACK` (per Session Interaction Specification §7(5)) —
 
     (a) the backend shall notify the frontend via the SignalR handler `FeedbackDeliveryFailed` (NetworkingAPISpec §2(1)(e)(v)).

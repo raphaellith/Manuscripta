@@ -86,7 +86,7 @@ public class ConfigurationEntity
         return new ConfigurationEntity(
             id: DefaultId,
             textSize: 6,
-            feedbackStyle: FeedbackStyle.IMMEDIATE,
+            feedbackStyle: FeedbackStyle.NEUTRAL,
             ttsEnabled: false,
             aiScaffoldingEnabled: false,
             summarisationEnabled: false,

@@ -24,6 +24,8 @@ interface StreamingGenerationViewProps {
     contentTokens: string;
     /** Whether generation has finished. Per §4B(2)(a1)(iv). */
     isComplete: boolean;
+    /** True while backend is querying source documents for retrieval context. */
+    isQueryingSourceDocuments?: boolean;
     /** Callback to cancel the generation. Per FrontendWorkflowSpecifications §4B(2)(a1)(v). */
     onCancel?: () => void;
     /** Whether the generation was cancelled. */
@@ -39,6 +41,7 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
     thinkingTokens,
     contentTokens,
     isComplete,
+    isQueryingSourceDocuments = false,
     onCancel,
     isCancelled = false,
 }) => {
@@ -84,6 +87,12 @@ export const StreamingGenerationView: React.FC<StreamingGenerationViewProps> = (
 
                 {/* Scrollable content area */}
                 <div className="streaming-generation-content" ref={contentRef}>
+                    {isQueryingSourceDocuments && !isComplete && !isCancelled && (
+                        <div className="streaming-thinking-section">
+                            <div className="streaming-thinking-summary">Querying source documents...</div>
+                        </div>
+                    )}
+
                     {/* Per §4B(2)(a1)(i): Thinking section - collapsible */}
                     {thinkingTokens.length > 0 && (
                         <details

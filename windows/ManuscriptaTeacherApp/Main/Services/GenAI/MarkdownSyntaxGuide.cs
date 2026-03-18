@@ -56,7 +56,7 @@ Use only plain text without Markdown syntax in question text, options or correct
 ```
 
 For questions of type `WRITTEN_ANSWER`, optionally include at most one of the attributes `correct_answer` and `mark_scheme`. Never include both attributes in the same question. If neither attributes are included, the question requires manual marking.
-- `correct_answer`: Use for questions with a single exact expected answer (e.g., ""What is 2+2?"" → ""4""). The student device auto-marks by exact match. Only include short factual answers.
+- `correct_answer`: Use for questions where there is only one possible correct answer. Only use this attribute when the answer is short and factual with either one or two words. Never use this attribute when there are multiple correct answers. Never use this attribute when the answer exceeds two words.
 - `mark_scheme`: Use for open-ended questions requiring judgement (e.g., ""Explain why...""). Provides criteria for the teacher or AI to grade. Include: what constitutes a correct response, mark allocation per point, and examples of acceptable answers.
 
 For questions of type `MULTIPLE_CHOICE`, optionally include the attribute `correct`, which stores the zero-based index of the correct option. If this attribute is not included, the question will not be auto-marked.

@@ -187,6 +187,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
     const [showAiInput, setShowAiInput] = useState(false);
     const [aiContentTokens, setAiContentTokens] = useState('');
     const [aiThinkingTokens, setAiThinkingTokens] = useState('');
+    const [isAiQueryingSourceDocuments, setIsAiQueryingSourceDocuments] = useState(false);
     const [aiWarnings, setAiWarnings] = useState<ValidationWarning[]>([]);
     // Ref to cancel the active modification (set inside handleAiInstructionSubmit)
     const aiCancelRef = useRef<(() => void) | null>(null);
@@ -449,6 +450,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         setAiGenerationId(null);
         aiGenerationIdRef.current = null;
         setAiWarnings([]);
+        setIsAiQueryingSourceDocuments(false);
 
         // Per §4B(2)(a1): Buffer streaming tokens to avoid setState per token (performance)
         let thinkingBuffer = '';
@@ -479,10 +481,12 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             setAiGenerationId(id);
         });
 
-        const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean) => {
-            if (isThinking) {
+        const offProgress = signalRService.onGenerationProgress((token: string, isThinking: boolean, done: boolean, queryingSourceDocuments: boolean) => {
+            setIsAiQueryingSourceDocuments(queryingSourceDocuments);
+
+            if (isThinking && token) {
                 thinkingBuffer += token;
-            } else {
+            } else if (!isThinking && token) {
                 contentBuffer += token;
             }
             if (!flushScheduled) {
@@ -501,6 +505,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 aiGenerationIdRef.current = null;
                 setAiContentTokens('');
                 setAiThinkingTokens('');
+                setIsAiQueryingSourceDocuments(false);
                 editor.setEditable(true);
             }
         });
@@ -545,6 +550,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             aiGenerationIdRef.current = null;
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
 
             // Per §4C(7): Surface validation warnings if present
             if (result.warnings && result.warnings.length > 0) {
@@ -562,6 +568,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             setAiGenerationId(null);
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
             // User cancellation shouldn't popup an alert.
         } finally {
             editor.setEditable(true);
@@ -586,6 +593,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
             aiGenerationIdRef.current = null;
             setAiContentTokens('');
             setAiThinkingTokens('');
+            setIsAiQueryingSourceDocuments(false);
             editor?.setEditable(true);
         } catch (err) {
             console.error('Failed to cancel generation:', err);
@@ -1304,24 +1312,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
         return true;
     };
 
-    // Insert PDF embed
-    const insertPdf = () => {
-        setInputDialog({
-            isOpen: true,
-            title: 'Insert PDF Embed',
-            placeholder: 'Enter PDF Attachment UUID',
-            onSubmit: (id) => {
-                closeInputDialog();
-                if (editor) {
-                    editor.chain().focus().insertContent({
-                        type: 'pdfEmbed',
-                        attrs: { id },
-                    }).run();
-                }
-            },
-        });
-    };
-
     // Insert attachment via file picker - per FrontendWorkflowSpecifications §4C(4)
     const insertAttachment = async () => {
         try {
@@ -1677,9 +1667,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                     >
                         <span className="material-symbols-outlined text-base">quiz</span>
                     </ToolbarButton>
-                    <ToolbarButton onClick={insertPdf} title="Insert PDF Embed">
-                        <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                    </ToolbarButton>
                     <ToolbarButton onClick={insertAttachment} title="Attach File (PNG, JPEG, PDF)">
                         <span className="material-symbols-outlined text-base">attach_file</span>
                     </ToolbarButton>
@@ -1764,6 +1751,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({ material, onClose }) =
                 thinkingTokens={aiThinkingTokens}
                 contentTokens={aiContentTokens}
                 isComplete={false}
+                isQueryingSourceDocuments={isAiQueryingSourceDocuments}
                 onCancel={handleCancelModification}
             />
 

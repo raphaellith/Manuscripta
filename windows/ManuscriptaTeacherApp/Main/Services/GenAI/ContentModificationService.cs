@@ -73,6 +73,11 @@ public class ContentModificationService : IContentModificationService
             var queryEmbedding = await _ollamaClient.GenerateEmbeddingAsync(combinedQuery);
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (onChunk != null)
+            {
+                await onChunk(new StreamingGenerationChunk(string.Empty, false, false, true));
+            }
+
             relevantChunks = await _embeddingService.RetrieveRelevantChunksAsync(
                 queryEmbedding,
                 unitCollectionId.Value,
