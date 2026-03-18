@@ -1,0 +1,60 @@
+{
+  "responses": [
+    {
+      "id": "31a8c5a8-90bf-4bd3-8a89-23c37326fe7d",
+      "questionText": "Solve the equation $\\ln(1 + e^{-3x}) = 2$. Give the answer correct to 3 decimal places.",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme:\nState that $1 + e^{-3x} = e^2$ (B1)\nUse correct method to solve an equation of the form $e^{-3x} = a$, where $a > 0$, for $x$ or equivalent (M1). Evidence of method must be seen.\nObtain answer $x = -0.618$ only (A1). Must be 3 decimal places.",
+      "maxScore": 3,
+      "studentAnswer": "$\\ln(1+e^{-3x}) = 2\\ln e$\n$\\ln(1+e^{-3x}) = \\ln e^2$\n$1+e^{-3x} = e^2$\n$e^{-3x} = e^2 - 1$\n$e^{-3x} = 6.389$\n$\\ln e^{-3x} = \\ln 6.389$\n$-3x\\ln e = 1.305$\n$-3x = 1.305$\n$x = \\frac{1.305}{-3}$\n$x = -0.435$",
+      "expectedMark": 2
+    },
+    {
+      "id": "ce63a182-4844-4a8e-afa2-f1402b574070",
+      "questionText": "Solve the equation $\\ln(1 + e^{-3x}) = 2$. Give the answer correct to 3 decimal places.",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme:\nState that $1 + e^{-3x} = e^2$ (B1)\nUse correct method to solve an equation of the form $e^{-3x} = a$, where $a > 0$, for $x$ or equivalent (M1). Evidence of method must be seen.\nObtain answer $x = -0.618$ only (A1). Must be 3 decimal places.",
+      "maxScore": 3,
+      "studentAnswer": "$1 + e^{-3x} = e^2$\n$\\frac{e^2}{\\ln e} = \\frac{1}{\\ln e} - 0$\n$\\ln 1 + \\ln e = \\ln 1 - 3x = 2$\n$0 - 3x = 2$\n$-3x = 2$\n$x = -\\frac{2}{3}$\n$x = -0.667$",
+      "expectedMark": 1
+    },
+    {
+      "id": "cc89f193-2c02-4233-b10d-d76c966354ef",
+      "questionText": "(a) Expand $\\sqrt[3]{1+6x}$ in ascending powers of $x$, up to and including the term in $x^3$, simplifying the coefficients. [4]\n(b) State the set of values of $x$ for which the expansion is valid. [1]",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme for (a):\nState a correct unsimplified version of the $x$ or $x^2$ or $x^3$ term (M1). For the given expression.\nState correct first two terms $1 + 2x$ (A1).\nObtain the next two terms $-4x^2 + \\frac{40}{3}x^3$ (A1 + A1). One mark for each correct term. ISW Accept $13\\frac{1}{3}$. The question asks for simplified coefficients, so candidates should cancel fractions.\n\nMark Scheme for (b):\nState answer $|x| < \\frac{1}{6}$ (B1). OE. Strict inequality.",
+      "maxScore": 5,
+      "studentAnswer": "(a)\n$\\sqrt[3]{1+6x} = (1+6x)^{\\frac{1}{3}}$\n$1 + (\\frac{1}{3} \\times 6x) + \\frac{(\\frac{1}{3})(\\frac{1}{3}-1)(6x)^2}{2!} + \\frac{(\\frac{1}{3})(\\frac{1}{3}-1)(\\frac{1}{3}-2)(6x)^3}{3!}$\n$1 + 2x - 4x^2 + \\frac{40}{3}x^3$\n\n(b)\n$|6x| < 1$",
+      "expectedMark": 4
+    },
+    {
+      "id": "a0fc76f5-dfc1-43f9-9926-c195d6149e72",
+      "questionText": "(a) Expand $\\sqrt[3]{1+6x}$ in ascending powers of $x$, up to and including the term in $x^3$, simplifying the coefficients. [4]\n(b) State the set of values of $x$ for which the expansion is valid. [1]",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme for (a):\nState a correct unsimplified version of the $x$ or $x^2$ or $x^3$ term (M1). For the given expression.\nState correct first two terms $1 + 2x$ (A1).\nObtain the next two terms $-4x^2 + \\frac{40}{3}x^3$ (A1 + A1). One mark for each correct term. ISW Accept $13\\frac{1}{3}$. The question asks for simplified coefficients, so candidates should cancel fractions.\n\nMark Scheme for (b):\nState answer $|x| < \\frac{1}{6}$ (B1). OE. Strict inequality.",
+      "maxScore": 5,
+      "studentAnswer": "(a)\n$(1+6x)^{\\frac{1}{3}}$\n$= 1 + \\frac{1}{3} \\times 6x + \\frac{(\\frac{1}{3}(\\frac{1}{3}-1))}{2!} \\cdot 6x^2 + \\frac{\\frac{1}{3}(\\frac{1}{3}-1)(\\frac{1}{3}-2)}{3!} \\cdot 6x^3$\n$= 1 + 2x - \\frac{2}{3}x^2 + \\frac{10}{27}x^3$\n\n(b)\n$1+6x = 0$\n$x = -\\frac{1}{6}$\n$-\\frac{1}{6} < x < \\frac{1}{6}$",
+      "expectedMark": 3
+    },
+    {
+      "id": "3e2e514a-5e6a-4904-bba8-21f18af4897e",
+      "questionText": "(a) Expand $\\sqrt[3]{1+6x}$ in ascending powers of $x$, up to and including the term in $x^3$, simplifying the coefficients. [4]\n(b) State the set of values of $x$ for which the expansion is valid. [1]",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme for (a):\nState a correct unsimplified version of the $x$ or $x^2$ or $x^3$ term (M1). For the given expression.\nState correct first two terms $1 + 2x$ (A1).\nObtain the next two terms $-4x^2 + \\frac{40}{3}x^3$ (A1 + A1). One mark for each correct term. ISW Accept $13\\frac{1}{3}$. The question asks for simplified coefficients, so candidates should cancel fractions.\n\nMark Scheme for (b):\nState answer $|x| < \\frac{1}{6}$ (B1). OE. Strict inequality.",
+      "maxScore": 5,
+      "studentAnswer": "(a)\n$\\sqrt[3]{1+6x} = (1+6x)^{\\frac{3}{2}} = 1 + nx + \\frac{n(n-1)}{2!}(x)^2 + \\frac{n(n-1)(n-2)}{3!}(x)^3$\n$(1+6x)^{\\frac{3}{2}} = 1 + \\frac{3}{2}(6x) + \\frac{(\\frac{3}{2})(\\frac{3}{2}-1)}{2!}(6x)^2 + \\frac{(\\frac{3}{2})(\\frac{3}{2}-1)(\\frac{3}{2}-2)}{3!}(6x)^3$\n$= 1 + 9x + \\frac{27}{2}x^2 + \\frac{-27}{2}x^3$\n\n(b)\n$|x| < 1$\n$|6x| < 1$\n$|x| < \\frac{1}{6}$",
+      "expectedMark": 1
+    },
+    {
+      "id": "75e1b3d1-c48c-44d9-88be-a536c9290470",
+      "questionText": "The variables $x$ and $y$ satisfy the relation $2^y = 3^{1-2x}$.\n(a) By taking logarithms, show that the graph of $y$ against $x$ is a straight line. State the exact value of the gradient of this line. [3]\n(b) Find the exact $x$-coordinate of the point of intersection of this line with the line $y=3x$. Give your answer in the form $\\frac{\\ln a}{\\ln b}$, where $a$ and $b$ are integers. [2]",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme for (a):\nState or imply $y \\ln 2 = \\ln 3 - 2x \\ln 3$ (B1). Accept $y \\ln 2 = (1-2x)\\ln 3$.\nState that the graph of $y$ against $x$ has an equation which is linear in $x$ and $y$, or is of the form $ay=bx+c$ (B1). Correct equation. Need a clear statement/comparison with matching linear form.\nClear indication that the gradient is $-\\frac{2\\ln 3}{\\ln 2}$ (B1). Must be exact.\n\nMark Scheme for (b):\nSubstitute $y=3x$ in an equation involving logarithms and solve for $x$ (M1).\nObtain answer $x = \\frac{\\ln 3}{\\ln 72}$ (A1). Allow M1A1 for the correct answer following decimals.",
+      "maxScore": 5,
+      "studentAnswer": "(a)\n$y \\log 2 = (1-2x)\\log 3$\n$y \\log 2 = \\log 3 - 2x \\log 3$\n$y \\log 2 = -2x \\log 3 + \\log 3$\ngradient $= -2$\n\n(b)\n$3x \\ln 2 = -2x \\ln 3 + \\ln 3$\n$3x \\ln 2 + 2x \\ln 3 = \\ln 3$\n$x(3 \\ln 2 + 2 \\ln 3) = \\ln 3$\n$x = \\frac{\\ln 3}{\\ln 8 + \\ln 9}$\n$x = \\frac{\\ln 3}{\\ln 72}$",
+      "expectedMark": 3
+    },
+    {
+      "id": "d5ab9fa3-ffbb-483f-8005-f22793f2fcf8",
+      "questionText": "The variables $x$ and $y$ satisfy the relation $2^y = 3^{1-2x}$.\n(a) By taking logarithms, show that the graph of $y$ against $x$ is a straight line. State the exact value of the gradient of this line. [3]\n(b) Find the exact $x$-coordinate of the point of intersection of this line with the line $y=3x$. Give your answer in the form $\\frac{\\ln a}{\\ln b}$, where $a$ and $b$ are integers. [2]",
+      "markScheme": "Introduction to marks:\nM: Method mark, awarded for a valid method applied to the problem.\nA: Accuracy mark, awarded for a correct answer or intermediate step correctly obtained.\nB: Mark for a correct result or statement independent of method marks.\n\nAbbreviations:\nAEF/OE: Any Equivalent Form / Or Equivalent\nAG: Answer Given\nCAO: Correct Answer Only\nCWO: Correct Working Only\nISW: Ignore Subsequent Working\nSOI: Seen Or Implied\n\nMark Scheme for (a):\nState or imply $y \\ln 2 = \\ln 3 - 2x \\ln 3$ (B1). Accept $y \\ln 2 = (1-2x)\\ln 3$.\nState that the graph of $y$ against $x$ has an equation which is linear in $x$ and $y$, or is of the form $ay=bx+c$ (B1). Correct equation. Need a clear statement/comparison with matching linear form.\nClear indication that the gradient is $-\\frac{2\\ln 3}{\\ln 2}$ (B1). Must be exact.\n\nMark Scheme for (b):\nSubstitute $y=3x$ in an equation involving logarithms and solve for $x$ (M1).\nObtain answer $x = \\frac{\\ln 3}{\\ln 72}$ (A1). Allow M1A1 for the correct answer following decimals.",
+      "maxScore": 5,
+      "studentAnswer": "(a)\n$2^y = 3^{1-2x}$\n$y \\ln 2 = (1-2x)\\ln 3$\n$y = \\frac{\\ln 3 (1-2x)}{\\ln 2}$\n$y = \\frac{\\ln 3}{\\ln 2} - \\frac{2x \\ln 3}{\\ln 2}$\ngradient $= \\frac{2 \\ln 3}{\\ln 2}$\n\n(b)\n$\\frac{\\ln 3}{\\ln 2} - \\frac{2\\ln 3}{\\ln 2} x = 3x$\n$3x + \\frac{2\\ln 3}{\\ln 2} x = \\frac{\\ln 3}{\\ln 2}$\n$(3 + \\frac{2\\ln 3}{\\ln 2}) x = \\frac{\\ln 3}{\\ln 2}$\n$x = \\frac{\\ln 3}{\\ln 2} \\times \\frac{\\ln 2}{3 \\ln 2 + 2 \\ln 3}$\n$x = \\frac{\\ln 3}{3 \\ln 2 + 2 \\ln 3}$",
+      "expectedMark": 2
+    }
+  ]
+}
