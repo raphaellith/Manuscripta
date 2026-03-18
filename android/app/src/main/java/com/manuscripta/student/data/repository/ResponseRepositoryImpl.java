@@ -92,8 +92,16 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         this.syncExecutor = Executors.newSingleThreadExecutor();
         this.isSyncing = new AtomicBoolean(false);
         this.respondedQuestionIds = Collections.synchronizedSet(new HashSet<>());
+        initRespondedQuestionIds();
+    }
 
-        // Prime duplicate-check index from persisted data in the background.
+    /**
+     * Primes the in-memory duplicate-check index from persisted data in the background.
+     * Protected to allow test subclasses to suppress this background task and avoid
+     * concurrent mock interactions during Mockito stub setup.
+     */
+    @VisibleForTesting
+    protected void initRespondedQuestionIds() {
         syncExecutor.execute(() -> {
             List<ResponseEntity> existing = responseDao.getAll();
             for (ResponseEntity entity : existing) {

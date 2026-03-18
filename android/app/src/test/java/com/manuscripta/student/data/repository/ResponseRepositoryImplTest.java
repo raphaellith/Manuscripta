@@ -716,6 +716,11 @@ public class ResponseRepositoryImplTest {
         TestableResponseRepository(ResponseDao responseDao, SyncEngine syncEngine) {
             super(responseDao, syncEngine);
         }
+
+        @Override
+        protected void initRespondedQuestionIds() {
+            // No-op: suppress background mock call during Mockito stub setup.
+        }
     }
 
 }
