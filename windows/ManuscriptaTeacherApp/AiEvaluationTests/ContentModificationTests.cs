@@ -13,6 +13,7 @@ namespace AiEvaluationTests;
 public class ContentModificationEvalResult
 {
     public int Iteration { get; set; }
+    public string Model { get; set; } = string.Empty;
     public double InitialFleschKincaid { get; set; }
     public double FinalFleschKincaid { get; set; }
     public bool RetainedEntity { get; set; }
@@ -23,6 +24,12 @@ public class ContentModificationTests : IClassFixture<AiEvaluationWebApplication
 {
     private readonly AiEvaluationWebApplicationFactory _factory;
     private readonly ITestOutputHelper _output;
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    private const string OriginalContent =
+        "The mitochondria is the indubitable powerhouse of the cellular micro-organism. "
+        + "It orchestrates adenocine-triphosphate synthesis.";
+    private const string Instruction = "Simplify terminology for an 8 year old";
 
     public ContentModificationTests(AiEvaluationWebApplicationFactory factory, ITestOutputHelper output)
     {
@@ -30,7 +37,7 @@ public class ContentModificationTests : IClassFixture<AiEvaluationWebApplication
         _output = output;
     }
 
-    private double CalculateFleschKincaid(string text)
+    private static double CalculateFleschKincaid(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
         var words = text.Split(new char[] { ' ', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
@@ -47,32 +54,84 @@ public class ContentModificationTests : IClassFixture<AiEvaluationWebApplication
     {
         using var scope = _factory.Services.CreateScope();
         var modService = scope.ServiceProvider.GetRequiredService<IContentModificationService>();
-        
-        string originalContent = "The mitochondria is the indubitable powerhouse of the cellular micro-organism. It orchestrates adenocine-triphosphate synthesis.";
-        string instruction = "Simplify terminology for an 8 year old";
 
-        var initialFk = CalculateFleschKincaid(originalContent);
+        var initialFk = CalculateFleschKincaid(OriginalContent);
         var results = new List<ContentModificationEvalResult>();
 
         for (int i = 0; i < iterations; i++)
         {
-            var result = await modService.ModifyContent(originalContent, instruction, null, "reading", "Cellular Biology", 8, 8, null, default);
+            var result = await modService.ModifyContent(
+                OriginalContent, Instruction, null, "reading",
+                "Cellular Biology", 8, 8, null, default);
             var content = result.Content ?? string.Empty;
             var simplifiedFk = CalculateFleschKincaid(content);
 
             results.Add(new ContentModificationEvalResult
             {
                 Iteration = i + 1,
+                Model = "qwen3:8b",
                 InitialFleschKincaid = initialFk,
                 FinalFleschKincaid = simplifiedFk,
                 RetainedEntity = content.Contains("mitochondria", StringComparison.OrdinalIgnoreCase)
             });
             
-            _output.WriteLine($"Iteration {i + 1} Simplified: {content}");
+            _output.WriteLine($"[qwen3:8b] Iteration {i + 1} Simplified: {content}");
         }
 
         string resultsDir = Path.Combine(AppContext.BaseDirectory, "Data", "Results");
         Directory.CreateDirectory(resultsDir);
-        await File.WriteAllTextAsync(Path.Combine(resultsDir, "ContentModificationResults.json"), JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(
+            Path.Combine(resultsDir, "ContentModificationResults.json"),
+            JsonSerializer.Serialize(results, JsonOptions));
+    }
+
+    /// <summary>
+    /// Evaluates content modification quality using direct LLM calls, parameterised by
+    /// model, to compare qwen3:8b and granite4 under the identical prompt.
+    /// </summary>
+    [Theory]
+    [InlineData("qwen3:8b", 10)]
+    [InlineData("granite4", 10)]
+    public async Task ModifyContent_Model_Comparison(string model, int iterations)
+    {
+        var ollamaClient = _factory.Services.GetRequiredService<OllamaClientService>();
+
+        var prompt = GenAIPromptBuilder.BuildModificationPrompt(
+            OriginalContent,
+            Instruction,
+            relevantChunks: new List<string>(),
+            materialType: "reading",
+            title: "Cellular Biology",
+            readingAge: 8,
+            actualAge: 8);
+
+        var initialFk = CalculateFleschKincaid(OriginalContent);
+        var results = new List<ContentModificationEvalResult>();
+
+        for (int i = 0; i < iterations; i++)
+        {
+            var content = await ollamaClient.GenerateChatCompletionAsync(model, prompt);
+            var simplifiedFk = CalculateFleschKincaid(content);
+
+            results.Add(new ContentModificationEvalResult
+            {
+                Iteration = i + 1,
+                Model = model,
+                InitialFleschKincaid = initialFk,
+                FinalFleschKincaid = simplifiedFk,
+                RetainedEntity = content.Contains("mitochondria", StringComparison.OrdinalIgnoreCase)
+            });
+
+            _output.WriteLine(
+                $"[{model}] Iteration {i + 1}: FK={simplifiedFk:F2}, " +
+                $"retained={content.Contains("mitochondria", StringComparison.OrdinalIgnoreCase)}");
+        }
+
+        string resultsDir = Path.Combine(AppContext.BaseDirectory, "Data", "Results");
+        Directory.CreateDirectory(resultsDir);
+        string safeModel = model.Replace(":", "_");
+        await File.WriteAllTextAsync(
+            Path.Combine(resultsDir, $"ContentModificationResults_{safeModel}.json"),
+            JsonSerializer.Serialize(results, JsonOptions));
     }
 }

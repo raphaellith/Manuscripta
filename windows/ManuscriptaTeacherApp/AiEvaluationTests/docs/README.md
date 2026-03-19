@@ -10,9 +10,11 @@ This directory contains the automated evaluation test suites used to validate th
 ## Evaluated Test Suites
 
 ### 1. `RAGLatencyTests.cs`
-- **Purpose**: Evaluates the latency of embedding and storing highly dense chunks into the vector store.
-- **Mechanism**: Instructs `DocumentEmbeddingService` to index a dataset spanning thousands of tokens, forcing ChromaDB to execute rapid storage ops.
-- **Dependencies**: For realistic stress-testing, place a generic dense baseline transcript in `AiEvaluationTests/Data/HeavyTranscript.txt`. A fallback repeating string will be generated if missing.
+- **Purpose**: Evaluates both indexing latency and retrieval quality of the RAG pipeline.
+- **Mechanism**:
+  - **Indexing test**: Instructs `DocumentEmbeddingService` to index a dataset spanning thousands of tokens over 10 iterations, measuring cold-start and steady-state indexing latency.
+  - **Retrieval test**: Indexes the transcript once, then issues domain-specific queries (binary search, normalisation, TCP/IP, fetch-decode-execute cycle, AI ethics) across multiple `topK` values (1, 3, 5, 10) with 3 iterations each.  Measures retrieval latency and keyword-based precision per chunk.  Asserts that mean precision at `topK=5` (the production default) meets a 50% threshold.
+- **Dependencies**: For realistic evaluation, place a dense baseline transcript in `AiEvaluationTests/Data/HeavyTranscript.txt`. The indexing test falls back to a generated string if missing; the retrieval test skips entirely without the file.
 
 ### 2. `MaterialGenerationTests.cs`
 - **Purpose**: Evaluates the model's ability to ingest RAG context and stream curriculum-aligned markdown out.
