@@ -15,6 +15,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
+import com.manuscripta.student.data.repository.MaterialRepository;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DeviceInfoDto;
 import com.manuscripta.student.network.tcp.PairingCallback;
@@ -57,6 +58,9 @@ public class PairingViewModelTest {
     private ManuscriptaDatabase mockDatabase;
 
     @Mock
+    private MaterialRepository mockMaterialRepository;
+
+    @Mock
     private Call<Void> mockCall;
 
     private PairingViewModel viewModel;
@@ -78,7 +82,7 @@ public class PairingViewModelTest {
         when(mockPairingManager.getPairingState()).thenReturn(pairingState);
 
         viewModel = new PairingViewModel(mockDiscoveryManager, mockPairingManager,
-                mockApiService, mockDatabase);
+                mockApiService, mockDatabase, mockMaterialRepository);
 
         // Capture the callbacks set by the ViewModel
         ArgumentCaptor<PairingCallback> callbackCaptor =

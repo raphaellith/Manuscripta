@@ -70,7 +70,8 @@ public class FeedbackDaoTest {
                 "What is 2+2?",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"3\", \"4\", \"5\"]",
-                "4"
+                "4",
+                null
         );
         questionDao.insert(question);
 

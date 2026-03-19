@@ -11,6 +11,16 @@
     <string name="no_materials">No materials received</string>
     <string name="no_materials_deployed">No materials deployed</string>
     <string name="answer_submitted">Answer submitted</string>
+    <string name="response_already_submitted">You have already submitted this response.</string>
+    <string name="responses_already_submitted">Some questions were already submitted.</string>
+    <string name="immediate_feedback_title">Immediate Feedback</string>
+    <string name="immediate_feedback_result_correct">Correct</string>
+    <string name="immediate_feedback_result_incorrect">Not quite right</string>
+    <string name="immediate_feedback_result_correct_plain">Correct</string>
+    <string name="immediate_feedback_result_incorrect_plain">Incorrect</string>
+    <string name="immediate_feedback_answer_given_label">Answer Given</string>
+    <string name="immediate_feedback_correct_answer">Correct answer</string>
+    <string name="immediate_feedback_correct_answer_unavailable">Unavailable</string>
 
     <!-- Quiz -->
     <string name="submit_answer">Submit Answer</string>
@@ -23,6 +33,7 @@
 
     <!-- Feedback -->
     <string name="feedback_correct">Correct!</string>
+    <string name="feedback_correct_generic">All checked answers are correct.</string>
     <string name="feedback_incorrect">Not quite right.</string>
     <string name="correct_answer_label">The correct answer is:</string>
     <string name="next_question">Next Question ►</string>
@@ -73,7 +84,16 @@
     <!-- Teacher Feedback -->
     <string name="teacher_feedback_title">Teacher Feedback</string>
     <string name="teacher_feedback_marks">Marks: %d</string>
+    <string name="teacher_feedback_empty">No feedback content available</string>
 
     <!-- Notifications -->
     <string name="material_received">New material received!</string>
+    <string name="feedback_received">New feedback received!</string>
+
+    <!-- Worksheet -->
+    <string name="worksheet_marks_available">%d marks</string>
+
+    <!-- Feedback dropdown labels -->
+    <string name="feedback_dropdown_label">Feedback: %s</string>
+    <string name="feedback_dropdown_unknown">Feedback</string>
 </resources>

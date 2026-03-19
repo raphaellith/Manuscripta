@@ -20,7 +20,7 @@
     <!-- Button sizes -->
     <dimen name="button_min_height">60dp</dimen>
     <dimen name="button_back_min_height">55dp</dimen>
-    <dimen name="audio_button_size">80dp</dimen>
+    <dimen name="audio_button_size">56dp</dimen>
     <dimen name="mascot_size">96dp</dimen>
 
     <!-- Spacing -->

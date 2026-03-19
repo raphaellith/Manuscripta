@@ -113,10 +113,9 @@ public class QuizFragment extends Fragment {
         }
         this.currentQuestion = question;
         binding.textLoading.setVisibility(View.GONE);
-        binding.buttonBack.setVisibility(View.VISIBLE);
         binding.cardQuestion.setVisibility(View.VISIBLE);
         binding.recyclerOptions.setVisibility(View.VISIBLE);
-        binding.buttonSubmit.setVisibility(View.VISIBLE);
+        binding.buttonSubmit.setVisibility(View.GONE);
 
         binding.textQuestion.setText(question.getQuestionText());
 
@@ -134,7 +133,6 @@ public class QuizFragment extends Fragment {
             return;
         }
         binding.textLoading.setVisibility(View.VISIBLE);
-        binding.buttonBack.setVisibility(View.GONE);
         binding.cardQuestion.setVisibility(View.GONE);
         binding.recyclerOptions.setVisibility(View.GONE);
         binding.buttonSubmit.setVisibility(View.GONE);
@@ -154,6 +152,14 @@ public class QuizFragment extends Fragment {
     }
 
     /**
+     * Submits the currently selected quiz answer.
+     * Exposed for the shared footer submit action.
+     */
+    public void submitCurrentAnswer() {
+        handleSubmit();
+    }
+
+    /**
      * Configures the options RecyclerView with a LinearLayoutManager and adapter.
      */
     private void setupRecyclerView() {
@@ -168,15 +174,9 @@ public class QuizFragment extends Fragment {
     }
 
     /**
-     * Sets up button click listeners for back and submit actions.
+     * Sets up button click listeners for submit actions.
      */
     private void setupButtons() {
-        binding.buttonBack.setOnClickListener(v -> {
-            if (navigationListener != null) {
-                navigationListener.onBackToLesson();
-            }
-        });
-
         binding.buttonSubmit.setOnClickListener(v -> handleSubmit());
     }
 
@@ -197,9 +197,10 @@ public class QuizFragment extends Fragment {
         }
 
         List<String> options = parseOptions(currentQuestion.getOptions());
-        String answer = options.get(selected);
+        String answer = String.valueOf(selected);
         String correctText = resolveCorrectAnswer(currentQuestion.getCorrectAnswer(), options);
-        boolean isCorrect = answer.equals(correctText);
+        String selectedText = selected < options.size() ? options.get(selected) : "";
+        boolean isCorrect = selectedText.equals(correctText);
 
         if (navigationListener != null) {
             navigationListener.onAnswerSubmitted(currentQuestion, answer, isCorrect);

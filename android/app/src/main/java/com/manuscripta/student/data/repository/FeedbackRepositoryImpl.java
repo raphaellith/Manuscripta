@@ -123,13 +123,14 @@ public class FeedbackRepositoryImpl implements FeedbackRepository {
             }
         }
 
-        if (!entities.isEmpty()) {
-            feedbackDao.insertAll(entities);
-        }
-
-        // Per API Contract §3.6.2, send one FEEDBACK_ACK per successfully stored entity
+        // Per API Contract §3.6.2, send one FEEDBACK_ACK per valid received entity.
+        // ACKs are sent immediately on receipt, before DB persistence.
         for (String feedbackId : feedbackIds) {
             ackRetrySender.send(new FeedbackAckMessage(deviceId, feedbackId), TAG);
+        }
+
+        if (!entities.isEmpty()) {
+            feedbackDao.insertAll(entities);
         }
     }
 

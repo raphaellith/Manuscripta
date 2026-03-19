@@ -18,13 +18,15 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.manuscripta.student.R;
 import com.manuscripta.student.data.model.FeedbackStyle;
-import com.manuscripta.student.data.model.MascotSelection;
+import com.manuscripta.student.data.model.QuestionType;
+import com.manuscripta.student.domain.model.Feedback;
 import com.manuscripta.student.databinding.ActivityMainBinding;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
 import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.ui.feedback.FeedbackFragment;
+import com.manuscripta.student.ui.feedback.TeacherFeedbackFragment;
 import com.manuscripta.student.ui.quiz.QuizFragment;
 import com.manuscripta.student.ui.quiz.QuizViewModel;
 import com.manuscripta.student.ui.reading.ReadingFragment;
@@ -36,10 +38,11 @@ import com.manuscripta.student.network.tcp.PairingManager;
 import com.manuscripta.student.network.tcp.PairingState;
 import com.manuscripta.student.ui.pairing.PairingActivity;
 import com.manuscripta.student.utils.FileStorageManager;
-import com.manuscripta.student.utils.TextToSpeechManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -48,13 +51,19 @@ import dagger.hilt.android.AndroidEntryPoint;
 /**
  * Main activity for the Manuscripta Student application.
  * Manages tab navigation between Reading, Quiz, and Worksheet fragments,
- * plus a footer containing the mascot and audio button areas.
+ * plus footer actions such as submit and raise hand.
  */
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
     /** Tag for logging. */
     private static final String TAG = "MainActivity";
+
+    /** Special popup menu item ID for locally generated immediate feedback. */
+    private static final int MENU_ID_IMMEDIATE_FEEDBACK = -1;
+
+    /** Popup ordering for immediate feedback item at top of dropdown. */
+    private static final int MENU_ORDER_IMMEDIATE_FEEDBACK = 0;
 
     /** View binding for the main activity layout. */
     private ActivityMainBinding binding;
@@ -68,15 +77,22 @@ public class MainActivity extends AppCompatActivity {
     /** ViewModel for worksheet response submission. */
     private WorksheetViewModel worksheetViewModel;
 
-    /** Text-to-speech service manager. */
-    private TextToSpeechManager ttsManager;
-
     /** The currently displayed fragment. */
     @Nullable
     private Fragment currentFragment;
 
     /** Cached list of all distributed materials for the dropdown. */
     private final List<Material> allMaterials = new ArrayList<>();
+
+    /** Cached list of all received feedback items for the dropdown. */
+    private final List<Feedback> allFeedback = new ArrayList<>();
+
+    /** Cached map of feedback ID to resolved material title for dropdown labels. */
+    private final Map<String, String> feedbackMaterialTitles = new HashMap<>();
+
+    /** Most recent locally generated immediate feedback page shown in dropdown. */
+    @Nullable
+    private Material immediateFeedbackMaterial;
 
     /** Whether the pairing state observer has fired at least once. */
     private boolean observerInitialised;
@@ -86,6 +102,41 @@ public class MainActivity extends AppCompatActivity {
 
     /** Tracks the number of feedback items already seen by the UI. */
     private int lastKnownFeedbackCount;
+
+    /**
+     * In-memory row model for immediate feedback presentation.
+     */
+    private static final class ImmediateFeedbackRow {
+        /** 1-based question number shown in the feedback page. */
+        private final int questionNumber;
+
+        /** Question prompt shown to the student. */
+        @NonNull
+        private final String questionText;
+
+        /** Student answer as displayed to the user. */
+        @NonNull
+        private final String answerGiven;
+
+        /** Whether the student's submitted answer was correct. */
+        private final boolean isCorrect;
+
+        /** The resolved correct answer text for display. */
+        @NonNull
+        private final String correctAnswer;
+
+        ImmediateFeedbackRow(int questionNumber,
+                             @NonNull String questionText,
+                             @NonNull String answerGiven,
+                             boolean isCorrect,
+                             @NonNull String correctAnswer) {
+            this.questionNumber = questionNumber;
+            this.questionText = questionText;
+            this.answerGiven = answerGiven;
+            this.isCorrect = isCorrect;
+            this.correctAnswer = correctAnswer;
+        }
+    }
 
     /** Manager for the raise-hand lifecycle, injected by Hilt. */
     @Inject
@@ -113,9 +164,6 @@ public class MainActivity extends AppCompatActivity {
         quizViewModel = new ViewModelProvider(this).get(QuizViewModel.class);
         worksheetViewModel = new ViewModelProvider(this).get(WorksheetViewModel.class);
 
-        ttsManager = new TextToSpeechManager();
-        ttsManager.init(this);
-
         setupMaterialDropdown();
         wireFooterViews();
         observeViewModel();
@@ -130,7 +178,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        ttsManager.shutdown();
         binding = null;
     }
 
@@ -158,6 +205,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setCurrentMaterial(material);
         if (binding != null) {
             binding.materialDropdown.setText(material.getTitle());
+            binding.teacherFeedbackPanel.hide();
         }
         showFragmentForMaterial(material);
         updateFooterVisibility();
@@ -234,25 +282,108 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows a popup menu listing all available materials.
+     * Shows a popup menu listing all available materials and feedback items.
      */
     private void showMaterialDropdown() {
-        if (allMaterials.isEmpty()) {
+        boolean hasImmediateFeedback = immediateFeedbackMaterial != null;
+        if (allMaterials.isEmpty() && allFeedback.isEmpty() && !hasImmediateFeedback) {
             Toast.makeText(this, R.string.no_materials, Toast.LENGTH_SHORT).show();
             return;
         }
         PopupMenu popup = new PopupMenu(this, binding.materialDropdown);
+        if (hasImmediateFeedback) {
+            popup.getMenu().add(0,
+                    MENU_ID_IMMEDIATE_FEEDBACK,
+                    MENU_ORDER_IMMEDIATE_FEEDBACK,
+                    R.string.immediate_feedback_title);
+        }
         for (int i = 0; i < allMaterials.size(); i++) {
             popup.getMenu().add(0, i, i, allMaterials.get(i).getTitle());
         }
+        for (int i = 0; i < allFeedback.size(); i++) {
+            int id = allMaterials.size() + i;
+            popup.getMenu().add(0, id, id, buildFeedbackLabel(allFeedback.get(i)));
+        }
         popup.setOnMenuItemClickListener(item -> {
             int index = item.getItemId();
-            if (index >= 0 && index < allMaterials.size()) {
+            if (index == MENU_ID_IMMEDIATE_FEEDBACK) {
+                selectImmediateFeedback();
+                return true;
+            }
+            if (index < allMaterials.size()) {
                 selectMaterial(allMaterials.get(index));
+            } else {
+                int feedbackIndex = index - allMaterials.size();
+                if (feedbackIndex < allFeedback.size()) {
+                    selectFeedback(allFeedback.get(feedbackIndex));
+                }
             }
             return true;
         });
         popup.show();
+    }
+
+    /**
+     * Displays the locally generated immediate feedback page.
+     */
+    private void selectImmediateFeedback() {
+        if (immediateFeedbackMaterial == null || binding == null) {
+            return;
+        }
+        binding.materialDropdown.setText(R.string.immediate_feedback_title);
+        binding.teacherFeedbackPanel.hide();
+
+        ReadingFragment fragment = createReadingFragment();
+        currentFragment = fragment;
+        replaceFragment(fragment);
+        updateFooterVisibility();
+
+        binding.fragmentContainer.post(() -> {
+            if (binding == null
+                    || currentFragment != fragment
+                    || !fragment.isAdded()
+                    || fragment.getView() == null) {
+                return;
+            }
+            Configuration config = viewModel.getConfiguration().getValue();
+            if (config != null) {
+                fragment.setTextScaleFactor(config.getTextSize() / DEFAULT_TEXT_SIZE);
+            }
+            fragment.displayMaterial(immediateFeedbackMaterial,
+                    java.util.Collections.emptyList());
+        });
+    }
+
+    /**
+     * Displays the given feedback item as material-style full-screen content.
+     *
+     * @param feedback The feedback item to display.
+     */
+    private void selectFeedback(@NonNull Feedback feedback) {
+        if (binding != null) {
+            binding.materialDropdown.setText(buildFeedbackLabel(feedback));
+            binding.teacherFeedbackPanel.hide();
+        }
+        TeacherFeedbackFragment fragment = TeacherFeedbackFragment.newInstance(feedback);
+        currentFragment = fragment;
+        replaceFragment(fragment);
+        updateFooterVisibility();
+    }
+
+    /**
+     * Builds a human-readable dropdown label for a feedback item.
+     * Uses the resolved material title if available, otherwise falls back
+     * to a generic "Feedback" label to avoid spoiling marks prematurely.
+     *
+     * @param feedback The feedback item.
+     * @return A label string for display in the dropdown menu.
+     */
+    private String buildFeedbackLabel(@NonNull Feedback feedback) {
+        String materialTitle = feedbackMaterialTitles.get(feedback.getId());
+        if (materialTitle == null || materialTitle.isEmpty()) {
+            materialTitle = getString(R.string.feedback_dropdown_unknown);
+        }
+        return getString(R.string.feedback_dropdown_label, materialTitle);
     }
 
     /**
@@ -276,6 +407,7 @@ public class MainActivity extends AppCompatActivity {
         }
         currentFragment = fragment;
         replaceFragment(fragment);
+        updateFooterVisibility();
         binding.fragmentContainer.post(this::updateFragmentData);
     }
 
@@ -300,9 +432,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Quiz answer submitted for question: "
                         + question.getId() + ", answer: " + answer
                         + ", correct: " + isCorrect);
-                quizViewModel.saveQuizResponse(question, answer);
-                Toast.makeText(MainActivity.this,
-                        R.string.answer_submitted, Toast.LENGTH_SHORT).show();
+                boolean accepted = quizViewModel
+                        .saveQuizResponseIfFirst(question, answer);
+                if (!accepted) {
+                    showDuplicateSubmissionNotification();
+                    return;
+                }
+                showResponseSubmittedNotification();
                 Configuration config = viewModel.getConfiguration().getValue();
                 boolean immediate = config == null
                         || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
@@ -311,11 +447,17 @@ public class MainActivity extends AppCompatActivity {
                             question.getOptions());
                     String correctText = QuizFragment.resolveCorrectAnswer(
                             question.getCorrectAnswer(), opts);
-                    if (isCorrect) {
-                        showCorrectFeedback(correctText);
-                    } else {
-                        showIncorrectFeedback(correctText);
-                    }
+                    List<ImmediateFeedbackRow> rows = new ArrayList<>();
+                    int questionNumber = resolveQuestionNumber(
+                        question,
+                        viewModel.getQuizQuestions());
+                    rows.add(new ImmediateFeedbackRow(
+                        questionNumber,
+                            question.getQuestionText(),
+                        resolveSubmittedAnswerForDisplay(question, answer),
+                            isCorrect,
+                            correctText));
+                    showImmediateFeedbackPage(rows);
                 }
             }
         });
@@ -330,11 +472,14 @@ public class MainActivity extends AppCompatActivity {
     @NonNull
     private WorksheetFragment createWorksheetFragment() {
         WorksheetFragment worksheet = WorksheetFragment.newInstance();
+        worksheet.setAttachmentImageLoader(
+            new AttachmentImageLoader(apiService, fileStorageManager));
+        worksheet.setFileStorageManager(fileStorageManager);
         worksheet.setSubmitListener(answers -> {
             Log.d(TAG, "Worksheet answers submitted: " + answers.size());
-            worksheetViewModel.submitAllAnswers(answers);
-            Toast.makeText(MainActivity.this,
-                    R.string.answer_submitted, Toast.LENGTH_SHORT).show();
+            WorksheetViewModel.SubmissionResult result =
+                    worksheetViewModel.submitAllAnswersValidated(answers);
+            handleWorksheetSubmissionFeedback(answers, result);
         });
         return worksheet;
     }
@@ -370,15 +515,19 @@ public class MainActivity extends AppCompatActivity {
             reading.setFileStorageManager(fileStorageManager);
             reading.resetRenderer();
         } else if (currentFragment instanceof WorksheetFragment) {
-            ((WorksheetFragment) currentFragment)
-                    .setSubmitListener(answers -> {
+            WorksheetFragment worksheet = (WorksheetFragment) currentFragment;
+            worksheet.setAttachmentImageLoader(
+                new AttachmentImageLoader(apiService, fileStorageManager));
+            worksheet.setFileStorageManager(fileStorageManager);
+            worksheet.setSubmitListener(answers -> {
                         Log.d(TAG, "Worksheet answers submitted: "
                                 + answers.size());
-                        worksheetViewModel.submitAllAnswers(answers);
-                        Toast.makeText(MainActivity.this,
-                                R.string.answer_submitted,
-                                Toast.LENGTH_SHORT).show();
+                    WorksheetViewModel.SubmissionResult result =
+                        worksheetViewModel
+                            .submitAllAnswersValidated(answers);
+                    handleWorksheetSubmissionFeedback(answers, result);
                     });
+            worksheet.resetRenderer();
         } else if (currentFragment instanceof QuizFragment) {
             ((QuizFragment) currentFragment).setNavigationListener(
                     new QuizFragment.QuizNavigationListener() {
@@ -392,11 +541,13 @@ public class MainActivity extends AppCompatActivity {
                                 @NonNull Question question,
                                 @NonNull String answer,
                                 boolean isCorrect) {
-                            quizViewModel.saveQuizResponse(
-                                    question, answer);
-                            Toast.makeText(MainActivity.this,
-                                    R.string.answer_submitted,
-                                    Toast.LENGTH_SHORT).show();
+                            boolean accepted = quizViewModel
+                                .saveQuizResponseIfFirst(question, answer);
+                            if (!accepted) {
+                            showDuplicateSubmissionNotification();
+                            return;
+                            }
+                            showResponseSubmittedNotification();
                             Configuration config =
                                     viewModel.getConfiguration().getValue();
                             boolean immediate = config == null
@@ -410,11 +561,20 @@ public class MainActivity extends AppCompatActivity {
                                         QuizFragment.resolveCorrectAnswer(
                                                 question.getCorrectAnswer(),
                                                 opts);
-                                if (isCorrect) {
-                                    showCorrectFeedback(correctText);
-                                } else {
-                                    showIncorrectFeedback(correctText);
-                                }
+                                List<ImmediateFeedbackRow> rows =
+                                        new ArrayList<>();
+                                int questionNumber = resolveQuestionNumber(
+                                    question,
+                                    viewModel.getQuizQuestions());
+                                rows.add(new ImmediateFeedbackRow(
+                                    questionNumber,
+                                        question.getQuestionText(),
+                                    resolveSubmittedAnswerForDisplay(
+                                        question,
+                                        answer),
+                                        isCorrect,
+                                        correctText));
+                                showImmediateFeedbackPage(rows);
                             }
                         }
                     });
@@ -434,20 +594,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates footer visibility based on the current fragment and configuration.
-     * The mascot is only visible on the Reading fragment when a mascot is selected.
+     * Updates footer submit visibility based on the current fragment.
      */
     private void updateFooterVisibility() {
         if (binding == null) {
             return;
         }
-        Configuration config = viewModel.getConfiguration().getValue();
-        boolean mascotEnabled = config != null
-                && config.getMascotSelection() != MascotSelection.NONE;
-        boolean isReading = currentFragment instanceof ReadingFragment;
-        int mascotVisibility = (mascotEnabled && isReading)
-                ? View.VISIBLE : View.INVISIBLE;
-        binding.mascotView.setVisibility(mascotVisibility);
+        if (currentFragment instanceof QuizFragment) {
+            binding.footerSubmitButton.setVisibility(View.VISIBLE);
+            binding.footerSubmitButton.setText(R.string.submit_answer);
+        } else if (currentFragment instanceof WorksheetFragment) {
+            binding.footerSubmitButton.setVisibility(View.VISIBLE);
+            binding.footerSubmitButton.setText(R.string.submit_answers);
+        } else {
+            binding.footerSubmitButton.setVisibility(View.GONE);
+        }
     }
 
     /**
@@ -473,18 +634,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Sets up listeners on footer views: mascot, audio button, and AI panel.
-     */
+    /** Sets up listeners on footer actions and AI panel controls. */
     private void wireFooterViews() {
-        binding.mascotView.setOnTaskSelected(
-            taskName -> viewModel.requestContentTransformation(taskName)
-        );
-        binding.audioButton.setOnAudioClickListener(
-            this::speakCurrentContent
-        );
         binding.aiResponsePanel.setOnCloseListener(
             () -> viewModel.clearAiTask()
+        );
+        binding.footerSubmitButton.setOnClickListener(
+            v -> submitCurrentAnswers()
         );
         binding.raiseHandButton.setOnClickListener(
             v -> raiseHandManager.raiseHand()
@@ -500,8 +656,7 @@ public class MainActivity extends AppCompatActivity {
             allMaterials.clear();
             if (materials != null && !materials.isEmpty()) {
                 allMaterials.addAll(materials);
-                if (materials.size() > lastKnownMaterialCount
-                        && lastKnownMaterialCount > 0) {
+                if (materials.size() > lastKnownMaterialCount) {
                     showMaterialReceivedNotification();
                 }
                 lastKnownMaterialCount = materials.size();
@@ -520,6 +675,9 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     updateFragmentData();
                 }
+            } else if (lastKnownMaterialCount > 0 || currentFragment != null) {
+                // Material cleared after being previously loaded
+                clearMaterialState();
             }
         });
         viewModel.getCurrentQuestions().observe(
@@ -568,10 +726,19 @@ public class MainActivity extends AppCompatActivity {
             if (binding == null || feedbackList == null) {
                 return;
             }
-            if (feedbackList.size() > lastKnownFeedbackCount) {
-                binding.teacherFeedbackPanel.showFeedback(feedbackList);
+            allFeedback.clear();
+            allFeedback.addAll(feedbackList);
+            if (feedbackList.size() > lastKnownFeedbackCount
+                    && lastKnownFeedbackCount > 0) {
+                showFeedbackReceivedNotification();
             }
             lastKnownFeedbackCount = feedbackList.size();
+        });
+        viewModel.getFeedbackMaterialTitles().observe(this, titleMap -> {
+            if (titleMap != null) {
+                feedbackMaterialTitles.clear();
+                feedbackMaterialTitles.putAll(titleMap);
+            }
         });
     }
 
@@ -587,18 +754,17 @@ public class MainActivity extends AppCompatActivity {
      * @param config The updated configuration.
      */
     private void applyConfiguration(@NonNull Configuration config) {
-        ttsManager.setTtsEnabled(config.isTtsEnabled());
         if (binding == null) {
             return;
         }
-        binding.audioButton.setVisibility(
-            config.isTtsEnabled() ? View.VISIBLE : View.GONE
-        );
         updateFooterVisibility();
 
         float scaleFactor = config.getTextSize() / DEFAULT_TEXT_SIZE;
         if (currentFragment instanceof ReadingFragment) {
             ((ReadingFragment) currentFragment)
+                    .setTextScaleFactor(scaleFactor);
+        } else if (currentFragment instanceof WorksheetFragment) {
+            ((WorksheetFragment) currentFragment)
                     .setTextScaleFactor(scaleFactor);
         }
     }
@@ -616,7 +782,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (currentFragment instanceof QuizFragment) {
             updateQuizFragment();
         } else if (currentFragment instanceof WorksheetFragment) {
-            updateWorksheetFragment();
+            updateWorksheetFragment(material);
         }
     }
 
@@ -658,45 +824,255 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates the worksheet fragment with available worksheet questions.
-     */
-    private void updateWorksheetFragment() {
-        WorksheetFragment worksheet = (WorksheetFragment) currentFragment;
-        List<Question> wsQuestions = viewModel.getWorksheetQuestions();
-        if (!wsQuestions.isEmpty()) {
-            worksheet.displayQuestions(wsQuestions);
-        } else {
-            worksheet.showLoading();
-        }
-    }
-
-    /**
-     * Speaks the text content of the currently visible fragment via TTS.
-     */
-    private void speakCurrentContent() {
-        String text = getCurrentFragmentText();
-        if (!text.isEmpty()) {
-            ttsManager.speak(text);
-        }
-    }
-
-    /**
-     * Returns the text content of the currently active fragment for TTS.
+     * Updates the worksheet fragment with material content and all related questions.
      *
-     * @return The displayable text, or an empty string if unavailable.
+     * @param material The current material, or null to show loading.
+     */
+    private void updateWorksheetFragment(@Nullable Material material) {
+        WorksheetFragment worksheet = (WorksheetFragment) currentFragment;
+        if (material == null) {
+            worksheet.showLoading();
+            return;
+        }
+        List<Question> wsQuestions = viewModel.getWorksheetQuestions();
+        worksheet.displayMaterial(material, wsQuestions);
+    }
+
+    /**
+     * Triggers submission for the currently visible answerable fragment.
+     */
+    private void submitCurrentAnswers() {
+        if (currentFragment instanceof QuizFragment) {
+            ((QuizFragment) currentFragment).submitCurrentAnswer();
+        } else if (currentFragment instanceof WorksheetFragment) {
+            ((WorksheetFragment) currentFragment).submitAnswers();
+        }
+    }
+
+    /**
+     * Applies feedback style behaviour for worksheet submissions.
+     * Immediate mode shows correctness for auto-checkable known answers.
+     * Neutral mode shows submission acknowledgement only.
+     *
+     * @param answers submitted worksheet answers keyed by question id
+     * @param result duplicate-filtered submission summary
+     */
+    private void handleWorksheetSubmissionFeedback(
+            @NonNull Map<String, String> answers,
+            @NonNull WorksheetViewModel.SubmissionResult result) {
+        if (result.getDuplicateCount() > 0) {
+            if (result.getSubmittedCount() == 0) {
+                showDuplicateSubmissionNotification();
+                return;
+            }
+            showDuplicateSubmissionNotification();
+        }
+
+        Configuration config = viewModel.getConfiguration().getValue();
+        boolean immediate = config == null
+                || config.getFeedbackStyle() == FeedbackStyle.IMMEDIATE;
+        if (!immediate) {
+            showResponseSubmittedNotification();
+            return;
+        }
+
+        List<ImmediateFeedbackRow> rows = new ArrayList<>();
+        for (Question question : viewModel.getWorksheetQuestions()) {
+            if (!result.getSubmittedQuestionIds().contains(question.getId())) {
+                continue;
+            }
+            String correctAnswer = question.getCorrectAnswer();
+            if (correctAnswer == null || correctAnswer.trim().isEmpty()) {
+                continue;
+            }
+            boolean isCorrect = isWorksheetAnswerCorrect(question, answers);
+                String submittedAnswer = answers.get(question.getId());
+            rows.add(new ImmediateFeedbackRow(
+                    resolveQuestionNumber(question, viewModel.getWorksheetQuestions()),
+                    question.getQuestionText(),
+                    resolveSubmittedAnswerForDisplay(question, submittedAnswer),
+                    isCorrect,
+                    resolveWorksheetCorrectAnswer(question)));
+        }
+
+        if (!rows.isEmpty()) {
+            showImmediateFeedbackPage(rows);
+        } else {
+            showResponseSubmittedNotification();
+        }
+    }
+
+    /**
+     * Shows and stores a local immediate feedback page in dropdown format.
+     *
+     * @param rows feedback rows to render
+     */
+    private void showImmediateFeedbackPage(@NonNull List<ImmediateFeedbackRow> rows) {
+        StringBuilder content = new StringBuilder();
+        content.append(getString(R.string.immediate_feedback_title))
+                .append("\n\n");
+        for (int i = 0; i < rows.size(); i++) {
+            ImmediateFeedbackRow row = rows.get(i);
+            String resultLabel = row.isCorrect
+                    ? getString(R.string.immediate_feedback_result_correct_plain)
+                    : getString(R.string.immediate_feedback_result_incorrect_plain);
+            content.append("Question ")
+                    .append(row.questionNumber)
+                    .append(":\n\n")
+                    .append(row.questionText)
+                    .append("\n\n")
+                    .append(getString(R.string.immediate_feedback_answer_given_label))
+                    .append(": ")
+                    .append(row.answerGiven)
+                    .append("\n\n")
+                    .append(resultLabel)
+                    .append("\n\n");
+            if (!row.isCorrect) {
+                String correctAnswerDisplay = row.correctAnswer.trim().isEmpty()
+                    ? getString(R.string.immediate_feedback_correct_answer_unavailable)
+                    : row.correctAnswer;
+                content.append(getString(R.string.immediate_feedback_correct_answer))
+                        .append(": ")
+                    .append(correctAnswerDisplay)
+                        .append("\n\n");
+            }
+            content.append("-----");
+            if (i < rows.size() - 1) {
+                content.append("\n\n");
+            }
+        }
+
+        // Use plain text layout so sizing follows configured reading body scale.
+        immediateFeedbackMaterial = new Material(
+            "immediate-feedback",
+            com.manuscripta.student.data.model.MaterialType.READING,
+            getString(R.string.immediate_feedback_title),
+            content.toString(),
+            "{}",
+            "[]",
+            System.currentTimeMillis());
+        selectImmediateFeedback();
+    }
+
+    /**
+     * Resolves a 1-based question number based on the current question list order.
+     *
+     * @param question question to locate
+     * @param questions ordered list containing the question
+     * @return 1-based number, or 1 when not found
+     */
+    private int resolveQuestionNumber(
+            @NonNull Question question,
+            @NonNull List<Question> questions) {
+        for (int i = 0; i < questions.size(); i++) {
+            if (question.getId().equals(questions.get(i).getId())) {
+                return i + 1;
+            }
+        }
+        return 1;
+    }
+
+    /**
+     * Converts a submitted answer into display-friendly text.
+     *
+     * @param question question metadata used for option lookups
+     * @param rawAnswer submitted answer payload
+     * @return answer text suitable for immediate feedback display
      */
     @NonNull
-    private String getCurrentFragmentText() {
-        if (currentFragment instanceof ReadingFragment) {
-            return ((ReadingFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof QuizFragment) {
-            return ((QuizFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof WorksheetFragment) {
-            return ((WorksheetFragment) currentFragment).getTextContent();
-        } else if (currentFragment instanceof FeedbackFragment) {
-            return ((FeedbackFragment) currentFragment).getTextContent();
+    private String resolveSubmittedAnswerForDisplay(
+            @NonNull Question question,
+            @Nullable String rawAnswer) {
+        if (rawAnswer == null || rawAnswer.trim().isEmpty()) {
+            return "(No answer provided)";
         }
-        return "";
+
+        String trimmed = rawAnswer.trim();
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> options = QuizFragment.parseOptions(question.getOptions());
+            try {
+                int selectedIndex = Integer.parseInt(trimmed);
+                if (selectedIndex >= 0 && selectedIndex < options.size()) {
+                    return options.get(selectedIndex);
+                }
+            } catch (NumberFormatException e) {
+                return trimmed;
+            }
+        }
+        return trimmed;
+    }
+
+    /**
+     * Checks a worksheet answer against a question's known correct value.
+     *
+     * @param question question metadata including expected answer
+     * @param answers submitted answers keyed by question id
+     * @return true if the submitted answer matches the expected one
+     */
+    private boolean isWorksheetAnswerCorrect(
+            @NonNull Question question,
+            @NonNull Map<String, String> answers) {
+        String submitted = answers.get(question.getId());
+        if (submitted == null) {
+            submitted = "";
+        }
+        submitted = submitted.trim();
+
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> options = QuizFragment.parseOptions(question.getOptions());
+            try {
+                int selectedIndex = Integer.parseInt(submitted);
+                if (selectedIndex < 0 || selectedIndex >= options.size()) {
+                    return false;
+                }
+                String selectedText = options.get(selectedIndex);
+                String correctText = QuizFragment.resolveCorrectAnswer(
+                        question.getCorrectAnswer(), options);
+                return selectedText.equals(correctText);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return submitted.equalsIgnoreCase(question.getCorrectAnswer().trim());
+    }
+
+    /**
+     * Resolves the displayable correct answer for worksheet feedback.
+     *
+     * @param question question metadata
+     * @return readable correct answer text for feedback UI
+     */
+    @NonNull
+    private String resolveWorksheetCorrectAnswer(@NonNull Question question) {
+        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> options = QuizFragment.parseOptions(question.getOptions());
+            return QuizFragment.resolveCorrectAnswer(
+                    question.getCorrectAnswer(), options);
+        }
+        return question.getCorrectAnswer();
+    }
+
+    /**
+     * Clears material display state and fragment when the database is cleared (e.g., during pairing).
+     * Only called when a material was previously loaded and then cleared, not on initial null state.
+     */
+    private void clearMaterialState() {
+        Log.d(TAG, "Clearing material state");
+        currentFragment = null;
+        allMaterials.clear();
+        allFeedback.clear();
+        if (binding != null) {
+            binding.materialDropdown.setText(R.string.no_materials_deployed);
+            Fragment existing = getSupportFragmentManager()
+                    .findFragmentById(R.id.fragmentContainer);
+            if (existing != null) {
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .remove(existing)
+                        .commit();
+            }
+        }
     }
 
     /**
@@ -711,4 +1087,42 @@ public class MainActivity extends AppCompatActivity {
                 0, 32);
         toast.show();
     }
+
+    /**
+     * Shows a brief notification at the top of the screen when
+     * new feedback has been received from the teacher server.
+     */
+    private void showFeedbackReceivedNotification() {
+        Toast toast = Toast.makeText(
+                this, R.string.feedback_received,
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                0, 32);
+        toast.show();
+    }
+
+    /**
+     * Shows a brief notification at the top of the screen when
+     * a student response is submitted.
+     */
+    private void showResponseSubmittedNotification() {
+        Toast toast = Toast.makeText(
+                this, R.string.answer_submitted,
+                Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+                0, 32);
+        toast.show();
+    }
+
+        /**
+         * Shows a brief notification when a duplicate response attempt is blocked.
+         */
+        private void showDuplicateSubmissionNotification() {
+        Toast toast = Toast.makeText(
+            this, R.string.response_already_submitted,
+            Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL,
+            0, 32);
+        toast.show();
+        }
 }

@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.manuscripta.student.data.local.ManuscriptaDatabase;
+import com.manuscripta.student.data.repository.MaterialRepository;
 import com.manuscripta.student.network.ApiService;
 import com.manuscripta.student.network.dto.DeviceInfoDto;
 import com.manuscripta.student.network.tcp.PairingCallback;
@@ -55,6 +56,9 @@ public class PairingViewModel extends ViewModel {
 
     /** The Room database, cleared on each new pairing. */
     private final ManuscriptaDatabase database;
+
+    /** The material repository, used to reset LiveData after database clear. */
+    private final MaterialRepository materialRepository;
 
     /** Overall pairing phase exposed to the UI. */
     private final MutableLiveData<PairingPhase> pairingPhase =
@@ -113,16 +117,22 @@ public class PairingViewModel extends ViewModel {
      * @param pairingManager   The TCP pairing manager
      * @param apiService       The Retrofit API service
      * @param database         The Room database to clear on pairing
+     * @param materialRepository The material repository to reset LiveData after DB clear
      */
     @Inject
     public PairingViewModel(@NonNull UdpDiscoveryManager discoveryManager,
                             @NonNull PairingManager pairingManager,
                             @NonNull ApiService apiService,
-                            @NonNull ManuscriptaDatabase database) {
+                            @NonNull ManuscriptaDatabase database,
+                            @NonNull MaterialRepository materialRepository) {
+        if (materialRepository == null) {
+            throw new IllegalArgumentException("MaterialRepository cannot be null");
+        }
         this.discoveryManager = discoveryManager;
         this.pairingManager = pairingManager;
         this.apiService = apiService;
         this.database = database;
+        this.materialRepository = materialRepository;
 
         pairingManager.setPairingCallback(pairingCallback);
         discoveryManager.addListener(discoveryListener);
@@ -321,6 +331,7 @@ public class PairingViewModel extends ViewModel {
 
         Executors.newSingleThreadExecutor().execute(() -> {
             database.clearAllTables();
+            materialRepository.resetLiveData();
             Log.i(TAG, "Local database cleared \u2014 navigating");
             pairingComplete.postValue(true);
         });

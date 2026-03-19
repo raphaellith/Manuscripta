@@ -47,7 +47,7 @@ public class QuestionBlockRendererTest {
                 "q1", "mat-1",
                 "What colour is the sky?",
                 QuestionType.MULTIPLE_CHOICE,
-                "[\"Red\",\"Blue\",\"Green\"]", "B");
+                "[\"Red\",\"Blue\",\"Green\"]", "B", null);
 
         View view = renderer.renderQuestion(context, question);
 
@@ -74,7 +74,7 @@ public class QuestionBlockRendererTest {
         Question question = new Question(
                 "q2", "mat-1",
                 "Describe the water cycle.",
-                QuestionType.WRITTEN_ANSWER, "", "");
+                QuestionType.WRITTEN_ANSWER, "", "", null);
 
         View view = renderer.renderQuestion(context, question);
 
@@ -96,7 +96,7 @@ public class QuestionBlockRendererTest {
         Question question = new Question(
                 "q1", "mat-1", "Pick one:",
                 QuestionType.MULTIPLE_CHOICE,
-                "[\"Alpha\",\"Beta\",\"Gamma\"]", "A");
+                "[\"Alpha\",\"Beta\",\"Gamma\"]", "A", null);
 
         View view =
                 renderer.renderMultipleChoice(context, question);
@@ -111,7 +111,7 @@ public class QuestionBlockRendererTest {
         Question question = new Question(
                 "q1", "mat-1", "Pick one:",
                 QuestionType.MULTIPLE_CHOICE,
-                "[\"First\",\"Second\"]", "A");
+                "[\"First\",\"Second\"]", "A", null);
 
         RadioGroup group = (RadioGroup)
                 renderer.renderMultipleChoice(context, question);
@@ -126,7 +126,7 @@ public class QuestionBlockRendererTest {
     public void testRenderMultipleChoice_emptyOptions_emptyRadioGroup() {
         Question question = new Question(
                 "q1", "mat-1", "Pick one:",
-                QuestionType.MULTIPLE_CHOICE, "", "A");
+                QuestionType.MULTIPLE_CHOICE, "", "A", null);
 
         RadioGroup group = (RadioGroup)
                 renderer.renderMultipleChoice(context, question);
@@ -139,7 +139,7 @@ public class QuestionBlockRendererTest {
         Question question = new Question(
                 "q1", "mat-1", "Pick one:",
                 QuestionType.MULTIPLE_CHOICE,
-                "not valid json", "A");
+                "not valid json", "A", null);
 
         RadioGroup group = (RadioGroup)
                 renderer.renderMultipleChoice(context, question);

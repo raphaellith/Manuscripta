@@ -30,7 +30,7 @@ public class FeedbackViewModelTest {
     public void setUp() {
         viewModel = new FeedbackViewModel();
         testQuestion = new Question("q-1", "mat-1", "What is 2+2?",
-                QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4");
+                QuestionType.MULTIPLE_CHOICE, "[\"3\",\"4\",\"5\"]", "4", null);
     }
 
     @Test

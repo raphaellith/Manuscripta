@@ -1,6 +1,8 @@
 package com.manuscripta.student.data.model;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
@@ -48,6 +50,11 @@ public class QuestionEntity {
     /** String representing the correct answer. */
     private String correctAnswer;
 
+    /** The maximum number of marks available for this question (null if not specified). */
+    @ColumnInfo(defaultValue = "NULL")
+    @Nullable
+    private Integer maxScore;
+
     /**
      * Constructor with required fields.
      *
@@ -57,19 +64,22 @@ public class QuestionEntity {
      * @param questionType The type of question
      * @param options JSON string of options (use empty string if none)
      * @param correctAnswer The correct answer string (use empty string if none)
+     * @param maxScore Maximum marks available (null if not specified)
      */
     public QuestionEntity(@NonNull String id,
                           @NonNull String materialId,
                           @NonNull String questionText,
                           @NonNull QuestionType questionType,
                           @NonNull String options,
-                          @NonNull String correctAnswer) {
+                          @NonNull String correctAnswer,
+                          @Nullable Integer maxScore) {
         this.id = id;
         this.materialId = materialId;
         this.questionText = questionText;
         this.questionType = questionType;
         this.options = options;
         this.correctAnswer = correctAnswer;
+        this.maxScore = maxScore;
     }
 
     // Getters
@@ -100,5 +110,10 @@ public class QuestionEntity {
 
     public String getCorrectAnswer() {
         return correctAnswer;
+    }
+
+    @Nullable
+    public Integer getMaxScore() {
+        return maxScore;
     }
 }

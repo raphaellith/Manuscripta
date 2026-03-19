@@ -24,8 +24,12 @@ import com.manuscripta.student.domain.model.Question;
 import com.manuscripta.student.domain.model.Session;
 import com.manuscripta.student.utils.ConnectionManager;
 
+import android.util.Log;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,6 +43,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
  */
 @HiltViewModel
 public class MainViewModel extends ViewModel {
+
+    /** Tag for logging. */
+    private static final String TAG = "MainViewModel";
 
     /** Repository for materials. */
     private final MaterialRepository materialRepository;
@@ -60,6 +67,9 @@ public class MainViewModel extends ViewModel {
 
     /** Repository for feedback. */
     private final FeedbackRepository feedbackRepository;
+
+    /** Repository for responses. */
+    private final com.manuscripta.student.data.repository.ResponseRepository responseRepository;
 
     /** The currently distributed material. */
     private final MediatorLiveData<Material> currentMaterial = new MediatorLiveData<>();
@@ -85,6 +95,9 @@ public class MainViewModel extends ViewModel {
     /** Background executor for database operations. */
     private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
+    /** Map from feedback ID to resolved material title, for dropdown labelling. */
+    private final MutableLiveData<Map<String, String>> feedbackMaterialTitles = new MutableLiveData<>();
+
     /**
      * Constructor for MainViewModel with Hilt injection.
      *
@@ -95,15 +108,19 @@ public class MainViewModel extends ViewModel {
      * @param sessionRepository  The session repository for lifecycle management
      * @param deviceStatusRepository  The device status repository for lock state
      * @param feedbackRepository The feedback repository for teacher feedback
+     * @param responseRepository The response repository for resolving feedback titles
      */
     @Inject
+    // CHECKSTYLE:OFF ParameterNumber - Hilt-injected dependencies
     public MainViewModel(@NonNull MaterialRepository materialRepository,
                          @NonNull QuestionDao questionDao,
                          @NonNull ConfigRepository configRepository,
                          @NonNull ConnectionManager connectionManager,
                          @NonNull SessionRepository sessionRepository,
                          @NonNull DeviceStatusRepository deviceStatusRepository,
-                         @NonNull FeedbackRepository feedbackRepository) {
+                         @NonNull FeedbackRepository feedbackRepository,
+                         @NonNull com.manuscripta.student.data.repository.ResponseRepository responseRepository) {
+        // CHECKSTYLE:ON ParameterNumber
         this.materialRepository = materialRepository;
         this.questionDao = questionDao;
         this.configRepository = configRepository;
@@ -111,6 +128,7 @@ public class MainViewModel extends ViewModel {
         this.sessionRepository = sessionRepository;
         this.deviceStatusRepository = deviceStatusRepository;
         this.feedbackRepository = feedbackRepository;
+        this.responseRepository = responseRepository;
 
         allMaterials = materialRepository.getMaterialsLiveData();
 
@@ -130,6 +148,13 @@ public class MainViewModel extends ViewModel {
                         == com.manuscripta.student.data.model.DeviceStatus.LOCKED
         );
 
+        // Observe feedback to resolve and cache material titles for dropdown labels
+        feedbackRepository.getFeedbackLiveData().observeForever(feedbackList -> {
+            if (feedbackList != null) {
+                dbExecutor.execute(() -> resolveAndPostMaterialTitles(feedbackList));
+            }
+        });
+
         // Observe materials from the repository to auto-select when distribution arrives
         currentMaterial.addSource(materialRepository.getMaterialsLiveData(), materials -> {
             if (materials != null && !materials.isEmpty()) {
@@ -146,6 +171,10 @@ public class MainViewModel extends ViewModel {
                         }
                     }
                 }
+            } else {
+                // Materials list became empty (e.g., after database clear during pairing)
+                currentMaterial.setValue(null);
+                currentQuestions.postValue(new ArrayList<>());
             }
         });
     }
@@ -349,7 +378,8 @@ public class MainViewModel extends ViewModel {
     /**
      * Gets all worksheet-type questions from the current question set.
      *
-     * @return A list of WRITTEN_ANSWER questions, or an empty list if none
+     * @return A list of all questions for the current worksheet material,
+     *         or an empty list if none
      */
     @NonNull
     public List<Question> getWorksheetQuestions() {
@@ -357,13 +387,7 @@ public class MainViewModel extends ViewModel {
         if (all == null) {
             return new ArrayList<>();
         }
-        List<Question> worksheetQuestions = new ArrayList<>();
-        for (Question q : all) {
-            if (q.getQuestionType() == QuestionType.WRITTEN_ANSWER) {
-                worksheetQuestions.add(q);
-            }
-        }
-        return worksheetQuestions;
+        return new ArrayList<>(all);
     }
 
     /**
@@ -380,5 +404,58 @@ public class MainViewModel extends ViewModel {
             }
             currentQuestions.postValue(questions);
         });
+    }
+
+    /**
+     * Resolves material titles for all feedback items and posts the result map.
+     * Must be called on a background thread.
+     *
+     * @param feedbackList The list of feedback items to resolve titles for
+     */
+    private void resolveAndPostMaterialTitles(@NonNull List<Feedback> feedbackList) {
+        Map<String, String> titleMap = new HashMap<>();
+        for (Feedback feedback : feedbackList) {
+            String materialTitle = resolveMaterialTitleForFeedback(feedback);
+            titleMap.put(feedback.getId(), materialTitle != null ? materialTitle : "");
+        }
+        feedbackMaterialTitles.postValue(titleMap);
+    }
+
+    /**
+     * Resolves the material title for a single feedback item by walking the
+     * feedback → response → question → material chain.
+     * Must be called on a background thread.
+     *
+     * @param feedback The feedback item
+     * @return The material title, or null if any step in the chain is missing
+     */
+    private String resolveMaterialTitleForFeedback(@NonNull Feedback feedback) {
+        try {
+            com.manuscripta.student.domain.model.Response response =
+                    responseRepository.getResponseById(feedback.getResponseId());
+            if (response == null) {
+                return null;
+            }
+            QuestionEntity question = questionDao.getById(response.getQuestionId());
+            if (question == null) {
+                return null;
+            }
+            Material material = materialRepository.getMaterialById(question.getMaterialId());
+            return material != null ? material.getTitle() : null;
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to resolve material title for feedback "
+                    + feedback.getId(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the observable map of feedback ID to resolved material title.
+     *
+     * @return LiveData containing the map of feedback IDs to material titles
+     */
+    @NonNull
+    public LiveData<Map<String, String>> getFeedbackMaterialTitles() {
+        return feedbackMaterialTitles;
     }
 }

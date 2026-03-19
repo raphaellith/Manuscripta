@@ -118,6 +118,31 @@ public class TeacherFeedbackPanelView extends LinearLayout {
     }
 
     /**
+     * Displays a single feedback item.
+     *
+     * @param feedback The feedback item to display.
+     */
+    public void showSingleFeedback(@NonNull Feedback feedback) {
+        if (feedback.hasMarks()) {
+            marksText.setText(getContext().getString(
+                    R.string.teacher_feedback_marks, feedback.getMarks()));
+            marksText.setVisibility(View.VISIBLE);
+        } else {
+            marksText.setVisibility(View.GONE);
+        }
+
+        if (feedback.hasText()) {
+            feedbackText.setText(feedback.getText());
+            feedbackText.setVisibility(View.VISIBLE);
+        } else {
+            feedbackText.setVisibility(View.GONE);
+        }
+
+        setVisibility(View.VISIBLE);
+        scrollView.scrollTo(0, 0);
+    }
+
+    /**
      * Hides the panel.
      */
     public void hide() {

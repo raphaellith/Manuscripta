@@ -156,4 +156,11 @@ it      *   <li>Sends one DISTRIBUTE_ACK per successfully received material (§3
      * @return true if a sync operation is in progress
      */
     boolean isSyncing();
+
+    /**
+     * Resets the materials LiveData by querying the current (possibly empty) database
+     * and posting the result. Used after clearing the database during pairing to ensure
+     * observers receive an empty list.
+     */
+    void resetLiveData();
 }

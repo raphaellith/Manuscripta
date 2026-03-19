@@ -14,9 +14,12 @@ import com.manuscripta.student.network.dto.ResponseDto;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
@@ -52,6 +55,12 @@ public class ResponseRepositoryImpl implements ResponseRepository {
     private final SyncEngine syncEngine;
 
     /**
+     * In-memory index of question IDs that already have a stored response.
+     * Keeps duplicate checks off the UI thread.
+     */
+    private final Set<String> respondedQuestionIds;
+
+    /**
      * Creates a new ResponseRepositoryImpl with the given DAO and API service.
      *
      * @param responseDao The DAO for response persistence
@@ -82,6 +91,23 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         this.syncEngine = syncEngine;
         this.syncExecutor = Executors.newSingleThreadExecutor();
         this.isSyncing = new AtomicBoolean(false);
+        this.respondedQuestionIds = Collections.synchronizedSet(new HashSet<>());
+        initRespondedQuestionIds();
+    }
+
+    /**
+     * Primes the in-memory duplicate-check index from persisted data in the background.
+     * Protected to allow test subclasses to suppress this background task and avoid
+     * concurrent mock interactions during Mockito stub setup.
+     */
+    @VisibleForTesting
+    protected void initRespondedQuestionIds() {
+        syncExecutor.execute(() -> {
+            List<ResponseEntity> existing = responseDao.getAll();
+            for (ResponseEntity entity : existing) {
+                respondedQuestionIds.add(entity.getQuestionId());
+            }
+        });
     }
 
     @Override
@@ -90,7 +116,16 @@ public class ResponseRepositoryImpl implements ResponseRepository {
             throw new IllegalArgumentException("Response cannot be null");
         }
         ResponseEntity entity = ResponseMapper.toEntity(response);
+        respondedQuestionIds.add(entity.getQuestionId());
         syncExecutor.execute(() -> responseDao.insert(entity));
+    }
+
+    @Override
+    public boolean hasResponseForQuestion(@NonNull String questionId) {
+        if (questionId == null || questionId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Question ID cannot be null or empty");
+        }
+        return respondedQuestionIds.contains(questionId);
     }
 
     @Override
@@ -139,6 +174,10 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("Response ID cannot be null or empty");
         }
+        ResponseEntity existing = responseDao.getById(id);
+        if (existing != null) {
+            respondedQuestionIds.remove(existing.getQuestionId());
+        }
         responseDao.deleteById(id);
     }
 
@@ -147,11 +186,13 @@ public class ResponseRepositoryImpl implements ResponseRepository {
         if (questionId == null || questionId.trim().isEmpty()) {
             throw new IllegalArgumentException("Question ID cannot be null or empty");
         }
+        respondedQuestionIds.remove(questionId);
         responseDao.deleteByQuestionId(questionId);
     }
 
     @Override
     public void deleteAllResponses() {
+        respondedQuestionIds.clear();
         responseDao.deleteAll();
     }
 

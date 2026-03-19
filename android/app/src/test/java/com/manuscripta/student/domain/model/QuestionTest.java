@@ -23,7 +23,8 @@ public class QuestionTest {
                 "What is the question?",
                 QuestionType.MULTIPLE_CHOICE,
                 "[\"A\",\"B\",\"C\",\"D\"]",
-                "B"
+                "B",
+                null
         );
     }
 
@@ -47,7 +48,8 @@ public class QuestionTest {
                 "Write an essay",
                 QuestionType.WRITTEN_ANSWER,
                 "",
-                ""
+                "",
+                null
         );
         assertEquals("", q.getOptions());
         assertEquals("", q.getCorrectAnswer());
@@ -63,7 +65,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question id cannot be null or empty", exception.getMessage());
@@ -79,7 +82,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question id cannot be null or empty", exception.getMessage());
@@ -95,7 +99,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question id cannot be null or empty", exception.getMessage());
@@ -111,7 +116,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question materialId cannot be null or empty", exception.getMessage());
@@ -127,7 +133,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question materialId cannot be null or empty", exception.getMessage());
@@ -143,7 +150,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question materialId cannot be null or empty", exception.getMessage());
@@ -159,7 +167,8 @@ public class QuestionTest {
                         null,
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question questionText cannot be null or empty", exception.getMessage());
@@ -175,7 +184,8 @@ public class QuestionTest {
                         "",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question questionText cannot be null or empty", exception.getMessage());
@@ -191,7 +201,8 @@ public class QuestionTest {
                         "   ",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question questionText cannot be null or empty", exception.getMessage());
@@ -207,7 +218,8 @@ public class QuestionTest {
                         "Question?",
                         null,
                         "[]",
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question questionType cannot be null", exception.getMessage());
@@ -223,7 +235,8 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         null,
-                        "A"
+                        "A",
+                        null
                 )
         );
         assertEquals("Question options cannot be null", exception.getMessage());
@@ -239,6 +252,7 @@ public class QuestionTest {
                         "Question?",
                         QuestionType.MULTIPLE_CHOICE,
                         "[]",
+                        null,
                         null
                 )
         );

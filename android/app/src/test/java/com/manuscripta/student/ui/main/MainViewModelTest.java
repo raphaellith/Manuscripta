@@ -21,6 +21,7 @@ import com.manuscripta.student.data.repository.ConfigRepository;
 import com.manuscripta.student.data.repository.DeviceStatusRepository;
 import com.manuscripta.student.data.repository.FeedbackRepository;
 import com.manuscripta.student.data.repository.MaterialRepository;
+import com.manuscripta.student.data.repository.ResponseRepository;
 import com.manuscripta.student.data.repository.SessionRepository;
 import com.manuscripta.student.domain.model.Configuration;
 import com.manuscripta.student.domain.model.Material;
@@ -70,6 +71,9 @@ public class MainViewModelTest {
     @Mock
     private FeedbackRepository mockFeedbackRepository;
 
+    @Mock
+    private ResponseRepository mockResponseRepository;
+
     private MutableLiveData<List<Material>> materialsLiveData;
     private MutableLiveData<com.manuscripta.student.domain.model.DeviceStatus> deviceStatusLiveData;
     private MutableLiveData<Configuration> configLiveData;
@@ -96,7 +100,7 @@ public class MainViewModelTest {
                 mockMaterialRepository, mockQuestionDao,
                 mockConfigRepository, mockConnectionManager,
                 mockSessionRepository, mockDeviceStatusRepository,
-                mockFeedbackRepository);
+                mockFeedbackRepository, mockResponseRepository);
     }
 
     @Test
@@ -241,9 +245,10 @@ public class MainViewModelTest {
         Thread.sleep(200);
 
         List<Question> worksheetQuestions = viewModel.getWorksheetQuestions();
-        assertEquals(2, worksheetQuestions.size());
-        assertEquals("q-2", worksheetQuestions.get(0).getId());
-        assertEquals("q-3", worksheetQuestions.get(1).getId());
+        assertEquals(3, worksheetQuestions.size());
+        assertEquals("q-1", worksheetQuestions.get(0).getId());
+        assertEquals("q-2", worksheetQuestions.get(1).getId());
+        assertEquals("q-3", worksheetQuestions.get(2).getId());
     }
 
     @Test
@@ -402,6 +407,6 @@ public class MainViewModelTest {
     private QuestionEntity createQuestionEntity(String id, String materialId,
                                                 QuestionType type) {
         return new QuestionEntity(id, materialId, "Question text?",
-                type, "[\"A\",\"B\",\"C\"]", "A");
+                type, "[\"A\",\"B\",\"C\"]", "A", null);
     }
 }

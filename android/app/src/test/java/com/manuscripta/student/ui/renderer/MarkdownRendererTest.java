@@ -410,7 +410,7 @@ public class MarkdownRendererTest {
         Question question = new Question(
                 "q1", "mat-1", "What is 2+2?",
                 QuestionType.MULTIPLE_CHOICE,
-                "[\"3\",\"4\",\"5\"]", "B");
+                "[\"3\",\"4\",\"5\"]", "B", null);
         Map<String, Question> questions = new HashMap<>();
         questions.put("q1", question);
 
@@ -479,7 +479,7 @@ public class MarkdownRendererTest {
     public void testRenderSegment_questionEmbed_found_rendersQuestion() {
         Question question = new Question(
                 "q1", "mat-1", "What?",
-                QuestionType.WRITTEN_ANSWER, "", "answer");
+                QuestionType.WRITTEN_ANSWER, "", "answer", null);
         Map<String, Question> questions = new HashMap<>();
         questions.put("q1", question);
 
