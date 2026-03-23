@@ -25,7 +25,7 @@ Manuscripta is an accessible educational platform that combines AI-powered e-lea
 
 ### The Problem
 
-For years, schools have been integrating digital devices into classrooms, offering students AI-assisted learning paths tailored to their individual needs. Unfortunately, full-colour screens designed to capture attention aren't really what teachers are looking for—especially in Special Educational Needs environments where minimising distractions and overstimulation is paramount.
+For years, schools have been integrating digital devices into classrooms, offering students AI-assisted learning paths tailored to their individual needs. Unfortunately, full-colour screens designed to capture attention aren't really what teachers are looking for, especially in Special Educational Needs environments where minimising distractions and overstimulation is paramount.
 
 While this issue can be partially addressed by using e-ink displays like Remarkable and AIPaper, these systems fail to keep teachers in the loop.
 
