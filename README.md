@@ -66,7 +66,7 @@ Manuscripta employs a client-server architecture with the Windows teacher applic
                     ┌─────────────────────────────────────────┐
                     │         Teacher's Windows PC            │
                     │  ┌─────────────────────────────────┐    │
-                    │  │   GenAI Models (Granite/OpenVINO)│    │
+                    │  │ GenAI Models (Granite/OpenVINO) │    │
                     │  └─────────────────────────────────┘    │
                     │  ┌─────────────────────────────────┐    │
                     │  │   Lesson Library & Dashboard    │    │
