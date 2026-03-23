@@ -67,7 +67,7 @@ Manuscripta employs a client-server architecture with the Windows teacher applic
                     ┌─────────────────────────────────────────┐
                     │         Teacher's Windows PC            │
                     │  ┌─────────────────────────────────┐    │
-                    │  │   GenAI (Ollama: Qwen3 / Granite)│    │
+                    │  │ GenAI (Ollama: Qwen3 / Granite) │    │
                     │  └─────────────────────────────────┘    │
                     │  ┌─────────────────────────────────┐    │
                     │  │   Lesson Library & Dashboard    │    │
