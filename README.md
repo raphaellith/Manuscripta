@@ -33,7 +33,13 @@ While this issue can be partially addressed by using e-ink displays like Remarka
 
 To give classrooms the best of both worlds, Manuscripta consists of two interdependent components: a portal running on the teacher's Windows laptop and an Android app running on each student's e-ink display.
 
-The portal allows teachers to create and manage custom lesson materials, empowered by privacy-maintaining generative AI tools. When a material is deployed, it's sent to students' individual e-ink displays where they can view and interact with their classwork with minimal audiovisual stimuli.
+The portal allows teachers to create and manage custom lesson materials, empowered by privacy-maintaining generative AI tools. When the teacher deploys a material, that material will be immediately transmitted to each student tablet, where our Android application presents students with an interactive and minimalist user interface. Here, students will be prompted to read through the provided text and answer questions accordingly. Question types range from multiple-choice questions to written responses, enabling students to test both their passive and active recall.
+
+Meanwhile, the teacher portal provides an overview of each tablet’s individual status, including whether each student is on task or requesting help, or if their tablets are idle or disconnected. All of this will be visualised and summarised in one comprehensive dashboard which also provides the option to lock individual tablets remotely.
+
+Furthermore, responses submitted by students will be collected for the teacher in real time, with the option to provide either AI-assisted or manual feedback and marking.
+
+In addition to running our native Android application on devices like AIPaper, teachers also have the option to directly transmit materials to reMarkable and Kindle tablets in the form of PDF documents, as these devices do not allow custom Android applications. This broadens our platform's compatibility, enabling schools that have already invested in reMarkable or Kindle hardware to participate without replacing existing devices.
 
 ## Key Features
 
