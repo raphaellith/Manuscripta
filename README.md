@@ -53,7 +53,7 @@ In addition to running our native Android application on devices like AIPaper, t
 - **Material Deployment** — Deploy materials to individual or multiple devices simultaneously, with deployment progress indicators and acknowledgement tracking. Differentiated deployment: send different materials to different device groups in one action
 - **Remote Device Control** — Lock/unlock screens, refresh device configuration, and push per-device settings (text size, feedback style, mascot selection) from a central interface
 - **Differentiated Instruction** — Deploy different materials to specific groups of students simultaneously. Reading age and actual age parameters shape AI content generation, so teachers can produce multiple difficulty variants of the same topic at edit time
-- **Responses & Feedback** — Collect student responses to worksheets and polls with class-level and per-device views. Multiple-choice and exact-match written answers are auto-marked on submission. For open-ended written answers, teachers create mark schemes (manually or via AI generation) that drive AI-powered auto-marking. AI-generated feedback enters a queue, is produced in the background, and is held as provisional until the teacher reviews, edits, and explicitly approves it for delivery. Failed deliveries can be retried from the dashboard
+- **Responses & Feedback** — Collect student responses to worksheets and polls with class-level and per-device views. Multiple-choice and exact-match written answers are auto-marked on submission. For open-ended written answers, teachers create mark schemes (manually or via AI generation) that drive AI-powered auto-marking. AI-generated feedback enters a queue, is produced in the background, and is held as provisional until the teacher reviews, edits and explicitly approves it for delivery. Failed deliveries can be retried from the dashboard
 
 ### For Students (Android E-Ink Application)
 
@@ -114,7 +114,7 @@ Each paired Android device sends a TCP heartbeat every 3 seconds containing its 
 **Teacher Application (Windows)**
 - Platform: Windows (.NET 10.0, ASP.NET Core)
 - Frontend: Electron with React, TypeScript, and TailwindCSS
-- Editor: TipTap rich text editor with KaTeX, react-pdf, Turndown, and Marked
+- Editor: TipTap rich text editor with KaTeX, react-pdf, Turndown and Marked
 - AI Runtime: Ollama (local inference server)
   - Primary model: Qwen3 8B (material generation, content modification, feedback generation)
   - Fallback model: IBM Granite 4.0 (used when primary model exhausts memory)
@@ -130,7 +130,7 @@ Each paired Android device sends a TCP heartbeat every 3 seconds containing its 
 - Architecture: MVVM with Clean Architecture
 - Local Storage: Room Database
 - Networking: Retrofit + OkHttp (HTTP), native Java sockets (TCP/UDP)
-- Markdown Rendering: Markwon (with tables, HTML, inline-parser, and LaTeX extensions)
+- Markdown Rendering: Markwon (with tables, HTML, inline-parser and LaTeX extensions)
 - Dependency Injection: Hilt
 - Testing: JUnit 4, Mockito, Robolectric, Espresso
 - Code Quality: Checkstyle, JaCoCo (90% minimum coverage)
@@ -158,7 +158,7 @@ Manuscripta/
 │   │   │   ├── data/                 # Room DB, entities, repositories
 │   │   │   ├── di/                   # Hilt dependency injection modules
 │   │   │   ├── domain/               # Domain models and mappers
-│   │   │   ├── network/              # HTTP (Retrofit), TCP, and UDP clients
+│   │   │   ├── network/              # HTTP (Retrofit), TCP and UDP clients
 │   │   │   │   ├── dto/              # Network data transfer objects
 │   │   │   │   ├── interceptor/      # OkHttp interceptors
 │   │   │   │   ├── tcp/              # TCP socket, heartbeat, pairing, hand-raise
