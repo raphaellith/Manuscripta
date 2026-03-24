@@ -91,16 +91,7 @@ namespace Main.Services.RuntimeDependencies
 
         private string BuildRmapiDownloadUrl()
         {
-            var releaseSource = _providerConfigurationResolver
-                .GetRequiredField("RMAPI_PROVIDER_CONFIG", "RmapiReleaseSource")
-                .TrimEnd('/');
-
-            if (releaseSource.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                return releaseSource;
-            }
-
-            return $"{releaseSource}/download/{RmapiService.RmapiReleaseVersion}/rmapi-win64.zip";
+            return RmapiService.BuildRmapiDownloadUrl(_providerConfigurationResolver);
         }
     }
 }

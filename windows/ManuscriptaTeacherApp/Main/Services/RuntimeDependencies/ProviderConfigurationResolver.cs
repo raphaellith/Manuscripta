@@ -19,7 +19,7 @@ public class ProviderConfigurationResolver : IProviderConfigurationResolver
     private readonly ILogger<ProviderConfigurationResolver> _logger;
     private readonly object _sync = new();
 
-    private bool _initialized;
+    private volatile bool _initialized;
     private Dictionary<string, string> _runtimeValues = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string> _deploymentOverrides = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
@@ -125,11 +125,32 @@ public class ProviderConfigurationResolver : IProviderConfigurationResolver
 
     private Dictionary<string, string> LoadDefaults()
     {
-        var defaultsPath = Path.Combine(AppContext.BaseDirectory, DefaultsFileName);
-        if (!File.Exists(defaultsPath))
+        var defaultsPath = GetDefaultsFilePath();
+
+        if (defaultsPath is null)
         {
-            throw new InvalidOperationException(
-                $"Bundled provider defaults artifact not found at '{defaultsPath}'.");
+            // Probe multiple locations to support different host setups (publish, dev, tests).
+            var candidatePaths = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, DefaultsFileName),
+                Path.Combine(Directory.GetCurrentDirectory(), DefaultsFileName)
+            };
+
+            foreach (var candidate in candidatePaths)
+            {
+                if (File.Exists(candidate))
+                {
+                    defaultsPath = candidate;
+                    break;
+                }
+            }
+
+            if (defaultsPath is null)
+            {
+                throw new InvalidOperationException(
+                    $"Bundled provider defaults artifact '{DefaultsFileName}' was not found in any of the probed " +
+                    $"locations: '{string.Join("', '", candidatePaths)}'.");
+            }
         }
 
         using var doc = JsonDocument.Parse(File.ReadAllText(defaultsPath));
@@ -155,6 +176,13 @@ public class ProviderConfigurationResolver : IProviderConfigurationResolver
 
         return result;
     }
+
+    /// <summary>
+    /// Returns the path to the bundled provider defaults JSON file, or <c>null</c> to
+    /// trigger automatic path probing (AppContext.BaseDirectory and CWD).
+    /// Overridable for testing purposes.
+    /// </summary>
+    protected virtual string? GetDefaultsFilePath() => null;
 
     private Dictionary<string, string> LoadDeploymentOverrides()
     {
@@ -184,29 +212,38 @@ public class ProviderConfigurationResolver : IProviderConfigurationResolver
             File.WriteAllText(runtimeFilePath, "{\n  \"ProviderConfigurations\": {}\n}\n");
         }
 
-        using var doc = JsonDocument.Parse(File.ReadAllText(runtimeFilePath));
-        if (!doc.RootElement.TryGetProperty("ProviderConfigurations", out var providerConfigurations)
-            || providerConfigurations.ValueKind != JsonValueKind.Object)
+        try
         {
-            _logger.LogWarning("Runtime provider configuration file is malformed. Reinitializing: {Path}", runtimeFilePath);
+            using var doc = JsonDocument.Parse(File.ReadAllText(runtimeFilePath));
+            if (!doc.RootElement.TryGetProperty("ProviderConfigurations", out var providerConfigurations)
+                || providerConfigurations.ValueKind != JsonValueKind.Object)
+            {
+                _logger.LogWarning("Runtime provider configuration file is malformed. Reinitializing: {Path}", runtimeFilePath);
+                File.WriteAllText(runtimeFilePath, "{\n  \"ProviderConfigurations\": {}\n}\n");
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in providerConfigurations.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.String)
+                {
+                    var value = property.Value.GetString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        result[property.Name] = value;
+                    }
+                }
+            }
+
+            return result;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Runtime provider configuration file contains invalid JSON. Reinitializing: {Path}", runtimeFilePath);
             File.WriteAllText(runtimeFilePath, "{\n  \"ProviderConfigurations\": {}\n}\n");
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
-
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in providerConfigurations.EnumerateObject())
-        {
-            if (property.Value.ValueKind == JsonValueKind.String)
-            {
-                var value = property.Value.GetString();
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    result[property.Name] = value;
-                }
-            }
-        }
-
-        return result;
     }
 
     private void PersistResolvedDefaultsToRuntimeSource()
@@ -246,7 +283,11 @@ public class ProviderConfigurationResolver : IProviderConfigurationResolver
         _logger.LogInformation("Persisted default provider configuration values to runtime source: {Path}", runtimeFilePath);
     }
 
-    private static string GetRuntimeFilePath()
+    /// <summary>
+    /// Returns the path to the runtime provider configuration file.
+    /// Overridable for testing purposes.
+    /// </summary>
+    protected virtual string GetRuntimeFilePath()
     {
         var appDataRoot = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appDataRoot, RuntimeDirectoryName, RuntimeConfigSubdirectory, RuntimeConfigFileName);

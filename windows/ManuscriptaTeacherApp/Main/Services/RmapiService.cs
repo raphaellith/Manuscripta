@@ -342,12 +342,23 @@ public class RmapiService : IRmapiService
 
     private string BuildRmapiDownloadUrl()
     {
-        if (_providerConfigurationResolver == null)
+        return BuildRmapiDownloadUrl(_providerConfigurationResolver);
+    }
+
+    /// <summary>
+    /// Builds the rmapi download URL from the given provider configuration resolver.
+    /// Falls back to the canonical GitHub releases URL when no resolver is provided.
+    /// </summary>
+    /// <param name="providerConfigurationResolver">The resolver to use, or <c>null</c> to use the default URL.</param>
+    /// <returns>The rmapi download URL.</returns>
+    public static string BuildRmapiDownloadUrl(IProviderConfigurationResolver? providerConfigurationResolver)
+    {
+        if (providerConfigurationResolver == null)
         {
             return $"https://github.com/ddvk/rmapi/releases/download/{RmapiReleaseVersion}/rmapi-win64.zip";
         }
 
-        var releaseSource = _providerConfigurationResolver
+        var releaseSource = providerConfigurationResolver
             .GetRequiredField("RMAPI_PROVIDER_CONFIG", "RmapiReleaseSource")
             .TrimEnd('/');
 
