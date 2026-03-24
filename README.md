@@ -195,12 +195,13 @@ Manuscripta/
 
 **Android Application**
 
-```bash
-cd android
-# Requires JDK 17 — the project does not build on JDK 21+
-JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew assembleDebug
-# The debug APK is output to app/build/outputs/apk/debug/app-debug.apk
-```
+The Android app requires **JDK 17** — it does not build on JDK 21+.
+
+1. Open the `android/` directory in Android Studio (**File > Open**, then select the `android/` folder).
+2. Set the project JDK to 17: **File > Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK** and select a JDK 17 installation.
+3. Select the **release** build variant: **Build > Select Build Variant**, then set the active variant to `release`.
+4. Connect a physical Android device via USB (with USB debugging enabled) or start an emulator from the **Device Manager**.
+5. Click **Run ▶** (or **Shift+F10**) to build and deploy the release APK to the connected device/emulator.
 
 **Windows Application**
 
