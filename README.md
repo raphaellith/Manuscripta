@@ -203,6 +203,8 @@ The Android app requires **JDK 17** — it does not build on JDK 21+.
 4. Connect a physical Android device via USB (with USB debugging enabled) or start an emulator from the **Device Manager**.
 5. Click **Run ▶** (or **Shift+F10**) to build and deploy the release APK to the connected device/emulator.
 
+> **Emulator networking note:** The Android emulator runs on an isolated virtual network (10.0.2.x) that cannot receive UDP broadcast packets from the host LAN. This means UDP device discovery will always time out in the emulator. To test pairing, use a physical Android device on the same Wi-Fi network as the teacher application.
+
 **Windows Application**
 
 Refer to the Windows team documentation in the `windows/` directory for build instructions.
