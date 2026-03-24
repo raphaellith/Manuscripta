@@ -18,17 +18,21 @@ namespace Main.Services.RuntimeDependencies
     {
         private readonly ILogger<Qwen3ModelRuntimeDependencyManager> _logger;
         private readonly HttpClient _httpClient;
-        private static OllamaClientService? _ollamaClientServiceInstance;
-        private readonly object _serviceLock = new object();
+        private readonly IProviderConfigurationResolver _providerConfigurationResolver;
+        private readonly OllamaClientService _ollamaClientService;
 
         public override string DependencyId => "qwen3:8b";
 
         public Qwen3ModelRuntimeDependencyManager(
             ILogger<Qwen3ModelRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IProviderConfigurationResolver providerConfigurationResolver,
+            OllamaClientService ollamaClientService)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _providerConfigurationResolver = providerConfigurationResolver;
+            _ollamaClientService = ollamaClientService;
         }
 
         /// <summary>
@@ -57,7 +61,7 @@ namespace Main.Services.RuntimeDependencies
             try
             {
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
+                var response = await _httpClient.GetAsync(GetOllamaVersionEndpoint(), cts.Token);
                 if (response.IsSuccessStatusCode)
                 {
                     return true;
@@ -107,7 +111,7 @@ namespace Main.Services.RuntimeDependencies
                     await Task.Delay(500);
                     try
                     {
-                        var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                        var response = await _httpClient.GetAsync(GetOllamaVersionEndpoint());
                         if (response.IsSuccessStatusCode)
                         {
                             return true;
@@ -135,7 +139,7 @@ namespace Main.Services.RuntimeDependencies
         {
             try
             {
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/tags");
+                var response = await _httpClient.GetAsync(GetOllamaTagsEndpoint());
                 if (!response.IsSuccessStatusCode)
                 {
                     return false;
@@ -352,15 +356,14 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
-            lock (_serviceLock)
-            {
-                if (_ollamaClientServiceInstance == null)
-                {
-                    _ollamaClientServiceInstance = new OllamaClientService();
-                }
-
-                return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);
-            }
+            return Task.FromResult<IDependencyService>(_ollamaClientService);
         }
+
+        private string GetOllamaBaseEndpoint() =>
+            _providerConfigurationResolver.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint").TrimEnd('/');
+
+        private string GetOllamaVersionEndpoint() => $"{GetOllamaBaseEndpoint()}/api/version";
+
+        private string GetOllamaTagsEndpoint() => $"{GetOllamaBaseEndpoint()}/api/tags";
     }
 }

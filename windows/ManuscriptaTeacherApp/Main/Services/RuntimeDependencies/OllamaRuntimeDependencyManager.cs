@@ -18,8 +18,8 @@ namespace Main.Services.RuntimeDependencies
     {
         private readonly ILogger<OllamaRuntimeDependencyManager> _logger;
         private readonly HttpClient _httpClient;
-        private static OllamaClientService? _ollamaClientServiceInstance;
-        private readonly object _serviceLock = new object();
+        private readonly IProviderConfigurationResolver _providerConfigurationResolver;
+        private readonly OllamaClientService _ollamaClientService;
 
         public override string DependencyId => "ollama";
 
@@ -37,14 +37,18 @@ namespace Main.Services.RuntimeDependencies
 
         public OllamaRuntimeDependencyManager(
             ILogger<OllamaRuntimeDependencyManager> logger,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IProviderConfigurationResolver providerConfigurationResolver,
+            OllamaClientService ollamaClientService)
         {
             _logger = logger;
             _httpClient = httpClient;
+            _providerConfigurationResolver = providerConfigurationResolver;
+            _ollamaClientService = ollamaClientService;
         }
 
         /// <summary>
-        /// Checks if Ollama is available by calling http://localhost:11434/api/version.
+        /// Checks if Ollama is available by calling the configured version endpoint.
         /// Per GenAISpec.md §1A(3)(a).
         /// Uses a short timeout (5 seconds) to avoid blocking the frontend if the
         /// daemon is present but unresponsive.
@@ -96,7 +100,7 @@ namespace Main.Services.RuntimeDependencies
             try
             {
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var response = await _httpClient.GetAsync("http://localhost:11434/api/version", cts.Token);
+                var response = await _httpClient.GetAsync(GetOllamaVersionEndpoint(), cts.Token);
                 return response.StatusCode == System.Net.HttpStatusCode.OK;
             }
             catch
@@ -145,7 +149,7 @@ namespace Main.Services.RuntimeDependencies
             }
 
             var zipPath = Path.Combine(binDir, "ollama-windows-amd64.zip");
-            var downloadUrl = "https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip";
+            var downloadUrl = GetOllamaDistributionSource();
 
             _logger.LogInformation("Downloading Ollama from {Url}", downloadUrl);
 
@@ -216,7 +220,7 @@ namespace Main.Services.RuntimeDependencies
             try
             {
                 // Download the checksum file
-                var checksumUrl = "https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt";
+                var checksumUrl = GetOllamaChecksumSource();
                 var checksumContent = await _httpClient.GetStringAsync(checksumUrl);
 
                 // Parse the checksum file to find the entry for ollama-windows-amd64.zip
@@ -432,15 +436,7 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
-            lock (_serviceLock)
-            {
-                if (_ollamaClientServiceInstance == null)
-                {
-                    _ollamaClientServiceInstance = new OllamaClientService();
-                }
-
-                return Task.FromResult<IDependencyService>(_ollamaClientServiceInstance);
-            }
+            return Task.FromResult<IDependencyService>(_ollamaClientService);
         }
 
         /// <summary>
@@ -475,7 +471,7 @@ namespace Main.Services.RuntimeDependencies
                 await Task.Delay(500);
                 try
                 {
-                    var response = await _httpClient.GetAsync("http://localhost:11434/api/version");
+                    var response = await _httpClient.GetAsync(GetOllamaVersionEndpoint());
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {
                         return;
@@ -489,5 +485,16 @@ namespace Main.Services.RuntimeDependencies
 
             throw new InvalidOperationException("Ollama daemon failed to start within timeout period");
         }
+
+        private string GetOllamaBaseEndpoint() =>
+            _providerConfigurationResolver.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint").TrimEnd('/');
+
+        private string GetOllamaVersionEndpoint() => $"{GetOllamaBaseEndpoint()}/api/version";
+
+        private string GetOllamaDistributionSource() =>
+            _providerConfigurationResolver.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "DistributionSource");
+
+        private string GetOllamaChecksumSource() =>
+            _providerConfigurationResolver.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ChecksumSource");
     }
 }

@@ -73,6 +73,26 @@ jobs:
             Write-Error "Backend executable not found!"
             exit 1
           }
+          $defaultsPath = "windows/ManuscriptaTeacherApp/UI/resources/backend/provider-config-defaults.json"
+          if (-not (Test-Path $defaultsPath)) {
+            Write-Error "Bundled provider defaults artifact not found: $defaultsPath"
+            exit 1
+          }
+
+          $json = Get-Content $defaultsPath -Raw | ConvertFrom-Json
+          if (-not $json.ProviderConfigurations) {
+            Write-Error "provider-config-defaults.json is missing ProviderConfigurations object"
+            exit 1
+          }
+
+          $requiredKeys = @("RMAPI_PROVIDER_CONFIG", "OLLAMA_PROVIDER_CONFIG", "CHROMA_PROVIDER_CONFIG")
+          foreach ($key in $requiredKeys) {
+            if (-not $json.ProviderConfigurations.PSObject.Properties[$key]) {
+              Write-Error "provider-config-defaults.json is missing required key: $key"
+              exit 1
+            }
+          }
+
           Write-Host "Backend published successfully"
           Get-ChildItem "windows/ManuscriptaTeacherApp/UI/resources/backend" | Select-Object Name, Length
         shell: pwsh
@@ -95,6 +115,32 @@ jobs:
         run: |
           Write-Host "=== Squirrel Installer ==="
           Get-ChildItem "windows/ManuscriptaTeacherApp/UI/out/make/squirrel.windows/x64" -ErrorAction SilentlyContinue
+
+      - name: Validate packaged provider defaults metadata
+        run: |
+          $matches = Get-ChildItem "windows/ManuscriptaTeacherApp/UI/out" -Recurse -Filter "provider-config-defaults.json" -ErrorAction SilentlyContinue
+          if (-not $matches -or $matches.Count -eq 0) {
+            Write-Error "No packaged provider-config-defaults.json found under UI/out"
+            exit 1
+          }
+
+          $foundValid = $false
+          foreach ($file in $matches) {
+            $json = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            if ($json.ProviderConfigurations -and
+                $json.ProviderConfigurations.PSObject.Properties["RMAPI_PROVIDER_CONFIG"] -and
+                $json.ProviderConfigurations.PSObject.Properties["OLLAMA_PROVIDER_CONFIG"] -and
+                $json.ProviderConfigurations.PSObject.Properties["CHROMA_PROVIDER_CONFIG"]) {
+              Write-Host "Validated packaged provider defaults at $($file.FullName)"
+              $foundValid = $true
+              break
+            }
+          }
+
+          if (-not $foundValid) {
+            Write-Error "Packaged provider defaults metadata does not contain all required keys"
+            exit 1
+          }
         shell: pwsh
 
       - name: Upload Windows Installer

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Main.Models;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,7 +18,11 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<NomicEmbedTextModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new NomicEmbedTextModelRuntimeDependencyManager(logger.Object, httpClient);
+        var manager = new NomicEmbedTextModelRuntimeDependencyManager(
+            logger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object,
+            new OllamaClientService("http://localhost:11434"));
 
         Assert.Equal("nomic-embed-text", manager.DependencyId);
     }
@@ -27,7 +32,10 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<NomicEmbedTextModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new TestableNomicEmbedTextManager(logger.Object, httpClient);
+        var manager = new TestableNomicEmbedTextManager(
+            logger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object);
 
         // act
         await manager.PublicDownload(new Progress<RuntimeDependencyProgress>());
@@ -43,8 +51,11 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
     /// </summary>
     private class TestableNomicEmbedTextManager : NomicEmbedTextModelRuntimeDependencyManager
     {
-        public TestableNomicEmbedTextManager(ILogger<NomicEmbedTextModelRuntimeDependencyManager> logger, HttpClient httpClient)
-            : base(logger, httpClient)
+        public TestableNomicEmbedTextManager(
+            ILogger<NomicEmbedTextModelRuntimeDependencyManager> logger,
+            HttpClient httpClient,
+            IProviderConfigurationResolver providerConfigurationResolver)
+            : base(logger, httpClient, providerConfigurationResolver, new OllamaClientService("http://localhost:11434"))
         {
         }
 
@@ -75,5 +86,14 @@ public class NomicEmbedTextModelRuntimeDependencyManagerTests
 
             return Process.Start(psi) ?? throw new InvalidOperationException("failed to start test process");
         }
+    }
+
+    private static Mock<IProviderConfigurationResolver> CreateProviderConfigurationResolver()
+    {
+        var resolver = new Mock<IProviderConfigurationResolver>();
+        resolver
+            .Setup(r => r.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint"))
+            .Returns("http://localhost:11434");
+        return resolver;
     }
 }

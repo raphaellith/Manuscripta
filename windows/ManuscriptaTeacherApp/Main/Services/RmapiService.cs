@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Main.Models;
+using Main.Services.RuntimeDependencies;
 
 namespace Main.Services;
 
@@ -21,6 +22,7 @@ public class RmapiService : IRmapiService
     private readonly ILogger<RmapiService> _logger;
     private readonly HttpClient _httpClient;
     private readonly string _rmapiExecutablePath;
+    private readonly IProviderConfigurationResolver? _providerConfigurationResolver;
     public const string RmapiReleaseVersion = "v0.0.32";
     private const string RmapiZipSha256 = "2b784d017ea19723bb75c90fa5500349a1599d2956404251b5631736de5ddf94";
 
@@ -45,13 +47,18 @@ public class RmapiService : IRmapiService
         "rmapi"
     );
 
-    public RmapiService(ILogger<RmapiService> logger, HttpClient httpClient, string? rmapiExecutablePath = null)
+    public RmapiService(
+        ILogger<RmapiService> logger,
+        HttpClient httpClient,
+        string? rmapiExecutablePath = null,
+        IProviderConfigurationResolver? providerConfigurationResolver = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _rmapiExecutablePath = string.IsNullOrWhiteSpace(rmapiExecutablePath)
             ? DefaultRmapiExecutablePath
             : rmapiExecutablePath;
+        _providerConfigurationResolver = providerConfigurationResolver;
     }
 
     /// <inheritdoc />
@@ -88,7 +95,7 @@ public class RmapiService : IRmapiService
             var binDir = Path.GetDirectoryName(_rmapiExecutablePath)!;
             Directory.CreateDirectory(binDir);
 
-            var downloadUrl = $"https://github.com/ddvk/rmapi/releases/download/{RmapiReleaseVersion}/rmapi-win64.zip";
+            var downloadUrl = BuildRmapiDownloadUrl();
             var tempZipPath = Path.GetTempFileName();
             var tempExtractPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
@@ -331,6 +338,25 @@ public class RmapiService : IRmapiService
     public string GetConfigPath(Guid deviceId)
     {
         return Path.Combine(RmapiConfigDirectory, $"{deviceId}.conf");
+    }
+
+    private string BuildRmapiDownloadUrl()
+    {
+        if (_providerConfigurationResolver == null)
+        {
+            return $"https://github.com/ddvk/rmapi/releases/download/{RmapiReleaseVersion}/rmapi-win64.zip";
+        }
+
+        var releaseSource = _providerConfigurationResolver
+            .GetRequiredField("RMAPI_PROVIDER_CONFIG", "RmapiReleaseSource")
+            .TrimEnd('/');
+
+        if (releaseSource.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            return releaseSource;
+        }
+
+        return $"{releaseSource}/download/{RmapiReleaseVersion}/rmapi-win64.zip";
     }
 
     /// <summary>

@@ -110,7 +110,7 @@ public class TeacherPortalHubTests
         _contentModificationService = new StubContentModificationService();
         _embeddingStatusService = new StubEmbeddingStatusService();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockOllamaClientService = new Mock<OllamaClientService>();
+        _mockOllamaClientService = new Mock<OllamaClientService>("http://localhost:11434");
         _questionExtractionService = new QuestionExtractionService(_mockQuestionService.Object);
         _feedbackQueueService = new FeedbackQueueService(
             _mockHubContext.Object,

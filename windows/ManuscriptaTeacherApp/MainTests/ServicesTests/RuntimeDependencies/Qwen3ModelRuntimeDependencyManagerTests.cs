@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Main.Models;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,8 +21,9 @@ public class Qwen3ModelRuntimeDependencyManagerTests
     {
         public TestableQwen3ModelRuntimeDependencyManager(
             ILogger<Qwen3ModelRuntimeDependencyManager> logger,
-            HttpClient httpClient)
-            : base(logger, httpClient)
+            HttpClient httpClient,
+            IProviderConfigurationResolver providerConfigurationResolver)
+            : base(logger, httpClient, providerConfigurationResolver, new OllamaClientService("http://localhost:11434"))
         {
         }
 
@@ -61,7 +63,11 @@ public class Qwen3ModelRuntimeDependencyManagerTests
         // Arrange
         var mockLogger = new Mock<ILogger<Qwen3ModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new Qwen3ModelRuntimeDependencyManager(mockLogger.Object, httpClient);
+        var manager = new Qwen3ModelRuntimeDependencyManager(
+            mockLogger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object,
+            new OllamaClientService("http://localhost:11434"));
 
         // Act
         var id = manager.DependencyId;
@@ -76,7 +82,10 @@ public class Qwen3ModelRuntimeDependencyManagerTests
         // Arrange
         var mockLogger = new Mock<ILogger<Qwen3ModelRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new TestableQwen3ModelRuntimeDependencyManager(mockLogger.Object, httpClient);
+        var manager = new TestableQwen3ModelRuntimeDependencyManager(
+            mockLogger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object);
         var progress = new Progress<RuntimeDependencyProgress>();
 
         // Act
@@ -84,5 +93,14 @@ public class Qwen3ModelRuntimeDependencyManagerTests
 
         // Assert: Process completed without exception
         Assert.True(true); // Successful completion of async download
+    }
+
+    private static Mock<IProviderConfigurationResolver> CreateProviderConfigurationResolver()
+    {
+        var resolver = new Mock<IProviderConfigurationResolver>();
+        resolver
+            .Setup(r => r.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint"))
+            .Returns("http://localhost:11434");
+        return resolver;
     }
 }

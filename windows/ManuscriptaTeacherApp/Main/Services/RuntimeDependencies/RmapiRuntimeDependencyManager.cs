@@ -8,14 +8,18 @@ namespace Main.Services.RuntimeDependencies
     public class RmapiRuntimeDependencyManager : RuntimeDependencyManagerBase
     {
         private readonly IRmapiService _rmapiService;
+        private readonly IProviderConfigurationResolver _providerConfigurationResolver;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmapiRuntimeDependencyManager"/> class.
         /// </summary>
         /// <param name="rmapiService">The underlying rmapi service to wrap.</param>
-        public RmapiRuntimeDependencyManager(IRmapiService rmapiService)
+        public RmapiRuntimeDependencyManager(
+            IRmapiService rmapiService,
+            IProviderConfigurationResolver providerConfigurationResolver)
         {
             _rmapiService = rmapiService;
+            _providerConfigurationResolver = providerConfigurationResolver;
         }
 
         /// <summary>
@@ -39,7 +43,7 @@ namespace Main.Services.RuntimeDependencies
 
         protected override async Task DownloadDependencyAsync(IProgress<RuntimeDependencyProgress> progress)
         {
-            var downloadUrl = $"https://github.com/ddvk/rmapi/releases/download/{RmapiService.RmapiReleaseVersion}/rmapi-win64.zip";
+            var downloadUrl = BuildRmapiDownloadUrl();
             _tempZipPath = System.IO.Path.GetTempFileName();
             _tempExtractPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName());
             
@@ -83,6 +87,20 @@ namespace Main.Services.RuntimeDependencies
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
             return Task.FromResult<IDependencyService>(_rmapiService);
+        }
+
+        private string BuildRmapiDownloadUrl()
+        {
+            var releaseSource = _providerConfigurationResolver
+                .GetRequiredField("RMAPI_PROVIDER_CONFIG", "RmapiReleaseSource")
+                .TrimEnd('/');
+
+            if (releaseSource.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                return releaseSource;
+            }
+
+            return $"{releaseSource}/download/{RmapiService.RmapiReleaseVersion}/rmapi-win64.zip";
         }
     }
 }

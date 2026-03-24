@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,7 +15,10 @@ public class ChromaRuntimeDependencyManagerTests
 	public void DependencyId_ReturnsChroma()
 	{
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
-		var manager = new ChromaRuntimeDependencyManager(logger.Object);
+		var manager = new ChromaRuntimeDependencyManager(
+			logger.Object,
+			CreateProviderConfigurationResolver().Object,
+			new ChromaClientService());
 
 		Assert.Equal("chroma", manager.DependencyId);
 	}
@@ -33,7 +37,11 @@ public class ChromaRuntimeDependencyManagerTests
 
 		try
 		{
-			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath, chromaApiHealthy: true);
+			var manager = new TestableChromaRuntimeDependencyManager(
+				logger.Object,
+				CreateProviderConfigurationResolver().Object,
+				executablePath,
+				chromaApiHealthy: true);
 
 			var result = await manager.CheckDependencyAvailabilityAsync();
 
@@ -53,7 +61,11 @@ public class ChromaRuntimeDependencyManagerTests
 	{
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var missingPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "chroma.exe");
-		var manager = new TestableChromaRuntimeDependencyManager(logger.Object, missingPath, chromaApiHealthy: true);
+		var manager = new TestableChromaRuntimeDependencyManager(
+			logger.Object,
+			CreateProviderConfigurationResolver().Object,
+			missingPath,
+			chromaApiHealthy: true);
 
 		var result = await manager.CheckDependencyAvailabilityAsync();
 
@@ -70,7 +82,11 @@ public class ChromaRuntimeDependencyManagerTests
 
 		try
 		{
-			var manager = new TestableChromaRuntimeDependencyManager(logger.Object, executablePath, chromaApiHealthy: false);
+			var manager = new TestableChromaRuntimeDependencyManager(
+				logger.Object,
+				CreateProviderConfigurationResolver().Object,
+				executablePath,
+				chromaApiHealthy: false);
 			var result = await manager.CheckDependencyAvailabilityAsync();
 			Assert.True(result);
 		}
@@ -129,7 +145,10 @@ public class ChromaRuntimeDependencyManagerTests
 	{
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var manager = new TestableChromaRuntimeDependencyManager(
-			logger.Object, "chroma.exe", chromaApiHealthy: true);
+			logger.Object,
+			CreateProviderConfigurationResolver().Object,
+			"chroma.exe",
+			chromaApiHealthy: true);
 
 		await manager.EnsureRunningAsync();
 
@@ -141,7 +160,10 @@ public class ChromaRuntimeDependencyManagerTests
 	{
 		var logger = new Mock<ILogger<ChromaRuntimeDependencyManager>>();
 		var manager = new TestableChromaRuntimeDependencyManager(
-			logger.Object, "chroma.exe", chromaApiHealthy: false);
+			logger.Object,
+			CreateProviderConfigurationResolver().Object,
+			"chroma.exe",
+			chromaApiHealthy: false);
 
 		await manager.EnsureRunningAsync();
 
@@ -160,9 +182,10 @@ public class ChromaRuntimeDependencyManagerTests
 
 		public TestableChromaRuntimeDependencyManager(
 			ILogger<ChromaRuntimeDependencyManager> logger,
+			IProviderConfigurationResolver providerConfigurationResolver,
 			string resolvedExecutablePath,
 			bool chromaApiHealthy)
-			: base(logger)
+			: base(logger, providerConfigurationResolver, new ChromaClientService())
 		{
 			_resolvedExecutablePath = resolvedExecutablePath;
 			_chromaApiHealthy = chromaApiHealthy;
@@ -183,5 +206,14 @@ public class ChromaRuntimeDependencyManagerTests
 			StartServerCallCount++;
 			return Task.CompletedTask;
 		}
+	}
+
+	private static Mock<IProviderConfigurationResolver> CreateProviderConfigurationResolver()
+	{
+		var resolver = new Mock<IProviderConfigurationResolver>();
+		resolver
+			.Setup(r => r.GetRequiredField("CHROMA_PROVIDER_CONFIG", "InstallerScriptSource"))
+			.Returns("https://example.invalid/install.ps1");
+		return resolver;
 	}
 }

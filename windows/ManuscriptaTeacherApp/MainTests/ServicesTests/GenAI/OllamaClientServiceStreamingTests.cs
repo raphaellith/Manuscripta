@@ -218,6 +218,7 @@ public class OllamaClientServiceStreamingTests
         private readonly HttpClient _testHttpClient;
 
         public TestableOllamaClientService(HttpClient httpClient)
+            : base("http://localhost:11434")
         {
             _testHttpClient = httpClient;
         }

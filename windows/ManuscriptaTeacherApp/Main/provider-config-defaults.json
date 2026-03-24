@@ -1,0 +1,7 @@
+{
+  "ProviderConfigurations": {
+    "RMAPI_PROVIDER_CONFIG": "{\"RmapiReleaseSource\":\"https://github.com/ddvk/rmapi/releases\",\"RemarkablePairingPortalUrl\":\"https://my.remarkable.com/device/desktop/connect\"}",
+    "OLLAMA_PROVIDER_CONFIG": "{\"ApiBaseEndpoint\":\"http://localhost:11434\",\"DistributionSource\":\"https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip\",\"ChecksumSource\":\"https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt\"}",
+    "CHROMA_PROVIDER_CONFIG": "{\"InstallerScriptSource\":\"https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1\"}"
+  }
+}
