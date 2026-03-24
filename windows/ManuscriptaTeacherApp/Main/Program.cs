@@ -133,10 +133,11 @@ builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 builder.Services.AddScoped<Main.Services.Repositories.IExternalDeviceRepository, Main.Services.Repositories.EfExternalDeviceRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IEmailCredentialRepository, Main.Services.Repositories.EfEmailCredentialRepository>();
 builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IProviderConfigurationResolver, Main.Services.RuntimeDependencies.ProviderConfigurationResolver>();
+builder.Services.AddHttpClient("rmapi");
 builder.Services.AddSingleton<IRmapiService>(sp =>
     new RmapiService(
         sp.GetRequiredService<ILogger<RmapiService>>(),
-        new HttpClient(),
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient("rmapi"),
         providerConfigurationResolver: sp.GetRequiredService<Main.Services.RuntimeDependencies.IProviderConfigurationResolver>()));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
