@@ -33,7 +33,7 @@ public class OutputValidationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var content = "# Title\nSimple content without markers.";
 
@@ -95,7 +95,7 @@ public class OutputValidationServiceTests
         fileService.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns<string>(path => fileExists.Any(id => path.Contains(id.ToString(), StringComparison.Ordinal)));
 
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var content = $@"#### Too Deep\n\n" +
                       $"!!! question id=\"{validQuestionId}\"\n" +
@@ -133,7 +133,7 @@ public class OutputValidationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var content = "# Worksheet\n\n" +
                       "!!! question-draft type=\"MULTIPLE_CHOICE\"\n" +
@@ -200,7 +200,7 @@ public class OutputValidationServiceTests
         await dbContext.SaveChangesAsync();
 
         var fileService = new Mock<IFileService>();
-        var service = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var service = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var content = $"!!! question id=\"{validQuestionId}\"\n\n" +
                       "!!! question-draft type=\"MULTIPLE_CHOICE\"\n" +

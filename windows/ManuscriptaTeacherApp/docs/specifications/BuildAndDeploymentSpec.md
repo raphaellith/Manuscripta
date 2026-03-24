@@ -63,7 +63,9 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 
     (b) all required .NET runtime libraries and dependencies;
 
-    (c) `appsettings.json`, the backend configuration file.
+    (c) `appsettings.json`, the backend configuration file;
+
+    (d) bundled provider-configuration defaults metadata for runtime dependencies.
 
 (4) **Exclusions**
 
@@ -121,7 +123,9 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 
     (a) the backend executable exists at `resources/backend/Manuscripta.Main.exe`;
 
-    (b) the installer exists in the Squirrel output directory.
+    (b) the installer exists in the Squirrel output directory;
+
+    (c) bundled provider-configuration defaults metadata is present in packaged resources and contains required keys for supported runtime dependencies.
 
 
 ## Section 6 — GitHub Actions Workflow
@@ -162,7 +166,9 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 
     (g) upload the generated installer as a workflow artifact with 90-day retention;
 
-    (h) if triggered by a release event, attach the installer to the GitHub release.
+    (h) if triggered by a release event, attach the installer to the GitHub release;
+
+    (i) validate that bundled provider-configuration defaults metadata includes all required keys before publishing artifacts.
 
 (5) **Workflow Inputs**
 
@@ -203,6 +209,27 @@ For runtime behaviour regarding the frontend's responsibility to start and manag
 (3) **Version Override**
 
     The GitHub Actions workflow shall permit a version override via `workflow_dispatch` input for release candidates, hotfixes, and pre-release versioning.
+
+
+## Section 9 - Runtime Provider Configuration Initialisation and Default Loading
+
+(1) Build outputs shall include a bundled provider-configuration defaults artifact for runtime dependencies.
+
+(2) During first-run initialisation, the backend shall initialise the runtime configuration source at the location defined in Windows App Structure Specification Section 2C if it does not already exist.
+
+(3) Default loading precedence for each provider configuration key shall be:
+
+    (a) value resolved from the runtime configuration source (highest precedence);
+
+    (b) bundled deployment override value, if provided;
+
+    (c) specification default value from the relevant dependency specification appendix (lowest precedence).
+
+(4) If a required provider configuration key cannot be resolved from (3)(a) or (3)(b), the backend shall load the default value from (3)(c), persist it into the runtime configuration source, and continue.
+
+(5) If neither runtime/deployment values nor specification defaults are available for a required provider configuration key, dependency manager initialisation shall fail fast in accordance with Backend Runtime Dependency Management Specification Appendix A(6).
+
+(6) Build verification shall assert that all required provider configuration keys for bundled runtime dependencies have corresponding default entries in bundled defaults metadata.
 
 
 ## Appendix 1 — Local Development Workflow

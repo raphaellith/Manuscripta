@@ -20,17 +20,21 @@ namespace Main.Services.RuntimeDependencies
     public class ChromaRuntimeDependencyManager : RuntimeDependencyManagerBase
     {
         private readonly ILogger<ChromaRuntimeDependencyManager> _logger;
+        private readonly IProviderConfigurationResolver _providerConfigurationResolver;
+        private readonly ChromaClientService _chromaClientService;
         private Process? _chromaServerProcess;
         private string? _installedChromaPath;
-        private static ChromaClientService? _chromaClientServiceInstance;
-        private readonly object _serviceLock = new object();
 
         public override string DependencyId => "chroma";
 
         public ChromaRuntimeDependencyManager(
-            ILogger<ChromaRuntimeDependencyManager> logger)
+            ILogger<ChromaRuntimeDependencyManager> logger,
+            IProviderConfigurationResolver providerConfigurationResolver,
+            ChromaClientService chromaClientService)
         {
             _logger = logger;
+            _providerConfigurationResolver = providerConfigurationResolver;
+            _chromaClientService = chromaClientService;
         }
 
         /// <summary>
@@ -89,7 +93,10 @@ namespace Main.Services.RuntimeDependencies
                 // to prevent Move-Item conflicts in the install script
                 CleanupExistingChromaInstallations();
 
-                var psScript = @"iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))";
+                var installerScriptSource = _providerConfigurationResolver
+                    .GetRequiredField("CHROMA_PROVIDER_CONFIG", "InstallerScriptSource")
+                    .Replace("'", "''");
+                var psScript = $@"iex ((New-Object System.Net.WebClient).DownloadString('{installerScriptSource}'))";
 
                 var processStartInfo = new ProcessStartInfo
                 {
@@ -702,15 +709,7 @@ namespace Main.Services.RuntimeDependencies
         /// </summary>
         protected override Task<IDependencyService> ProvideDependencyServiceAsync()
         {
-            lock (_serviceLock)
-            {
-                if (_chromaClientServiceInstance == null)
-                {
-                    _chromaClientServiceInstance = new ChromaClientService();
-                }
-
-                return Task.FromResult<IDependencyService>(_chromaClientServiceInstance);
-            }
+            return Task.FromResult<IDependencyService>(_chromaClientService);
         }
 
         /// <summary>

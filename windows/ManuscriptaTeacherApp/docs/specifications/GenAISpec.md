@@ -49,13 +49,21 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The `OllamaRuntimeDependencyManager` class shall have the unique identifier `"ollama"`.
 
+(2A) For the purposes of Backend Runtime Dependency Management Specification Appendix A —
+
+    (a) the `OllamaRuntimeDependencyManager` shall define the provider configuration entry key `OLLAMA_PROVIDER_CONFIG`;
+
+    (b) the value resolved from `OLLAMA_PROVIDER_CONFIG` shall contain the provider-controlled values required by this specification, including Ollama API base endpoint, Ollama distribution source, and Ollama checksum source, and shall be resolved from the runtime configuration source defined in Windows App Structure Specification Section 2C; and
+
+    (c) the current effective hard-coded values are documented in Appendix A of this specification.
+
 (3) The `OllamaRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Ollama by calling `http://localhost:11434/api/version`. It shall return true if the HTTP request succeeds with a 200 status code, and false if the request fails.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Ollama by calling the version endpoint resolved from `OLLAMA_PROVIDER_CONFIG`. It shall return true if the HTTP request succeeds with a 200 status code, and false if the request fails.
 
-    (b) `Task DownloadDependencyAsync()` shall download the standalone Windows release from `https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip` and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-windows-amd64.zip`. It shall also ensure that the `ManuscriptaTeacherApp` directory is included in the PATH environmental variable.
+    (b) `Task DownloadDependencyAsync()` shall download the standalone Windows release from the distribution source resolved from `OLLAMA_PROVIDER_CONFIG` and store it as `%AppData%\ManuscriptaTeacherApp\bin\ollama-windows-amd64.zip`. It shall also ensure that the `ManuscriptaTeacherApp` directory is included in the PATH environmental variable.
 
-    (c) `Task VerifyDownloadAsync()` shall verify the downloaded ZIP file by comparing its SHA256 hash output against the published checksum. The checksum shall be retrieved from `https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt`, in which the checksum precedes the file name `./ollama-windows-amd64.zip`.
+    (c) `Task VerifyDownloadAsync()` shall verify the downloaded ZIP file by comparing its SHA256 hash output against the published checksum. The checksum shall be retrieved from the checksum source resolved from `OLLAMA_PROVIDER_CONFIG`, in which the checksum precedes the file name `./ollama-windows-amd64.zip`.
 
     (d) `Task PerformInstallDependencyAsync()` shall extract the ZIP file to `%AppData%\ManuscriptaTeacherApp\bin\ollama\`, delete the ZIP file and start `ollama serve` from the extracted directory.
 
@@ -66,7 +74,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (4) Before invoking any model, the backend shall —
 
-    (a) verify that Ollama's daemon is running by calling `http://localhost:11434`, and run `ollama serve` if it is not.
+    (a) verify that Ollama's daemon is running by calling the base endpoint resolved from `OLLAMA_PROVIDER_CONFIG`, and run `ollama serve` if it is not.
 
 
 ## Section 1B - Ascertaining the availability of Chroma
@@ -75,11 +83,19 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (2) The `ChromaRuntimeDependencyManager` class shall have the unique identifier `"chroma"`.
 
+(2A) For the purposes of Backend Runtime Dependency Management Specification Appendix A —
+
+    (a) the `ChromaRuntimeDependencyManager` shall define the provider configuration entry key `CHROMA_PROVIDER_CONFIG`;
+
+    (b) the value resolved from `CHROMA_PROVIDER_CONFIG` shall contain provider-controlled values required by this specification, including the Chroma installer script source, and shall be resolved from the runtime configuration source defined in Windows App Structure Specification Section 2C; and
+
+    (c) the current effective hard-coded value is documented in Appendix A of this specification.
+
 (3) The `ChromaRuntimeDependencyManager` class shall implement abstract methods as follows.
 
     (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of Chroma by calling `chroma --version`.
 
-    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling `iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1'))`. The location of the installed executable shall also be added to the PATH environment variable.
+    (b) `Task DownloadDependencyAsync()` shall install Chroma globally by calling an installer script source resolved from `CHROMA_PROVIDER_CONFIG`. The location of the installed executable shall also be added to the PATH environment variable.
 
     (c) `Task VerifyDownloadAsync()` shall be implemented as a no-op. This is because Chroma has not published any checksums or other methods for verifying downloads.
 
@@ -98,7 +114,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) The `Qwen3ModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Qwen3 8B model by querying the Ollama tags endpoint resolved from `OLLAMA_PROVIDER_CONFIG` and checking if the response contains a model with name `qwen3:8b`. It shall return `true` if the model is present, and `false` otherwise.
 
     (b) `Task DownloadDependencyAsync()` shall download the Qwen3 8B model by calling `ollama pull qwen3:8b` via the command line. This operation may take significant time and download several gigabytes of data.
 
@@ -119,7 +135,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) The `GraniteModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the IBM Granite 4.0 model by querying the Ollama tags endpoint resolved from `OLLAMA_PROVIDER_CONFIG` and checking if the response contains a model with name `granite4`. It shall return `true` if the model is present, and `false` otherwise.
 
     (b) `Task DownloadDependencyAsync()` shall download the IBM Granite 4.0 model by calling `ollama pull granite4` via the command line. This operation may take significant time and download several gigabytes of data.
 
@@ -140,7 +156,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 (3) The `NomicEmbedTextModelRuntimeDependencyManager` class shall implement abstract methods as follows.
 
-    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying Ollama's API endpoint `http://localhost:11434/api/tags` and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
+    (a) `Task<Boolean> CheckDependencyAvailabilityAsync()` shall determine the availability of the Nomic Embed Text model by querying the Ollama tags endpoint resolved from `OLLAMA_PROVIDER_CONFIG` and checking if the response contains a model with name `nomic-embed-text`. It shall return `true` if the model is present, and `false` otherwise.
 
     (b) `Task DownloadDependencyAsync()` shall download the Nomic Embed Text model by calling `ollama pull nomic-embed-text` via the command line. This operation may take significant time and download data.
 
@@ -627,7 +643,7 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 
 ---
 
-## Appendix A — Configuration Constants
+## Appendix A — Configuration Constants and Current Effective Provider Configurations
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -635,11 +651,23 @@ Frontend workflows interacting with these functionalities are defined in Fronten
 | `CHUNK_OVERLAP_TOKENS` | 64 | Overlap between adjacent chunks |
 | `DEFAULT_TOP_K` | 5 | Default number of chunks to retrieve |
 | `EMBEDDING_DIMENSIONS` | 768 | Dimension of `nomic-embed-text` vectors |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `MAX_EMBEDDING_RETRIES` | 3 | Maximum automatic retry attempts for indexing |
 | `MAX_REFINEMENT_ITERATIONS` | 3 | Maximum attempts for iterative refinement |
 | `PRIMARY_MODEL` | `qwen3:8b` | Primary model for all generative tasks |
 | `FALLBACK_MODEL` | `granite4` | Fallback model if primary unavailable |
+
+### Provider Configuration Entries (Default Values)
+
+For the purposes of Backend Runtime Dependency Management Specification Appendix A, the following values are the defaults for provider-controlled fields represented by provider configuration keys.
+
+These defaults shall be used when the relevant provider configuration key is not resolved from the runtime configuration source defined in Windows App Structure Specification Section 2C.
+
+| Provider Configuration Key | Semantic Field | Default Value |
+|----------|-------|-------------|
+| `OLLAMA_PROVIDER_CONFIG` | `ApiBaseEndpoint` | `http://localhost:11434` |
+| `OLLAMA_PROVIDER_CONFIG` | `DistributionSource` | `https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip` |
+| `OLLAMA_PROVIDER_CONFIG` | `ChecksumSource` | `https://github.com/ollama/ollama/releases/latest/download/sha256sum.txt` |
+| `CHROMA_PROVIDER_CONFIG` | `InstallerScriptSource` | `https://raw.githubusercontent.com/chroma-core/chroma/main/rust/cli/install/install.ps1` |
 
 ---
 

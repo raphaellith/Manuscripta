@@ -11,12 +11,17 @@ namespace MainTests.ServicesTests.RuntimeDependencies;
 public class RmapiRuntimeDependencyManagerTests
 {
     private readonly Mock<IRmapiService> _mockRmapiService;
+    private readonly Mock<IProviderConfigurationResolver> _mockProviderConfigurationResolver;
     private readonly RmapiRuntimeDependencyManager _manager;
 
     public RmapiRuntimeDependencyManagerTests()
     {
         _mockRmapiService = new Mock<IRmapiService>();
-        _manager = new RmapiRuntimeDependencyManager(_mockRmapiService.Object);
+        _mockProviderConfigurationResolver = new Mock<IProviderConfigurationResolver>();
+        _mockProviderConfigurationResolver
+            .Setup(r => r.GetRequiredField("RMAPI_PROVIDER_CONFIG", "RmapiReleaseSource"))
+            .Returns("https://example.invalid/rmapi");
+        _manager = new RmapiRuntimeDependencyManager(_mockRmapiService.Object, _mockProviderConfigurationResolver.Object);
     }
 
     [Fact]

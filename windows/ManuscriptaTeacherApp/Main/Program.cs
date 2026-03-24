@@ -132,17 +132,26 @@ builder.Services.AddScoped<IMaterialPdfService, MaterialPdfService>();
 // Register external device and email services - NetworkingAPISpec §1(1)(n) and §1(1)(o)
 builder.Services.AddScoped<Main.Services.Repositories.IExternalDeviceRepository, Main.Services.Repositories.EfExternalDeviceRepository>();
 builder.Services.AddScoped<Main.Services.Repositories.IEmailCredentialRepository, Main.Services.Repositories.EfEmailCredentialRepository>();
+builder.Services.AddSingleton<Main.Services.RuntimeDependencies.IProviderConfigurationResolver, Main.Services.RuntimeDependencies.ProviderConfigurationResolver>();
+builder.Services.AddHttpClient("rmapi");
 builder.Services.AddSingleton<IRmapiService>(sp =>
     new RmapiService(
         sp.GetRequiredService<ILogger<RmapiService>>(),
-        new HttpClient()));
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient("rmapi"),
+        providerConfigurationResolver: sp.GetRequiredService<Main.Services.RuntimeDependencies.IProviderConfigurationResolver>()));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IExternalDeviceDeploymentService, ExternalDeviceDeploymentService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // Register GenAI services
 // See GenAISpec.md §3(1) and §3(2)
-builder.Services.AddSingleton<OllamaClientService>();
+builder.Services.AddSingleton<OllamaClientService>(sp =>
+{
+    var resolver = sp.GetRequiredService<Main.Services.RuntimeDependencies.IProviderConfigurationResolver>();
+    var baseEndpoint = resolver.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint");
+    return new OllamaClientService(baseEndpoint);
+});
+builder.Services.AddSingleton<ChromaClientService>();
 builder.Services.AddScoped<IEmbeddingService, DocumentEmbeddingService>();
 builder.Services.AddScoped<IMaterialGenerationService, MaterialGenerationService>();
 builder.Services.AddScoped<IContentModificationService, ContentModificationService>();

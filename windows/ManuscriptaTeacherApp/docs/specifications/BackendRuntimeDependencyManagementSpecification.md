@@ -30,6 +30,9 @@ This specification defines the requirement to provide and use a standardised int
 
 (7) Each runtime dependency shall be provided with a unique identifier, for the purpose of communication between the frontend and the backend.
 
+(8) Runtime dependencies shall not hard-code configuration data that is subject to changes by an external provider. This includes, but does not limit to, the use of external URLs. 
+
+(9) For the purposes of subsection (8), each runtime dependency shall define one configuration entry key (string) used to resolve provider-controlled values from an implementation-defined configuration source at runtime, in accordance with Appendix A. This includes, where applicable, download and verification endpoints. Runtime logic may derive concrete endpoints from that configured value, but shall not hard-code provider-controlled endpoints in code. For the Windows application, the storage location of that configuration source is defined in Windows App Structure Specification Section 2C.
 
 ## Section 2 - Runtime Dependency Management Blueprint
 
@@ -45,9 +48,9 @@ This specification defines the requirement to provide and use a standardised int
 
 (2A) To fulfill the purposes of paragraph (2)(b) above, the abstract methods defined there shall be implemented by derived classes as follows, and shall throw an exception if any of the steps results in an exception:
 
-    (a) `Task DownloadDependencyAsync()`: Downloads the dependency files from a specified source.
+    (a) `Task DownloadDependencyAsync()`: Downloads the dependency files from a specified source. The source shall be resolved via the dependency's configuration entry key defined under Section 1(9) and Appendix A, unless the dependency has no external provider-controlled source.
 
-    (b) `Task VerifyDownloadAsync()`: Verifies the downloaded files using a specified method, such as a hash or signature. Throws an exception if the verification fails. 
+    (b) `Task VerifyDownloadAsync()`: Verifies the downloaded files using a specified method, such as a hash or signature. Where verification depends on provider-controlled endpoints or metadata, those values shall be resolved via the dependency's configuration entry key defined under Section 1(9) and Appendix A. Throws an exception if the verification fails. 
 
     This method may be implemented as no-op if verification is not feasible, but that decision shall be clearly justified in the form of comments.
 
@@ -71,6 +74,23 @@ This specification defines the requirement to provide and use a standardised int
     (a) the backend shall notify the frontend that relevant runtime dependency(ies) have not been installed, using the `RuntimeDependencyNotInstalled` handler specified in the Networking API Specification Section 2(1)(f)(i); and
 
     (b) the frontend shall handle this notification in accordance with the Frontend Workflow Specifications Section 3A.
+
+
+## Appendix A - Provider Configuration Entry Mechanism
+
+(1) Each runtime dependency shall define one configuration entry key (string), referred to in this Appendix as the `ProviderConfigurationKey`.
+
+(2) The `ProviderConfigurationKey` shall resolve to one configuration string, referred to in this Appendix as the `ProviderConfigurationValue`.
+
+(3) The `ProviderConfigurationValue` shall contain all provider-controlled values required by that runtime dependency under this specification, including any values required to fulfill `DownloadDependencyAsync()` and `VerifyDownloadAsync()`.
+
+(4) Where required by a dependency-specific specification, the `ProviderConfigurationValue` may also contain values used by availability checks, pairing flows, or other provider-facing operations.
+
+(5) The representation and encoding of `ProviderConfigurationValue` shall be implementation-defined, provided that it is deterministic and parseable by the dependency manager implementation.
+
+(6) If the `ProviderConfigurationKey` cannot be resolved, or the `ProviderConfigurationValue` cannot be parsed into the required provider-controlled values, the dependency manager shall fail fast by throwing an exception before executing provider-facing operations.
+
+(7) Dependency-specific specifications shall define the key name and the semantic fields required from `ProviderConfigurationValue`, and shall not require hard-coded provider-controlled URLs in method-level requirements.
 
 
 

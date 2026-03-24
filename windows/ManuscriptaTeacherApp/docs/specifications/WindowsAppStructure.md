@@ -167,4 +167,15 @@ This document defines the structure of the Windows app, and the directories and 
     (b) Global state that must be shared across multiple pages shall be managed via React Context providers in the `state` directory.
 
     (c) Local component state shall use React's `useState` hook directly.
+
+
+## Section 2C - Runtime Provider Configuration Storage
+
+(1) For the Windows application, runtime provider configuration shall be stored in a user-scoped configuration source under the application data root at `%AppData%\ManuscriptaTeacherApp\config`.
+
+(2) The configuration source in paragraph (1) shall store values addressable by provider configuration entry keys as defined in Backend Runtime Dependency Management Specification Appendix A.
+
+(3) Runtime dependency managers shall resolve provider configuration values from the source defined in paragraph (1), and shall not require dependency-specific specifications to reference any concrete configuration file.
+
+(4) Dependency-specific specifications that define provider configuration keys shall cross-reference this Section 2C for storage location and resolution context.
     

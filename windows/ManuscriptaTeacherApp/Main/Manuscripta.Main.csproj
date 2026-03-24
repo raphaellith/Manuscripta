@@ -35,6 +35,10 @@
     <EmbeddedResource Include="Resources\Quill Logo.png" LogicalName="QuillLogo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="provider-config-defaults.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
   <!-- Exclude Testing/ code from Release builds so simulation/integration endpoints
        do not exist in a production binary. Debug builds keep them for local
        Integration-mode testing. -->

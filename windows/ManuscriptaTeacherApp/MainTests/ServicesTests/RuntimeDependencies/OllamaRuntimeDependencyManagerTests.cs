@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Main.Models;
+using Main.Services.GenAI;
 using Main.Services.RuntimeDependencies;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,7 +19,11 @@ public class OllamaRuntimeDependencyManagerTests
     {
         var logger = new Mock<ILogger<OllamaRuntimeDependencyManager>>();
         var httpClient = new HttpClient();
-        var manager = new OllamaRuntimeDependencyManager(logger.Object, httpClient);
+        var manager = new OllamaRuntimeDependencyManager(
+            logger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object,
+            new OllamaClientService("http://localhost:11434"));
 
         Assert.Equal("ollama", manager.DependencyId);
     }
@@ -56,7 +61,11 @@ public class OllamaRuntimeDependencyManagerTests
         var httpClient = new HttpClient(handler);
 
         var logger = new Mock<ILogger<OllamaRuntimeDependencyManager>>();
-        var manager = new TestableOllamaRuntimeDependencyManager(logger.Object, httpClient, tempAppData);
+        var manager = new TestableOllamaRuntimeDependencyManager(
+            logger.Object,
+            httpClient,
+            CreateProviderConfigurationResolver().Object,
+            tempAppData);
 
         try
         {
@@ -98,8 +107,12 @@ public class OllamaRuntimeDependencyManagerTests
     {
         private readonly string _overrideAppData;
 
-        public TestableOllamaRuntimeDependencyManager(ILogger<OllamaRuntimeDependencyManager> logger, HttpClient httpClient, string overrideAppData)
-            : base(logger, httpClient)
+        public TestableOllamaRuntimeDependencyManager(
+            ILogger<OllamaRuntimeDependencyManager> logger,
+            HttpClient httpClient,
+            IProviderConfigurationResolver providerConfigurationResolver,
+            string overrideAppData)
+            : base(logger, httpClient, providerConfigurationResolver, new OllamaClientService("http://localhost:11434"))
         {
             _overrideAppData = overrideAppData;
         }
@@ -111,5 +124,20 @@ public class OllamaRuntimeDependencyManagerTests
         {
             return _overrideAppData;
         }
+    }
+
+    private static Mock<IProviderConfigurationResolver> CreateProviderConfigurationResolver()
+    {
+        var resolver = new Mock<IProviderConfigurationResolver>();
+        resolver
+            .Setup(r => r.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "DistributionSource"))
+            .Returns("https://example.invalid/ollama-windows-amd64.zip");
+        resolver
+            .Setup(r => r.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ChecksumSource"))
+            .Returns("https://example.invalid/ollama-windows-amd64.zip.sha256");
+        resolver
+            .Setup(r => r.GetRequiredField("OLLAMA_PROVIDER_CONFIG", "ApiBaseEndpoint"))
+            .Returns("http://localhost:11434");
+        return resolver;
     }
 }

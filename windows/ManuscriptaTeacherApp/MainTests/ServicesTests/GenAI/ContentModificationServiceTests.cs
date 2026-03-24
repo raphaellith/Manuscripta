@@ -30,7 +30,7 @@ public class ContentModificationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService
         {
@@ -76,7 +76,7 @@ public class ContentModificationServiceTests
     {
         using var dbContext = BuildDbContext();
         var fileService = new Mock<IFileService>();
-        var validationService = new OutputValidationService(new OllamaClientService(), dbContext, fileService.Object);
+        var validationService = new OutputValidationService(new OllamaClientService("http://localhost:11434"), dbContext, fileService.Object);
 
         var ollama = new FakeOllamaClientService
         {
@@ -114,6 +114,10 @@ public class ContentModificationServiceTests
     private sealed class FakeOllamaClientService : OllamaClientService
     {
         public string PrimaryChatResponse { get; set; } = "modified-content";
+
+        public FakeOllamaClientService() : base("http://localhost:11434")
+        {
+        }
 
         public override Task EnsureModelReadyAsync(string modelName)
         {

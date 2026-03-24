@@ -20,7 +20,7 @@ This document specifies the integration of the application with "external device
 ## Section 2 - Supported Device Types and Delivery Mechanisms
 
 (1) The application shall support the following external device types, defined by the `ExternalDeviceType` enum:
-    (a) `REMARKABLE`: Delivered via the reMarkable cloud using `rmapi` (`https://github.com/ddvk/rmapi`).
+    (a) `REMARKABLE`: Delivered via the reMarkable cloud using `rmapi`.
     (b) `KINDLE`: Delivered via Amazon's Personal Documents service using the "Send to Kindle" email address.
 
 (2) Prior to any operation involving an external device (pairing or deployment), the application shall verify that the prerequisite capability for that device type is available in the following manner:
@@ -33,11 +33,19 @@ This document specifies the integration of the application with "external device
 
 (2) For the purposes of Section 2(2A) of that Specification —
 
-    (a) `DownloadDependencyAsync()` shall download version 0.0.32 Windows x64 release of `rmapi` from `https://github.com/ddvk/rmapi/releases`;
+    (a) `DownloadDependencyAsync()` shall download version 0.0.32 Windows x64 release of `rmapi` from the release source resolved from `RMAPI_PROVIDER_CONFIG`;
 
     (b) `VerifyDownloadAsync()` shall verify the downloaded file using SHA256 hash comparison against the published checksums; and
 
     (c) `PerformInstallDependencyAsync()` shall extract or copy the executable to `%AppData%\ManuscriptaTeacherApp\bin\rmapi.exe`.
+
+(2A) For the purposes of Backend Runtime Dependency Management Specification Appendix A —
+
+    (a) the `RmapiRuntimeDependencyManager` shall define the provider configuration entry key `RMAPI_PROVIDER_CONFIG`;
+
+    (b) the value resolved from `RMAPI_PROVIDER_CONFIG` shall contain the provider-controlled values required by this specification, including the rmapi release source and reMarkable pairing portal URL, and shall be resolved from the runtime configuration source defined in Windows App Structure Specification Section 2C; and
+
+    (c) the current effective hard-coded values are documented in Appendix A of this specification.
 
 (3) The `GetDependencyServiceAsync()` method shall return an instance of `IRmapiService`, which shall provide methods for interacting with the reMarkable cloud via `rmapi`.
 
@@ -51,7 +59,7 @@ This document specifies the integration of the application with "external device
 
 (1) To pair an external device, the application shall collect a user-friendly device name and type-specific configuration data.
 
-(2) When pairing an external device of type `REMARKABLE`, the application shall authenticate with the reMarkable cloud using a one-time code obtained from `https://my.remarkable.com/device/desktop/connect`. Upon successful authentication, the application shall invoke `rmapi` to generate a configuration file at `%AppData%\ManuscriptaTeacherApp\rmapi\{DeviceId}.conf`.
+(2) When pairing an external device of type `REMARKABLE`, the application shall authenticate with the reMarkable cloud using a one-time code obtained from the pairing portal URL resolved from `RMAPI_PROVIDER_CONFIG`. Upon successful authentication, the application shall invoke `rmapi` to generate a configuration file at `%AppData%\ManuscriptaTeacherApp\rmapi\{DeviceId}.conf`.
 
 (3) When pairing an external device of type `KINDLE`, the application shall collect the unique "Send to Kindle" email prefix and append the fixed `@kindle.com` domain. The application shall advise the user to ensure the Manuscripta sender address is added to their "Approved Personal Document E-mail List" on Amazon.
 
@@ -76,3 +84,14 @@ This document specifies the integration of the application with "external device
 (4) The application shall not await acknowledgement from the external device, as external cloud services operate asynchronously. 
 
 (5) If dispatch fails due to capability errors (e.g. missing `rmapi`, missing email credentials), or transient network errors, the application shall display an error message and allow the user to retry.
+
+## Appendix A - Default Provider Configuration Values
+
+For the purposes of Backend Runtime Dependency Management Specification Appendix A, this Appendix defines the default values for provider-controlled fields represented by `RMAPI_PROVIDER_CONFIG`.
+
+These defaults shall be used when `RMAPI_PROVIDER_CONFIG` is not resolved from the runtime configuration source defined in Windows App Structure Specification Section 2C.
+
+| Provider Configuration Key | Semantic Field | Default Value |
+|---|---|---|
+| `RMAPI_PROVIDER_CONFIG` | `RmapiReleaseSource` | `https://github.com/ddvk/rmapi/releases` |
+| `RMAPI_PROVIDER_CONFIG` | `RemarkablePairingPortalUrl` | `https://my.remarkable.com/device/desktop/connect` |

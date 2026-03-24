@@ -15,9 +15,11 @@ public class OllamaClientService : IDependencyService
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
 
-    public OllamaClientService()
+    public OllamaClientService(string baseUrl)
     {
-        _baseUrl = "http://localhost:11434";
+        _baseUrl = string.IsNullOrWhiteSpace(baseUrl)
+            ? throw new ArgumentException("Ollama base URL cannot be empty.", nameof(baseUrl))
+            : baseUrl.TrimEnd('/');
         _httpClient = new HttpClient { 
             BaseAddress = new Uri(_baseUrl),
             Timeout = TimeSpan.FromSeconds(300) // 5 minutes for material generation
