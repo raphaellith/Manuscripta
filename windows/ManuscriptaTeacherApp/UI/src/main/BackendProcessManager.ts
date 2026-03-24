@@ -165,9 +165,10 @@ export class BackendProcessManager {
             let addressInUseDetected = false;
             let spawnErrorOccurred = false;
             
-            // Per §2ZA(3)(c)(ii): Start with --urls argument
-            // Per API Contract: SignalR on port, HTTP API on HTTP_API_PORT (5911)
-            const urls = `http://localhost:${port};http://localhost:${HTTP_API_PORT}`;
+            // Per FrontendWorkflowSpecifications §2ZA(3)(c)(ii): keep designated frontend port on localhost.
+            // Per API Contract §Ports and Pairing Process §2: Android must reach HTTP API on teacher LAN IP.
+            // Therefore keep SignalR local, but expose the REST API port on all interfaces.
+            const urls = `http://localhost:${port};http://*:${HTTP_API_PORT}`;
             this.process = spawn(executablePath, [`--urls`, urls], {
                 stdio: ['ignore', 'pipe', 'pipe'],
                 detached: false,
