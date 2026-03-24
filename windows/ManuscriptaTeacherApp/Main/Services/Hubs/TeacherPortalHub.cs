@@ -611,12 +611,12 @@ public class TeacherPortalHub : Hub
     }
 
     /// <summary>
-    /// Stops the pairing process by stopping both UDP broadcast and TCP listener.
+    /// Stops the pairing process by stopping the UDP broadcast.
+    /// The TCP listener is kept alive as it is continuously needed for control signals.
     /// </summary>
     public Task StopPairing()
     {
         _udpBroadcastService.StopBroadcasting();
-        _tcpPairingService.StopListening();
         return Task.CompletedTask;
     }
 

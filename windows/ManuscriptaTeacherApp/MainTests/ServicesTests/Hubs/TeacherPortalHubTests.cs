@@ -1472,14 +1472,15 @@ public class TeacherPortalHubTests
     }
 
     [Fact]
-    public async Task StopPairing_StopsUdpAndTcpServices()
+    public async Task StopPairing_StopsUdpServiceOnly()
     {
         // Act
         await _hub.StopPairing();
 
         // Assert
         _mockUdpBroadcastService.Verify(s => s.StopBroadcasting(), Times.Once);
-        _mockTcpPairingService.Verify(s => s.StopListening(), Times.Once);
+        // TCP Service stays running for continuous control signals
+        _mockTcpPairingService.Verify(s => s.StopListening(), Times.Never);
     }
 
     [Fact]
