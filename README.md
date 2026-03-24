@@ -198,8 +198,8 @@ Manuscripta/
 The Android app requires **JDK 17** — it does not build on JDK 21+.
 
 1. Open the `android/` directory in Android Studio (**File > Open**, then select the `android/` folder).
-2. Set the project JDK to 17: **File > Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK** and select a JDK 17 installation.
-3. Select the **release** build variant: **Build > Select Build Variant**, then set the active variant to `release`.
+2. Set the Gradle JDK to 17: **Android Studio > Settings > Build, Execution, Deployment > Build Tools > Gradle**, then select a JDK 17 installation from the **Gradle JDK** dropdown.
+3. Select the **release** build variant from the **Build Variants** panel (accessible from the left sidebar or via **View > Tool Windows > Build Variants**).
 4. Connect a physical Android device via USB (with USB debugging enabled) or start an emulator from the **Device Manager**.
 5. Click **Run ▶** (or **Shift+F10**) to build and deploy the release APK to the connected device/emulator.
 
