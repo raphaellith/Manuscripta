@@ -201,12 +201,15 @@ Manuscripta/
 
 **Android Application**
 
-```bash
-cd android
-# Requires JDK 17 — the project does not build on JDK 21+
-JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew assembleDebug
-# The debug APK is output to app/build/outputs/apk/debug/app-debug.apk
-```
+The Android app requires **JDK 17** — it does not build on JDK 21+.
+
+1. Open the `android/` directory in Android Studio (**File > Open**, then select the `android/` folder).
+2. Set the Gradle JDK to 17: **Android Studio > Settings > Build, Execution, Deployment > Build Tools > Gradle**, then select a JDK 17 installation from the **Gradle JDK** dropdown.
+3. Select the **release** build variant from the **Build Variants** panel (accessible from the left sidebar or via **View > Tool Windows > Build Variants**).
+4. Connect a physical Android device via USB (with USB debugging enabled) or start an emulator from the **Device Manager**.
+5. Click **Run ▶** (or **Shift+F10**) to build and deploy the release APK to the connected device/emulator.
+
+> **Emulator networking note:** The Android emulator runs on an isolated virtual network (10.0.2.x) that cannot receive UDP broadcast packets from the host LAN. This means UDP device discovery will always time out in the emulator. To test pairing, use a physical Android device on the same Wi-Fi network as the teacher application.
 
 **Windows Application**
 
