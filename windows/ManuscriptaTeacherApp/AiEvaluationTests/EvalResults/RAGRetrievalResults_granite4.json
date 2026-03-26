@@ -1,0 +1,602 @@
+[
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 36,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 1,
+    "Precision": 0.2
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 5,
+    "RelevantChunks": 1,
+    "Precision": 0.2
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 5,
+    "RelevantChunks": 1,
+    "Precision": 0.2
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 6,
+    "ChunksReturned": 10,
+    "RelevantChunks": 2,
+    "Precision": 0.2
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 2,
+    "Precision": 0.2
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 2,
+    "Precision": 0.2
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 10,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 1,
+    "RelevantChunks": 0,
+    "Precision": 0
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 2,
+    "Precision": 0.4
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 5,
+    "RelevantChunks": 2,
+    "Precision": 0.4
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 2,
+    "Precision": 0.4
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 4,
+    "Precision": 0.4
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 4,
+    "Precision": 0.4
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 4,
+    "Precision": 0.4
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 1,
+    "Precision": 0.3333
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 3,
+    "Precision": 0.6
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 5,
+    "RelevantChunks": 3,
+    "Precision": 0.6
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 5,
+    "RelevantChunks": 3,
+    "Precision": 0.6
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 6,
+    "ChunksReturned": 10,
+    "RelevantChunks": 3,
+    "Precision": 0.3
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 3,
+    "Precision": 0.3
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 3,
+    "Precision": 0.3
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 9,
+    "Precision": 0.9
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 3,
+    "ChunksReturned": 10,
+    "RelevantChunks": 9,
+    "Precision": 0.9
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "granite4",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 4,
+    "ChunksReturned": 10,
+    "RelevantChunks": 9,
+    "Precision": 0.9
+  }
+]

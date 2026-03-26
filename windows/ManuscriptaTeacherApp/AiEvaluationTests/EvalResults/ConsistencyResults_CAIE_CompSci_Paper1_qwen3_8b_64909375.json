@@ -1,0 +1,252 @@
+[
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 1,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and each drawback is supported by specific examples. For the first drawback, you correctly highlight the security risks, such as the lack of central management and the potential for malicious files (e.g., viruses, trojans) to spread. This aligns with the mark scheme\u2019s points about reduced security and the network being as secure as the weakest computer. For the second drawback, you explain how the failure of one node (e.g., a slow internet connection) can disrupt the entire network, which matches the mark scheme\u2019s emphasis on the lack of central backup and the risk of data loss. Your explanation is logical and well-structured, showing a strong grasp of the topic.  \n\n**Strengths:**  \n- Clear and concise identification of two drawbacks.  \n- Use of specific examples (e.g., viruses, slow bandwidth) to illustrate points.  \n- Logical flow connecting the drawbacks to the peer-to-peer network\u2019s limitations.  \n\n**Suggestions for Improvement:**  \n- Consider explicitly mentioning the lack of central management (as in the mark scheme) to strengthen your analysis.  \n- For the second drawback, focus more on the backup issue (e.g., data loss if a node fails) rather than bandwidth, which is not directly addressed in the mark scheme.  \n\nWell done on demonstrating a solid understanding of the topic! With a few tweaks to align more closely with the mark scheme, your response could be even more precise. Keep up the great work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 2,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n   \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and you\u2019ve demonstrated a strong understanding of the key issues. For the first drawback, you accurately highlighted the security risks, mentioning how the network lacks central security management and how malicious files can be shared without checks\u2014this aligns with multiple points in the mark scheme (e.g., \u201Cno central management of security\u201D and \u201Ceach computer is at risk from viruses from other computers\u201D). For the second drawback, you explained how node failures and slow bandwidth can disrupt downloads, which ties to the mark scheme\u2019s points about data loss if a node fails and network traffic issues. Your explanation is concise and relevant, showing a good grasp of the technical challenges.  \n\nTo further strengthen your response, you could explicitly reference additional mark scheme points, such as the lack of central backup or inconsistent software across devices. However, your current answer is already comprehensive and well-structured. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 3,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n   \nYour response effectively addresses the question by clearly identifying two drawbacks of using a peer-to-peer network. For the first drawback, you accurately highlight the **reduced security** inherent in such networks, explaining how trust in peers leads to risks like viruses and malicious files. This aligns well with the mark scheme\u2019s focus on **no central management of security** and **each computer being at risk from others**.  \n\nFor the second drawback, you correctly explain how the **lack of central management** impacts reliability, noting that a failed node or slow bandwidth can disrupt the entire network. This ties directly to the mark scheme\u2019s points about **no central management of backup** and **individual computers responding slower**.  \n\n**Strengths**: Your explanation is clear, concise, and directly references the mark scheme\u2019s criteria. You\u2019ve demonstrated a solid understanding of peer-to-peer network vulnerabilities.  \n\n**Suggestions for improvement**: To further strengthen your response, consider elaborating on the **specific consequences** of these drawbacks (e.g., how viruses could affect Melinda\u2019s files) or comparing the risks to centralized systems. This would deepen your analysis and show a more nuanced grasp of the topic. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 4,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively addresses both drawbacks of using a peer-to-peer network, and you\u2019ve provided clear, relevant points that align with the mark scheme. For the first drawback, you correctly highlight the **reduced security** and the risk of malicious code, explaining how trust in peers leads to vulnerabilities like viruses and trojans. This directly matches the mark scheme\u2019s points about no central management of security and the weakest computer being a risk.  \n\nFor the second drawback, you accurately describe how the **failure of a single node** disrupts the network, as each node holds part of the file. You also mention the impact of slow bandwidth on overall performance, which ties to the mark scheme\u2019s emphasis on individual computers slowing down due to shared access. These points are well-explained and demonstrate a strong understanding of peer-to-peer limitations.  \n\nYour response is thorough and meets all criteria for the maximum score. Well done! If you continue to expand on the consequences of these drawbacks (e.g., data loss from unbacked-up files), your analysis could become even more comprehensive. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 5,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and each drawback is supported by two relevant points, aligning well with the mark scheme. For the first drawback, you correctly highlight the security risks, noting that the network lacks central management of security and that each computer is vulnerable to viruses from other peers. This covers both \u0022no central management of security\u0022 and \u0022each computer is at risk from viruses from other computers\u0022 (2 marks). For the second drawback, you explain how a failed node disrupts file downloads and how slow bandwidth causes network congestion, which matches \u0022no central management of backup\u0022 and \u0022individual computers may respond slower\u0022 (2 marks).  \n\nStrengths: Your explanation is clear and directly addresses the question, with specific examples like \u0022viruses, trojans\u0022 and \u0022slow bandwidth\u0022 that demonstrate understanding. The structure of your response is logical and well-organized.  \n\nSuggestions for improvement: Consider elaborating on how the lack of central management impacts consistency in software or files (e.g., \u0022no central management of files/software\u0022 or \u0022consistency may be difficult to maintain\u0022). Additionally, you could explicitly mention the role of central management in mitigating these issues, which would strengthen the connection to the mark scheme. Keep up the great work\u2014your analysis is thorough and well-researched!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 6,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network. For the first drawback, you highlight the security risks, specifically mentioning that the network lacks central management of security and that each computer is vulnerable to viruses from others. These points align precisely with the mark scheme\u2019s criteria for reduced security (1 mark) and the network being as secure as the weakest computer (1 mark), earning you 2 marks here.  \n\nFor the second drawback, you explain how node failures can disrupt file downloads and how slow bandwidth can cause network congestion. While your explanation is accurate, it could be strengthened by explicitly referencing the mark scheme\u2019s points about **no central management of backup** (e.g., data loss if a node fails) and **individual computers responding slower** (e.g., slow bandwidth affecting download speeds). This would clarify how these issues relate to the peer-to-peer model.  \n\n**Strengths:**  \n- Clear and concise explanation of security risks.  \n- Logical reasoning about node failures and network congestion.  \n\n**Suggestions for Improvement:**  \n- Explicitly link your points to the mark scheme\u2019s specific criteria (e.g., mention backup or software consistency).  \n- Consider elaborating on how these drawbacks impact the reliability or efficiency of the network.  \n\nWell done on identifying the key drawbacks! With a bit more precision in aligning your points to the mark scheme, your response could be even stronger. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 7,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network. For the first drawback, you correctly highlight the **reduced security** risk, explaining how the network lacks central management and makes each peer vulnerable to malicious files like viruses or trojans. This aligns with the mark scheme\u2019s points on \u0022no central management of security\u0022 and \u0022each computer is at risk from viruses from other computers.\u0022  \n\nFor the second drawback, you accurately describe how the **lack of central management** impacts reliability. You note that if one node fails, the download process can be disrupted, and slow bandwidth can cause network congestion. This matches the mark scheme\u2019s points on \u0022no central management of backup\u0022 (data loss if one computer\u2019s data is unbacked up) and \u0022individual computers may respond slower\u0022 due to shared resources.  \n\n**Strengths**: Your explanation is clear, logical, and directly addresses the question. You\u2019ve used specific examples (e.g., viruses, slow bandwidth) to illustrate the drawbacks, which strengthens your response.  \n\n**Suggestions for improvement**: To further enhance your answer, consider expanding on specific scenarios, such as how a virus could spread across the network or how inconsistent software versions might cause compatibility issues. Also, linking your points to the context of Melinda and her friends (e.g., how a failed node could disrupt their group project) could make your response even more relevant.  \n\nWell done on identifying the key drawbacks! With a few tweaks, your answer could be even more detailed and impactful. Keep up the great work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 8,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and you\u2019ve provided detailed explanations that align well with the mark scheme. For the first drawback, you correctly highlight the security risks, noting that the network relies on trust between peers and lacks centralized security checks. This directly addresses the mark scheme points about \u0022no central management of security\u0022 and \u0022each computer is at risk from viruses from other computers\u0022 (2 marks).  \n\nFor the second drawback, you explain how the failure of a single node (e.g., Melinda\u2019s friend) can disrupt the network, as well as how slow bandwidth on one device can cause network congestion. This covers the mark scheme points about \u0022no central management of backup\u0022 (data loss if a node\u2019s data isn\u2019t backed up) and \u0022individual computers may respond slower\u0022 (due to shared access) (2 marks).  \n\nStrengths: Your explanations are clear, specific, and directly reference the mark scheme. You\u2019ve also used examples (e.g., viruses, slow bandwidth) to illustrate the drawbacks effectively.  \n\nTo enhance your response further, consider explicitly mentioning the lack of central management for backups and the risk of data loss if a node fails. Additionally, expanding on how individual computers slow down due to being accessed by others could strengthen your analysis. Keep up the good work\u2014your understanding of the topic is solid!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 9,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses both drawbacks of using a peer-to-peer network, and you have clearly demonstrated a strong understanding of the key issues. For the first drawback, you correctly highlight the security risks, explaining that the lack of central management means the network is only as secure as the weakest peer. This aligns well with the mark scheme\u2019s points about no central security checks and the risk of viruses/trojans from other computers. For the second drawback, you accurately describe how the failure of a single node can disrupt the entire process, as the file is split across multiple peers. This ties into the mark scheme\u2019s emphasis on the lack of central backup management. Additionally, you mention the impact of slow bandwidth on network traffic, which reflects the idea that individual computers may respond slower due to shared resources.  \n\n**Strengths**:  \n- Your explanations are clear and relevant to the context of Melinda and her friends.  \n- You use specific examples (e.g., \u0022Melinda\u2019s friend\u0022 failing) to illustrate the drawbacks.  \n- Your response is well-structured and covers both required drawbacks comprehensively.  \n\n**Suggestions for Improvement**:  \n- Consider elaborating slightly on the second drawback by explicitly linking slow bandwidth to the concept of \u0022network congestion\u0022 or \u0022shared resource limitations,\u0022 which is part of the mark scheme.  \n- For the first drawback, you could explicitly mention the absence of central management (e.g., \u0022no central authority to enforce security protocols\u0022) to strengthen the link to the mark scheme.  \n\nWell done! Your answer is thorough and meets the requirements fully. Keep refining your explanations to ensure all mark scheme points are explicitly addressed."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 10,
+    "ExpectedMark": 4,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively identifies two drawbacks of using a peer-to-peer network, and you\u2019ve demonstrated a clear understanding of the risks involved. For your first point, you correctly highlight the reduced security by noting that the network relies on trust between peers and lacks centralised security checks. This aligns with the mark scheme\u2019s focus on \u0022reduced security\u0022 and \u0022no central management of security,\u0022 which justifies 1 mark.  \n\nFor your second point, you explain how the failure of one node can disrupt the network, which ties to the mark scheme\u2019s emphasis on \u0022no central management of backup\u0022 and the risk of data loss if backups are not maintained. This also earns 1 mark.  \n\n**Strengths**:  \n- You clearly connect the drawbacks to the peer-to-peer model\u2019s inherent limitations.  \n- Your explanation of the risk of malicious code is thorough and relevant.  \n\n**Suggestions for Improvement**:  \n- Consider expanding on the concept of \u0022no central management\u0022 in your first point, as the mark scheme also mentions how the network is \u0022only as secure as the weakest computer.\u0022 This could strengthen your analysis.  \n- For the second point, you could explicitly reference the mark scheme\u2019s \u0022individual computers may respond slower\u0022 due to shared bandwidth, which would make your response even more precise.  \n\nKeep up the good work! With a few adjustments, your response could fully align with the mark scheme and earn the maximum score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 11,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network, and each point is well-supported by relevant details. For the first drawback, you correctly highlight the security risks, such as the lack of central management and the potential for malicious code (e.g., viruses, trojans) to spread. This aligns with the mark scheme points about \u0022no central management of security\u0022 and \u0022each computer is at risk from viruses from other computers\u0022 (2 marks).  \n\nFor the second drawback, you explain how node failure disrupts file downloads and how slow bandwidth can cause network congestion. This connects to the mark scheme points about \u0022no central management of backup\u0022 (data loss if one computer\u2019s data is unbacked up) and \u0022individual computers may respond slower\u0022 due to shared access (2 marks).  \n\n**Strengths:**  \n- Clear and concise explanations that directly address the drawbacks.  \n- Use of specific examples (e.g., viruses, slow bandwidth) to illustrate the issues.  \n- Alignment with the mark scheme\u2019s key points.  \n\n**Suggestions for Improvement:**  \n- Consider structuring each drawback with a heading or clearer separation to enhance readability.  \n- Elaborate slightly on the consequences of each drawback (e.g., how data loss affects Melinda and her friends) to deepen the analysis.  \n\nWell done on identifying the core issues! With a few minor adjustments, your answer could be even more impactful. Keep up the great work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 12,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network, and each drawback is supported by two relevant points that align with the mark scheme. For the first drawback, you correctly highlight the security risks, explaining how the lack of central management leaves the network vulnerable to malicious code and viruses. This matches the mark scheme\u2019s emphasis on reduced security and the weakest computer being a risk. For the second drawback, you explain how node failures and slow bandwidth can disrupt file sharing, which aligns with the mark scheme\u2019s points about backup issues and individual computer slowdowns.  \n\n**Strengths:**  \n- You clearly articulate the risks of trusting peers and the lack of centralized control.  \n- Your examples (e.g., viruses, slow bandwidth) are specific and relevant to the topic.  \n\n**Suggestions for Improvement:**  \n- Consider explicitly mentioning \u0022no central management of backup\u0022 as a separate point for the second drawback, as this is a key aspect of the mark scheme.  \n- Ensure each drawback is clearly separated to avoid confusion, though your current structure is acceptable.  \n\nWell done on demonstrating a thorough understanding of peer-to-peer networks! With a few minor adjustments, your response could be even more precise. Keep up the great work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 13,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network. Each drawback is explained with relevant examples, showing a good understanding of the topic. For instance, your first point highlights the security risks, mentioning the lack of central management and the potential for malicious files like viruses and trojans. This aligns well with the mark scheme\u2019s criteria for reduced security and the vulnerability of individual computers. Your second point explains the reliability issue caused by node failures and bandwidth limitations, which connects to the mark scheme\u2019s points about inconsistent backups and slower performance due to shared resources.  \n\n**Strengths:**  \n- Clear identification of two drawbacks with specific examples.  \n- Use of technical terms like \u0022viruses\u0022 and \u0022bandwidth\u0022 demonstrates understanding.  \n- Logical explanations that tie to the core issues of peer-to-peer networks.  \n\n**Suggestions for Improvement:**  \n- For the first drawback, explicitly mention \u0022no central management of security\u0022 or \u0022each computer is at risk from viruses from other computers\u0022 to directly reference the mark scheme.  \n- For the second drawback, elaborate on \u0022no central management of backup\u0022 and how data loss could occur if one node\u2019s data isn\u2019t backed up. This would strengthen the alignment with the mark scheme.  \n\nKeep up the good work! With a few tweaks to explicitly link your points to the mark scheme, your response could be even more precise and score even higher."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 14,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively addresses both drawbacks of using a peer-to-peer network, and you\u2019ve covered key points from the mark scheme. For the first drawback (security), you correctly highlight that peer-to-peer networks lack centralised security management, making them vulnerable to malicious attacks like viruses and trojans. This aligns with the mark scheme\u2019s points about reduced security and the risk of individual computers being compromised. For the second drawback (reliability), you explain how node failures can disrupt file downloads and how slow bandwidth can cause network congestion. These points match the mark scheme\u2019s focus on the lack of centralised backup management and the impact of inconsistent bandwidth.  \n\n**Strengths**:  \n- You clearly identify two distinct drawbacks and explain them with relevant examples (e.g., viruses, slow internet).  \n- Your response demonstrates a strong understanding of how peer-to-peer networks operate and their inherent risks.  \n\n**Suggestions for Improvement**:  \n- Consider elaborating slightly on the consequences of these drawbacks (e.g., how data loss from a failed node affects the entire network).  \n- You could also mention the lack of centralised file management as a third drawback, but since the question asks for two, your answer is complete.  \n\nKeep up the excellent work! Your analysis is thorough and well-structured. With a few minor adjustments, you could further enhance your response."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 15,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network and covers multiple points from the mark scheme. For the first drawback, you correctly highlight the security risks, explaining that the network lacks centralised security checks and that each peer is a potential vulnerability. This aligns with the mark scheme points about \u0022reduced security\u0022 and \u0022no central management of security.\u0022 Additionally, your mention of malicious files like viruses and trojans further strengthens this point.  \n\nFor the second drawback, you address the risk of node failure and slow bandwidth, which ties directly to the mark scheme\u2019s points on \u0022no central management of backup\u0022 and \u0022individual computers responding slower.\u0022 Your explanation about data loss if a node fails and the impact of slow internet on network traffic is thorough and relevant.  \n\n**Strengths**: Your response is well-structured, covers key aspects of the question, and demonstrates a clear understanding of peer-to-peer network vulnerabilities.  \n**Suggestions for improvement**: Consider elaborating on how these drawbacks affect the overall reliability or security of the network, or explore additional points from the mark scheme (e.g., software inconsistency or backup issues) to further enrich your answer. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 16,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network. For the first drawback, you accurately highlight the security risks, referencing how the lack of central management makes the network vulnerable to malicious code and viruses. This aligns with the mark scheme\u2019s points on \u0022reduced security\u0022 and \u0022no central management of security,\u0022 earning two marks.  \n\nFor the second drawback, you explain how the failure of a single node (e.g., Melinda\u2019s friend) can disrupt the download process, which directly relates to the mark scheme\u2019s point on \u0022no central management of backup\u0022 and the risk of data loss. Additionally, you mention the impact of slow bandwidth on network performance, which connects to the mark scheme\u2019s point about \u0022individual computers responding slower.\u0022 This earns another two marks.  \n\n**Strengths:**  \n- Clear, concise explanations that directly address the drawbacks.  \n- Use of specific examples (e.g., viruses, slow bandwidth) to illustrate points.  \n- Alignment with the mark scheme\u2019s key criteria.  \n\n**Suggestions for Improvement:**  \nWhile your answer is thorough, consider expanding on how peer-to-peer networks lack centralised control, which could further clarify the implications of these drawbacks. For example, you might mention how the absence of a central authority makes it harder to enforce security policies or manage file consistency.  \n\nWell done! Your response demonstrates a strong understanding of the topic. Keep building on these strengths to tackle more complex questions."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 17,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response is well-structured and effectively addresses both drawbacks of using a peer-to-peer network. For the first drawback, you clearly explain the security risks, highlighting that the network lacks central management and that peers are not checked for malicious intent. This aligns with the mark scheme points about reduced security and the vulnerability of individual computers to viruses. For the second drawback, you accurately describe how node failures can disrupt file downloads and how slow bandwidth can cause network congestion. These points correspond to the mark scheme\u2019s emphasis on the absence of central backup and the impact of individual computer performance on the network. Your explanation is thorough and demonstrates a strong understanding of the topic. Well done!  \n\n**Score Justification:**  \n- **First drawback (2 marks):** You address reduced security (1 mark) and the lack of central management (1 mark).  \n- **Second drawback (2 marks):** You cover the absence of central backup (1 mark) and the impact of individual computer performance on the network (1 mark).  \nYour response fully meets the mark scheme requirements, with no gaps in the explanation. No improvements are needed. Keep up the excellent work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 18,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses both drawbacks of using a peer-to-peer network, and your explanations are clear and relevant to the question. For the first drawback, you correctly highlight the security risks, noting that the network lacks central management and that each peer is vulnerable to viruses or malicious files. This aligns with the mark scheme points about reduced security and the weakest computer being a risk. For the second drawback, you explain how node failure disrupts file downloads and how slow bandwidth can cause network congestion, which matches the mark scheme\u2019s emphasis on lack of central backup and individual computers slowing down.  \n  \nStrengths:  \n- You clearly identify two distinct drawbacks and provide specific examples (e.g., viruses, slow bandwidth).  \n- Your explanations are logically structured and directly relate to the peer-to-peer network\u2019s characteristics.  \n- You use precise terms like \u201Cno security check\u201D and \u201Ctraffic\u201D to demonstrate understanding.  \n  \n\nSuggestions for Improvement:  \n- To further strengthen your answer, you could explicitly reference the **lack of central management** in both points (e.g., \u201Cno central backup system\u201D for the second drawback).  \n- Expanding on the consequences of each drawback (e.g., data loss if a node fails or network slowdowns affecting all users) might add depth.  \n- Ensure each point is clearly separated into two distinct drawbacks, as the question asks for two.  \n\nKeep up the good work! With a few tweaks, your response could be even more comprehensive."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 19,
+    "ExpectedMark": 4,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response demonstrates a clear understanding of the security risks associated with peer-to-peer networks, which is a strong point. The first drawback is well explained, as you correctly highlight the lack of centralized security management and the risk of malicious files, aligning with the mark scheme\u2019s points about reduced security and vulnerabilities. This earns you 2 marks for this drawback.  \n\nHowever, the second drawback could have been more aligned with the mark scheme. While you mention node failures and bandwidth issues, these do not directly address the specific points in the scheme, such as the absence of centralized backup systems or software consistency. For example, you could have elaborated on how data loss occurs if a node fails (linked to the lack of backup) or how inconsistent software across devices might cause compatibility problems.  \n\nTo improve, focus on the exact points in the mark scheme. For instance, when discussing reliability, explicitly mention the risk of data loss due to unbacked-up nodes. Additionally, consider how varying software versions might lead to inconsistencies. These details would strengthen your response and align it more closely with the mark scheme. Keep up the good work on the security aspect\u2014your explanation is thorough and well-structured!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 20,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and you\u2019ve provided detailed explanations that align well with the mark scheme. For the first drawback, you accurately highlight the security risks, such as the lack of central management and the vulnerability of individual computers to malware. This covers two key points from the mark scheme: \u201Cno central management of security\u201D and \u201Ceach computer is at risk from viruses from other computers.\u201D  \n\nFor the second drawback, you explain how node failures and slow bandwidth can disrupt file sharing, which ties to the mark scheme\u2019s points about \u201Cindividual computers may respond slower\u201D and the indirect reference to backup issues. While your explanation is slightly more general, it still addresses the core idea of decentralised risks.  \n\n**Strengths**:  \n- You clearly distinguish between the two drawbacks and provide relevant examples (e.g., viruses, slow bandwidth).  \n- Your explanations are concise and directly address the question.  \n\n**Suggestions for Improvement**:  \n- Consider explicitly mentioning specific mark scheme terms, such as \u201Cno central management of backup,\u201D to ensure all points are explicitly covered.  \n- Expand slightly on how decentralisation affects consistency (e.g., different software versions across peers) to fully utilise the mark scheme\u2019s criteria.  \n\nWell done on identifying the key issues! With a few minor refinements, your answer could be even more precise. Keep up the good work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 21,
+    "ExpectedMark": 4,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies two valid drawbacks of using a peer-to-peer network, which is a strong start. The first point about security is well-explained, as you highlight the lack of central management and the risk of malicious files, which aligns with the mark scheme\u2019s emphasis on reduced security and the network being as secure as the weakest computer. This earns you 1 mark.  \n\nThe second point addresses the risk of node failure and slow bandwidth, which is also relevant. You mention that a failed node could disrupt downloads and that slow internet can cause network congestion. While this is a valid drawback, it could be strengthened by explicitly referencing the mark scheme\u2019s points about individual computers slowing down due to being accessed by others or the lack of central management of backup, which directly ties to data loss if one node\u2019s data is not backed up. This would earn an additional 1 mark, bringing your total to 2.  \n\n**Strengths:**  \n- You clearly identify two distinct drawbacks (security and node reliability).  \n- Your explanations are logical and relevant to the topic.  \n\n**Areas for Improvement:**  \n- Expand each point by incorporating specific terms from the mark scheme (e.g., \u201Cno central management of backup\u201D or \u201Cindividual computers may respond slower\u201D).  \n- Clarify how these drawbacks impact the network\u2019s functionality or security.  \n\nKeep up the good work! With a bit more precision and depth, your response could achieve the full score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 22,
+    "ExpectedMark": 4,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies two drawbacks of using a peer-to-peer network, which is a good start. For the first drawback, you highlight the risk of malicious code and viruses due to the lack of security checks, which aligns with the mark scheme\u2019s points about reduced security and no central management of security. For the second drawback, you explain how a failed node or slow bandwidth can disrupt file downloads, which relates to the mark scheme\u2019s points about individual computers responding slower and potential issues with file consistency.  \n\n**Strengths:**  \n- You clearly connect the drawbacks to the peer-to-peer model (e.g., trust in peers, reliance on multiple nodes).  \n- Your explanation of the security risk is concise and relevant.  \n\n**Areas for Improvement:**  \n- To earn full marks, you could expand each drawback by referencing additional points from the mark scheme. For example, for the first drawback, mention how the network\u2019s lack of central management makes it vulnerable to viruses (as in the mark scheme\u2019s bullet points). For the second drawback, elaborate on how slow bandwidth affects the entire network\u2019s performance or how inconsistent software across nodes might cause compatibility issues.  \n- Using more specific examples from the mark scheme (e.g., \u0022no central management of backup\u0022 or \u0022consistency may be difficult to maintain\u0022) would strengthen your response.  \n\nKeep up the good work! With a bit more detail, you could fully address all aspects of the question."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 23,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses two key drawbacks of peer-to-peer networks, demonstrating a clear understanding of the topic. For the first drawback, you correctly highlight the security risks, such as the potential for malicious code and viruses, which aligns with the mark scheme points about \u0022reduced security\u0022 and \u0022each computer is at risk from viruses from other computers.\u0022 This earns you two marks. For the second drawback, you explain how node failures can disrupt file downloads and how slow bandwidth can strain the network, which corresponds to the mark scheme\u2019s points on \u0022no central management of backup\u0022 and \u0022individual computers may respond slower.\u0022 This also secures two marks.  \n\n**Strengths:**  \n- You clearly identify both drawbacks and explain their implications.  \n- Your examples (e.g., viruses, slow bandwidth) are relevant and well-structured.  \n\n**Suggestions for Improvement:**  \n- Consider explicitly referencing terms from the mark scheme, such as \u0022no central management of security\u0022 or \u0022consistency may be difficult to maintain,\u0022 to ensure full alignment with the criteria.  \n- Expanding on how these issues impact the network\u2019s reliability could strengthen your analysis further.  \n\nKeep up the good work\u2014you\u2019ve shown a strong grasp of the topic! With a few tweaks, your response could be even more precise."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 24,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n   \nYour response effectively addresses the question by identifying two clear drawbacks of using a peer-to-peer network, and you\u2019ve provided detailed explanations that align well with the mark scheme.  \n**Strengths:**  \n1. **Security Concerns:** You accurately highlighted the risk of malicious attacks (e.g., viruses, trojans) and explained how the lack of central security management makes the network vulnerable. This directly matches the mark scheme\u2019s points about reduced security and the network being as secure as the weakest computer.  \n2. **Reliability Issues:** Your second point clearly describes how a failed node (e.g., a friend\u2019s device) can disrupt file downloads, as well as how slow bandwidth from one user can affect the entire network. This ties into the mark scheme\u2019s emphasis on no central management of backup and inconsistent performance due to individual devices.  \n\n**Suggestions for Improvement:**  \nConsider expanding slightly on the consequences of these issues (e.g., how data loss or slowed connections impacts Melinda and her friends\u2019 collaboration). However, your response is already strong and fully meets the requirements. Well done!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 25,
+    "ExpectedMark": 4,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response identifies one clear drawback related to security, which is well-supported by the mark scheme. You correctly highlight the risk of malicious files and the lack of centralized security checks, demonstrating a good understanding of peer-to-peer (P2P) network vulnerabilities. This earns you 1 mark.  \n\nHowever, your second point about node failure and bandwidth issues does not fully align with the mark scheme\u2019s criteria for a drawback. While the idea of reliability is relevant, the mark scheme specifically emphasizes drawbacks like **no central management of backup**, **data loss due to unbacked-up files**, or **software inconsistency**. Your response mentions performance issues but lacks direct reference to these specific aspects.  \n\n**Strengths:**  \n- You clearly explain the security risk, which is a key drawback of P2P networks.  \n- Your explanation of node failure is logical and shows engagement with the topic.  \n\n**Suggestions for Improvement:**  \n- For the second drawback, consider linking it to **backup management** (e.g., if a node fails, data is lost because there\u2019s no centralized backup system).  \n- Alternatively, focus on **software inconsistency** (e.g., if one peer uses outdated software, it could disrupt the network).  \n\nKeep refining your ability to connect ideas directly to the mark scheme\u2019s criteria. With this, you could earn the full 2 marks!"
+  }
+]

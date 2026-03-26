@@ -1,0 +1,72 @@
+[
+  {
+    "Iteration": 1,
+    "Model": "granite4",
+    "GenerationTimeMs": 50562,
+    "ContainsDraftQuestion": false,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 2,
+    "Model": "granite4",
+    "GenerationTimeMs": 7369,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 3,
+    "Model": "granite4",
+    "GenerationTimeMs": 6251,
+    "ContainsDraftQuestion": false,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 4,
+    "Model": "granite4",
+    "GenerationTimeMs": 8867,
+    "ContainsDraftQuestion": false,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 5,
+    "Model": "granite4",
+    "GenerationTimeMs": 8794,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 6,
+    "Model": "granite4",
+    "GenerationTimeMs": 9468,
+    "ContainsDraftQuestion": false,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 7,
+    "Model": "granite4",
+    "GenerationTimeMs": 5096,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 8,
+    "Model": "granite4",
+    "GenerationTimeMs": 5838,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 9,
+    "Model": "granite4",
+    "GenerationTimeMs": 6544,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  },
+  {
+    "Iteration": 10,
+    "Model": "granite4",
+    "GenerationTimeMs": 4623,
+    "ContainsDraftQuestion": true,
+    "ContainsThinkingTags": false
+  }
+]

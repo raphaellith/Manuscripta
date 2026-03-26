@@ -1,0 +1,72 @@
+[
+  {
+    "Iteration": 1,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 14.777777777777782,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 2,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 13.420591397849467,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 3,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 13.521086956521739,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 4,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 17.39454545454546,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 5,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 15.577580645161287,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 6,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 18.4525641025641,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 7,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 10.955869565217395,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 8,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 10.810769230769232,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 9,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 14.16531746031746,
+    "RetainedEntity": false
+  },
+  {
+    "Iteration": 10,
+    "Model": "granite4",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 12.570333333333334,
+    "RetainedEntity": true
+  }
+]

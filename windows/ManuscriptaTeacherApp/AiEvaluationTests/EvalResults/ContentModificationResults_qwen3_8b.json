@@ -1,0 +1,72 @@
+[
+  {
+    "Iteration": 1,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 10.158666666666665,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 2,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 11.168492063492064,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 3,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 9.038888888888891,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 4,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 15.212043010752687,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 5,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 11.301904761904762,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 6,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 11.839607843137259,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 7,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 10.638333333333335,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 8,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 9.655000000000001,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 9,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 12.102716049382721,
+    "RetainedEntity": true
+  },
+  {
+    "Iteration": 10,
+    "Model": "qwen3:8b",
+    "InitialFleschKincaid": 23.10190476190476,
+    "FinalFleschKincaid": 12.359166666666667,
+    "RetainedEntity": true
+  }
+]

@@ -1,0 +1,452 @@
+[
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d381afd1-bfbe-4328-93c4-39458bfbdfd7",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour answer correctly identifies Run-Length Encoding (RLE) as a valid method of lossless compression, which earns you 1 mark. However, the description lacks clarity and contains inaccuracies. While you mentioned replacing sequences with a code and count, your example uses characters (e.g., \u0022EEEFAA\u0022) rather than pixels, which is not relevant to image compression. Additionally, the example \u0022EEEFAA\u0022 becomes \u0022E3F1A4\u0022 incorrectly (it should be \u0022E3F1A3\u0022). To improve, focus on how RLE applies to images: it replaces repeated pixel values (e.g., a block of 100 identical pixels) with a single value and a count, drastically reducing the number of bits needed to represent the data. Practice explaining the method in the context of pixel sequences, not text characters. Well done on identifying the method!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d381afd1-bfbe-4328-93c4-39458bfbdfd7",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies Run-length Encoding (RLE) as a valid method of lossless image compression, which earns you 1 mark. However, the description could be improved. While you mention that repeated characters are stored as a single instance followed by a count (e.g., E3F1A4), this example uses characters rather than pixels, which is not appropriate for image compression. The mark scheme specifies that RLE replaces sequences of the same **colour pixel**, so using pixel examples (e.g., \u0022black pixels repeated 10 times\u0022 becomes \u0022black10\u0022) would align better with the question\u2019s context. Additionally, you could explicitly explain how this reduces file size by replacing multiple identical pixels with a shorter code, thereby reducing the number of bits required to represent the image. For example, instead of storing 10 black pixels as 10 bits, you store \u0022black10\u0022 as fewer bits. This would strengthen your description and earn the second mark. Well done on identifying the correct method!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d381afd1-bfbe-4328-93c4-39458bfbdfd7",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 3,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies Run-Length Encoding (RLE) as a method of lossless compression and explains how it reduces file size. You clearly state that repeated characters (or pixel values) are stored once followed by their count, such as E3F1A4, which demonstrates the core principle of RLE. This aligns well with the mark scheme\u2019s requirement to name the method and describe how it replaces sequences of identical pixels with a colour code and count.  \n\n**Strengths:**  \n- Accurate identification of RLE as the method.  \n- Clear explanation of how repeated data is compressed using a code and count.  \n- Example (E3F1A4) effectively illustrates the reduction in data size.  \n\n**Suggestions for Improvement:**  \nWhile your answer is correct, you could enhance clarity by explicitly mentioning that RLE is applied to pixel data in images (e.g., \u0022sequences of the same colour pixel\u0022). This would directly reference the mark scheme\u2019s second point. Additionally, specifying that the \u0022character\u0022 in your example represents a colour code (e.g., RGB values) might strengthen the connection to image compression.  \n\nKeep up the good work! With minor adjustments, your explanation could be even more precise and aligned with the mark scheme\u2019s expectations."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "fa5d9656-0935-44f6-bb07-0151b2aff235",
+    "Iteration": 1,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour answer correctly identifies Run-length encoding (RLE) as a valid method of lossless image compression, which earns you 1 mark. You also provide a clear explanation of how RLE works by storing two values: the type of character (which could be interpreted as a pixel value) and the number of repetitions. This demonstrates an understanding of the core principle of RLE, earning you a second mark.  \n\nHowever, there is room for improvement. The term \u0022character\u0022 is slightly imprecise in the context of image compression, where we refer to **color pixels** rather than text characters. Additionally, your explanation could explicitly mention how RLE replaces sequences of identical pixels with a **color code** and a **repetition count**, which is central to the method\u2019s efficiency. For example, a sequence of 100 red pixels would be stored as \u0022red, 100\u0022 instead of repeating \u0022red\u0022 100 times.  \n\nStrengths:  \n- Correct identification of RLE as a valid compression method.  \n- Clear explanation of how RLE reduces file size by storing repeated data more efficiently.  \n\nSuggestions for improvement:  \n- Use \u0022color pixel\u0022 instead of \u0022character\u0022 to align with image compression terminology.  \n- Explicitly mention how RLE replaces sequences with a color code and repetition count.  \n\nKeep up the good work! With these small adjustments, your answer could achieve the maximum score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "fa5d9656-0935-44f6-bb07-0151b2aff235",
+    "Iteration": 2,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies **Run-length encoding (RLE)** as the method, which earns you 1 mark. You also provide a reasonable explanation of how RLE works by mentioning the storage of two values: the character type and the number of repetitions. This addresses part of the description requirement, earning you a second mark.  \n\nHowever, there is room for improvement. The mark scheme specifies that RLE replaces sequences of the same colour pixel with a **colour code and number of identical pixels**. Your answer refers to \u0022identical character\u0022 and \u0022repetition of the character,\u0022 which is slightly more aligned with text compression than image compression. To fully align with the mark scheme, you could explicitly mention replacing pixel sequences with a colour code and count. Additionally, clarifying that this method reduces file size by eliminating redundant data (e.g., repeated pixels) would strengthen your explanation.  \n\nWell done on identifying the correct method! To improve, focus on how RLE specifically applies to images and ensure your description includes the exact terms from the mark scheme. Keep up the good work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "fa5d9656-0935-44f6-bb07-0151b2aff235",
+    "Iteration": 3,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies Run-length encoding (RLE) as a valid method of lossless image compression, which earns you 1 mark. The description mentions storing two values\u2014a character type and its repetition count\u2014which is a key aspect of RLE. However, the explanation could be more precise. For example, you could clarify that RLE replaces sequences of identical pixels (not characters) with a colour code and a count of repetitions, which directly reduces file size by eliminating redundant data. To improve, focus on how RLE specifically applies to images (e.g., grouping same-coloured pixels) and explicitly mention the replacement process. This would align more closely with the mark scheme and strengthen your answer. Well done on identifying the correct method!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "cf098466-5936-4366-93f3-b59e548d1afa",
+    "Iteration": 1,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nThe response identifies an incorrect method of lossless compression (\u0022Similarity compression\u0022) and fails to name a valid technique such as run-length encoding. While the student correctly mentions that lossless compression preserves data integrity, the method described is not a recognized standard. The description also lacks clarity on how the method reduces file size, such as replacing sequences of identical pixels with colour codes and numerical counts. To improve, the student should:  \n1. Name a correct method (e.g., run-length encoding).  \n2. Explain how the method reduces file size by replacing repeated pixel sequences with concise codes.  \n3. Ensure the explanation directly links the technique to file size reduction.  \nThis would align with the mark scheme\u2019s requirements for both method naming and detailed description."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "cf098466-5936-4366-93f3-b59e548d1afa",
+    "Iteration": 2,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response attempts to address the question but does not fully meet the requirements. The method you named, \u0022Similarity compression,\u0022 is not a recognized method of lossless compression, and the description lacks clarity or specificity. While you correctly mention that lossless compression preserves data integrity, the explanation of how the method reduces file size is vague and does not align with the mark scheme\u2019s example (e.g., run-length encoding). To improve, focus on naming a standard method (such as run-length encoding) and explain how it replaces repeated pixel sequences with color codes and counts, thereby reducing redundancy. Practise using precise technical terms and structuring your answer to directly address both parts of the question."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "cf098466-5936-4366-93f3-b59e548d1afa",
+    "Iteration": 3,
+    "ExpectedMark": 0,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response shows some understanding of the concept of lossless compression, but there are areas where you could improve. You correctly identified that lossless compression preserves data integrity, which is a key point. However, the method you named\u2014\u201CSimilarity compression\u201D\u2014is not a standard term in this context. The mark scheme specifies \u201Crun-length encoding\u201D as an example, so using the correct terminology is essential for full marks.  \n\nYour description mentions counting the same colors in the image, which aligns with the idea of run-length encoding. However, you could elaborate further by explaining how the method replaces sequences of identical pixels with a colour code and a count (e.g., \u201Cred, 10\u201D instead of 10 red pixels). This detail is crucial for demonstrating how the file size is reduced.  \n\nTo improve, focus on using precise terminology and expanding your explanation to include the specific mechanics of the method. Practice identifying standard compression techniques and their technical processes to strengthen your answers. Well done on addressing the core concept!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "370a61d9-9b91-4e5d-88ee-a41b1b30eaab",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response is too vague and does not address the key elements of the question. While you mentioned \u0022ownership,\u0022 the phrasing (\u0022legal recognition of ownership of a software or something\u0022) is incorrect and lacks clarity. Copyright is not limited to software or vague categories like \u0022something.\u0022 The mark scheme requires specific points such as legal rights to ownership (intellectual property rights), protection against unauthorized reproduction, and the legal right of redress. These were not included in your answer. To improve, focus on defining copyright using the exact points from the mark scheme and avoid generalizations. For example, you could explain how copyright grants exclusive rights to creators and protects against unauthorized use. This will ensure your response aligns with the question\u2019s requirements."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "370a61d9-9b91-4e5d-88ee-a41b1b30eaab",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response begins to address the concept of copyright by mentioning ownership, but it lacks clarity and accuracy. Copyright is not limited to \u0022software or something\u0022 \u2014 it is a legal framework protecting original works like art, music, and text. To improve, you should define copyright as the formal legal rights to ownership (intellectual property rights) and explain how it prevents unauthorized reproduction of creative works. Additionally, mentioning the right to seek legal redress if these rights are violated would strengthen your answer. Focus on precision and ensure your explanation aligns with the mark scheme\u2019s criteria."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "370a61d9-9b91-4e5d-88ee-a41b1b30eaab",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that copyright involves a \u0022legal recognition of ownership,\u0022 which aligns with the first bullet point in the mark scheme. This demonstrates an understanding of the basic concept of copyright as a legal right. However, the answer is somewhat vague and lacks specific details. For example, you mention \u0022software or something,\u0022 which is too broad and does not fully address the broader scope of copyright (e.g., artistic works, literary texts, etc.). Additionally, you do not mention key aspects such as protection against unauthorized reproduction or the legal right of redress, which are critical components of the definition.  \n\nTo improve, consider elaborating on the nature of copyright as a form of intellectual property and how it safeguards creators from unauthorized use of their work. Also, ensure your answer is precise and avoids vague terms like \u0022something.\u0022 This will help you fully meet the mark scheme requirements. Well done on identifying the core idea!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "4b2b4a19-89a6-4dc8-a7c0-41709d15d690",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies two key aspects of copyright: first, that it is an intellectual property right, and second, that it prevents unauthorized copying. These points align with the first and second bullet points in the mark scheme. However, the phrasing could be more precise. For example, \u0022cannot be copied\u0022 could be clarified as \u0022unauthorised reproduction\u0022 to match the mark scheme\u2019s wording. Additionally, mentioning legal redress (e.g., penalties for piracy) would strengthen your answer.  \n\n**Strengths**:  \n- You clearly link copyright to intellectual property rights.  \n- You address the protection against unauthorized copying, which is central to the definition.  \n\n**Suggestions for Improvement**:  \n- Use more formal terminology (e.g., \u0022unauthorised reproduction\u0022 instead of \u0022cannot be copied\u0022).  \n- Expand on the legal consequences (e.g., \u0022legal redress\u0022 or \u0022penalties for infringement\u0022) to fully cover the mark scheme\u2019s third bullet point.  \n\nKeep up the good work! With a little refinement, your answer could be even more precise and comprehensive."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "4b2b4a19-89a6-4dc8-a7c0-41709d15d690",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n   \nYour response correctly identifies two key aspects of copyright: it is an intellectual property right (aligning with the first bullet point in the mark scheme), and it prevents unauthorized copying (matching the second bullet point). These points are accurate and demonstrate a clear understanding of the concept. However, your explanation could be more precise. For example, the phrase \u0022action can be taken because it is considered as piracy\u0022 is slightly vague\u2014copyright infringement is a legal term, and piracy specifically refers to unauthorized copying of copyrighted works, not all forms of unauthorized use. Additionally, you could have mentioned the legal redress aspect (third bullet point) to strengthen your answer. To improve, focus on defining copyright as a legal right to control reproduction and distribution, and explain how this protects creators. Keep up the good work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "4b2b4a19-89a6-4dc8-a7c0-41709d15d690",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n   \nYour response correctly identifies two key aspects of copyright, which aligns with the mark scheme. You mentioned \u0022intellectual property right on the image, program, and many more,\u0022 which addresses the first bullet point about copyright being a form of intellectual property rights. Additionally, your reference to \u0022cannot be copied\u0022 and the concept of \u0022piracy\u0022 touches on the second bullet point regarding protection against unauthorized reproduction. These points demonstrate a clear understanding of the core principles of copyright.  \n\nTo enhance your answer further, consider specifying that copyright is a **specific type of intellectual property** (e.g., distinct from trademarks or patents) and elaborating on the **legal redress** available to rights holders, such as fines or injunctions. This would fully address the mark scheme\u2019s third bullet point. Keep up the good work\u2014your response shows a solid grasp of the topic!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d0756b33-9ad8-472b-a60f-7c126aa83cca",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that copyright relates to ownership, which is one of the key aspects of the mark scheme. However, it lacks clarity and precision in explaining the concept. For example, you mention \u0022authorized or belongs to private,\u0022 which is not an accurate description of copyright. A clearer explanation would focus on the legal rights of the creator, such as exclusive control over reproduction and distribution. Additionally, you could have addressed how copyright protects against unauthorized use, which is another key point in the mark scheme. To improve, consider defining copyright more clearly and linking it to its purpose, such as preventing unauthorized copying. Well done on touching on ownership, but expanding on the legal protections and redress options would strengthen your answer."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d0756b33-9ad8-472b-a60f-7c126aa83cca",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies two key aspects of copyright: the ownership of the image and the requirement for authorization before use. This aligns with the mark scheme\u2019s first bullet point about formal legal rights and intellectual property, and the second bullet point regarding unauthorized reproduction. However, your explanation is slightly unclear in places\u2014for example, describing copyright as something an image \u0022is\u0022 rather than a legal right held by the creator. Additionally, the mention of \u0022illegal behavior\u0022 lacks specific detail about legal redress, which is the third bullet point in the mark scheme.  \n\n**Strengths:**  \n- You accurately address the core idea of copyright as a legal right.  \n- You correctly note the need for authorization, which relates to preventing unauthorized use.  \n\n**Suggestions for Improvement:**  \n- Clarify that copyright is a legal right held by the creator, not an inherent property of the image itself.  \n- Expand on how legal redress (e.g., penalties for unauthorized use) protects creators.  \n\nKeep refining your explanations to ensure clarity and precision! \uD83D\uDE0A"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d0756b33-9ad8-472b-a60f-7c126aa83cca",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response attempts to address the question by mentioning legal rights and unauthorized use, which are key aspects of copyright. However, the explanation is unclear and contains inaccuracies. For example, you state that copyright is about \u0022authorized or belongs to private,\u0022 which is not a correct definition. Copyright refers to the legal rights of the creator, not ownership by private entities. Additionally, the phrase \u0022Anya\u0027s behavior is illegal\u0022 is vague and does not fully align with the mark scheme\u2019s focus on protecting against unauthorized reproduction.  \n\n**Strengths:**  \nYou correctly identified that copyright involves legal protections, which is a core part of the mark scheme.  \n\n**Suggestions for Improvement:**  \nTo enhance your answer, clarify that copyright grants the creator exclusive rights to their work (e.g., reproduction, distribution) and explain how it prevents unauthorized use. Avoid vague statements like \u0022illegal\u0022 without context. Referencing the mark scheme\u2019s bullet points directly (e.g., \u0022legal rights to ownership\u0022 and \u0022unauthorized reproduction\u0022) would strengthen your response.  \n\nKeep practicing defining legal concepts clearly and concisely!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "383985d3-1449-4d2c-9695-8d194ef4d2d7",
+    "Iteration": 1,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies two key features of a peer-to-peer network: that all computers are of equal status (by describing nodes as connected without a central server) and that data is distributed across the network (by mentioning files are split and shared). These points align with the mark scheme\u2019s criteria for 1 mark each. However, your explanation could be more precise. For example, you could clarify that in a peer-to-peer network, each node acts as both a client and server, which directly relates to the feature of computers sharing resources. Additionally, you might expand on how data distribution reduces reliance on a central server. To strengthen your answer further, consider addressing how communication occurs between peers and the role of security in such networks. Well done on identifying the core concepts!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "383985d3-1449-4d2c-9695-8d194ef4d2d7",
+    "Iteration": 2,
+    "ExpectedMark": 2,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that peer-to-peer networks lack a central server, which is a key feature, and you mention nodes acting as both senders and receivers of files. This demonstrates an understanding of how communication and resource sharing work in such networks. However, the explanation is somewhat vague, and some points (like data distribution and security responsibilities) are not clearly addressed. For example, you mention \u201Cdistributed parts of the file over the network,\u201D which touches on data distribution, but this idea could be explained more precisely. Additionally, the concept of equal status among all computers is implied but not explicitly stated. To improve, focus on clearly defining each key feature from the mark scheme, such as equal status, resource sharing, and security responsibilities. Practising structuring your answer with clear, concise points will help you score higher in future tasks. Well done on identifying the central idea of peer-to-peer networks!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "383985d3-1449-4d2c-9695-8d194ef4d2d7",
+    "Iteration": 3,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies two key features of a peer-to-peer (P2P) network: the absence of a centralised server and the distributed nature of data. By explaining that nodes (like Melinda) both send and receive files, you demonstrate an understanding of how P2P networks operate without relying on a central authority. This aligns well with the mark scheme\u2019s points about equal status and distributed resources.  \n\nTo further strengthen your answer, you could explicitly mention how all devices share responsibility for security (as per the mark scheme) and clarify that communication between nodes is direct and decentralized. For example, you might add that each node acts as both a client and server, enabling seamless resource sharing without a central point of failure.  \n\nGreat effort in addressing core concepts\u2014keep refining your explanations to cover all key features for even greater clarity!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d93a4ea6-5214-44d7-9655-2b8e889576cf",
+    "Iteration": 1,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies two key features of a peer-to-peer network: that all computers are of equal status and that they share resources and data. These points align with the mark scheme\u2019s first and second bullet points, which are worth 1 mark each, totaling 2 marks. You clearly explained how peers can access each other\u2019s software and data, which demonstrates understanding of resource sharing.  \n\nTo strengthen your answer further, you could explicitly mention how computers communicate directly (e.g., without a central server) and briefly touch on the responsibility of each computer for its own security, as these are also important aspects of peer-to-peer networks. Expanding slightly on these points would help ensure your response fully meets the mark scheme\u2019s expectations. Well done on identifying the core features!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d93a4ea6-5214-44d7-9655-2b8e889576cf",
+    "Iteration": 2,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively identifies two key features of a peer-to-peer network: that all computers are of equal status and that they share resources and data. These points directly align with the mark scheme\u2019s first and second bullet points, demonstrating a clear understanding of the concept.  \n\n**Strengths:**  \n- You correctly highlight the egalitarian nature of peer-to-peer networks, where no single device acts as a central authority.  \n- Your mention of shared software and data reflects the distributed nature of the network, which is a core characteristic.  \n\n**Suggestions for Improvement:**  \nTo further strengthen your answer, consider adding details about how computers communicate directly (e.g., file transfers or resource sharing without a central server) and the role of each device in managing its own security. These aspects are outlined in the mark scheme\u2019s third and fourth bullet points and would help you achieve a higher score.  \n\nKeep up the good work\u2014your response is solid, and with a few additional details, it could be even more comprehensive!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "d93a4ea6-5214-44d7-9655-2b8e889576cf",
+    "Iteration": 3,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies two key features of a peer-to-peer network: that all members are of equal status and that peers can access each other\u2019s software and data. These points align well with the mark scheme, particularly the bullet points about equal status and resource sharing.  \n\n**Strengths:**  \n- You clearly explain that all computers are treated equally, which is a fundamental characteristic of peer-to-peer networks.  \n- Your mention of shared access to software and data demonstrates an understanding of how resources are distributed in such networks.  \n\n**Areas for Improvement:**  \n- To strengthen your answer further, you could explicitly mention **data distribution** (as in the mark scheme\u2019s second bullet point) or elaborate on how **computers communicate and share resources** (third bullet point). For example, you might note that data is not stored in a central server but is instead spread across multiple peers.  \n- You could also briefly touch on **security responsibilities** (fourth bullet point), such as how each peer manages its own security without relying on a central authority.  \n\nKeep up the good work! Expanding on these points would help your response fully meet the mark scheme\u2019s expectations."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "f86a10bc-9449-4844-9d35-58e1e1214d35",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that computers in a peer-to-peer network can act as both servers and clients, which aligns with the mark scheme\u2019s point about \u0022all computers being of equal status.\u0022 This is a clear and accurate insight. However, you could have expanded on other key features, such as how data is distributed across the network or how computers share resources directly without a central server. Additionally, the mention of \u0022easier for a new computer to join\u0022 touches on scalability but doesn\u2019t fully address the mark scheme\u2019s emphasis on resource sharing and security responsibilities.  \n\nTo improve, consider explicitly stating how data is distributed (e.g., \u0022data is stored across multiple devices\u0022) and mention that each computer manages its own security (e.g., \u0022no central authority oversees security\u0022). These details would strengthen your answer and align more closely with the mark scheme. Well done on identifying the equal-status aspect!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "f86a10bc-9449-4844-9d35-58e1e1214d35",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies that computers in a peer-to-peer network can act as both servers and clients, which aligns with the key feature of equal status among devices. This is a strong point and demonstrates an understanding of the basic structure of peer-to-peer networks. However, there is room for improvement by expanding on other essential features. For example, you could mention how data is distributed across the network, how devices communicate directly without a central server, or the responsibility each computer has for its own security. These additional details would strengthen your answer and align it more closely with the mark scheme. Keep up the good work\u2014your grasp of the core concept is solid, and adding these elements will help you achieve a higher score next time!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "f86a10bc-9449-4844-9d35-58e1e1214d35",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that each computer can act as both a server and a client, which aligns with the key feature of equal status in a peer-to-peer network. This demonstrates a clear understanding of how devices interact in such a setup. However, the second point about ease of joining a network is not explicitly mentioned in the mark scheme, and it doesn\u2019t fully capture one of the core features (e.g., resource sharing or security responsibilities).  \n\nTo improve, consider including additional details from the mark scheme, such as how all computers share resources or take responsibility for their own security. These points would strengthen your answer and ensure it fully addresses the question. Keep up the good work on identifying the server/client duality!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 1,
+    "ExpectedMark": 4,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response demonstrates a good understanding of the key drawbacks of peer-to-peer networks. The first point effectively highlights the security risks, such as the lack of central management and the potential for malicious files, which aligns well with the mark scheme. This is a strong example of how to address the security drawback.  \n\nThe second point covers reliability and performance issues, such as node failures and slow bandwidth, which are relevant to the mark scheme. However, it could be strengthened by explicitly referencing specific points from the mark scheme, such as the lack of central management of backup or the impact of individual computers on network performance. For instance, mentioning how data loss could occur if a node fails or how slow internet speeds might affect the entire network would make this point more precise.  \n\nTo improve further, consider expanding each drawback with more detailed examples or linking your points directly to the mark scheme criteria. This will help ensure clarity and completeness in your response. Well done on identifying the core issues!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 2,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response effectively identifies two clear drawbacks of using a peer-to-peer network, and you have provided detailed explanations that align well with the mark scheme. For the first drawback, you correctly highlight the **reduced security** and the **lack of central management** (e.g., no security checks, risk of viruses/trojans from peers). These points directly match the mark scheme\u2019s bullet points on security vulnerabilities.  \n\nFor the second drawback, you explain how **node failure** (e.g., a friend\u2019s computer crashing) disrupts file downloads, which ties to the mark scheme\u2019s emphasis on **no central management of backup**. Additionally, you mention **slow bandwidth** causing network congestion, which aligns with the mark scheme\u2019s point about **individual computers responding slower** due to shared access.  \n\n**Strengths:**  \n- You clearly identify two distinct drawbacks.  \n- Your explanations are thorough and relevant to the question.  \n- You use specific examples (e.g., viruses, slow bandwidth) to illustrate the issues.  \n\n**Suggestions for Improvement:**  \n- Consider structuring your response to explicitly link each point to the mark scheme\u2019s bullet points (e.g., explicitly mention \u201Cno central management of backup\u201D for the second drawback).  \n- You could also clarify how the lack of central management affects consistency (e.g., different software versions across peers), which is another mark scheme point.  \n\nWell done on addressing the question comprehensively! With minor adjustments, your response could even score higher. Keep up the good work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "64909375-8f49-4b46-af8e-a94a1390ef0b",
+    "Iteration": 3,
+    "ExpectedMark": 4,
+    "ActualMark": 4,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response effectively addresses two drawbacks of using a peer-to-peer network, and you\u2019ve included four relevant points from the mark scheme, which is excellent.  \n  \n**Strengths:**  \n1. **Security Risks:** You clearly explain how peer-to-peer networks lack central security management, making them vulnerable to viruses and malicious files (e.g., \u0022no security check done by the network\u0022 and \u0022each computer is at risk from viruses from other computers\u0022). This aligns with the mark scheme\u2019s first three bullets about reduced security and trust in peers.  \n2. **Network Reliability:** You highlight how slow bandwidth can cause network congestion (\u0022huge traffic on the network\u0022) and how a single node failure can disrupt file downloads. While the node failure aspect isn\u2019t directly in the mark scheme, the slow bandwidth issue matches the \u0022individual computers may respond slower\u0022 bullet.  \n\n**Suggestions for Improvement:**  \n- To strengthen your answer further, consider mentioning the lack of central backup management (e.g., \u0022if one computer\u2019s data is lost, it affects all peers\u0022) or software inconsistency (e.g., \u0022different software on each computer can cause compatibility issues\u0022). These would add depth and align with additional mark scheme bullets.  \n- Ensure your explanations are concise but thorough, avoiding redundancy. For example, the \u0022trust in peers\u0022 point could be slightly refined to explicitly link to the network\u2019s security vulnerabilities.  \n\nWell done on identifying key drawbacks! With minor adjustments, your response could be even more comprehensive. Keep up the great work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "9de00805-b4e2-473e-aba4-3bfcb9bdab4f",
+    "Iteration": 1,
+    "ExpectedMark": 1,
+    "ActualMark": 3,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response correctly identifies two drawbacks of using a peer-to-peer network and addresses them with clear explanations. For the first drawback, you explain that the network becomes harder to manage as it expands, which is a valid point and aligns with the mark scheme\u2019s focus on the lack of central management. This earns you 1 mark. For the second drawback, you mention reduced security and reliance on trust, which are key aspects of the security risks in peer-to-peer networks. This covers two elements from the mark scheme (reduced security and no central management of security), earning you 2 marks.  \n\n**Strengths:**  \n- Your explanation of management complexity is precise and relevant.  \n- You clearly connect the concept of trust to the security risks, showing understanding of peer-to-peer vulnerabilities.  \n\n**Suggestions for Improvement:**  \n- To fully earn the maximum 4 marks, you could expand on the security aspect by mentioning specific risks, such as the potential for viruses or data loss due to the absence of central backup systems. For example, you could add: \u201CA peer could accidentally introduce malicious software, or if one computer\u2019s data is lost, it may be inaccessible to all others.\u201D This would align with additional points in the mark scheme and strengthen your response.  \n\nKeep up the good work! With a little more detail, your answer could achieve the highest score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "9de00805-b4e2-473e-aba4-3bfcb9bdab4f",
+    "Iteration": 2,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response demonstrates a good understanding of the drawbacks of peer-to-peer networks, particularly in terms of security. The second point about reduced security and the risk of malicious attacks aligns well with the mark scheme, as it addresses the lack of centralised security management and the vulnerability of individual computers to viruses. This earns you 2 marks, as it covers two relevant aspects from the mark scheme.  \n\nHowever, your first point about the network becoming harder to manage as it expands does not directly match the mark scheme\u2019s criteria. While complexity is a valid concern, the mark scheme specifically highlights issues like no central management of backup, files, or software consistency. To improve, you could focus on these points, such as mentioning the risk of data loss if backups are not managed centrally or the inconsistency caused by differing software across devices.  \n\nStrengths: Your second point clearly addresses security risks and trust issues, which are key drawbacks.  \nAreas for improvement: Expand on management challenges by referencing specific mark scheme elements like backup or software consistency.  \nKeep up the good work\u2014your analysis is on the right track!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "9de00805-b4e2-473e-aba4-3bfcb9bdab4f",
+    "Iteration": 3,
+    "ExpectedMark": 1,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response identifies two drawbacks of using a peer-to-peer network, which is a good start. For the **second drawback** about security, you correctly highlight that the network relies on trust and is vulnerable to malicious attacks or software. This aligns with the mark scheme\u2019s points on reduced security and the risk of viruses spreading between devices. You\u2019ve earned 1 mark for this.  \n\nFor the **first drawback**, you mention that the network becomes harder to manage as it grows. While this is a valid concern, the mark scheme specifically rewards points like *no central management of backup* or *no central management of files/software*. Your response is more general and lacks the specificity needed to fully address these points. This means you\u2019ve earned **0 marks** for this part.  \n\n**Strengths**:  \n- You clearly explain the security risks, which is a key drawback of peer-to-peer networks.  \n- Your structure with numbered points makes the response easy to follow.  \n\n**Suggestions for Improvement**:  \n- For the management issue, consider adding details like *no central backup system* or *inconsistent software across devices* to align more closely with the mark scheme.  \n- Use examples (e.g., \u201Cdata loss if one computer fails\u201D) to strengthen your points.  \n\nKeep up the good work! With a bit more specificity, your response could earn a higher score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "c440aec6-d01c-47a8-9d0b-82e4c889e7a2",
+    "Iteration": 1,
+    "ExpectedMark": 2,
+    "ActualMark": 3,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response addresses the question by identifying two drawbacks of using a peer-to-peer network, which is a good start. The first bullet point, \u0022It is difficult to manage so many computers in peer-to-peer network,\u0022 effectively highlights the lack of central management, which aligns with the mark scheme\u2019s points about **no central management of backup** and **no central management of files/software**. This demonstrates a clear understanding of the complexity in maintaining consistency and data integrity across multiple devices.  \n\nThe second bullet point, \u0022It is loss of centralism security,\u0022 correctly refers to the **reduced security** due to the absence of a central authority. However, the phrasing is slightly unclear (\u0022loss of centralism security\u0022 could be rephrased as \u0022no central management of security\u0022 for clarity). While this point earns one mark, it could have been strengthened by explicitly mentioning risks like **viruses spreading between devices** or **data loss due to unbacked-up files**, which are also part of the mark scheme.  \n\n**Strengths:**  \n- You clearly identified two drawbacks, which is the core requirement of the question.  \n- Your first point effectively covers multiple aspects of management challenges.  \n\n**Suggestions for Improvement:**  \n- Clarify the second point by directly referencing the mark scheme\u2019s examples (e.g., \u0022no central management of security\u0022 or \u0022each computer is at risk from viruses\u0022).  \n- Expand on the implications of these drawbacks to show a deeper understanding.  \n\nKeep up the good work! With a bit more precision in phrasing and elaboration, your response could achieve the full mark."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "c440aec6-d01c-47a8-9d0b-82e4c889e7a2",
+    "Iteration": 2,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \n  \nYour response identifies two valid drawbacks of using a peer-to-peer network, which is a good start. However, the phrasing and specific details could be refined to better align with the mark scheme.  \n\n**Strengths:**  \n- You correctly highlight **management challenges** (e.g., difficulty managing multiple computers), which is a key drawback of peer-to-peer networks.  \n- Your second point about **security** is relevant, though the phrasing (\u0022loss of centralism security\u0022) is slightly unclear. The mark scheme emphasizes \u0022no central management of security,\u0022 which is a more precise way to express this idea.  \n\n**Suggestions for Improvement:**  \n1. For the first drawback, consider elaborating on specific issues like **no central management of backup** or **software inconsistency** (as mentioned in the mark scheme). For example, you could explain how data loss occurs if backups are not centralized.  \n2. For the second drawback, clarify that peer-to-peer networks **lack centralized security**, making them vulnerable to viruses or malware spreading between devices.  \n\n**Score Justification:**  \n- **1 mark for the first point:** Your identification of management difficulties is valid, but it lacks specific details from the mark scheme (e.g., no central management of backup).  \n- **1 mark for the second point:** The idea of security risks is correct, but the phrasing (\u0022loss of centralism security\u0022) is imprecise. A clearer explanation would earn full marks.  \n\nKeep refining your explanations to match the mark scheme\u2019s terminology and structure. You\u2019re on the right track!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "c440aec6-d01c-47a8-9d0b-82e4c889e7a2",
+    "Iteration": 3,
+    "ExpectedMark": 2,
+    "ActualMark": 2,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies two drawbacks of using a peer-to-peer network, which is a good start. The first point about difficulty managing multiple computers is relevant and aligns with the mark scheme\u2019s emphasis on challenges in central management. The second point about the loss of central security is also valid, as it touches on the lack of a unified security system.  \n\nHowever, your answer could be strengthened by providing more specific details from the mark scheme. For example, under the security drawback, you could elaborate on how the network is only as secure as the weakest computer or the risk of viruses spreading between devices. Similarly, for the management drawback, you might mention issues like inconsistent software versions or the lack of centralized backup systems.  \n\nTo improve, consider expanding each point with one or two specific examples from the mark scheme. This will not only increase your score but also demonstrate a deeper understanding of the topic. Well done on identifying the main drawbacks\u2014now focus on elaborating them with more detail!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "b3b8df67-efb9-42cf-a4c2-3843b24030f5",
+    "Iteration": 1,
+    "ExpectedMark": 2,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response correctly identifies that an embedded system performs a specific task, which is a key part of the definition. This shows a good understanding of the core concept. However, the explanation could be more precise. For instance, you could have mentioned that an embedded system typically involves a microprocessor or microcontroller (a small computer) within a larger device, such as the washing machine. This would have earned you the full mark for the definition.  \n\nFor the example, you mentioned remote control via an app, but the embedded system in a washing machine is more about managing the washing cycle (e.g., controlling water temperature, spin speed) rather than external connectivity. To improve, focus on the internal function of the embedded system within the machine itself.  \n\nWell done on addressing the definition, but refining your example to align with the mark scheme will help you achieve the maximum score. Keep up the good work!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "b3b8df67-efb9-42cf-a4c2-3843b24030f5",
+    "Iteration": 2,
+    "ExpectedMark": 2,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nThe student has attempted to define an embedded system but has not fully addressed the mark scheme criteria. While they correctly mention that an embedded system performs a specific task, they fail to include the key component of a microprocessor or microcontroller, which is essential to the definition. Additionally, the example provided\u2014remote control via an app\u2014is not relevant to the embedded system\u2019s function in a washing machine. The mark scheme specifies that the embedded system in a washing machine controls the washing cycle and does not perform other functions, but the student\u2019s example focuses on external connectivity rather than the internal control mechanism.  \n\n**Strengths:** The student correctly identifies that an embedded system performs a specific task, which aligns with part of the definition.  \n\n**Suggestions for Improvement:** To improve, focus on the role of the microprocessor/microcontroller within the washing machine, such as managing water temperature, spin speed, or cycle timing. Avoid examples that involve external devices like apps, as these are not part of the embedded system\u2019s core function. Clarifying the internal control processes would better meet the mark scheme requirements."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "b3b8df67-efb9-42cf-a4c2-3843b24030f5",
+    "Iteration": 3,
+    "ExpectedMark": 2,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nThe student has correctly identified that an embedded system performs a specific task, which aligns with the definition bullet point. However, the example provided does not fully meet the mark scheme criteria. The response mentions remote control via an app, which is not directly related to the embedded system\u2019s function in the washing machine. A more accurate example would focus on the system controlling the washing cycle (e.g., water temperature, spin speed) rather than external connectivity features.  \n\nStrengths: The definition of an embedded system as a system performing a specific task is accurate and demonstrates understanding of the core concept.  \n\nImprovement: To enhance the response, the student should elaborate on how the embedded system in the washing machine operates within the appliance (e.g., managing the washing cycle) rather than discussing external features like app integration. This would better align with the mark scheme\u2019s example criteria.  \n\nKeep up the good work on the definition! With a clearer example, this response could achieve the full score."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "1b3f9c24-b4b4-430e-9905-7f9ca8747f03",
+    "Iteration": 1,
+    "ExpectedMark": 0,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response touches on some correct elements of an embedded system, but there are areas for improvement. You correctly mention that an embedded system includes hardware, software, and BIOS, which are components of such systems. However, your definition of an embedded system is unclear and contains a minor error (\u0022applicants\u0022 should be \u0022appliances\u0022). A clearer definition would focus on the role of a microprocessor/microcontroller within a larger system, such as a washing machine, to perform specific tasks like controlling the washing cycle. \n\nFor the example, you mention that the embedded system enables the washing machine to control motors and record time, which is accurate. However, the mark scheme emphasizes that an embedded system in a washing machine \u0022only controls the programs for the washing cycle\u0022 and does not perform other functions. Your explanation could be more precise by explicitly stating that the system is dedicated to the washing cycle and not to other tasks. \n\nTo improve, ensure your definition is clear and directly addresses the mark scheme criteria. Also, elaborate on how the embedded system is specialized to its function. Keep up the good work on identifying components!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "1b3f9c24-b4b4-430e-9905-7f9ca8747f03",
+    "Iteration": 2,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response attempts to address the question but falls short in several key areas. While you mention hardware, software, and BIOS as components of the embedded system, this does not fully align with the mark scheme\u2019s requirement for a clear definition. The definition bullet point specifies that an embedded system is a microprocessor/microcontroller within a larger system or performing a specific task. Your answer incorrectly refers to a \u0022microcomputer and software\u0022 and mistakenly uses the term \u0022applicants\u0022 instead of \u0022appliances,\u0022 which is a critical error.  \n\nFor the example, the mark scheme requires that the embedded system in the washing machine *only* controls the washing cycle and does not perform other functions. Your response mentions \u0022controlling motors\u0022 and \u0022recording time,\u0022 which are valid functions but do not explicitly state that the system is limited to the washing cycle. This omission means the example does not fully meet the criteria.  \n\n**Strengths:** You correctly identify hardware and software as part of the system, which is a good start.  \n**Improvement:** Focus on defining the embedded system using the exact terminology from the mark scheme (e.g., microprocessor/microcontroller) and clarify that the system is specifically dedicated to the washing cycle, not other functions. Practice using precise language to ensure your examples match the mark scheme\u2019s requirements."
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "1b3f9c24-b4b4-430e-9905-7f9ca8747f03",
+    "Iteration": 3,
+    "ExpectedMark": 0,
+    "ActualMark": 1,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response demonstrates some understanding of the concept of an embedded system, but there are areas that require clarification and improvement. You correctly identified that an embedded system involves hardware, software, and components like BIOS, which are relevant to the washing machine\u2019s operation. However, the definition you provided is inaccurate\u2014\u201Cmicrocomputer and software is embedded in applicants\u201D contains a grammatical error and uses the incorrect term \u201Capplicants\u201D instead of \u201Cappliances\u201D or \u201Cdevices.\u201D This undermines the clarity of your explanation.  \n\nFor the example, you mentioned that the embedded system controls motors and records time, which aligns with the washing machine\u2019s specific functions. However, the mark scheme emphasizes that an embedded system performs **one specific task** (e.g., controlling the washing cycle) and is part of a larger system. While your example touches on this, it could be strengthened by explicitly stating that the system is dedicated solely to the washing process and does not handle other functions.  \n\nTo improve, focus on defining the term precisely using the mark scheme\u2019s criteria (e.g., \u201Ca microprocessor/microcontroller within a larger system\u201D) and ensure your example clearly links the embedded system\u2019s role to its specific function. Practice using correct terminology and structuring your answer to directly address the question\u2019s requirements. Well done on identifying key components!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "eab0415a-484e-48f1-b92a-e1e139f02ce7",
+    "Iteration": 1,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response attempts to define an embedded system but lacks precision and alignment with the mark scheme. While you mention that an embedded system operates independently and processes limited instructions, the definition does not explicitly reference a **microprocessor/microcontroller** (as required by the mark scheme). This is a key gap in your explanation.  \n\nFor the example, you focus on the **user interface** of the washing machine rather than the **core embedded system** responsible for controlling the washing cycle. The mark scheme specifies that the embedded system in the washing machine performs a **specific task** (e.g., managing the washing program) and does not handle other functions. Your example does not reflect this, which weakens the response.  \n\n**Strengths:**  \n- You correctly identify the washing machine as an example of an embedded system.  \n- You mention that the system is pre-tested and limited in function, which shows some understanding of its characteristics.  \n\n**Suggestions for Improvement:**  \n- Clarify the definition by explicitly mentioning a **microprocessor/microcontroller** and its role in a larger system.  \n- Focus on the **core embedded system** (e.g., the control unit that manages the washing cycle) rather than peripheral components like the user interface.  \n- Ensure your example directly ties to the **specific task** the embedded system performs.  \n\nKeep refining your definitions and examples to align more closely with the mark scheme. Good effort!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "eab0415a-484e-48f1-b92a-e1e139f02ce7",
+    "Iteration": 2,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response shows some understanding of embedded systems but lacks clarity and precision in defining the concept. While you mentioned that an embedded system is a \u0022small piece of system that can run independently with some simple instruction,\u0022 this is not a complete or accurate definition. The mark scheme specifies that an embedded system is a microprocessor/microcontroller within a larger system or one that performs a specific task, which your answer does not fully address.  \n\nFor the example, you described the \u0022user interface on the washing machine\u0022 as an embedded system, but the mark scheme clarifies that the embedded system in a washing machine specifically controls the washing cycle (e.g., water temperature, spin speed) and does not perform other functions. Your example is incorrect, as the user interface is part of the system but not the embedded system itself.  \n\nTo improve, focus on defining the core components (e.g., microcontroller, specific task) and provide a clear, accurate example. For instance, you could explain how the embedded system in the washing machine manages the washing cycle without handling other tasks like lighting or display. This would align better with the mark scheme. Keep practicing by linking technical terms to real-world applications!"
+  },
+  {
+    "DatasetName": "CAIE_CompSci_Paper1",
+    "Model": "qwen3:8b",
+    "QuestionId": "eab0415a-484e-48f1-b92a-e1e139f02ce7",
+    "Iteration": 3,
+    "ExpectedMark": 0,
+    "ActualMark": 0,
+    "ValidFormat": true,
+    "RawFeedback": "  \nYour response attempts to define an embedded system but lacks the specific technical details required by the mark scheme. While you mention that the system \u0022can run independently\u0022 and \u0022processes limited instruction,\u0022 this is too vague and does not align with the mark scheme\u0027s requirement of a microprocessor/microcontroller performing a specific task. Additionally, your example of the \u0022user interface\u0022 is too broad and does not clearly link the embedded system to its function in the washing machine (e.g., controlling the washing cycle). To improve, focus on defining the system as a microcontroller managing a specific task (e.g., controlling water temperature or spin speed) and clarify how it operates within the larger machine. Practice using precise technical terms to meet the mark scheme\u2019s criteria."
+  }
+]

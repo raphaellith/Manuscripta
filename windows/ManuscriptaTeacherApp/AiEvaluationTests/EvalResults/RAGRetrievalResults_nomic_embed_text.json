@@ -1,0 +1,602 @@
+[
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 22,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "What is binary search and how does it work?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Explain the concept of normalisation in databases",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "How does TCP/IP enable reliable data transmission?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 5,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "Describe the fetch-decode-execute cycle of a processor",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 2,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 1,
+    "Iteration": 3,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 1,
+    "RelevantChunks": 1,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 3,
+    "Iteration": 3,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 3,
+    "RelevantChunks": 3,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 1,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 2,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 5,
+    "Iteration": 3,
+    "RetrievalTimeMs": 1,
+    "ChunksReturned": 5,
+    "RelevantChunks": 5,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 1,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 2,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  },
+  {
+    "Query": "What are the ethical implications of artificial intelligence?",
+    "EmbeddingModel": "nomic-embed-text",
+    "TopK": 10,
+    "Iteration": 3,
+    "RetrievalTimeMs": 2,
+    "ChunksReturned": 10,
+    "RelevantChunks": 10,
+    "Precision": 1
+  }
+]
