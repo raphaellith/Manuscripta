@@ -135,7 +135,7 @@ Each paired Android device sends a TCP heartbeat every 3 seconds containing its 
 - Testing: JUnit 4, Mockito, Robolectric, Espresso
 - Code Quality: Checkstyle, JaCoCo (90% minimum coverage)
 
-## Getting Started
+## Deployment Manual
 
 ### Prerequisites
 
@@ -214,6 +214,105 @@ The Android app requires **JDK 17** — it does not build on JDK 21+.
 **Windows Application**
 
 Refer to the Windows team documentation in the `windows/` directory for build instructions.
+
+## User Manual
+
+### Teacher Workflow
+
+![Content Library](images/content-library.png)
+
+#### Opening the Application
+
+Launch the Manuscripta Windows application on your laptop. The application opens to the **Lesson Library** tab. Use the navigation tabs at the top to move between **Library**, **Classroom**, **Responses** and **Settings**.
+
+#### Creating a New Material
+
+1. In the Lesson Library, click **Create New Material**
+2. Select a material type: **Worksheet**, **Quiz** or **Poll**
+3. Enter a topic (e.g. "Water Cycle"), set the **Reading Age** and **Actual Age** using the sliders, and optionally upload a source document (PDF or Word file) to ground the AI output in specific curriculum content
+4. Click **Generate** and the on-device AI produces the material locally on your laptop with no internet connection required
+5. Review the generated output in the editor and make any manual edits
+6. Click **Save** to add the material to your library
+
+![Content Generator](images/content-generator.png)
+
+#### Organising Materials
+
+Materials are organised into a three-level hierarchy:
+
+- **Units** (e.g. Science)
+- **Lessons** within each unit (e.g. Water Cycle)
+- **Materials** within each lesson (e.g. Water Cycle Worksheet)
+
+This structure makes it easy to find and deploy materials during a lesson without searching through a flat list.
+
+#### Deploying a Material
+
+1. Open the **Classroom** tab
+2. Select the Unit, Lesson and Material from the dropdown menus
+3. Select individual student devices or click **Select All** to target all connected tablets
+4. Click **Deploy to Devices** and the material is pushed to all selected E-ink tablets over the local Wi-Fi network within seconds
+
+![Classroom Management](images/classroom-management.png)
+
+#### Monitoring Student Progress
+
+The Classroom dashboard shows a colour-coded grid with one tile per connected student device:
+
+- Green means the student is on task
+- Orange means the student has raised their hand and needs help
+- Grey means the device is disconnected
+
+Click any device tile to view that student's current progress. No names are stored and all devices are identified by anonymised device IDs.
+
+#### Reviewing Responses and Feedback
+
+1. Open the **Responses** tab
+2. For each submitted response you will see the student's answer, an AI-generated mark scheme, a mark input field and an AI-generated feedback comment
+3. Edit the mark or feedback comment if needed
+4. Click **Send** to deliver feedback to the student's tablet, or **Regenerate** to produce a new AI feedback comment
+
+![Responses](images/responses.png)
+
+#### Locking and Unlocking Screens
+
+At any point during a lesson, click **Lock All Screens** to freeze all connected student tablets and draw the class's attention. Click **Unlock All Screens** to resume the lesson.
+
+---
+
+### Student Workflow
+
+#### Pairing Your Tablet
+
+When you first open the Manuscripta app on your E-ink tablet, the pairing screen appears. Enter your name in the text field and tap **Pair**. The tablet connects to the teacher's laptop automatically over the local Wi-Fi network.
+
+![Device Pairing](images/device-pairing.png)
+
+#### Receiving and Viewing a Worksheet
+
+When your teacher deploys a material, a notification appears on your tablet. Tap the notification or the worksheet tile to open it. The worksheet appears on your E-ink display in a clean, distraction-free format with no colour, animations or notifications.
+
+![Worksheet View](images/worksheet-view.png)
+
+#### Answering Questions
+
+For multiple choice questions, tap your chosen answer. For written response questions, tap the text field and type your answer using the on-screen keyboard or stylus. Take your time as there is no visible timer and no comparison with other students.
+
+![Quiz View](images/quiz-view.png)
+
+#### Submitting Your Work
+
+When you have answered all questions, tap the **Submit** button at the bottom of the screen. A confirmation message appears on your tablet and your answers are sent to the teacher's laptop over the local Wi-Fi network.
+
+#### Requesting Help
+
+If you are stuck at any point, tap the **Raise Hand** button in the status bar at the top of the screen. Your teacher will see your device highlighted on their dashboard and will come to help you. You do not need to speak aloud or raise your hand in front of the class.
+
+#### Viewing Feedback
+
+After your teacher has reviewed and marked your work, the feedback appears on your tablet showing your mark and a written comment. If an answer was incorrect you may be given the option to try again.
+
+![Feedback View](images/feedback-view.png)
 
 ## Documentation
 
