@@ -217,26 +217,25 @@ Refer to the Windows team documentation in the `windows/` directory for build in
 
 ## User Manual
 
-### Teacher Workflow
+---
 
-![Content Library](images/content-library.png)
+## Teacher Workflow
 
-#### Opening the Application
+### Opening the Application
 
-Launch the Manuscripta Windows application on your laptop. The application opens to the **Lesson Library** tab. Use the navigation tabs at the top to move between **Library**, **Classroom**, **Responses** and **Settings**.
+Launch the Manuscripta Windows application on your laptop. The application opens to the **Lesson Library** tab.
 
-#### Creating a New Material
+Use the navigation tabs at the top to move between:
+- **Library**
+- **Classroom**
+- **Responses**
+- **Settings**
 
-1. In the Lesson Library, click **Create New Material**
-2. Select a material type: **Worksheet**, **Quiz** or **Poll**
-3. Enter a topic (e.g. "Water Cycle"), set the **Reading Age** and **Actual Age** using the sliders, and optionally upload a source document (PDF or Word file) to ground the AI output in specific curriculum content
-4. Click **Generate** and the on-device AI produces the material locally on your laptop with no internet connection required
-5. Review the generated output in the editor and make any manual edits
-6. Click **Save** to add the material to your library
+<img width="1150" height="567" src="https://github.com/user-attachments/assets/832517e2-d5c3-4944-b1ce-72a00bd75fde" />
 
-![Content Generator](images/content-generator.png)
+---
 
-#### Organising Materials
+### Organising Materials
 
 Materials are organised into a three-level hierarchy:
 
@@ -244,75 +243,172 @@ Materials are organised into a three-level hierarchy:
 - **Lessons** within each unit (e.g. Water Cycle)
 - **Materials** within each lesson (e.g. Water Cycle Worksheet)
 
-This structure makes it easy to find and deploy materials during a lesson without searching through a flat list.
-
-#### Deploying a Material
-
-1. Open the **Classroom** tab
-2. Select the Unit, Lesson and Material from the dropdown menus
-3. Select individual student devices or click **Select All** to target all connected tablets
-4. Click **Deploy to Devices** and the material is pushed to all selected E-ink tablets over the local Wi-Fi network within seconds
-
-![Classroom Management](images/classroom-management.png)
-
-#### Monitoring Student Progress
-
-The Classroom dashboard shows a colour-coded grid with one tile per connected student device:
-
-- Green means the student is on task
-- Orange means the student has raised their hand and needs help
-- Grey means the device is disconnected
-
-Click any device tile to view that student's current progress. No names are stored and all devices are identified by anonymised device IDs.
-
-#### Reviewing Responses and Feedback
-
-1. Open the **Responses** tab
-2. For each submitted response you will see the student's answer, an AI-generated mark scheme, a mark input field and an AI-generated feedback comment
-3. Edit the mark or feedback comment if needed
-4. Click **Send** to deliver feedback to the student's tablet, or **Regenerate** to produce a new AI feedback comment
-
-![Responses](images/responses.png)
-
-#### Locking and Unlocking Screens
-
-At any point during a lesson, click **Lock All Screens** to freeze all connected student tablets and draw the class's attention. Click **Unlock All Screens** to resume the lesson.
+This structure makes it easy to find and deploy materials without searching through a flat list.
 
 ---
 
-### Student Workflow
+### Creating a New Material
 
-#### Pairing Your Tablet
+1. In the Lesson Library, click **Create New Material**
+2. Click the **+ icon** to create your:
+   - Collection
+   - Unit
+   - Lesson
+3. Choose either **AI Generation** or **Manual Creation**
 
-When you first open the Manuscripta app on your E-ink tablet, the pairing screen appears. Enter your name in the text field and tap **Pair**. The tablet connects to the teacher's laptop automatically over the local Wi-Fi network.
+<img width="1005" height="411" src="https://github.com/user-attachments/assets/bccf118c-1415-490f-9852-04d67a14e19b" />
 
-![Device Pairing](images/device-pairing.png)
+---
 
-#### Receiving and Viewing a Worksheet
+#### AI Generation
 
-When your teacher deploys a material, a notification appears on your tablet. Tap the notification or the worksheet tile to open it. The worksheet appears on your E-ink display in a clean, distraction-free format with no colour, animations or notifications.
+<img width="954" height="710" src="https://github.com/user-attachments/assets/c53a5dd9-86a2-431b-90b6-bdcc56fdeef8" />
 
-![Worksheet View](images/worksheet-view.png)
+4. Select a material type: **Reading** or **Worksheet**
+5. Enter a topic (e.g. *"Spelling"*)
+6. Set the **Reading Age** and **Actual Age** using the sliders
+7. Optionally upload a source document (PDF or Word) to guide the AI
+8. Click **Generate** — materials are created locally on your device (no internet required)
+9. Review and edit the generated content
+10. Click **Save** to add it to your library
 
-#### Answering Questions
+<img width="550" height="840" src="https://github.com/user-attachments/assets/a9093a61-bfb1-44cc-827d-2685e2afd437" />
+<img width="1118" height="586" src="https://github.com/user-attachments/assets/743d2228-bd7d-40ce-8f26-f0dc3728804b" />
 
-For multiple choice questions, tap your chosen answer. For written response questions, tap the text field and type your answer using the on-screen keyboard or stylus. Take your time as there is no visible timer and no comparison with other students.
+---
 
-![Quiz View](images/quiz-view.png)
+#### Manual Creation
 
-#### Submitting Your Work
+4. Select a material type: **Reading**, **Worksheet**, or **Poll**
 
-When you have answered all questions, tap the **Submit** button at the bottom of the screen. A confirmation message appears on your tablet and your answers are sent to the teacher's laptop over the local Wi-Fi network.
+<img width="1283" height="359" src="https://github.com/user-attachments/assets/2dcae2c3-6763-4104-af6f-e1d368713d26" />
 
-#### Requesting Help
+5. Click **Create Worksheet** to open the manual editor
+6. Develop your worksheet content
+7. Click **Save** to add it to your library
 
-If you are stuck at any point, tap the **Raise Hand** button in the status bar at the top of the screen. Your teacher will see your device highlighted on their dashboard and will come to help you. You do not need to speak aloud or raise your hand in front of the class.
+<img width="1150" height="641" src="https://github.com/user-attachments/assets/4a583c74-7845-4519-961c-67d1f1f23a12" />
 
-#### Viewing Feedback
+---
 
-After your teacher has reviewed and marked your work, the feedback appears on your tablet showing your mark and a written comment. If an answer was incorrect you may be given the option to try again.
+### Deploying a Material
 
-![Feedback View](images/feedback-view.png)
+1. Open the **Classroom** tab
+2. Select the **Unit**, **Lesson**, and **Material** from the dropdown menus
+3. Select individual devices or click **Select All**
+4. Click **Deploy to Devices**
+
+The material is sent to all selected E-ink tablets over the local Wi-Fi network within seconds.
+
+<img width="1437" height="473" src="https://github.com/user-attachments/assets/c7550b4a-aea8-44fd-a7b7-f8da44bb3973" />
+<img width="735" height="273" src="https://github.com/user-attachments/assets/1663a7e8-93b8-4c55-afcb-ad4507f14865" />
+
+---
+
+### Monitoring Student Progress
+
+The Classroom dashboard shows a colour-coded grid:
+
+- **Green** → Student is on task
+- **Orange** → Student has raised their hand
+- **Grey** → Device is disconnected
+
+Click a device tile to view that student's progress.
+
+No names are stored — devices are identified using anonymised IDs.
+
+---
+
+### Reviewing Responses and Feedback
+
+1. Open the **Responses** tab
+2. View:
+   - Student answers
+   - AI-generated mark scheme
+   - Mark input field
+   - AI-generated feedback
+3. Edit marks or feedback if needed
+4. Click:
+   - **Send** → Deliver feedback
+   - **Regenerate** → Create new AI feedback
+
+<img width="1159" height="533" src="https://github.com/user-attachments/assets/fd9aa2ca-3142-457e-83bc-0dfa0dbe1c10" />
+
+---
+
+### Locking and Unlocking Screens
+
+- Click **Lock All Screens** to pause all student devices
+- Click **Unlock All Screens** to resume the lesson
+
+---
+
+## Student Workflow
+
+### Pairing Your Tablet
+
+When you open the Manuscripta app:
+
+1. Enter your name
+2. Tap **Pair**
+
+The tablet connects automatically to the teacher's laptop via local Wi-Fi.
+
+<img width="349" height="689" src="https://github.com/user-attachments/assets/602e2b0c-a0b8-42f1-ad08-4879eb4d34c7" />
+
+---
+
+### Receiving and Viewing a Worksheet
+
+When a teacher deploys material:
+
+- A notification appears
+- Tap it to open the worksheet
+
+The content displays in a clean, distraction-free E-ink format.
+
+<img width="344" height="697" src="https://github.com/user-attachments/assets/fcad815e-4de4-41a4-9379-0612550d0ef1" />
+
+---
+
+### Answering Questions
+
+- Tap answers for multiple choice
+- Use keyboard or stylus for written responses
+
+There is:
+- No timer
+- No comparison with other students
+
+<img width="346" height="690" src="https://github.com/user-attachments/assets/23ece075-b77e-4cec-8bd7-f304f0ec8805" />
+
+---
+
+### Submitting Your Work
+
+1. Tap **Submit**
+2. A confirmation message appears
+
+Your answers are sent to the teacher over local Wi-Fi.
+
+---
+
+### Requesting Help
+
+Tap **Raise Hand** in the top bar.
+
+Your teacher will see this on their dashboard — no need to speak or raise your hand physically.
+
+---
+
+### Viewing Feedback
+
+After marking:
+
+- Your **mark** and **feedback** appear on your tablet
+- You may be allowed to retry incorrect answers
+
+<img width="340" height="687" src="https://github.com/user-attachments/assets/41581d2f-d6c4-4745-8edc-b02f209f1c2b" />
 
 ## Documentation
 
