@@ -135,7 +135,7 @@ Each paired Android device sends a TCP heartbeat every 3 seconds containing its 
 - Testing: JUnit 4, Mockito, Robolectric, Espresso
 - Code Quality: Checkstyle, JaCoCo (90% minimum coverage)
 
-## Getting Started
+## Deployment Manual
 
 ### Prerequisites
 
