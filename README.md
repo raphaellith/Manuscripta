@@ -213,7 +213,36 @@ The Android app requires **JDK 17** — it does not build on JDK 21+.
 
 **Windows Application**
 
-Refer to the Windows team documentation in the `windows/` directory for build instructions.
+Build prerequisites: **.NET SDK 10+**, **Node.js 20+ (with npm)**, and **Git**.
+
+Build from the repository root in this order:
+
+1. Clean previous artifacts:
+
+```powershell
+if (Test-Path "windows/ManuscriptaTeacherApp/UI/resources/backend") { Remove-Item -Recurse -Force "windows/ManuscriptaTeacherApp/UI/resources/backend" }
+if (Test-Path "windows/ManuscriptaTeacherApp/UI/out") { Remove-Item -Recurse -Force "windows/ManuscriptaTeacherApp/UI/out" }
+```
+
+2. Publish the backend (self-contained, Release, `win-x64`) into the Electron resources folder:
+
+```powershell
+dotnet restore windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj
+dotnet publish windows/ManuscriptaTeacherApp/Main/Manuscripta.Main.csproj --configuration Release --runtime win-x64 --self-contained true --output windows/ManuscriptaTeacherApp/UI/resources/backend
+```
+
+3. Build the Electron installer:
+
+```powershell
+cd windows/ManuscriptaTeacherApp/UI
+npm ci
+npm run make
+```
+
+4. Verify outputs:
+
+- Backend executable: `windows/ManuscriptaTeacherApp/UI/resources/backend/Manuscripta.Main.exe`
+- Installer output (Squirrel): `windows/ManuscriptaTeacherApp/UI/out/make/squirrel.windows/x64`
 
 ## User Manual
 
