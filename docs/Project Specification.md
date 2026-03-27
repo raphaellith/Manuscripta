@@ -8,7 +8,7 @@ Raphael Li, Nemo Shu, Priya Bargota, Will Stephen
 
 This document provides the detailed specifications for the Manuscripta Project, which aims to develop a classroom orchestration system that enables teachers to use on-device Generative AI (GenAI) to create and distribute educational materials onto students’ e-ink devices, such as those supplied by Boox or AiPaper.
 
-The system consists of two main components: (1) a Windows application for teachers which runs on an Intel- or Qualcomm-based AI-powered PC; and (2) an Android application for students which runs on low-distraction E-ink displays. This system aims to provide the benefits of digital and AI-enhanced learning while mitigating the disruption often caused by full-colour tablets and computers in a classroom setting.
+The system consists of two main components: (1) a Windows application for teachers which runs on an Intel- or Qualcomm-based AI-powered PC; and (2) an Android application for students which runs on low-distraction E-ink displays. In addition, for non-Android e-ink devices (e.g., reMarkable/Kindle), materials can be delivered and returned via an alternative external-device workflow. This system aims to provide the benefits of digital and AI-enhanced learning while mitigating the disruption often caused by full-colour tablets and computers in a classroom setting.
 
 This project is supervised by Professor Dean Mohamedally, with partners including Qualcomm and the Granite+Interactions Group at IBM.
 
@@ -40,10 +40,10 @@ This project is motivated by the desire to:
 The project’s scope includes the development of the following:
 
 1) a native Windows application for teachers;  
-2) a corresponding native Android application specifically for e-ink tablets, of which there are assumed to be approximately 30 per class;  
-3) the integration of on-device AI models, utilising OpenVINO and Qualcomm Snapdragon technologies, for teachers to generate lesson materials;  
+2) a corresponding native Android application specifically for e-ink tablets, of which there are assumed to be approximately 30 per class, with an alternative PDF-and-email delivery workflow for non-Android e-ink devices;  
+3) the integration of on-device AI models (Qwen primary, IBM Granite fallback) managed locally through Ollama for teachers to generate lesson materials;  
 4) the aggregation of anonymised student responses for quizzes and polls; and  
-5) bidirectional communication between the teacher app and the student apps operating exclusively over a Local Area Network (LAN).
+5) bidirectional communication between the teacher app and Android student apps over a Local Area Network (LAN), with a parallel PDF-and-email return path for non-Android e-ink devices.
 
 Items considered out of scope include:
 
@@ -51,7 +51,7 @@ Items considered out of scope include:
 2) the collection or management of any personally identifiable student data;  
 3) running GenAI models directly on the E-ink devices;  
 4) performing AI-driven image generation; and  
-5) support for student devices other than Android-based E-ink tablets.
+5) [REMOVED] See revised Scope item 2, which supports non-Android e-ink devices via PDF-and-email delivery rather than a native app.
 
 ### **4\. Requirements Specification: Teacher Application**
 
@@ -93,7 +93,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT15** The application must allow the import and display of static images and PDF documents as lesson materials.
 
-**MAT16** The application must allow the teacher to highlight and define keywords or vocabulary for each material.
+**MAT16** [REMOVED]
 
 **MAT17**	 When creating a new material, the system must provide a means, such as through a slider, for adjusting the text complexity and readability of the generated material, by selecting a target age group (e.g. “the readability should match a typical 8-year-old’s reading level”) as well as a target reading age level, such as that suggested by a Progressive Skills test.
 
@@ -157,6 +157,8 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **SYS3**	The application must be packaged for distribution via the Microsoft Store.
 
+**SYS4**	The system should support external devices such as reMarkable and Kindle through an alternative delivery workflow.
+
 ### **5\. Requirements Specification: Student Application**
 
 #### This section lists the requirements associated with the student application.
@@ -173,17 +175,17 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **MAT2B**	When answering questions, the application must display feedback as configured by the teacher: either a "Correct" (✓) or "Not quite right" (✗) message, or a neutral acknowledgment (e.g., "Response submitted").
 
-**MAT3**	When answering questions, the application must provide a "Try Again" option for incorrect responses.
+**MAT3**	[REMOVED]
 
-**MAT4**	The application must include buttons to either simplify, expand on or summarise the text in the currently displayed material.
+**MAT4**	[REMOVED]
 
-**MAT5**	The application must provide students with AI assistance tools, possibly through a chat interface, to dynamically scaffold and guide their learning.
+**MAT5**	[REMOVED]
 
-**MAT6** The application must provide a dedicated area or highlighting mechanism to display the "Key Vocabulary" defined by the teacher for the current lesson.
+**MAT6** [REMOVED]
 
 **MAT7** The application must include a "Raise Hand" button that sends a help request to the teacher's dashboard.
 
-**MAT8** The application must support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
+**MAT8** The application could support handwriting input, allowing students to annotate directly onto worksheets or PDFs using a stylus.
 
 **MAT9** [REMOVED] See MAT9A.
 
@@ -199,7 +201,7 @@ The requirements are grouped into the following categories: lesson materials (MA
 
 **ACC4**	The application must have a monochromatic display with minimal audiovisual stimuli to avoid distractions.
 
-**ACC5  \-** If enabled by the teacher, the application should include animated mascots or avatars to act as learning companions.
+**ACC5**	If enabled by the teacher, the application should include animated mascots or avatars to act as learning companions.
 
 ### **NETWORKING (NET)**
 
@@ -229,7 +231,7 @@ The above requirements are set with respect to the following constraints.
 
 1. The teacher's laptop and all student devices must be connected to the same LAN.  
 2. The teacher's device must be a Windows PC with an AI-capable chipset and sufficient computational power to run the required GenAI models locally.  
-3. The student devices must be Android-based e-ink tablets.  
+3. The primary student app target is Android-based e-ink tablets; non-Android e-ink devices can be supported via an alternative external-device workflow.  
 4. Student data privacy is of paramount importance. All collected data must be anonymised.
 
 In addition, it is assumed that the school's LAN infrastructure is capable of handling concurrent traffic from over 30 devices.
@@ -244,14 +246,14 @@ This section describes the architecture and framework to be used for each applic
 
 **Language/Framework:** .NET
 
-**AI Model(s):** Granite
+**AI Model(s):** Qwen (primary), IBM Granite (fallback)
 
 **Considerations:**
 
 * The product of the framework must be easily put on the Microsoft Store  
-* The Programming language must be supported by the chosen AI model (e.g. IBM Granite), or can be easily integrated  
-* The Programming Language & Framework should be able to support CRUD and database integration  
-  **AI Libraries:** OpenVINO, Qualcomm AI Stack (e.g., "executorch")
+* The programming language must support integration with local LLM inference runtimes  
+* The programming language and framework should be able to support CRUD and database integration  
+  **AI Runtime:** Ollama (for local model management and inference)
 
 **Student Application (E-ink):**
 
@@ -267,9 +269,9 @@ This section describes the architecture and framework to be used for each applic
 
 **Networking Protocol:**
 
-**Client-server relationship:** the Android Tablets should act as the client and the Windows Laptop should act as the server.
+**Client-server relationship:** Android tablets should act as LAN clients and the Windows laptop should act as the server. For non-Android e-ink devices, delivery may be performed through an alternative external-device workflow outside the Android client-server channel.
 
-Communication should mainly be done by the HTTP protocol, since it is anticipated that most content would be transmitted as text. However, lower-level message transmission using TCP/UDP on certain control messages should be considered if a performance bottleneck is discovered.
+Communication should mainly be done by the HTTP protocol for the Windows-Android channel, since it is anticipated that most content would be transmitted as text. However, lower-level message transmission using TCP/UDP on certain control messages should be considered if a performance bottleneck is discovered. Non-Android e-ink workflows rely on PDF export and email-based exchange.
 
 Data Consistency and Entity Identification:
 
